@@ -671,11 +671,6 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     }
 
     qd_message_message_annotations(msg);
-    qd_bitmask_t *link_exclusions;
-    uint32_t      distance;
-    int           ingress_index = 0; // Default to _this_ router
-
-    qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, &distance, &ingress_index);
 
     //
     // Head of line blocking avoidance (DISPATCH-1545)
@@ -699,7 +694,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     if (!receive_complete) {
         if (qd_message_is_streaming(msg) || qd_message_is_Q2_blocked(msg)) {
             qd_log(router->log_source, QD_LOG_DEBUG,
-                   "[C%"PRIu64" L%"PRIu64"] Incoming message classified as streaming. User:%s",
+                   "[C%"PRIu64"][L%"PRIu64"] Incoming message classified as streaming. User:%s",
                    conn->connection_id,
                    qd_link_link_id(link),
                    conn->user_id);
@@ -708,6 +703,11 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             return false;
         }
     }
+
+    uint32_t       distance = 0;
+    int            ingress_index = 0; // Default to _this_ router
+    qd_bitmask_t  *link_exclusions = 0;
+    qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, &distance, &ingress_index);
 
     //
     // If this delivery has traveled further than the known radius of the network topology (plus 1),
