@@ -1247,7 +1247,7 @@ static uint64_t _send_request_headers(_server_request_t *hreq, qd_message_t *msg
 
     method_str = (char*) qd_iterator_copy(method_iter);
     qd_iterator_free(method_iter);
-    if (!method_str) {
+    if (!method_str || *method_str == 0) {
         return PN_REJECTED;
     }
 
@@ -1267,7 +1267,7 @@ static uint64_t _send_request_headers(_server_request_t *hreq, qd_message_t *msg
 
     qd_parsed_field_t *ref = qd_parse_value_by_key(app_props, TARGET_HEADER_KEY);
     target_str = (char*) qd_iterator_copy(qd_parse_raw(ref));
-    if (!target_str) {
+    if (!target_str || *target_str == 0) {
         outcome = PN_REJECTED;
         goto exit;
     }
