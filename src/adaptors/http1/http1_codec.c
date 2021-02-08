@@ -353,6 +353,8 @@ static void ensure_outgoing_capacity(struct encoder_t *encoder, size_t capacity)
 static void write_string(struct encoder_t *encoder, const char *string)
 {
     size_t needed = strlen(string);
+    if (needed == 0) return;
+
     ensure_outgoing_capacity(encoder, needed);
 
     encoder->hrs->out_octets += needed;
@@ -492,6 +494,14 @@ static bool ensure_scratch_size(scratch_memory_t *b, size_t required)
 }
 
 
+// return true if octet in str
+static inline bool filter_str(const char *str, uint8_t octet)
+{
+    const char *ptr = strchr(str, (int)((unsigned int)octet));
+    return ptr && *ptr != 0;
+}
+
+
 // trims any optional whitespace characters at the start of 'line'
 // RFC7230 defines OWS as zero or more spaces or horizontal tabs
 //
@@ -538,7 +548,7 @@ static bool parse_token(qd_iterator_pointer_t *line, qd_iterator_pointer_t *toke
            && (('A' <= octet && octet <= 'Z') ||
                ('a' <= octet && octet <= 'z') ||
                ('0' <= octet && octet <= '9') ||
-               (strchr(TOKEN_EXTRA, octet)))) {
+               (filter_str(TOKEN_EXTRA, octet)))) {
         len++;
     }
 
@@ -1733,17 +1743,17 @@ const char *h1_codec_token_list_next(const char *start, size_t *len, const char 
 
     if (!start) return 0;
 
-    while (*start && strchr(SKIPME, *start))
+    while (*start && filter_str(SKIPME, *start))
         ++start;
 
     if (!*start) return 0;
 
     const char *end = start;
-    while (*end && !strchr(SKIPME, *end))
+    while (*end && !filter_str(SKIPME, *end))
         ++end;
 
     *len = end - start;
-    while (*end && strchr(SKIPME, *end))
+    while (*end && filter_str(SKIPME, *end))
         ++end;
 
     *next = end;
