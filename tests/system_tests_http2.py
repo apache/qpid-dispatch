@@ -281,7 +281,7 @@ class Http2TestOneStandaloneRouter(Http2TestBase, CommonHttp2Tests):
                                                   listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
                                                   py_string='python3',
                                                   server_file="http2_server.py")
-        name = "http2-test-router"
+        name = "http2-test-standalone-router"
         cls.connector_name = 'connectorToBeDeleted'
         cls.connector_props = {
             'port': os.getenv('SERVER_LISTEN_PORT'),
@@ -310,20 +310,24 @@ class Http2TestOneStandaloneRouter(Http2TestBase, CommonHttp2Tests):
     def test_000_stats(self):
         # Run curl 127.0.0.1:port --http2-prior-knowledge
         address = self.router_qdra.http_addresses[0]
-        self.run_curl(address=address)
+        qd_manager = QdManager(self, address=self.router_qdra.addresses[0])
+
+        # First request
+        out = self.run_curl(address=address)
+
+        # Second request
         address = self.router_qdra.http_addresses[0] + "/myinfo"
         out = self.run_curl(args=['-d', 'fname=Mickey&lname=Mouse', '-X', 'POST'], address=address)
         self.assertIn('Success! Your first name is Mickey, last name is Mouse', out)
-        qd_manager = QdManager(self, address=self.router_qdra.addresses[0])
+
         stats = qd_manager.query('org.apache.qpid.dispatch.httpRequestInfo')
         self.assertEqual(len(stats), 2)
 
         # Give time for the core thread to augment the stats.
         i = 0
         while i < 3:
-            s = stats[0]
-            i += 1
-            if s.get('requests') < 2:
+            if not stats or stats[0].get('requests') < 2:
+                i += 1
                 sleep(1)
                 stats = qd_manager.query('org.apache.qpid.dispatch.httpRequestInfo')
             else:
@@ -475,20 +479,23 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
     def test_000_stats(self):
         # Run curl 127.0.0.1:port --http2-prior-knowledge
         address = self.router_qdra.http_addresses[0]
-        self.run_curl(address=address)
-        address = self.router_qdra.http_addresses[0] + "/myinfo"
-        out = self.run_curl(args=['-d', 'fname=Mickey&lname=Mouse', '-X', 'POST'], address=address)
-        self.assertIn('Success! Your first name is Mickey, last name is Mouse', out)
         qd_manager_a = QdManager(self, address=self.router_qdra.addresses[0])
         stats_a = qd_manager_a.query('org.apache.qpid.dispatch.httpRequestInfo')
+
+        # First request
+        self.run_curl(address=address)
+        address = self.router_qdra.http_addresses[0] + "/myinfo"
+
+        # Second request
+        out = self.run_curl(args=['-d', 'fname=Mickey&lname=Mouse', '-X', 'POST'], address=address)
+        self.assertIn('Success! Your first name is Mickey, last name is Mouse', out)
 
         # Give time for the core thread to augment the stats.
         i = 0
         while i < 3:
-            s = stats_a[0]
-            i += 1
-            if s.get('requests') < 2:
+            if not stats_a or stats_a[0].get('requests') < 2:
                 sleep(1)
+                i += 1
                 stats_a = qd_manager_a.query('org.apache.qpid.dispatch.httpRequestInfo')
             else:
                 break
@@ -505,8 +512,8 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
         i = 0
         while i < 3:
             s = stats_b[0]
-            i += 1
-            if s.get('requests') < 2:
+            if not stats_b or stats_b[0].get('requests') < 2:
+                i += 1
                 sleep(1)
                 stats_b = qd_manager_b.query('org.apache.qpid.dispatch.httpRequestInfo')
             else:
