@@ -690,7 +690,7 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
                 stats->current++;
                 qd_log(hs->log, QD_LOG_DEBUG, "wrote metric %lu of %lu", stats->current, metrics_length);
             } else {
-                qd_log(hs->log, QD_LOG_DEBUG, "insufficient space in buffer");
+                qd_log(hs->log, QD_LOG_WARNING, "insufficient space in buffer");
                 break;
             }
         }
@@ -701,7 +701,7 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
                 qd_log(hs->log, QD_LOG_DEBUG, "wrote allocator metric %lu of %lu", alloc_cur, allocator_metrics_length);
                 alloc_cur++;
             } else {
-                qd_log(hs->log, QD_LOG_DEBUG, "insufficient space in buffer");
+                qd_log(hs->log, QD_LOG_WARNING, "insufficient space in buffer");
                 break;
             }
         }
