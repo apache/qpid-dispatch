@@ -253,10 +253,9 @@ qd_message_t * qd_get_message_context(pn_delivery_t *delivery);
  * @param msg A pointer to a message to be sent.
  * @param link The outgoing link on which to send the message.
  * @param strip_outbound_annotations [in] annotation control flag
- * @param restart_rx [out] indication to wake up receive process
  * @param q3_stalled [out] indicates that the link is stalled due to proton-buffer-full
  */
-void qd_message_send(qd_message_t *msg, qd_link_t *link, bool strip_outbound_annotations, bool *restart_rx, bool *q3_stalled);
+void qd_message_send(qd_message_t *msg, qd_link_t *link, bool strip_outbound_annotations, bool *q3_stalled);
 
 /**
  * Check that the message is well-formed up to a certain depth.  Any part of the message that is
@@ -556,12 +555,21 @@ bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg);
  */
 bool qd_message_is_Q2_blocked(const qd_message_t *msg);
 
+
 /**
- * Return qd_link through which the message is being received.
- * @param msg A pointer to the message
- * @return the qd_link
+ * Register a callback that will be invoked when the message has exited the Q2
+ * blocking state. Note that the callback can be invoked on any I/O thread.
+ * The callback must be thread safe.
+ *
+ * @param msg The message to monitor.
+ * @param callback The method to invoke
+ * @param ptr safe pointer holding the context pointer
  */
-qd_link_t * qd_message_get_receiving_link(const qd_message_t *msg);
+
+typedef void (*qd_message_Q2_unblocked_handler_t)(void *context);
+void qd_message_set_Q2_unblocked_handler(qd_message_t *msg,
+                                         qd_message_Q2_unblocked_handler_t callback,
+                                         const qd_alloc_safe_ptr_t *ptr);
 
 /**
  * Return message aborted state

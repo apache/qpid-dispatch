@@ -47,6 +47,7 @@ static char *node_id;
 
 static void deferred_AMQP_rx_handler(void *context, bool discard);
 static bool parse_failover_property_list(qd_router_t *router, qd_connection_t *conn, pn_data_t *props);
+static void qd_link_restart_rx(qd_link_t *in_link);
 
 const char *QD_AMQP_COND_OVERSIZE_DESCRIPTION = "Message size exceeded";
 
@@ -1914,20 +1915,15 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
     if (!pdlv)
         return 0;
 
-    bool restart_rx = false;
     bool q3_stalled = false;
 
     qd_message_t *msg_out = qdr_delivery_message(dlv);
 
-    qd_message_send(msg_out, qlink, qdr_link_strip_annotations_out(link), &restart_rx, &q3_stalled);
+    qd_message_send(msg_out, qlink, qdr_link_strip_annotations_out(link), &q3_stalled);
 
     if (q3_stalled) {
         qd_link_q3_block(qlink);
         qdr_link_stalled_outbound(link);
-    }
-
-    if (restart_rx) {
-        qd_link_restart_rx(qd_message_get_receiving_link(msg_out));
     }
 
     bool send_complete = qdr_delivery_send_complete(dlv);
@@ -2131,9 +2127,20 @@ qdr_core_t *qd_router_core(qd_dispatch_t *qd)
 }
 
 
-// called when Q2 holdoff is deactivated so we can receive more message buffers
+// invoked by an I/O thread when enough buffers have been released deactivate
+// the Q2 block.  Note that this method will likely be running on a worker
+// thread that is not the same thread that "owns" the qd_link_t passed in.
 //
-void qd_link_restart_rx(qd_link_t *in_link)
+void qd_link_q2_restart_recv(void *context)
+{
+    qd_link_restart_rx((qd_link_t*) context);
+}
+
+
+// Called to wake up the thread that owns in_link and run the rx_handler on the
+// link.
+//
+static void qd_link_restart_rx(qd_link_t *in_link)
 {
     if (!in_link)
         return;

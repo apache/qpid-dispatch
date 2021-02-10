@@ -503,6 +503,10 @@ uint32_t qd_alloc_sequence(void *p)
         return 0;
 
     qd_alloc_item_t *item = ((qd_alloc_item_t*) p) - 1;
+#ifdef QD_MEMORY_DEBUG
+    // ensure p actually points to an alloc pool item
+    assert(item->header == PATTERN_FRONT);
+#endif
     return item->sequence;
 }
 
