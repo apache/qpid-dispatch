@@ -228,7 +228,7 @@ void qd_link_close(qd_link_t *link);
 void qd_link_detach(qd_link_t *link);
 void qd_link_free(qd_link_t *link);
 void *qd_link_get_node_context(const qd_link_t *link);
-void qd_link_restart_rx(qd_link_t *link);
+void qd_link_q2_restart_receive(const qd_alloc_safe_ptr_t context);
 void qd_link_q3_block(qd_link_t *link);
 void qd_link_q3_unblock(qd_link_t *link);
 uint64_t qd_link_link_id(const qd_link_t *link);

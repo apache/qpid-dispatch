@@ -976,7 +976,8 @@ static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
 
     qd_message_t *msg = rmsg->msg ? rmsg->msg : qdr_delivery_message(rmsg->dlv);
 
-    qd_message_stream_data_append(msg, body);
+    // @TODO(kgiusti): handle Q2 block event:
+    qd_message_stream_data_append(msg, body, 0);
 
     //
     // Notify the router that more data is ready to be pushed out on the delivery

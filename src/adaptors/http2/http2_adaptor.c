@@ -465,7 +465,8 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
                     qd_buffer_list_t existing_buffers;
                     DEQ_INIT(existing_buffers);
                     qd_compose_take_buffers(stream_data->body, &existing_buffers);
-                    qd_message_stream_data_append(stream_data->message, &existing_buffers);
+                    // @TODO(kgiusti): handle Q2 block event:
+                    qd_message_stream_data_append(stream_data->message, &existing_buffers, 0);
                     stream_data->body_data_added = true;
                 }
             }
@@ -475,7 +476,8 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
                 stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
                 stream_data->body_data_added = true;
             }
-            qd_message_stream_data_append(stream_data->message, &buffers);
+            // @TODO(kgiusti): handle Q2 block event:
+            qd_message_stream_data_append(stream_data->message, &buffers, 0);
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->message", conn->conn_id, stream_id);
         }
         else {
@@ -930,7 +932,8 @@ static int on_frame_recv_callback(nghttp2_session *session,
             if (!stream_data->body) {
                 stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
                 qd_compose_insert_binary(stream_data->body, 0, 0);
-                qd_message_extend(stream_data->message, stream_data->body);
+                // @TODO(kgiusti): handle Q2 block event:
+                qd_message_extend(stream_data->message, stream_data->body, 0);
             }
         }
 
@@ -965,7 +968,8 @@ static int on_frame_recv_callback(nghttp2_session *session,
             if (stream_data->use_footer_properties) {
                 qd_compose_end_map(stream_data->footer_properties);
                 stream_data->entire_footer_arrived = true;
-                qd_message_extend(stream_data->message, stream_data->footer_properties);
+                // @TODO(kgiusti): handle Q2 block event:
+                qd_message_extend(stream_data->message, stream_data->footer_properties, 0);
                 qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Closing footer map, extending message with footer", conn->conn_id, stream_id);
             }
             else {
