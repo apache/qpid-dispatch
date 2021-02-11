@@ -119,6 +119,8 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
             pn_raw_connection_close(rconn);
         }
 
+        sys_atomic_destroy(&hconn->q2_restart);
+
         free(hconn->cfg.host);
         free(hconn->cfg.port);
         free(hconn->cfg.address);
@@ -412,6 +414,25 @@ void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn)
             }
         }
     }
+}
+
+
+// Per-message callback to resume receiving after Q2 is unblocked on the
+// incoming link (to HTTP app).  This routine runs on another I/O thread so it
+// must be thread safe!
+//
+void qdr_http1_q2_unblocked_handler(const qd_alloc_safe_ptr_t context)
+{
+    // prevent the hconn from being deleted while running:
+    sys_mutex_lock(qdr_http1_adaptor->lock);
+
+    qdr_http1_connection_t *hconn = (qdr_http1_connection_t*)qd_alloc_deref_safe_ptr(&context);
+    if (hconn && hconn->raw_conn) {
+        sys_atomic_set(&hconn->q2_restart, 1);
+        pn_raw_connection_wake(hconn->raw_conn);
+    }
+
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
 }
 
 

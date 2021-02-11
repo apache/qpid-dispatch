@@ -2938,12 +2938,14 @@ void qd_message_set_Q2_unblocked_handler(qd_message_t *msg,
 
 void qd_message_clear_Q2_unblocked_handler(qd_message_t *msg)
 {
-    qd_message_content_t *content = MSG_CONTENT(msg);
+    if (msg) {
+        qd_message_content_t *content = MSG_CONTENT(msg);
 
-    LOCK(content->lock);
+        LOCK(content->lock);
 
-    content->q2_unblocker.handler = 0;
-    qd_nullify_safe_ptr(&content->q2_unblocker.context);
+        content->q2_unblocker.handler = 0;
+        qd_nullify_safe_ptr(&content->q2_unblocker.context);
 
-    UNLOCK(content->lock);
+        UNLOCK(content->lock);
+    }
 }
