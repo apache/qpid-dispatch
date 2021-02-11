@@ -47,7 +47,6 @@ static char *node_id;
 
 static void deferred_AMQP_rx_handler(void *context, bool discard);
 static bool parse_failover_property_list(qd_router_t *router, qd_connection_t *conn, pn_data_t *props);
-static void qd_link_restart_rx(qd_link_t *in_link);
 
 const char *QD_AMQP_COND_OVERSIZE_DESCRIPTION = "Message size exceeded";
 
@@ -856,6 +855,7 @@ static void deferred_AMQP_rx_handler(void *context, bool discard)
     if (!discard) {
         qd_link_t *qdl = safe_deref_qd_link_t(*safe_qdl);
         if (!!qdl) {
+            assert(qd_link_direction(qdl) == QD_INCOMING);
             qd_router_t *qdr = (qd_router_t*) qd_link_get_node_context(qdl);
             assert(qdr != 0);
             while (true) {
@@ -2055,7 +2055,10 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
                 // and if it is blocked by Q2 holdoff, get the link rolling again.
                 //
                 qd_message_Q2_holdoff_disable(msg);
-                qd_link_restart_rx(link);
+
+                qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
+                set_safe_ptr_qd_link_t(link, safe_ptr);
+                qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, safe_ptr);
             }
         }
     }
@@ -2131,17 +2134,9 @@ qdr_core_t *qd_router_core(qd_dispatch_t *qd)
 // the Q2 block.  Note that this method will likely be running on a worker
 // thread that is not the same thread that "owns" the qd_link_t passed in.
 //
-void qd_link_q2_restart_recv(void *context)
+void qd_link_q2_restart_recv(qd_alloc_safe_ptr_t context)
 {
-    qd_link_restart_rx((qd_link_t*) context);
-}
-
-
-// Called to wake up the thread that owns in_link and run the rx_handler on the
-// link.
-//
-static void qd_link_restart_rx(qd_link_t *in_link)
-{
+    qd_link_t *in_link = (qd_link_t*) qd_alloc_deref_safe_ptr(&context);
     if (!in_link)
         return;
 
@@ -2149,8 +2144,8 @@ static void qd_link_restart_rx(qd_link_t *in_link)
 
     qd_connection_t *in_conn = qd_link_connection(in_link);
     if (in_conn) {
-        qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
-        set_safe_ptr_qd_link_t(in_link, safe_ptr);
+        qd_link_t_sp *safe_ptr = NEW(qd_alloc_safe_ptr_t);
+        *safe_ptr = context;  // use original to keep old sequence counter
         qd_connection_invoke_deferred(in_conn, deferred_AMQP_rx_handler, safe_ptr);
     }
 }

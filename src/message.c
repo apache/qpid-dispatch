@@ -1064,7 +1064,7 @@ void qd_message_free(qd_message_t *in_msg)
 
     // the Q2 handler must be invoked outside the lock
     if (q2_unblock.handler)
-        q2_unblock.handler(qd_alloc_deref_safe_ptr(&q2_unblock.context));
+        q2_unblock.handler(q2_unblock.context);
 
     rc = sys_atomic_dec(&content->ref_count) - 1;
     if (rc == 0) {
@@ -1396,7 +1396,6 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
         } else if (rc == PN_EOS || rc < 0) {
             // End of message or error: finalize message_receive handling
             msg->content->aborted = pn_delivery_aborted(delivery);
-            ///qd_nullify_safe_ptr(&msg->content->input_link_sp);
             pn_record_t *record = pn_delivery_attachments(delivery);
             pn_record_set(record, PN_DELIVERY_CTX, 0);
             if (msg->content->oversize) {
@@ -1442,7 +1441,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg = (qd_message_pvt_t*) qd_message();
         qd_connection_t *qdc = qd_link_connection(qdl);
         qd_alloc_safe_ptr_t sp = QD_SAFE_PTR_INIT(qdl);
-        qd_message_set_Q2_unblocked_handler((qd_message_t*) msg, qd_link_q2_restart_recv, &sp);
+        qd_message_set_Q2_unblocked_handler((qd_message_t*) msg, qd_link_q2_restart_recv, sp);
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
@@ -1955,7 +1954,7 @@ void qd_message_send(qd_message_t *in_msg,
 
     // the Q2 handler must be invoked outside the lock
     if (q2_unblock.handler)
-        q2_unblock.handler(qd_alloc_deref_safe_ptr(&q2_unblock.context));
+        q2_unblock.handler(q2_unblock.context);
 
     if (content->aborted) {
         if (pn_link_current(pnl)) {
@@ -2613,7 +2612,7 @@ void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
     free_qd_message_stream_data_t(stream_data);
 
     if (q2_unblock.handler)
-        q2_unblock.handler(qd_alloc_deref_safe_ptr(&q2_unblock.context));
+        q2_unblock.handler(q2_unblock.context);
 }
 
 
@@ -2915,17 +2914,27 @@ int qd_message_stream_data_append(qd_message_t *message, qd_buffer_list_t *data)
 
 void qd_message_set_Q2_unblocked_handler(qd_message_t *msg,
                                          qd_message_Q2_unblocked_handler_t callback,
-                                         const qd_alloc_safe_ptr_t *ptr)
+                                         const qd_alloc_safe_ptr_t context)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
 
     LOCK(content->lock);
 
     content->q2_unblocker.handler = callback;
-    if (ptr)
-        content->q2_unblocker.context = *ptr;
-    else
-        qd_nullify_safe_ptr(&content->q2_unblocker.context);
+    content->q2_unblocker.context = context;
+
+    UNLOCK(content->lock);
+}
+
+
+void qd_message_clear_Q2_unblocked_handler(qd_message_t *msg)
+{
+    qd_message_content_t *content = MSG_CONTENT(msg);
+
+    LOCK(content->lock);
+
+    content->q2_unblocker.handler = 0;
+    qd_nullify_safe_ptr(&content->q2_unblocker.context);
 
     UNLOCK(content->lock);
 }

@@ -566,10 +566,11 @@ bool qd_message_is_Q2_blocked(const qd_message_t *msg);
  * @param ptr safe pointer holding the context pointer
  */
 
-typedef void (*qd_message_Q2_unblocked_handler_t)(void *context);
+typedef void (*qd_message_Q2_unblocked_handler_t)(const qd_alloc_safe_ptr_t context);
 void qd_message_set_Q2_unblocked_handler(qd_message_t *msg,
                                          qd_message_Q2_unblocked_handler_t callback,
-                                         const qd_alloc_safe_ptr_t *ptr);
+                                         const qd_alloc_safe_ptr_t context);
+void qd_message_clear_Q2_unblocked_handler(qd_message_t *msg);
 
 /**
  * Return message aborted state
