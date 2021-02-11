@@ -303,9 +303,10 @@ void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_c
  *
  * @param msg Pointer to a message
  * @param field A composed field to be appended to the end of the message's stream
+ * @param q2_blocked Set to true if this call caused Q2 to block
  * @return The number of buffers stored in the message's content
  */
-int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field);
+int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field, bool *q2_blocked);
 
 
 /**
@@ -403,9 +404,10 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *msg, q
  *
  * @param msg Pointer to message under construction
  * @param data List of buffers containing body data.
+ * @param qd_blocked Set to true if this call caused Q2 to block
  * @return The number of buffers stored in the message's content
  */
-int qd_message_stream_data_append(qd_message_t *msg, qd_buffer_list_t *data);
+int qd_message_stream_data_append(qd_message_t *msg, qd_buffer_list_t *data, bool *q2_blocked);
 
 
 /** Put string representation of a message suitable for logging in buffer.

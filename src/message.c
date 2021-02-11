@@ -2335,12 +2335,15 @@ void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_com
 }
 
 
-int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field)
+int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field, bool *q2_blocked)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
     int                   count;
     qd_buffer_list_t     *buffers = qd_compose_buffers(field);
     qd_buffer_t          *buf     = DEQ_HEAD(*buffers);
+
+    if (q2_blocked)
+        *q2_blocked = false;
 
     LOCK(content->lock);
     while (buf) {
@@ -2352,8 +2355,11 @@ int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field)
     count = DEQ_SIZE(content->buffers);
 
     // buffers added - much check for Q2:
-    if (qd_message_Q2_holdoff_should_block(msg))
+    if (qd_message_Q2_holdoff_should_block(msg)) {
         content->q2_input_holdoff = true;
+        if (q2_blocked)
+            *q2_blocked = true;
+    }
 
     UNLOCK(content->lock);
     return count;
@@ -2866,11 +2872,14 @@ bool qd_message_oversize(const qd_message_t *msg)
 }
 
 
-int qd_message_stream_data_append(qd_message_t *message, qd_buffer_list_t *data)
+int qd_message_stream_data_append(qd_message_t *message, qd_buffer_list_t *data, bool *q2_blocked)
 {
     unsigned int        length = DEQ_SIZE(*data);
     qd_composed_field_t *field = 0;
     int rc = 0;
+
+    if (q2_blocked)
+        *q2_blocked = false;
 
     if (length == 0)
         return rc;
@@ -2906,7 +2915,7 @@ int qd_message_stream_data_append(qd_message_t *message, qd_buffer_list_t *data)
     field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
     qd_compose_insert_binary_buffers(field, data);
 
-    rc = qd_message_extend(message, field);
+    rc = qd_message_extend(message, field, q2_blocked);
     qd_compose_free(field);
     return rc;
 }

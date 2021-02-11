@@ -180,7 +180,8 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
     grant_read_buffers(conn);
 
     if (conn->instream) {
-        qd_message_stream_data_append(qdr_delivery_message(conn->instream), &buffers);
+        // @TODO(kgiusti): handle Q2 block event:
+        qd_message_stream_data_append(qdr_delivery_message(conn->instream), &buffers, 0);
         qdr_delivery_continue(tcp_adaptor->core, conn->instream, false);
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Continuing message with %i bytes", conn->conn_id, conn->incoming_id, count);
     } else {
