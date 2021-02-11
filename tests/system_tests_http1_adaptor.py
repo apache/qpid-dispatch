@@ -27,10 +27,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
+import errno
+import io
+import select
 import socket
 import sys
 from threading import Thread
-from time import sleep
+from time import sleep, time
 import uuid
 try:
     from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -1703,6 +1706,254 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                                   self.http_listener_port)
         self.assertIsNone(error)
         self.assertEqual(1, count)
+
+
+
+class Http1AdaptorQ2Standalone(TestCase):
+    """
+    Force Q2 blocking/recovery on both client and server endpoints. This test
+    uses a single router to ensure both client facing and server facing
+    Q2 components of the HTTP/1.x adaptor are triggered.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Single router configuration with one HTTPListener and one
+        HTTPConnector.
+        """
+        super(Http1AdaptorQ2Standalone, cls).setUpClass()
+
+        cls.http_server_port = cls.tester.get_port()
+        cls.http_listener_port = cls.tester.get_port()
+
+        config = [
+            ('router', {'mode': 'standalone',
+                        'id': 'RowdyRoddyRouter',
+                        'allowUnsettledMulticast': 'yes'}),
+            ('listener', {'role': 'normal',
+                          'port': cls.tester.get_port()}),
+            ('httpListener', {'port': cls.http_listener_port,
+                              'protocolVersion': 'HTTP1',
+                              'address': 'testServer'}),
+            ('httpConnector', {'port': cls.http_server_port,
+                               'protocolVersion': 'HTTP1',
+                               'address': 'testServer'}),
+            ('address', {'prefix': 'closest',   'distribution': 'closest'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+        ]
+        config = Qdrouterd.Config(config)
+        cls.INT_A = cls.tester.qdrouterd("TestBadEndpoints", config, wait=True)
+        cls.INT_A.listener = cls.INT_A.addresses[0]
+
+
+    def _write_until_full(self, sock, data, timeout):
+        """
+        Write data to socket until either all data written or timeout.
+        Return the number of bytes written, which will == len(data) if timeout
+        not hit
+        """
+        sock.setblocking(0)
+        sent = 0
+
+        while sent < len(data):
+            try:
+                _, rw, _ = select.select([], [sock], [], timeout)
+            except select.error as serror:
+                if serror[0] == errno.EINTR:
+                    print("ignoring interrupt from select(): %s" % str(serror))
+                    continue
+                raise  # assuming fatal...
+            if rw:
+                sent += sock.send(data[sent:])
+            else:
+                break  # timeout
+        return sent
+
+    def _read_until_empty(self, sock, timeout):
+        """
+        Read data from socket until timeout occurs.  Return read data.
+        """
+        sock.setblocking(0)
+        data = b''
+
+        while True:
+            try:
+                rd, _, _ = select.select([sock], [], [], timeout)
+            except select.error as serror:
+                if serror[0] == errno.EINTR:
+                    print("ignoring interrupt from select(): %s" % str(serror))
+                    continue
+                raise  # assuming fatal...
+            if rd:
+                data += sock.recv(4096)
+            else:
+                break  # timeout
+        return data
+
+    def test_01_backpressure_client(self):
+        """
+        Trigger Q2 backpressure against the HTTP client.
+        """
+
+        # create a listener socket to act as the server service
+        server_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_listener.settimeout(TIMEOUT)
+        server_listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_listener.bind(('', self.http_server_port))
+        server_listener.listen(1)
+
+        # block until router connects
+        server_sock, host_port = server_listener.accept()
+        server_sock.settimeout(0.5)
+        server_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+        # create a client connection to the router
+        client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_sock.settimeout(0.5)
+        client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        client_sock.connect((host_port[0], self.http_listener_port))
+
+        # send a Very Large PUSH request, expecting it to block at some point
+
+        push_req_hdr = b'PUSH / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n'
+        count = self._write_until_full(client_sock, push_req_hdr, 1.0)
+        self.assertEqual(len(push_req_hdr), count)
+
+        chunk = b'8000\r\n' + b'X' * 0x8000 + b'\r\n'
+        last_chunk = b'0 \r\n\r\n'
+        count = 0
+        deadline = time() + TIMEOUT
+        while deadline >= time():
+            count = self._write_until_full(client_sock, chunk, 5.0)
+            if count < len(chunk):
+                break
+        self.assertFalse(time() > deadline,
+                         "Client never blocked as expected!")
+
+        # client should now be in Q2 block. Drain the server to unblock Q2
+        _ = self._read_until_empty(server_sock, 2.0)
+
+        # finish the PUSH
+        if count:
+            remainder = self._write_until_full(client_sock, chunk[count:], 1.0)
+            self.assertEqual(len(chunk), count + remainder)
+
+        count = self._write_until_full(client_sock, last_chunk, 1.0)
+        self.assertEqual(len(last_chunk), count)
+
+        # receive the request and reply
+        _ = self._read_until_empty(server_sock, 2.0)
+
+        response = b'HTTP/1.1 201 Created\r\nContent-Length: 0\r\n\r\n'
+        count = self._write_until_full(server_sock, response, 1.0)
+        self.assertEqual(len(response), count)
+
+        # complete the response read
+        _ = self._read_until_empty(client_sock, 2.0)
+        self.assertEqual(len(response), len(_))
+
+        client_sock.shutdown(socket.SHUT_RDWR)
+        client_sock.close()
+
+        server_sock.shutdown(socket.SHUT_RDWR)
+        server_sock.close()
+
+        server_listener.shutdown(socket.SHUT_RDWR)
+        server_listener.close()
+
+        # search the router log file to verify Q2 was hit
+
+        block_ct = 0
+        unblock_ct = 0
+        with io.open(self.INT_A.logfile_path) as f:
+            for line in f:
+                if 'client link blocked on Q2 limit' in line:
+                    block_ct += 1
+                if 'client link unblocked from Q2 limit' in line:
+                    unblock_ct += 1
+        self.assertTrue(block_ct > 0)
+        self.assertEqual(block_ct, unblock_ct)
+
+    def test_02_backpressure_server(self):
+        """
+        Trigger Q2 backpressure against the HTTP server.
+        """
+        small_get_req = b'GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n'
+
+        # create a listener socket to act as the server service
+        server_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_listener.settimeout(TIMEOUT)
+        server_listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_listener.bind(('', self.http_server_port))
+        server_listener.listen(1)
+
+        # block until router connects
+        server_sock, host_port = server_listener.accept()
+        server_sock.settimeout(0.5)
+        server_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+        # create a client connection to the router
+        client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_sock.settimeout(0.5)
+        client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        client_sock.connect((host_port[0], self.http_listener_port))
+
+        # send GET request - expect this to be successful
+        count = self._write_until_full(client_sock, small_get_req, 1.0)
+        self.assertEqual(len(small_get_req), count)
+
+        request = self._read_until_empty(server_sock, 5.0)
+        self.assertEqual(len(small_get_req), len(request))
+
+        # send a Very Long response, expecting it to block at some point
+        chunk = b'8000\r\n' + b'X' * 0x8000 + b'\r\n'
+        last_chunk = b'0 \r\n\r\n'
+        response = b'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n'
+
+        count = self._write_until_full(server_sock, response, 1.0)
+        self.assertEqual(len(response), count)
+
+        count = 0
+        deadline = time() + TIMEOUT
+        while deadline >= time():
+            count = self._write_until_full(server_sock, chunk, 5.0)
+            if count < len(chunk):
+                break
+        self.assertFalse(time() > deadline,
+                         "Server never blocked as expected!")
+
+        # server should now be in Q2 block. Drain the client to unblock Q2
+        _ = self._read_until_empty(client_sock, 2.0)
+
+        # finish the response
+        if count:
+            remainder = self._write_until_full(server_sock, chunk[count:], 1.0)
+            self.assertEqual(len(chunk), count + remainder)
+
+        count = self._write_until_full(server_sock, last_chunk, 1.0)
+        self.assertEqual(len(last_chunk), count)
+        server_sock.shutdown(socket.SHUT_RDWR)
+        server_sock.close()
+
+        _ = self._read_until_empty(client_sock, 1.0)
+        client_sock.shutdown(socket.SHUT_RDWR)
+        client_sock.close()
+
+        server_listener.shutdown(socket.SHUT_RDWR)
+        server_listener.close()
+
+        # search the router log file to verify Q2 was hit
+
+        block_ct = 0
+        unblock_ct = 0
+        with io.open(self.INT_A.logfile_path) as f:
+            for line in f:
+                if 'server link blocked on Q2 limit' in line:
+                    block_ct += 1
+                if 'server link unblocked from Q2 limit' in line:
+                    unblock_ct += 1
+        self.assertTrue(block_ct > 0)
+        self.assertEqual(block_ct, unblock_ct)
 
 
 if __name__ == '__main__':
