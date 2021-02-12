@@ -460,6 +460,11 @@ typedef struct metric_definition {
     int_metric value;
 } metric_definition;
 
+typedef struct allocator_metric_definition {
+    const char* name;
+    qd_alloc_stats_t *(*fn)(void);
+} allocator_metric_definition;
+
 static int stats_get_connections(qdr_global_stats_t *stats) { return stats->connections; }
 static int stats_get_links(qdr_global_stats_t *stats) { return stats->links; }
 static int stats_get_addrs(qdr_global_stats_t *stats) { return stats->addrs; }
@@ -482,6 +487,43 @@ static int stats_get_deliveries_delayed_10sec(qdr_global_stats_t *stats) { retur
 static int stats_get_deliveries_stuck(qdr_global_stats_t *stats) { return stats->deliveries_stuck; }
 static int stats_get_links_blocked(qdr_global_stats_t *stats) { return stats->links_blocked; }
 static int stats_get_deliveries_redirected_to_fallback(qdr_global_stats_t *stats) { return stats->deliveries_redirected_to_fallback; }
+
+qd_alloc_stats_t *alloc_stats_qd_bitmask_t(void);
+qd_alloc_stats_t *alloc_stats_qd_buffer_t(void);
+qd_alloc_stats_t *alloc_stats_qd_composed_field_t(void);
+qd_alloc_stats_t *alloc_stats_qd_composite_t(void);
+qd_alloc_stats_t *alloc_stats_qd_connection_t(void);
+qd_alloc_stats_t *alloc_stats_qd_hash_handle_t(void);
+qd_alloc_stats_t *alloc_stats_qd_hash_item_t(void);
+qd_alloc_stats_t *alloc_stats_qd_iterator_t(void);
+qd_alloc_stats_t *alloc_stats_qd_link_ref_t(void);
+qd_alloc_stats_t *alloc_stats_qd_link_t(void);
+qd_alloc_stats_t *alloc_stats_qd_listener_t(void);
+qd_alloc_stats_t *alloc_stats_qd_log_entry_t(void);
+qd_alloc_stats_t *alloc_stats_qd_management_context_t(void);
+qd_alloc_stats_t *alloc_stats_qd_message_content_t(void);
+qd_alloc_stats_t *alloc_stats_qd_message_t(void);
+qd_alloc_stats_t *alloc_stats_qd_node_t(void);
+qd_alloc_stats_t *alloc_stats_qd_parse_node_t(void);
+qd_alloc_stats_t *alloc_stats_qd_parsed_field_t(void);
+qd_alloc_stats_t *alloc_stats_qd_timer_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_action_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_address_config_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_address_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_connection_info_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_connection_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_connection_work_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_core_timer_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_delivery_cleanup_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_delivery_ref_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_delivery_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_field_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_general_work_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_link_ref_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_link_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_link_work_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_query_t(void);
+qd_alloc_stats_t *alloc_stats_qdr_terminus_t(void);
 
 static struct metric_definition metrics[] = {
     {"qdr_connections_total", "gauge", stats_get_connections},
@@ -509,9 +551,60 @@ static struct metric_definition metrics[] = {
 };
 static size_t metrics_length = sizeof(metrics)/sizeof(metrics[0]);
 
+static struct allocator_metric_definition allocator_metrics[] = {
+        {"qdr_allocator_qd_bitmask_t", alloc_stats_qd_bitmask_t},
+        {"qdr_allocator_qd_buffer_t", alloc_stats_qd_buffer_t},
+        {"qdr_allocator_qd_composed_field_t", alloc_stats_qd_composed_field_t},
+        {"qdr_allocator_qd_composite_t", alloc_stats_qd_composite_t},
+        {"qdr_allocator_qd_connection_t", alloc_stats_qd_connection_t},
+        {"qdr_allocator_qd_hash_handle_t", alloc_stats_qd_hash_handle_t},
+        {"qdr_allocator_qd_hash_item_t", alloc_stats_qd_hash_item_t},
+        {"qdr_allocator_qd_iterator_t", alloc_stats_qd_iterator_t},
+        {"qdr_allocator_qd_link_ref_t", alloc_stats_qd_link_ref_t},
+        {"qdr_allocator_qd_link_t", alloc_stats_qd_link_t},
+        {"qdr_allocator_qd_listener_t", alloc_stats_qd_listener_t},
+        {"qdr_allocator_qd_log_entry_t", alloc_stats_qd_log_entry_t},
+        {"qdr_allocator_qd_management_context_t", alloc_stats_qd_management_context_t},
+        {"qdr_allocator_qd_message_content_t", alloc_stats_qd_message_content_t},
+        {"qdr_allocator_qd_message_t", alloc_stats_qd_message_t},
+        {"qdr_allocator_qd_node_t", alloc_stats_qd_node_t},
+        {"qdr_allocator_qd_parse_node_t", alloc_stats_qd_parse_node_t},
+        {"qdr_allocator_qd_parsed_field_t", alloc_stats_qd_parsed_field_t},
+        {"qdr_allocator_qd_timer_t", alloc_stats_qd_timer_t},
+        {"qdr_allocator_qdr_action_t", alloc_stats_qdr_action_t},
+        {"qdr_allocator_qdr_address_config_t", alloc_stats_qdr_address_config_t},
+        {"qdr_allocator_qdr_address_t", alloc_stats_qdr_address_t},
+        {"qdr_allocator_qdr_connection_info_t", alloc_stats_qdr_connection_info_t},
+        {"qdr_allocator_qdr_connection_t", alloc_stats_qdr_connection_t},
+        {"qdr_allocator_qdr_connection_work_t", alloc_stats_qdr_connection_work_t},
+        {"qdr_allocator_qdr_core_timer_t", alloc_stats_qdr_core_timer_t},
+        {"qdr_allocator_qdr_delivery_cleanup_t", alloc_stats_qdr_delivery_cleanup_t},
+        {"qdr_allocator_qdr_delivery_ref_t", alloc_stats_qdr_delivery_ref_t},
+        {"qdr_allocator_qdr_delivery_t", alloc_stats_qdr_delivery_t},
+        {"qdr_allocator_qdr_field_t", alloc_stats_qdr_field_t},
+        {"qdr_allocator_qdr_general_work_t", alloc_stats_qdr_general_work_t},
+        {"qdr_allocator_qdr_link_ref_t", alloc_stats_qdr_link_ref_t},
+        {"qdr_allocator_qdr_link_t", alloc_stats_qdr_link_t},
+        {"qdr_allocator_qdr_link_work_t", alloc_stats_qdr_link_work_t},
+        {"qdr_allocator_qdr_query_t", alloc_stats_qdr_query_t},
+        {"qdr_allocator_qdr_terminus_t", alloc_stats_qdr_terminus_t}
+};
+static size_t allocator_metrics_length = sizeof(allocator_metrics)/sizeof(allocator_metrics[0]);
+
+#define ALLOC_DATA(S, F) ((allocator_field) {#F, (S!=NULL? S->F: 0)})
+
+typedef struct allocator_field {
+    const char* name;
+    uint64_t value;
+} allocator_field;
+
 static bool write_stats(uint8_t **position, const uint8_t * const end, const char* name, const char* type, int value)
 {
     //11 chars + type + 2*name + 20 chars for int
+    // average metric name size is 30 bytes
+    // average metric type size is 8 bytes
+    // current number of metrics is 22
+    // total metric buffer size = 22 * (11 + 8 + 2*30 + 20) = 2178
     size_t length = 11 + strlen(type) + strlen(name)*2 + 20;
     if (end - *position >= length) {
         *position += lws_snprintf((char*) *position, end - *position, "# TYPE %s %s\n", name, type);
@@ -522,9 +615,36 @@ static bool write_stats(uint8_t **position, const uint8_t * const end, const cha
     }
 }
 
+static bool write_allocator_stats(uint8_t **position, const uint8_t * const end, const char* name, allocator_field field)
+{
+    // 30 chars (static) + 2*name + 2*field.name + 20 for int
+    // average allocator metric name size is 54 bytes (name:field.name)
+    // current number of metrics is 180
+    // total allocator buffer size = 180 * (30 + 2*54 + 20) = 28440
+    size_t length = 30 + strlen(name)*2 + strlen(field.name)*2 + 20;
+    if (end - *position >= length) {
+        *position += lws_snprintf((char*) *position, end - *position, "# TYPE %s:%s_bytes gauge\n", name, field.name);
+        *position += lws_snprintf((char*) *position, end - *position, "%s:%s_bytes %"PRIu64"\n", name, field.name, field.value);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 static bool write_metric(uint8_t **position, const uint8_t * const end, metric_definition* definition, qdr_global_stats_t* stats)
 {
     return write_stats(position, end, definition->name, definition->type, definition->value(stats));
+}
+
+static bool write_allocator_metric(uint8_t **position, const uint8_t * const end, allocator_metric_definition* definition)
+{
+    qd_alloc_stats_t *allocator_stats = definition->fn();
+    if (!write_allocator_stats(position, end, definition->name, ALLOC_DATA(allocator_stats, total_alloc_from_heap))) return false;
+    if (!write_allocator_stats(position, end, definition->name, ALLOC_DATA(allocator_stats, total_free_to_heap))) return false;
+    if (!write_allocator_stats(position, end, definition->name, ALLOC_DATA(allocator_stats, held_by_threads))) return false;
+    if (!write_allocator_stats(position, end, definition->name, ALLOC_DATA(allocator_stats, batches_rebalanced_to_threads))) return false;
+    if (!write_allocator_stats(position, end, definition->name, ALLOC_DATA(allocator_stats, batches_rebalanced_to_global))) return false;
+    return true;
 }
 
 static int add_header_by_name(struct lws *wsi, const char* name, const char* value, uint8_t** position, uint8_t* end)
@@ -537,7 +657,8 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
 {
     qd_http_server_t *hs = wsi_server(wsi);
     stats_t *stats = (stats_t*) user;
-    uint8_t buffer[LWS_PRE + 2048];
+    // rationale for buffer size is explained at write_stats and write_allocator_stats
+    uint8_t buffer[LWS_PRE + 30618];
     uint8_t *start = &buffer[LWS_PRE], *position = start, *end = &buffer[sizeof(buffer) - LWS_PRE - 1];
 
     switch (reason) {
@@ -569,15 +690,26 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
                 stats->current++;
                 qd_log(hs->log, QD_LOG_DEBUG, "wrote metric %lu of %lu", stats->current, metrics_length);
             } else {
-                qd_log(hs->log, QD_LOG_DEBUG, "insufficient space in buffer");
+                qd_log(hs->log, QD_LOG_WARNING, "insufficient space in buffer");
                 break;
             }
         }
-        int n = stats->current < metrics_length ? LWS_WRITE_HTTP : LWS_WRITE_HTTP_FINAL;
+
+        int alloc_cur = 0;
+        while (alloc_cur < allocator_metrics_length) {
+            if (write_allocator_metric(&position, end, &allocator_metrics[alloc_cur])) {
+                qd_log(hs->log, QD_LOG_DEBUG, "wrote allocator metric %lu of %lu", alloc_cur, allocator_metrics_length);
+                alloc_cur++;
+            } else {
+                qd_log(hs->log, QD_LOG_WARNING, "insufficient space in buffer");
+                break;
+            }
+        }
+        int n = (stats->current < metrics_length) || (alloc_cur < allocator_metrics_length) ? LWS_WRITE_HTTP : LWS_WRITE_HTTP_FINAL;
 
         //write buffer
         size_t available = position - start;
-	if (lws_write(wsi, (unsigned char*) start, available, n) != available)
+        if (lws_write(wsi, (unsigned char*) start, available, n) != available)
             return 1;
         if (n == LWS_WRITE_HTTP_FINAL) {
             if (lws_http_transaction_completed(wsi)) return -1;
