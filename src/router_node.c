@@ -2134,7 +2134,7 @@ qdr_core_t *qd_router_core(qd_dispatch_t *qd)
 // the Q2 block.  Note that this method will likely be running on a worker
 // thread that is not the same thread that "owns" the qd_link_t passed in.
 //
-void qd_link_q2_restart_recv(qd_alloc_safe_ptr_t context)
+void qd_link_q2_restart_receive(qd_alloc_safe_ptr_t context)
 {
     qd_link_t *in_link = (qd_link_t*) qd_alloc_deref_safe_ptr(&context);
     if (!in_link)

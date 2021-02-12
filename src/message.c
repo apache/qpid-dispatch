@@ -1021,7 +1021,7 @@ void qd_message_free(qd_message_t *in_msg)
     if (!in_msg) return;
     uint32_t rc;
     qd_message_pvt_t          *msg        = (qd_message_pvt_t*) in_msg;
-    qd_message_Q2_unblocker_t  q2_unblock = {0};
+    qd_message_q2_unblocker_t  q2_unblock = {0};
 
     qd_buffer_list_free_buffers(&msg->ma_to_override);
     qd_buffer_list_free_buffers(&msg->ma_trace);
@@ -1441,7 +1441,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg = (qd_message_pvt_t*) qd_message();
         qd_connection_t *qdc = qd_link_connection(qdl);
         qd_alloc_safe_ptr_t sp = QD_SAFE_PTR_INIT(qdl);
-        qd_message_set_Q2_unblocked_handler((qd_message_t*) msg, qd_link_q2_restart_recv, sp);
+        qd_message_set_q2_unblocked_handler((qd_message_t*) msg, qd_link_q2_restart_receive, sp);
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
@@ -1853,7 +1853,7 @@ void qd_message_send(qd_message_t *in_msg,
 
     buf = msg->cursor.buffer;
 
-    qd_message_Q2_unblocker_t  q2_unblock = {0};
+    qd_message_q2_unblocker_t  q2_unblock = {0};
     pn_session_t              *pns        = pn_link_session(pnl);
     const size_t               q3_upper   = BUFFER_SIZE * QD_QLIMIT_Q3_UPPER;
 
@@ -2577,7 +2577,7 @@ void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
     LOCK(content->lock);
 
     bool                      was_blocked = !qd_message_Q2_holdoff_should_unblock((qd_message_t*) pvt);
-    qd_message_Q2_unblocker_t q2_unblock  = {0};
+    qd_message_q2_unblocker_t q2_unblock  = {0};
 
     if (pvt->is_fanout) {
         buf = start_buf;
@@ -2921,9 +2921,9 @@ int qd_message_stream_data_append(qd_message_t *message, qd_buffer_list_t *data,
 }
 
 
-void qd_message_set_Q2_unblocked_handler(qd_message_t *msg,
-                                         qd_message_Q2_unblocked_handler_t callback,
-                                         const qd_alloc_safe_ptr_t context)
+void qd_message_set_q2_unblocked_handler(qd_message_t *msg,
+                                         qd_message_q2_unblocked_handler_t callback,
+                                         qd_alloc_safe_ptr_t context)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
 

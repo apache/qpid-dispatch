@@ -75,9 +75,9 @@ DEQ_DECLARE(qd_message_stream_data_t, qd_message_stream_data_list_t);
 
 
 typedef struct {
-    qd_message_Q2_unblocked_handler_t  handler;
+    qd_message_q2_unblocked_handler_t  handler;
     qd_alloc_safe_ptr_t                context;
-} qd_message_Q2_unblocker_t;
+} qd_message_q2_unblocker_t;
 
 
 // TODO - consider using pointers to qd_field_location_t below to save memory
@@ -134,7 +134,7 @@ typedef struct {
     uint64_t             bytes_received;                 // bytes returned by pn_link_recv() when enforcing max_message_size
     uint32_t             fanout;                         // The number of receivers for this message, including in-process subscribers.
 
-    qd_message_Q2_unblocker_t q2_unblocker;
+    qd_message_q2_unblocker_t q2_unblocker;              // callback and context to signal Q2 unblocked to receiver
 
     bool                 ma_parsed;                      // have parsed annotations in incoming message
     bool                 discard;                        // Should this message be discarded?

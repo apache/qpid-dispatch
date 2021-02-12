@@ -565,14 +565,14 @@ bool qd_message_is_Q2_blocked(const qd_message_t *msg);
  *
  * @param msg The message to monitor.
  * @param callback The method to invoke
- * @param ptr safe pointer holding the context pointer
+ * @param context safe pointer holding the context
  */
 
-typedef void (*qd_message_Q2_unblocked_handler_t)(const qd_alloc_safe_ptr_t context);
-void qd_message_set_Q2_unblocked_handler(qd_message_t *msg,
-                                         qd_message_Q2_unblocked_handler_t callback,
-                                         const qd_alloc_safe_ptr_t context);
-void qd_message_clear_Q2_unblocked_handler(qd_message_t *msg);
+typedef void (*qd_message_q2_unblocked_handler_t)(qd_alloc_safe_ptr_t context);
+void qd_message_set_q2_unblocked_handler(qd_message_t *msg,
+                                         qd_message_q2_unblocked_handler_t callback,
+                                         qd_alloc_safe_ptr_t context);
+void qd_message_clear_q2_unblocked_handler(qd_message_t *msg);
 
 /**
  * Return message aborted state
