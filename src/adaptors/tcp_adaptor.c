@@ -567,7 +567,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         int read = handle_incoming(conn);
         conn->last_in_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_in += read;
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes", conn->conn_id, read);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes. Total read %"PRIu64" bytes", conn->conn_id, read, conn->bytes_in);
         while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
@@ -583,9 +583,9 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                 }
             }
         }
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %zu bytes", conn->conn_id, written);
         conn->last_out_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_out += written;
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %zu bytes. Total written %"PRIu64" bytes", conn->conn_id, written, conn->bytes_out);
         while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
@@ -1527,8 +1527,12 @@ static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bo
         qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
         if (conn->in_list) {
             DEQ_REMOVE(tcp_adaptor->connections, conn);
-            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_del_tcp_connection_CT %s (%zu)",
-                   conn->conn_id, conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+                   "[C%"PRIu64"] qdr_del_tcp_connection_CT %s deleted. bytes_in=%"PRIu64", bytes_out=%"PRId64", "
+                   "opened_time=%"PRId64", last_in_time=%"PRId64", last_out_time=%"PRId64". Connections remaining %zu",
+                   conn->conn_id, conn->config.host_port,
+                   conn->bytes_in, conn->bytes_out, conn->opened_time, conn->last_in_time, conn->last_out_time,
+                   DEQ_SIZE(tcp_adaptor->connections));
         }
         free_qdr_tcp_connection(conn);
     }
