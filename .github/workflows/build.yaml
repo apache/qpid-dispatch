@@ -121,7 +121,7 @@ jobs:
             "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
             "-DCMAKE_BUILD_TYPE=${BuildType}" \
             "-GNinja" \
-            ${ProtonCMakeExtraArgs}
+            ${{env.ProtonCMakeExtraArgs}}
 
       - name: qpid-proton cmake build/install
         run: cmake --build "${ProtonBuildDir}" --config ${BuildType} -t install
@@ -137,7 +137,7 @@ jobs:
             "-DCMAKE_BUILD_TYPE=${BuildType}" \
             "-DPYTHON_TEST_COMMAND='-m;pytest;-vs;--junit-prefix=pytest.\${py_test_module};--junit-xml=junitxmls/\${py_test_module}.xml;--pyargs;\${py_test_module}'" \
             "-GNinja" \
-            ${DispatchCMakeExtraArgs}
+            ${{env.DispatchCMakeExtraArgs}}
 
       - name: qpid-dispatch cmake build/install
         run: cmake --build "${DispatchBuildDir}" --config ${BuildType} -t install
