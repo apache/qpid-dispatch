@@ -22,6 +22,7 @@
 #include <proton/netaddr.h>
 #include <proton/proactor.h>
 #include <proton/raw_connection.h>
+#include "qpid/dispatch/alloc_pool.h"
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/protocol_adaptor.h"
 #include "delivery.h"
@@ -79,6 +80,8 @@ struct qdr_tcp_connection_t {
 };
 
 DEQ_DECLARE(qdr_tcp_connection_t, qdr_tcp_connection_list_t);
+ALLOC_DECLARE(qdr_tcp_connection_t);
+ALLOC_DEFINE(qdr_tcp_connection_t);
 
 typedef struct qdr_tcp_adaptor_t {
     qdr_core_t               *core;
@@ -241,7 +244,7 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
     }
     sys_mutex_free(tc->activation_lock);
     //proactor will free the socket
-    free(tc);
+    free_qdr_tcp_connection_t(tc);
 }
 
 static void handle_disconnected(qdr_tcp_connection_t* conn)
@@ -597,7 +600,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
 
 static qdr_tcp_connection_t *qdr_tcp_connection_ingress(qd_tcp_listener_t* listener)
 {
-    qdr_tcp_connection_t* tc = NEW(qdr_tcp_connection_t);
+    qdr_tcp_connection_t* tc = new_qdr_tcp_connection_t();
     ZERO(tc);
     tc->activation_lock = sys_mutex();
     tc->ingress = true;
@@ -682,7 +685,7 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
 
 static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_bridge_config_t *config, qd_server_t *server, qdr_delivery_t *initial_delivery)
 {
-    qdr_tcp_connection_t* tc = NEW(qdr_tcp_connection_t);
+    qdr_tcp_connection_t* tc = new_qdr_tcp_connection_t();
     ZERO(tc);
     tc->activation_lock = sys_mutex();
     if (initial_delivery) {
