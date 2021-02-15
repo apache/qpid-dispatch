@@ -64,7 +64,6 @@ struct qdr_http2_session_data_t {
     nghttp2_session             *session;    // A pointer to the nghttp2s' session object
     qd_http2_stream_data_list_t  streams;    // A session can have many streams.
     qd_http2_buffer_list_t       buffs;      // Buffers for writing
-    bool                         max_buffs_in_pool;
 };
 
 struct qdr_http2_stream_data_t {
