@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@patternfly/patternfly": "^4.70.2",
-    "@patternfly/react-charts": "^5.1.6",
+    "@patternfly/react-charts": "^6.14.1",
     "@patternfly/react-core": "^4.84.4",
     "@patternfly/react-icons": "^4.7.22",
     "@patternfly/react-styles": "^4.7.22",
