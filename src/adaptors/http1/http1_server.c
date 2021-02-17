@@ -529,11 +529,15 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_CLOSED_READ: {
+        if (hconn->q2_blocked) {
+            hconn->q2_blocked = false;
+            // drain any pending buffers blocked by Q2
+            _handle_conn_read_event(hconn);
+        }
         // notify the codec so it can complete the current response
         // message (response body terminated on connection closed)
         h1_codec_connection_rx_closed(hconn->http_conn);
         pn_raw_connection_close(hconn->raw_conn);
-        hconn->q2_blocked = false;
         break;
     }
 
@@ -601,7 +605,8 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
-        _handle_conn_need_read_buffers(hconn);
+        if (!hconn->q2_blocked)
+            _handle_conn_need_read_buffers(hconn);
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
@@ -1136,7 +1141,7 @@ void qdr_http1_server_core_link_flow(qdr_http1_adaptor_t    *adaptor,
 
     if (hconn->in_link_credit > 0) {
 
-        if (hconn->raw_conn)
+        if (hconn->raw_conn && !hconn->q2_blocked)
             qda_raw_conn_grant_read_buffers(hconn->raw_conn);
 
         // check for pending responses that are blocked for credit
