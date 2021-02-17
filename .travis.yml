@@ -131,7 +131,6 @@ addons:
     - asciidoctor
     - dblatex
     # unit test requirement
-    - python-unittest2
     - tox
     # code coverage
     - lcov

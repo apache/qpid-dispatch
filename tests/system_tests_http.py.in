@@ -57,14 +57,10 @@ class RouterTestHttp(TestCase):
 
     @classmethod
     def get(cls, url, use_ca=True):
-        if sys.version_info >= (2, 7):
-            if use_ca:
-                http_data = urlopen(url, cafile=cls.ssl_file('ca-certificate.pem'))
-            else:
-                http_data = urlopen(url)
+        if use_ca:
+            http_data = urlopen(url, cafile=cls.ssl_file('ca-certificate.pem'))
         else:
-            req = urllib.Request(url=url)
-            http_data = urlopen(req)
+            http_data = urlopen(url)
         return http_data.read().decode('utf-8')
 
     @classmethod
@@ -213,10 +209,6 @@ class RouterTestHttp(TestCase):
         self.assertRaises(URLError, urlopen, "https://localhost:%d/nosuch" % r.ports[0])
 
     def test_http_metrics(self):
-
-        if not sys.version_info >= (2, 7):
-            return
-
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.METRICS'}),
             ('listener', {'port': self.get_port(), 'http': 'yes'}),
@@ -252,10 +244,6 @@ class RouterTestHttp(TestCase):
             if t.ex: raise t.ex
 
     def test_http_healthz(self):
-
-        if not sys.version_info >= (2, 7):
-            return
-
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.HEALTHZ'}),
             ('listener', {'port': self.get_port(), 'http': 'yes'}),
@@ -332,28 +320,24 @@ class RouterTestHttp(TestCase):
         # authenticatePeer=True requires a client cert
         self.assertRaises((URLError, ssl.SSLError), self.assert_get, "https://localhost:%s" % r.ports[2])
 
-        # could not provide key password on python 2.6
-        if sys.version_info >= (2, 7):
-            # Provide client cert
+        # Provide client cert
+        self.assert_get_cert("https://localhost:%d" % r.ports[2])
+
+        # Try a get on the HTTP listener we are going to delete
+        self.assert_get_cert("https://localhost:%d" % r.ports[3])
+
+        if not self.skip_delete_http_listener_test:
+            # Delete the listener with name 'delete-me'
+            long_type = 'org.apache.qpid.dispatch.listener'
+            mgmt = QdManager(self, address=address())
+            mgmt.delete(long_type, name=name)
+
+            # Make sure that the listener got deleted.
+            ret_val = retry(lambda: self.is_get_request_failing("https://localhost:%s/system_tests_http.txt" % r.ports[3], use_get_cert=True), timeout=10, delay=2)
+            self.assertTrue(ret_val)
+
+            # Make sure other ports are working normally after the above delete.
             self.assert_get_cert("https://localhost:%d" % r.ports[2])
-
-            # Try a get on the HTTP listener we are going to delete
-            self.assert_get_cert("https://localhost:%d" % r.ports[3])
-
-            if not self.skip_delete_http_listener_test:
-                # Delete the listener with name 'delete-me'
-                long_type = 'org.apache.qpid.dispatch.listener'
-                mgmt = QdManager(self, address=address())
-                mgmt.delete(long_type, name=name)
-
-                # Make sure that the listener got deleted.
-                ret_val = retry(lambda: self.is_get_request_failing("https://localhost:%s/system_tests_http.txt" % r.ports[3], use_get_cert=True), timeout=10, delay=2)
-                self.assertTrue(ret_val)
-
-                # Make sure other ports are working normally after the above delete.
-                self.assert_get_cert("https://localhost:%d" % r.ports[2])
-
-
 
 
 if __name__ == '__main__':

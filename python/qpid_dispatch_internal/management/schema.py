@@ -34,9 +34,9 @@ from __future__ import print_function
 
 import sys
 import traceback
+from collections import OrderedDict
 from qpid_dispatch.management.entity import EntityBase
 from qpid_dispatch.management.error import NotImplementedStatus
-from ..compat import OrderedDict
 from ..compat import PY_STRING_TYPE
 from ..compat import PY_TEXT_TYPE
 from ..compat import dict_keys

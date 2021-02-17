@@ -34,8 +34,6 @@ from qpid_dispatch_site import VERSION
 from proton import SSLDomain, Url
 from proton.utils import SyncRequestResponse, BlockingConnection
 
-def version_supports_mutually_exclusive_arguments():
-    return sys.version_info >= (2,8)
 
 class UsageError(Exception):
     """

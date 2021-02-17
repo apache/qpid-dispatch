@@ -25,8 +25,7 @@ from qpid_dispatch_internal.tools.command import (main,
                                                   parse_args_qdstat,
                                                   parse_args_qdmanage,
                                                   _qdmanage_parser,
-                                                  _qdstat_parser,
-                                                  version_supports_mutually_exclusive_arguments)
+                                                  _qdstat_parser)
 
 from system_test import unittest
 
@@ -64,11 +63,6 @@ class TestParseArgsQdstat(unittest.TestCase):
         self.parser.print_help()
 
     def test_parse_args_qdstat_mutually_exclusive(self):
-        if not version_supports_mutually_exclusive_arguments():
-            #unittest.skip also not supported
-            print("skipping: Mutually_exclusive options not working on python 2.6")
-            return
-
         options1 = ["-g", "-c",
                     "-l","-n","-e","-a","-m","--autolinks","--linkroutes","--log",
                     "--all-entities"]

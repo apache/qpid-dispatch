@@ -47,19 +47,7 @@ from threading import Event
 import json
 import uuid
 
-is_python2 = sys.version_info[0] == 2
-
-# DISPATCH-1443: for python < 2.7 use unittest2 since the default unittest for
-# older versions lacks features we need:
-#
-if is_python2 and sys.version_info[1] < 7:
-    # python < 2.7:
-    try:
-        import unittest2 as unittest
-    except ImportError:
-        raise Exception("Python unittest2 not installed - see README")
-else:
-    import unittest
+import unittest
 
 import proton
 from proton import Message
@@ -87,6 +75,10 @@ try:
 except ImportError as err:
     qm = None  # pylint: disable=invalid-name
     MISSING_MODULES.append(str(err))
+
+
+is_python2 = sys.version_info[0] == 2
+
 
 def find_exe(program):
     """Find an executable in the system PATH"""
@@ -844,60 +836,15 @@ class TestCase(unittest.TestCase, Tester):  # pylint: disable=too-many-public-me
             del cls.tester
 
     def setUp(self):
-        # Python < 2.7 will call setUp on the system_test.TestCase class
-        # itself as well as the subclasses. Ignore that.
-        if self.__class__ is TestCase: return
-        # Hack to support setUpClass on older python.
-        # If the class has not already been set up, do it now.
-        if not hasattr(self.__class__, 'tester'):
-            try:
-                self.setUpClass()
-            except:
-                if hasattr(self.__class__, 'tester'):
-                    self.__class__.tester.teardown()
-                raise
         Tester.setup(self)
 
     def tearDown(self):
-        # Python < 2.7 will call tearDown on the system_test.TestCase class
-        # itself as well as the subclasses. Ignore that.
-        if self.__class__ is TestCase: return
         Tester.teardown(self)
-        # Hack to support tearDownClass on older versions of python.
-        if hasattr(self.__class__, '_tear_down_class'):
-            self.tearDownClass()
-
-    def skipTest(self, reason):
-        """Workaround missing unittest.TestCase.skipTest in python 2.6.
-        The caller must return in order to end the test"""
-        if hasattr(unittest.TestCase, 'skipTest'):
-            unittest.TestCase.skipTest(self, reason)
-        else:
-            print("Skipping test %s: %s" % (self.id(), reason))
-
-    # Hack to support tearDownClass on older versions of python.
-    # The default TestLoader sorts tests alphabetically so we insert
-    # a fake tests that will run last to call tearDownClass.
-    # NOTE: definitely not safe for a parallel test-runner.
-    if not hasattr(unittest.TestCase, 'tearDownClass'):
-        def test_zzzz_teardown_class(self):
-            """Fake test to call tearDownClass"""
-            if self.__class__ is not TestCase:
-                self.__class__._tear_down_class = True
 
     def assert_fair(self, seq):
         avg = sum(seq)/len(seq)
         for i in seq:
             assert i > avg/2, "Work not fairly distributed: %s"%seq
-
-    if not hasattr(unittest.TestCase, 'assertIn'):
-        def assertIn(self, item, items, msg=None):
-            """For Python < 2.7"""
-            assert item in items, msg or "%s not in %s%s"
-
-    if not hasattr(unittest.TestCase, 'assertNotIn'):
-        def assertNotIn(self, item, items, msg=None):
-            assert item not in items, msg or "%s not in %s%s"
 
     if not hasattr(unittest.TestCase, 'assertRegex'):
         def assertRegex(self, text, regexp, msg=None):
@@ -949,11 +896,7 @@ class SkipIfNeeded(object):
             """
             instance = args[0]
             if self.skip:
-                if sys.version_info < (2, 7):
-                    print("%s -> skipping (python<2.7) [%s] ..." % (f.__name__, self.reason))
-                    return
-                else:
-                    instance.skipTest(self.reason)
+                instance.skipTest(self.reason)
             return f(*args, **kwargs)
 
         return wrap

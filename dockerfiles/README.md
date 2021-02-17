@@ -42,7 +42,7 @@ The dockerfiles follow these steps before launching the dispatch router
 * To build the ubuntu docker file
  * sudo docker build -t docker-image-name --file=Dockerfile-ubuntu  .  (substitute docker-image-name with your own image name)
 * To build the centos docker file
- * sudo docker build -t docker-image-name --file=Dockerfile-centos  .  (substitute docker-image-name with your own image name)
+ * sudo docker build -t docker-image-name --file=Dockerfile-centos7 .  (substitute docker-image-name with your own image name)
 
 * To run the fedora/ubuntu/centos docker image
  * sudo docker run -i -t docker-image-name (substitute docker-image-name with your own image name)
@@ -79,4 +79,3 @@ Uncomment the line *RUN ctest -VV*  to run the dispatch unit and system tests.
 
 ####Note
 These dockerfiles are provided for developers to quickly get started with the dispatch router and are not intended for use in production environments.
-

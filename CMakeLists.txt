@@ -108,33 +108,13 @@ elseif(PYTHON_VERSION_MAJOR STREQUAL 2)
     set(PY_STRING "python")
 endif()
 
-enable_testing()
-
-# python unittest
-# For versions < 2.7 the developer needs to install the unittest2
-# module (available via 'yum install python-unittest2' or 'pip install unittest2'
-#
-if(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-  set(PYTHON_TEST_COMMAND "unit2")
-  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
-                  RESULT_VARIABLE UNITTEST_MISSING
-                  ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(UNITTEST_MISSING)
-    message(WARNING "python-unittest2 is not installed. ***unit tests cannot be run***\ntry 'pip install python-unittest2' to install python-unittest2")
-    # add bogus test for folk who may have missed the cmake warning
-    add_test(WARNING_python_unittest2_module_NOT_INSTALLED false)
-  endif(UNITTEST_MISSING)
-else(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-  set(PYTHON_TEST_COMMAND "-m" "unittest")
-endif(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-
-if(NOT UNITTEST_MISSING)
-  if (NOT DEFINED DISPATCH_TEST_TIMEOUT)
+if (NOT DEFINED DISPATCH_TEST_TIMEOUT)
     set(DISPATCH_TEST_TIMEOUT "600")
-  endif (NOT DEFINED DISPATCH_TEST_TIMEOUT)
-  SET(DART_TESTING_TIMEOUT ${DISPATCH_TEST_TIMEOUT} CACHE STRING "Default CTest timeout in seconds")
-  include (CTest)
-endif(NOT UNITTEST_MISSING)
+endif (NOT DEFINED DISPATCH_TEST_TIMEOUT)
+SET(DART_TESTING_TIMEOUT ${DISPATCH_TEST_TIMEOUT} CACHE STRING "Default CTest timeout in seconds")
+include (CTest)
+
+set(PYTHON_TEST_COMMAND "-m" "unittest")
 
 set (SO_VERSION_MAJOR 2)
 set (SO_VERSION_MINOR 0)
