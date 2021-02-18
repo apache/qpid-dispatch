@@ -35,22 +35,22 @@ if IS_PY2:
 else:
     PY_STRING_TYPE = str
 
-    def check_output(args, stdin=None, stderr=None, shell=False, universal_newlines=False, **kwargs):
-        """
-        Run command args and return its output as a byte string.
-        kwargs are passed through to L{subprocess.Popen}
-        @return: stdout of command (mixed with stderr if stderr=STDOUT)
-        @raise L{CalledProcessError}: If command returns non-0 exit status.
-        """
-        if "stdout" in kwargs:
-            raise ValueError("Must not specify stdout in check_output")
-        p = Popen(args, stdout=PIPE, stdin=stdin, stderr=stderr, shell=shell, universal_newlines=universal_newlines, **kwargs)
-        out, err = p.communicate()
-        if p.returncode:
-            e = CalledProcessError(p.returncode, args)
-            e.output = err or out
-            raise e
-        return out
+def check_output(args, stdin=None, stderr=None, shell=False, universal_newlines=False, **kwargs):
+    """
+    Run command args and return its output as a byte string.
+    kwargs are passed through to L{subprocess.Popen}
+    @return: stdout of command (mixed with stderr if stderr=STDOUT)
+    @raise L{CalledProcessError}: If command returns non-0 exit status.
+    """
+    if "stdout" in kwargs:
+        raise ValueError("Must not specify stdout in check_output")
+    p = Popen(args, stdout=PIPE, stdin=stdin, stderr=stderr, shell=shell, universal_newlines=universal_newlines, **kwargs)
+    out, err = p.communicate()
+    if p.returncode:
+        e = CalledProcessError(p.returncode, args)
+        e.output = err or out
+        raise e
+    return out
 
 def help2txt(help_out):
     VALUE = r"(?:[\w-]+|<[^>]+>)"
