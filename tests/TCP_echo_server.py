@@ -88,7 +88,7 @@ def split_chunk_for_display(raw_bytes):
 
 class TcpEchoServer:
 
-    def __init__(self, prefix="ECHO_SERVER", port="0", echo_count=0, timeout=0.0, logger=None):
+    def __init__(self, prefix="ECHO_SERVER", port="0", echo_count=0, timeout=0.0, logger=None, d1968=False):
         """
         Start echo server in separate thread
 
@@ -105,6 +105,7 @@ class TcpEchoServer:
         self.echo_count = echo_count
         self.timeout = timeout
         self.logger = logger
+        self.d1968 = d1968
         self.keep_running = True
         self.HOST = '127.0.0.1'
         self.is_running = False
@@ -165,7 +166,11 @@ class TcpEchoServer:
                             else:
                                 pass  # Only listener 'sock' has None in opaque data field
                         else:
-                            total_echoed += self.do_service(key, mask, sel, self.logger)
+                            n_echoed = self.do_service(key, mask, sel, self.logger, self.d1968)
+                            if n_echoed < 0:
+                                self.exit_status = "Exiting due to d1968 test socket closure. Total echoed = %d" % total_echoed
+                                break
+                            total_echoed += n_echoed
                 else:
                     pass   # select timeout. probably.
 
@@ -184,7 +189,7 @@ class TcpEchoServer:
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
         sel.register(conn, events, data=ClientRecord(addr))
 
-    def do_service(self, key, mask, sel, logger):
+    def do_service(self, key, mask, sel, logger, d1968):
         retval = 0
         sock = key.fileobj
         data = key.data
@@ -208,6 +213,11 @@ class TcpEchoServer:
                 data.outb += recv_data
                 logger.log('%s read from: %s:%d len:%d: %s' % (self.prefix, data.addr[0], data.addr[1], len(recv_data),
                                                                split_chunk_for_display(recv_data)))
+                if d1968:
+                    logger.log('%s Closing connection to %s:%d due to d1968' % (self.prefix, data.addr[0], data.addr[1]))
+                    sel.unregister(sock)
+                    sock.close()
+                    return -1
                 sel.modify(sock, selectors.EVENT_READ | selectors.EVENT_WRITE, data=data)
             else:
                 logger.log('%s Closing connection to %s:%d' % (self.prefix, data.addr[0], data.addr[1]))
@@ -264,6 +274,9 @@ def main(argv):
     p.add_argument('--log', '-l',
                    action='store_true',
                    help='Write activity log to console')
+    p.add_argument('--D1968',
+                   action='store_true',
+                   help='Close client connection as soon as data arrives. TEST ONLY DISPATCH-1968')
     del argv[0]
     args = p.parse_args(argv)
 
@@ -292,7 +305,7 @@ def main(argv):
                         print_to_console=args.log,
                         save_for_dump=False)
 
-        server = TcpEchoServer(prefix, port, args.echo, args.timeout, logger)
+        server = TcpEchoServer(prefix, port, args.echo, args.timeout, logger, args.D1968)
 
         keep_running = True
         while keep_running:

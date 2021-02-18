@@ -374,7 +374,7 @@ class TcpAdaptor(TestCase):
             cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
             server = TcpEchoServer(prefix=server_prefix,
                                    port=cls.tcp_server_listener_ports[rtr],
-                                   logger=server_logger)
+                                   logger=server_logger, d1968=True)
             assert server.is_running
             cls.echo_servers[rtr] = server
 
