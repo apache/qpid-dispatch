@@ -382,10 +382,6 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn, bool on_shutdo
         buff = DEQ_HEAD(http_conn->granted_read_buffs);
     }
 
-    if (http_conn->delete_egress_connections) {
-        http_conn->config = 0;
-    }
-
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Freeing http2 connection in free_qdr_http2_connection", http_conn->conn_id);
 
     free_qdr_http2_connection_t(http_conn);
@@ -872,13 +868,13 @@ static void _http_record_request(qdr_http2_connection_t *conn, qdr_http2_stream_
             remote_addr = conn->remote_address;
         }
     } else {
-        remote_addr = conn->config->host;
+        remote_addr = conn->config?conn->config->host:0;
     }
     qd_http_record_request(http2_adaptor->core,
                            stream_data->method,
                            stream_data->request_status,
-                           conn->config->address,
-                           remote_addr, conn->config->site,
+                           conn->config?conn->config->address:0,
+                           remote_addr, conn->config?conn->config->site:0,
                            stream_data->remote_site,
                            conn->ingress, stream_data->bytes_in, stream_data->bytes_out,
                            stream_data->stop && stream_data->start ? stream_data->stop - stream_data->start : 0);
@@ -2094,6 +2090,8 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
             conn->stream_dispatcher_stream_data = 0;
 
             if (conn->delete_egress_connections) {
+                // The config has already been freed by the qd_http_connector_decref() function, set it to zero here
+                conn->config = 0;
                 close_connections(conn);
             }
         }
