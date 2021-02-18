@@ -25,11 +25,32 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
+from subprocess import Popen, PIPE, CalledProcessError
 
 import re, sys
-from qpid_dispatch_internal.compat import PY_STRING_TYPE
-from qpid_dispatch_internal.compat.subproc import check_output
 
+IS_PY2 = sys.version_info[0] == 2
+if IS_PY2:
+    PY_STRING_TYPE = basestring  # noqa: F821
+else:
+    PY_STRING_TYPE = str
+
+    def check_output(args, stdin=None, stderr=None, shell=False, universal_newlines=False, **kwargs):
+        """
+        Run command args and return its output as a byte string.
+        kwargs are passed through to L{subprocess.Popen}
+        @return: stdout of command (mixed with stderr if stderr=STDOUT)
+        @raise L{CalledProcessError}: If command returns non-0 exit status.
+        """
+        if "stdout" in kwargs:
+            raise ValueError("Must not specify stdout in check_output")
+        p = Popen(args, stdout=PIPE, stdin=stdin, stderr=stderr, shell=shell, universal_newlines=universal_newlines, **kwargs)
+        out, err = p.communicate()
+        if p.returncode:
+            e = CalledProcessError(p.returncode, args)
+            e.output = err or out
+            raise e
+        return out
 
 def help2txt(help_out):
     VALUE = r"(?:[\w-]+|<[^>]+>)"
