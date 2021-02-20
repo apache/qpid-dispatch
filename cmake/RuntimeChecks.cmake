@@ -106,9 +106,17 @@ elseif(RUNTIME_CHECK STREQUAL "asan")
     message(FATAL_ERROR "libubsan not installed - address sanitizer not available")
   endif(UBSAN_LIBRARY-NOTFOUND)
   message(STATUS "Runtime memory checker: gcc/clang address sanitizers")
+  option(SANITIZE_3RD_PARTY "Detect leaks in 3rd party libraries used by Dispatch while running tests" OFF)
+  file (COPY "${CMAKE_SOURCE_DIR}/tests/lsan.supp" DESTINATION "${CMAKE_BINARY_DIR}/tests")
+  if (NOT SANITIZE_3RD_PARTY)
+    # Append wholesale library suppressions
+    #  this is necessary if target system does not have debug symbols for these libraries installed
+    #  and therefore the more specific suppressions do not match
+    file(APPEND "${CMAKE_BINARY_DIR}/tests/lsan.supp" "\nleak:/libpython2.*.so\nleak:/libpython3.*.so\n")
+  endif ()
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=address,undefined")
   set(RUNTIME_ASAN_ENV_OPTIONS "detect_leaks=true suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
-  set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp")
+  set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_BINARY_DIR}/tests/lsan.supp")
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()
