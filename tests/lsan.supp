@@ -33,9 +33,6 @@ leak:^pgetaddrinfo$
 # to be triaged; system_tests_link_routes
 leak:^pni_init_default_logger$
 
-# DISPATCH-1844 - shutdown leak
-leak:sys_mutex
-
 # expected, not a bug:
 #
 leak:qdr_core_subscribe
