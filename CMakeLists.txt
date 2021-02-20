@@ -62,8 +62,14 @@ else (NOT APPLE)
   set(rt "")
 endif (NOT APPLE)
 
-find_package(PythonInterp REQUIRED)
-find_package(PythonLibs REQUIRED)
+# This setting mirrors FindPythonInterp behavior on Windows/macOS, which did not consult registry/frameworks first.
+if (NOT DEFINED Python_FIND_REGISTRY)
+    set(Python_FIND_REGISTRY "LAST")
+endif ()
+if (NOT DEFINED Python_FIND_FRAMEWORK)
+    set(Python_FIND_FRAMEWORK "LAST")
+endif ()
+find_package(Python REQUIRED COMPONENTS Interpreter Development)
 find_package(Threads REQUIRED)
 find_package(Proton 0.33.0 REQUIRED COMPONENTS Core Proactor)
 message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERSION}\")" )
@@ -102,9 +108,9 @@ if (LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
 endif(LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
 
 # Python
-if (PYTHON_VERSION_MAJOR STREQUAL 3)
+if (Python_VERSION_MAJOR STREQUAL 3)
     set(PY_STRING "python3")
-elseif(PYTHON_VERSION_MAJOR STREQUAL 2)
+elseif(Python_VERSION_MAJOR STREQUAL 2)
     set(PY_STRING "python")
 endif()
 
@@ -142,7 +148,7 @@ set(CONSOLE_BASE_INSTALL_DIR "share/qpid-dispatch/console")
 set(CONSOLE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CONSOLE_BASE_INSTALL_DIR}")
 set(CONSOLE_STAND_ALONE_INSTALL_DIR "${CONSOLE_INSTALL_DIR}")
 
-set(RUN ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/run.py)
+set(RUN ${Python_EXECUTABLE} ${CMAKE_BINARY_DIR}/run.py)
 
 # define the configuration directory based on whether or not the install prefix is defined
 if(NOT DEFINED SYSCONF_INSTALL_DIR)
@@ -173,7 +179,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/include
     ${Proton_Proactor_INCLUDE_DIRS}
     ${Proton_Core_INCLUDE_DIRS}
-    ${PYTHON_INCLUDE_PATH}
+    ${Python_INCLUDE_DIRS}
     )
 
 # Originally from the LLVM project, https://opensource.apple.com/source/llvmCore/llvmCore-2358.3/CMakeLists.txt.auto.html
