@@ -36,10 +36,6 @@ leak:^pni_init_default_logger$
 # DISPATCH-1844 - shutdown leak
 leak:sys_mutex
 
-# expected, not a bug:
-#
-leak:qdr_core_subscribe
-
 # Ubuntu 16.04 (Xenial)
 #
 leak:_ctypes_alloc_format_string
