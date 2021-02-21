@@ -49,7 +49,7 @@ class RestartRecord():
         self.lineno = _lineno
         try:
             self.datetime = datetime.datetime.strptime(self.line[:26], '%Y-%m-%d %H:%M:%S.%f')
-        except BaseException:
+        except:
             self.datetime = datetime.datetime(1970, 1, 1)
 
     def __repr__(self):
@@ -225,6 +225,6 @@ def which_router_id_tod(routers, id, at_time):
 if __name__ == "__main__":
     try:
         pass
-    except BaseException:
+    except:
         traceback.print_exc(file=sys.stdout)
         pass

@@ -118,7 +118,7 @@ class RouterTestSslClient(RouterTestSslBase):
             OPENSSL_OUT_VER = m.group(0)
             OPENSSL_VER_1_1_GT = StrictVersion(OPENSSL_OUT_VER) >= StrictVersion('1.1')
             print("OpenSSL Version found = %s" % OPENSSL_OUT_VER)
-        except BaseException:
+        except:
             pass
 
     # Following variables define TLS versions allowed by openssl
@@ -135,7 +135,7 @@ class RouterTestSslClient(RouterTestSslBase):
         try:
             ssl.TLSVersion.TLSv1_3
             OPENSSL_HAS_TLSV1_3 = True
-        except BaseException:
+        except:
             pass
 
     # Test if Proton supports TLSv1_3
@@ -392,7 +392,7 @@ class RouterTestSslClient(RouterTestSslBase):
             return False
         except proton.ConnectionException:
             return False
-        except BaseException:
+        except:
             return False
 
         # TLS version provided was accepted

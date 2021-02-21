@@ -194,7 +194,7 @@ def port_available(port, protocol_family='IPv4'):
         s.connect((host, port))
     except socket.error as e:
         available = e.errno == errno.ECONNREFUSED
-    except BaseException:
+    except:
         pass
 
     s.close()
@@ -526,7 +526,7 @@ class Qdrouterd(Process):
         if self._management:
             try:
                 self._management.close()
-            except BaseException:
+            except:
                 pass
             self._management = None
 
@@ -661,7 +661,7 @@ class Qdrouterd(Process):
                 if result[index_host] == outs:
                     ret_val = True
             return ret_val
-        except BaseException:
+        except:
             return False
 
     def wait_address(self, address, subscribers=0, remotes=0, containers=0,
@@ -747,7 +747,7 @@ class Qdrouterd(Process):
             # Meantime the following actually tests send-thru to the router.
             node = Node.connect(self.addresses[0], router_id, timeout=1)
             return retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))
-        except BaseException:
+        except:
             return False
 
     def wait_router_connected(self, router_id, **retry_kwargs):

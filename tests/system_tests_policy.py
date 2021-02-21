@@ -1363,7 +1363,7 @@ class ConnectorPolicyMisconfiguredClient(FakeBroker):
         while keep_running:
             try:
                 self._container.process()
-            except BaseException:
+            except:
                 self._stop_thread = True
                 keep_running = False
             if self._stop_thread:
@@ -1513,7 +1513,7 @@ class ConnectorPolicyClient(FakeBroker):
                         self.request_in_flight = True
                         self.req_anonymous_sender = False
 
-            except BaseException:
+            except:
                 self._stop_thread = True
                 keep_running = False
             if self._stop_thread:
@@ -1647,7 +1647,7 @@ class ConnectorPolicySrcTgt(TestCase):
         for addr in ["examples", "$management", "playtime"]:  # allowed targets
             try:
                 res = cpc.try_sender(addr)
-            except BaseException:
+            except:
                 res = False
             self.assertTrue(res)
 
@@ -1750,7 +1750,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
         for i in range(self.MAX_SENDERS - 2):
             try:
                 res = cpc.try_sender(addr)
-            except BaseException:
+            except:
                 res = False
             self.assertTrue(res)
 

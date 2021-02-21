@@ -256,7 +256,7 @@ class DescribedType:
 
             # the remainder, no matter how unlikely, must be the delivery-tag
             self.add_field_to_dict(self.line, "delivery-tag")
-        except BaseException:
+        except:
             # delivery-id and delivery-tag are optional in subsequent transfers
             # when more=true.
             pass
@@ -846,7 +846,7 @@ class ParsedLogLine(object):
                     try:
                         lnum = int(lNumStr)
                         hasFileLine = True
-                    except BaseException:
+                    except:
                         pass
         if hasFileLine:
             self.line = self.line[:self.line.rfind('(')].rstrip()
@@ -856,7 +856,7 @@ class ParsedLogLine(object):
         self.datetime = None
         try:
             self.datetime = datetime.strptime(self.line[:26], '%Y-%m-%d %H:%M:%S.%f')
-        except BaseException:
+        except:
             # old routers flub the timestamp and don't print leading zero in uS time
             # 2018-11-18 11:31:08.269 should be 2018-11-18 11:31:08.000269
             td = self.line[:26]
@@ -869,7 +869,7 @@ class ParsedLogLine(object):
             td = '.'.join(parts)
             try:
                 self.datetime = datetime.strptime(td[:26], '%Y-%m-%d %H:%M:%S.%f')
-            except BaseException:
+            except:
                 self.datetime = datetime(1970, 1, 1)
 
         # Apply time-of-day filters
@@ -1120,7 +1120,7 @@ if __name__ == "__main__":
             else:
                 pass  # splitter does not split transfers
         pass
-    except BaseException:
+    except:
         traceback.print_exc(file=sys.stdout)
         pass
 
@@ -1135,7 +1135,7 @@ if __name__ == "__main__":
             temp = ParsedLogLine(log_index, instance, i, data[i], comn, None)
             print(temp.datetime, temp.data.conn_id, temp.data.direction, temp.data.web_show_str)
         pass
-    except BaseException:
+    except:
         traceback.print_exc(file=sys.stdout)
         pass
     comn.shorteners.short_data_names.sort_customers()

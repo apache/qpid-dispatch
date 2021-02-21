@@ -155,7 +155,7 @@ class Header:
                 return result
             if self.format == Header.COMMAS:
                 return Commas(value)
-        except BaseException:
+        except:
             return "?"
 
 
@@ -163,7 +163,7 @@ def PlainNum(value):
     try:
         ret_val = "%d" % value
         return ret_val
-    except BaseException:
+    except:
         return "%s" % value
 
 

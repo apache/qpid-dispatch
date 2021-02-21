@@ -102,7 +102,7 @@ class parsed_attach():
         # timestamp
         try:
             self.datetime = datetime.strptime(self.line[:26], '%Y-%m-%d %H:%M:%S.%f')
-        except BaseException:
+        except:
             # old routers flub the timestamp and don't print leading zero in uS time
             # 2018-11-18 11:31:08.269 should be 2018-11-18 11:31:08.000269
             td = self.line[:26]
@@ -115,7 +115,7 @@ class parsed_attach():
             td = '.'.join(parts)
             try:
                 self.datetime = datetime.strptime(td[:26], '%Y-%m-%d %H:%M:%S.%f')
-            except BaseException:
+            except:
                 self.datetime = datetime(1970, 1, 1)
         key_strace = "SERVER (trace) ["
         sti = self.line.find(key_strace)

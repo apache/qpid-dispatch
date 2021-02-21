@@ -1001,6 +1001,6 @@ if __name__ == "__main__":
 
     try:
         pass
-    except BaseException:
+    except:
         traceback.print_exc(file=sys.stdout)
         pass

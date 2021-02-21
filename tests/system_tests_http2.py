@@ -40,7 +40,7 @@ def curl_available():
                           universal_newlines=True)
         out = process.communicate()[0]
         return True
-    except BaseException:
+    except:
         return False
 
 

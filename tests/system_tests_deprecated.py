@@ -51,7 +51,7 @@ class RouterTestDeprecatedLinkRoute(TestCase):
         # Try connecting for 4 seconds. If unable to connect, just move on.
         try:
             cls.router.wait_ready(timeout=4)
-        except BaseException:
+        except:
             pass
 
     def test_deprecated_link_route(self):
@@ -86,7 +86,7 @@ class RouterTestDeprecatedLAutoLink(TestCase):
         # Try connecting for 4 seconds. If unable to connect, just move on.
         try:
             cls.router.wait_ready(timeout=4)
-        except BaseException:
+        except:
             pass
 
     def test_deprecated_auto_link(self):

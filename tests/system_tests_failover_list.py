@@ -93,7 +93,7 @@ class FailoverTest(MessagingHandler):
         fol = None
         try:
             fol = properties['failover-server-list']
-        except BaseException:
+        except:
             fol = None
 
         if self.count == 0:

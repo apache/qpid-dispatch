@@ -3509,7 +3509,7 @@ class OneRouterUnavailableCoordinatorTest(TestCase):
             try:
                 if outs['prefix'] == COORDINATOR:
                     link_route_created = True
-            except BaseException:
+            except:
                 pass
 
         self.assertTrue(link_route_created)

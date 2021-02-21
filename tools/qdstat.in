@@ -156,7 +156,7 @@ class BusManager(object):
             if first:
                 active = first.active
                 has_active = True
-        except BaseException:
+        except:
             pass
 
         if has_active:
@@ -215,12 +215,12 @@ class BusManager(object):
             try:
                 lastDlvSeconds = first_conn.lastDlvSeconds
                 has_last_dlv = True
-            except BaseException:
+            except:
                 pass
             try:
                 uptime = first_conn.uptimeSeconds
                 has_uptime = True
-            except BaseException:
+            except:
                 pass
 
         # This is so that, this qdstat can be used against older routers without Python keyerrors
@@ -338,12 +338,12 @@ class BusManager(object):
         rows.append(('Router Id',      router.id))
         try:
             rows.append(('Worker Threads', PlainNum(router.workerThreads)))
-        except BaseException:
+        except:
             pass
 
         try:
             rows.append(('Uptime',        TimeLong(router.uptimeSeconds)))
-        except BaseException:
+        except:
             pass
 
         try:
@@ -377,16 +377,16 @@ class BusManager(object):
                 rows.append(('Deliveries to Fallback',     PlainNum(router.deliveriesRedirectedToFallback)))
                 try:
                     rows.append(('Links Blocked', PlainNum(router.linksBlocked)))
-                except BaseException:
+                except:
                     pass
-            except BaseException:
+            except:
                 pass
             rows.append(('Ingress Count', PlainNum(router.deliveriesIngress)))
             rows.append(('Egress Count', PlainNum(router.deliveriesEgress)))
             rows.append(('Transit Count', PlainNum(router.deliveriesTransit)))
             rows.append(('Deliveries from Route Container', PlainNum(router.deliveriesIngressRouteContainer)))
             rows.append(('Deliveries to Route Container', PlainNum(router.deliveriesEgressRouteContainer)))
-        except BaseException:
+        except:
             pass
 
         title = "Router Statistics"
@@ -617,7 +617,7 @@ class BusManager(object):
             row.append(PlainNum(addr.deliveriesTransit))
             try:
                 row.append(PlainNum(addr.deliveriesRedirectedToFallback))
-            except BaseException:
+            except:
                 row.append("-")
             if self.opts.verbose:
                 row.append(PlainNum(addr.deliveriesToContainer))
