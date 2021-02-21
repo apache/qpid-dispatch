@@ -848,18 +848,11 @@ class TestCase(unittest.TestCase, Tester):  # pylint: disable=too-many-public-me
 
     if not hasattr(unittest.TestCase, 'assertRegex'):
         def assertRegex(self, text, regexp, msg=None):
-            """For Python < 3.2"""
-            if hasattr(unittest.TestCase, 'assertRegexpMatches'):
-                self.assertRegexpMatches(text, regexp, msg)
-            else:
-                assert re.search(regexp, text), msg or "Can't find %r in '%s'" % (regexp, text)
+            assert re.search(regexp, text), msg or "Can't find %r in '%s'" % (regexp, text)
 
     if not hasattr(unittest.TestCase, 'assertNotRegex'):
         def assertNotRegex(self, text, regexp, msg=None):
-            if hasattr(unittest.TestCase, 'assertNotRegexpMatches'):
-                self.assertNotRegexpMatches(text, regexp, msg)
-            else:
-                assert not re.search(regexp, text), msg or "Found %r in '%s'" % (regexp, text)
+            assert not re.search(regexp, text), msg or "Found %r in '%s'" % (regexp, text)
 
 
 class SkipIfNeeded(object):
