@@ -19,13 +19,14 @@
 #
 
 from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import runpy
 import sys
 import os
 from subprocess import Popen, PIPE
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 """
 Run a tool or test in a build tree with the correct PATH, PYTHONPATH, etc.
