@@ -122,7 +122,7 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
         try:
             # This will time out in 5 seconds because there is no inter-router connection
             cls.routers[1].wait_connectors(timeout=5)
-        except:
+        except BaseException:
             pass
 
         # Give some time for connector failures to be written to the log.
@@ -218,7 +218,7 @@ class RouterTestPlainSaslFailureUsingLiteral(RouterTestPlainSaslCommon):
         try:
             # This will time out in 5 seconds because there is no inter-router connection
             cls.routers[1].wait_connectors(timeout=5)
-        except:
+        except BaseException:
             pass
 
         # Give some time for connector failures to be written to the log.
@@ -584,7 +584,7 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
         try:
             # This will time out because there is no inter-router connection
             cls.routers[1].wait_connectors(timeout=3)
-        except:
+        except BaseException:
             pass
 
     @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")

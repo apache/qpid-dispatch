@@ -105,9 +105,9 @@ class Node(object):
                                   timeout=timeout,
                                   ssl_domain=ssl_domain,
                                   sasl_enabled=sasl_enabled,
-                                  allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs != None else None,
-                                  user=str(sasl.user) if sasl and sasl.user != None else None,
-                                  password=str(sasl.password) if sasl and sasl.password != None else None)
+                                  allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs is not None else None,
+                                  user=str(sasl.user) if sasl and sasl.user is not None else None,
+                                  password=str(sasl.password) if sasl and sasl.password is not None else None)
 
     @staticmethod
     def connect(url=None, router=None, timeout=10, ssl_domain=None, sasl=None,

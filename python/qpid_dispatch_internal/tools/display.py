@@ -115,7 +115,7 @@ class Header:
 
     def formatted(self, value):
         try:
-            if value == None:
+            if value is None:
                 return ''
             if self.format == Header.NONE:
                 return value
@@ -155,7 +155,7 @@ class Header:
                 return result
             if self.format == Header.COMMAS:
                 return Commas(value)
-        except:
+        except BaseException:
             return "?"
 
 
@@ -163,7 +163,7 @@ def PlainNum(value):
     try:
         ret_val = "%d" % value
         return ret_val
-    except:
+    except BaseException:
         return "%s" % value
 
 

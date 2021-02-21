@@ -113,13 +113,13 @@ def main_except(argv):
     if not comn.args.time_start is None:
         try:
             comn.args.time_start = datetime.datetime.strptime(comn.args.time_start, "%Y-%m-%d %H:%M:%S.%f")
-        except:
+        except BaseException:
             sys.exit("ERROR: Failed to parse time_start '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_start)
 
     if not comn.args.time_end is None:
         try:
             comn.args.time_end = datetime.datetime.strptime(comn.args.time_end, "%Y-%m-%d %H:%M:%S.%f")
-        except:
+        except BaseException:
             sys.exit("ERROR: Failed to parse time_end '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_end)
 
     if not comn.args.log_modules is None:
@@ -847,7 +847,7 @@ def main_except(argv):
                 line = line[sti:]
                 try:
                     l_dict = common.ls_eval(line)
-                except:
+                except BaseException:
                     traceback.print_exc()
                     sys.stderr.write("Failed to parse router %s, line %d : %s. Analysis continuing...\n" % (plf.router.iname, plf.lineno, plf.line))
                     l_dict = {}
@@ -874,7 +874,7 @@ def main_except(argv):
                 # update this router's cost view in running table
                 if plf.router.is_interior():
                     cur_costs[plf.router.container_name] = costs_row
-            except:
+            except BaseException:
                 raise
             print("</tr>")
             # if the costs are stable across all routers then put an indicator in table

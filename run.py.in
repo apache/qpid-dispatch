@@ -81,8 +81,8 @@ env_vars = {
                                    os.path.join("${CMAKE_BINARY_DIR}", 'tools'),
                                    os.path.join("${CMAKE_SOURCE_DIR}", 'bin')] +
                                   getpath('PATH'))),
-    'MANPATH' : os.pathsep.join([os.path.join("${CMAKE_BINARY_DIR}", 'doc', 'man')] +
-                                getpath('MANPATH')),
+    'MANPATH': os.pathsep.join([os.path.join("${CMAKE_BINARY_DIR}", 'doc', 'man')] +
+                               getpath('MANPATH')),
     'SOURCE_DIR': "${CMAKE_SOURCE_DIR}",
     'BUILD_DIR': "${CMAKE_BINARY_DIR}",
     'QPID_DISPATCH_HOME': "${CMAKE_SOURCE_DIR}",

@@ -1165,7 +1165,7 @@ class ManageAutolinksTest(MessagingHandler):
                 self.send_ops()
 
     def on_link_remote_close(self, event):
-        if event.link.remote_condition != None:
+        if event.link.remote_condition is not None:
             self.error = "Received unexpected error on link-close: %s" % event.link.remote_condition.name
             self.timer.cancel()
             self.normal_conn.close()

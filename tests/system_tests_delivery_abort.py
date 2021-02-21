@@ -415,7 +415,7 @@ class MessageRouteAbortTest(MessagingHandler):
         op, size = self.program.pop(0) if len(self.program) > 0 else (None, None)
         self.logger.log("send - op=%s, size=%s" % (str(op), str(size)))
 
-        if op == None:
+        if op is None:
             return
 
         body = ""

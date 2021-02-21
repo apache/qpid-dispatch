@@ -1978,7 +1978,7 @@ class ThreeAck (MessagingHandler) :
             self.bail("out-of-order message")
             return
         self.n_received += 1
-        if self.tmp_dlv == None :
+        if self.tmp_dlv is None :
             self.tmp_dlv = dlv
 
     # We have no way, on receiver side, of tracking when sender settles.
@@ -2348,7 +2348,7 @@ class StripMessageAnnotationsBoth (MessagingHandler) :
             if event.sender.credit < 1 :
                 break
             msg = Message(body=self.n_sent)
-            annotations = {'Canis_meus' : 'id_comedit',
+            annotations = {'Canis_meus': 'id_comedit',
                            'x-opt-qd.ingress': 'ingress-router',
                            'x-opt-qd.trace': ['0/QDR.1'],
                            }
@@ -2436,7 +2436,7 @@ class StripMessageAnnotationsOut (MessagingHandler) :
 
         # The annotations that the router routinely adds
         # should all get stripped,
-        if event.message.annotations != None :
+        if event.message.annotations is not None :
             self.bail("An annotation was not stripped in egress message.")
             return
 
@@ -3509,7 +3509,7 @@ class OneRouterUnavailableCoordinatorTest(TestCase):
             try:
                 if outs['prefix'] == COORDINATOR:
                     link_route_created = True
-            except:
+            except BaseException:
                 pass
 
         self.assertTrue(link_route_created)

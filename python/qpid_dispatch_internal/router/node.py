@@ -209,7 +209,7 @@ class NodeTracker(object):
         ##
         # Add the version if we haven't already done so.
         ##
-        if node.version == None:
+        if node.version is None:
             node.version = version
 
         ##

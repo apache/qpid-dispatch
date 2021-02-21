@@ -412,7 +412,7 @@ class TopologyDispositionTests (TestCase):
                             break
                         sti += 1
                         qci += 1
-                    if error == None and oopen[qci].isdigit():
+                    if error is None and oopen[qci].isdigit():
                         error = "log %s, line '%s' published conn-id is too big" % (log_name, oopen)
                 self.assertEqual(None, error)
             self.assertEqual(None, error)
@@ -973,7 +973,7 @@ class TopologyDisposition (MessagingHandler):
                 msg = Message(body=self.n_sent)
                 msg_tag = str(self.n_sent)
                 dlv = self.sender.send(msg, tag=msg_tag)
-                if dlv == None :
+                if dlv is None :
                     self.debug_print("send failed")
                     return
                 self.message_status[msg_tag] = 'sent'

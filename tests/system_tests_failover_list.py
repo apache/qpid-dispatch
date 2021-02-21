@@ -93,11 +93,11 @@ class FailoverTest(MessagingHandler):
         fol = None
         try:
             fol = properties['failover-server-list']
-        except:
+        except BaseException:
             fol = None
 
         if self.count == 0:
-            if fol != None and fol != []:
+            if fol is not None and fol != []:
                 self.error = "Expected no failover-list, got: %r" % fol
 
         elif fol.__class__ != list:

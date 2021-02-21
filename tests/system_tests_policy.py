@@ -1363,7 +1363,7 @@ class ConnectorPolicyMisconfiguredClient(FakeBroker):
         while keep_running:
             try:
                 self._container.process()
-            except:
+            except BaseException:
                 self._stop_thread = True
                 keep_running = False
             if self._stop_thread:
@@ -1449,7 +1449,7 @@ class ConnectorPolicyMisconfigured(TestCase):
     def test_30_connector_policy_misconfigured(self):
         url = "127.0.0.1:%d" % self.remoteListenerPort
         tc = ConnectorPolicyMisconfiguredClient(url, "tc")
-        while tc.connection_error == 0 and tc._error == None:
+        while tc.connection_error == 0 and tc._error is None:
             time.sleep(0.1)
         tc.join()
         self.assertTrue(tc.connection_error == 1)
@@ -1513,7 +1513,7 @@ class ConnectorPolicyClient(FakeBroker):
                         self.request_in_flight = True
                         self.req_anonymous_sender = False
 
-            except:
+            except BaseException:
                 self._stop_thread = True
                 keep_running = False
             if self._stop_thread:
@@ -1637,7 +1637,7 @@ class ConnectorPolicySrcTgt(TestCase):
     def test_31_connector_policy(self):
         url = "127.0.0.1:%d" % self.remoteListenerPort
         cpc = ConnectorPolicyClient(url, "cpc")
-        while cpc.connection_opened == 0 and cpc._error == None:
+        while cpc.connection_opened == 0 and cpc._error is None:
             time.sleep(0.1)
         time.sleep(0.05)
         self.assertTrue(cpc.connection_error == 0)  # expect connection to stay up
@@ -1647,7 +1647,7 @@ class ConnectorPolicySrcTgt(TestCase):
         for addr in ["examples", "$management", "playtime"]:  # allowed targets
             try:
                 res = cpc.try_sender(addr)
-            except:
+            except BaseException:
                 res = False
             self.assertTrue(res)
 
@@ -1729,7 +1729,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
     def test_32_connector_policy_max_sndr_rcvr(self):
         url = "127.0.0.1:%d" % self.remoteListenerPort
         cpc = ConnectorPolicyClient(url, "cpc")
-        while cpc.connection_opened == 0 and cpc._error == None:
+        while cpc.connection_opened == 0 and cpc._error is None:
             time.sleep(0.1)
         time.sleep(0.05)
         self.assertTrue(cpc.connection_error == 0)  # expect connection to stay up
@@ -1750,7 +1750,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
         for i in range(self.MAX_SENDERS - 2):
             try:
                 res = cpc.try_sender(addr)
-            except:
+            except BaseException:
                 res = False
             self.assertTrue(res)
 

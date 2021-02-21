@@ -170,7 +170,7 @@ class SchemaTest(unittest.TestCase):
         try:
             e.nosuch = 'x'
             self.fail("Expected exception")
-        except:
+        except BaseException:
             pass
 
 

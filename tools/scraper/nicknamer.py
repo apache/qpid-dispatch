@@ -83,7 +83,7 @@ class ShortNames():
             lname = lname[1:-1]
         try:
             idx = self.longnames.index(lname)
-        except:
+        except BaseException:
             self.longnames.append(lname)
             idx = self.longnames.index(lname)
         # return as-given if short enough
@@ -119,7 +119,7 @@ class ShortNames():
             raise ValueError("Short name '%s' does not start with prefix '%s'" % (sname, self.prefix))
         try:
             lname = self.longnames[int(sname[(len(self.prefix) + 1):])]
-        except:
+        except BaseException:
             raise ValueError("Short name '%s' did not translate to a long name" % (sname))
         return "<span title=\"" + common.html_escape(lname) + sname + "</span>"
 

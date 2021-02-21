@@ -69,13 +69,13 @@ class PathEngine(object):
         ##
         while not unresolved.empty():
             u = unresolved.lowest_cost()
-            if cost[u] == None:
+            if cost[u] is None:
                 # There are no more reachable nodes in unresolved
                 break
             for v, v_cost in link_states[u].items():
                 if unresolved.contains(v):
                     alt = cost[u] + v_cost
-                    if cost[v] == None or alt < cost[v]:
+                    if cost[v] is None or alt < cost[v]:
                         hops[v] = hops[u] + 1
                         cost[v] = alt
                         prev[v] = u
@@ -222,7 +222,7 @@ class NodeSet(object):
 
         index = 0
         for i, c in self.nodes:
-            if c == None or new_cost < c or (new_cost == c and _id < i):
+            if c is None or new_cost < c or (new_cost == c and _id < i):
                 break
             index += 1
 

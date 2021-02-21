@@ -531,7 +531,7 @@ class TopologyFailover (MessagingHandler):
                         self.state_transition('final expected trace %s observed' % expected, 'bailing')
                         self.bail(None)
                         return
-                    self.state_transition("expected trace %d observed successfully %s" % (self.trace_count, expected) , 'kill_connector')
+                    self.state_transition("expected trace %d observed successfully %s" % (self.trace_count, expected), 'kill_connector')
                     self.kill_a_connector(self.kill_list[self.trace_count])
                     self.trace_count += 1
                 else :

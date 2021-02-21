@@ -34,15 +34,15 @@ import text
 Given a map of all connections with lists of the associated frames
 analyze and show per-connection, per-session, and per-link details.
 
-This is done in a two-step process: 
- * Run through the frame lists and generates an intermediate structure 
+This is done in a two-step process:
+ * Run through the frame lists and generates an intermediate structure
    with the the details for display.
  * Generate the html from the detail structure.
 This strategy allows for a third step that would allow more details
 to be gleaned from the static details. For instance, if router A
-sends a transfer to router B then router A's details could show 
+sends a transfer to router B then router A's details could show
 how long it took for the transfer to reach router B. Similarly
-router B's details could show how long ago router A sent the transfer. 
+router B's details could show how long ago router A sent the transfer.
 """
 
 
@@ -570,7 +570,7 @@ class AllDetails():
                 # session required
                 channel = plf.data.channel  # Assume in/out channels are the same for the time being
                 sess_details = conn_details.FindSession(channel)
-                if sess_details == None:
+                if sess_details is None:
                     new_id = len(conn_details.session_list)
                     sess_details = SessionDetail(new_id, conn_details, conn_details.GetSeqNo(), plf.datetime)
                     conn_details.session_list.append(sess_details)
@@ -1001,6 +1001,6 @@ if __name__ == "__main__":
 
     try:
         pass
-    except:
+    except BaseException:
         traceback.print_exc(file=sys.stdout)
         pass

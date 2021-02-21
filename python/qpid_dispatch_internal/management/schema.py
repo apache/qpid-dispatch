@@ -44,7 +44,7 @@ from ..compat import dict_items
 try:
     from ..dispatch import LogAdapter, LOG_WARNING
     logger_available = True
-except:
+except BaseException:
     # We need to do this because at compile time the schema is pulled using this code and at that time the
     # LogAdapter is not loaded. When running the router, the LogAdapter is available.
     logger_available = False
@@ -105,7 +105,7 @@ class BooleanType(Type):
             if isinstance(value, (PY_STRING_TYPE, PY_TEXT_TYPE)):
                 return self.VALUES[value.lower()]
             return bool(value)
-        except:
+        except BaseException:
             raise ValidationError("Invalid Boolean value '%r'" % value)
 
 

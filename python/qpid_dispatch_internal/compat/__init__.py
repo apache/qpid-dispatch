@@ -94,9 +94,9 @@ if IS_PY2:
             raise TypeError("%s cannot be converted to binary" % ts)
 
     def UNICODE(s):
-        if type(s) is str:
+        if isinstance(s, str):
             return s.decode("utf-8")
-        elif type(s) is unicode:  # noqa: F821
+        elif isinstance(s, unicode):  # noqa: F821
             return s
         else:
             return unicode(str(s), "utf-8")  # noqa: F821
@@ -141,9 +141,9 @@ else:
             raise TypeError("%s cannot be converted to binary" % st)
 
     def UNICODE(s):
-        if type(s) is bytes:
+        if isinstance(s, bytes):
             return s.decode("utf-8")
-        elif type(s) is str:
+        elif isinstance(s, str):
             return s
         else:
             return str(s)

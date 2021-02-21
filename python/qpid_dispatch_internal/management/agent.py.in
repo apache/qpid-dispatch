@@ -279,7 +279,7 @@ class RouterEntity(EntityAdapter):
                     raise AttributeError("Router id attribute containing character '%s' in id '%s' is disallowed." % (ch, self.attributes[u"id"]))
         try:
             self.attributes[u"hostName"] = socket.gethostbyaddr(socket.gethostname())[0]
-        except:
+        except BaseException:
             self.attributes[u"hostName"] = ''
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
 
@@ -535,7 +535,7 @@ class ConsoleEntity(EntityAdapter):
 
                         # run the external program
                         Popen(pargs)
-                    except:
+                    except BaseException:
                         self._agent.log(LOG_ERROR, "Can't parse console entity: %s" % (format_exc()))
                     break
 
@@ -955,7 +955,7 @@ class Agent(object):
         self.log(LOG_DEBUG, "Agent response:\n  %s\n  Responding to: \n  %s" % (response, request))
         try:
             self.io.send(response)
-        except:
+        except BaseException:
             self.log(LOG_ERROR, "Can't respond to %s: %s" % (request, format_exc()))
 
     def receive(self, request, unused_link_id, unused_cost):

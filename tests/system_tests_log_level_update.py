@@ -88,7 +88,7 @@ class ManyLogFilesTest(TestCase):
                     if (parts[3] != "SERVER"):
                         all_server_logs = False
                         break
-        except:
+        except BaseException:
             server_log_found = False
 
         self.assertTrue(all_server_logs)
@@ -103,7 +103,7 @@ class ManyLogFilesTest(TestCase):
                     if (parts[3] != "PROTOCOL"):
                         all_protocol_logs = False
                         break
-        except:
+        except BaseException:
             protocol_log_found = False
 
         self.assertTrue(protocol_log_found)
@@ -119,7 +119,7 @@ class ManyLogFilesTest(TestCase):
                         all_core_router_logs = False
                         break
 
-        except:
+        except BaseException:
             core_router_log_found = False
 
         self.assertTrue(core_router_log_found)
@@ -631,7 +631,7 @@ class RouterCoreModuleLogTest(TestCase):
                     if not "ROUTER_CORE" in line:
                         all_lines_router_core = False
                         break
-        except:
+        except BaseException:
             core_log_file_found = False
 
         self.assertTrue(core_log_file_found)

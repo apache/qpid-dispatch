@@ -51,6 +51,6 @@ if __name__ == "__main__":
         for line in datasource.data():
             print(line)
         pass
-    except:
+    except BaseException:
         traceback.print_exc(file=sys.stdout)
         pass

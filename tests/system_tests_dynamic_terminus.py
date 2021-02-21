@@ -123,7 +123,7 @@ class DynamicSourceTest(MessagingHandler):
         self.sender_2 = event.container.create_sender(self.sender_2_conn)
 
     def send(self):
-        if self.address == None:
+        if self.address is None:
             return
 
         while self.sender_1.credit > 0 and self.n_sent_1 < self.count:

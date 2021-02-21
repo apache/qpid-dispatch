@@ -213,8 +213,8 @@ class DistributionTests (TestCase):
             [
                 ('address',
                  {'prefix': cls.waypoint_prefix_2,
-                  'ingressPhase' : 0,    # into the waypoint-process
-                  'egressPhase'  : 2,    # out of the waypoint process
+                  'ingressPhase': 0,    # into the waypoint-process
+                  'egressPhase': 2,    # out of the waypoint process
                   }
                  ),
 
@@ -899,8 +899,8 @@ class DistributionTests (TestCase):
             # none to the other two.
             {
                 'event'  : 'got_receivers',
-                'action' : {'fn'   : 'check_receiver_distribution',
-                            'arg'  : where_the_routed_link_attaches_should_go,
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': where_the_routed_link_attaches_should_go,
                             }
             },
             {
@@ -986,8 +986,8 @@ class DistributionTests (TestCase):
             # none anywhere else.
             {
                 'event'  : 'got_receivers',
-                'action' : {'fn'   : 'check_receiver_distribution',
-                            'arg'  : where_the_routed_link_attaches_should_go,
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': where_the_routed_link_attaches_should_go,
                             }
             },
             {
@@ -1320,8 +1320,8 @@ class DistributionTests (TestCase):
             # none to the other two.
             {
                 'event'  : 'got_receivers',
-                'action' : {'fn'   : 'check_receiver_distribution',
-                            'arg'  : where_the_routed_link_attaches_should_go,
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': where_the_routed_link_attaches_should_go,
                             }
             },
             {
@@ -1420,8 +1420,8 @@ class DistributionTests (TestCase):
             # none anywhere else.
             {
                 'event'  : 'got_receivers',
-                'action' : {'fn'   : 'check_receiver_distribution',
-                            'arg'  : where_the_routed_link_attaches_should_go,
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': where_the_routed_link_attaches_should_go,
                             }
             },
             {
@@ -1519,8 +1519,8 @@ class DistributionTests (TestCase):
             # none anywhere else.
             {
                 'event'  : 'got_receivers',
-                'action' : {'fn'   : 'check_receiver_distribution',
-                            'arg'  : first_four,
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': first_four,
                             }
             },
             # After we see that the first 4 senders have
@@ -1876,7 +1876,7 @@ class DynamicReplyTo(MessagingHandler):
                 self.addr_check_timer = event.reactor.schedule(3, AddressCheckerTimeout(self))
 
     def on_sendable(self, event):
-        if self.reply_to_addr == None:
+        if self.reply_to_addr is None:
             return
 
         if event.sender == self.client_sender:

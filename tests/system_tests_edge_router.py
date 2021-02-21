@@ -2948,7 +2948,7 @@ class EdgeListenerSender(TestCase):
         addr = self.routers[0].addresses[0]
         blocking_connection = BlockingConnection(addr)
         blocking_sender = blocking_connection.create_sender(address="multicast")
-        self.assertTrue(blocking_sender != None)
+        self.assertTrue(blocking_sender is not None)
 
 
 class StreamingMessageTest(TestCase):
