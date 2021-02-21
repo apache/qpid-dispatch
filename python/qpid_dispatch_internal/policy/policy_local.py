@@ -513,7 +513,7 @@ class PolicyCompiler(object):
 
         # Default connections require a default settings
         if policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
-            if not PolicyKeys.KW_DEFAULT_SETTINGS in policy_out[PolicyKeys.KW_GROUPS]:
+            if PolicyKeys.KW_DEFAULT_SETTINGS not in policy_out[PolicyKeys.KW_GROUPS]:
                 errors.append("Policy vhost '%s' allows connections by default but default settings are not defined" %
                               (name))
                 return False

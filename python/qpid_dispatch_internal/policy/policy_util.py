@@ -322,10 +322,10 @@ class PolicyAppConnectionMgr(object):
         allowbyhost  = n_host < max_per_host
 
         if allowbytotal and allowbyuser and allowbyhost:
-            if not user in self.per_user_state:
+            if user not in self.per_user_state:
                 self.per_user_state[user] = []
             self.per_user_state[user].append(conn_id)
-            if not host in self.per_host_state:
+            if host not in self.per_host_state:
                 self.per_host_state[host] = []
             self.per_host_state[host].append(conn_id)
             self.connections_active += 1

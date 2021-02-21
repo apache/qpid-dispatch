@@ -628,7 +628,7 @@ class RouterCoreModuleLogTest(TestCase):
             with open(self.router.outdir + '/test-router-core.log', 'r') as core_log:
                 for line in core_log:
                     # Every line in the file must log to the router core module.
-                    if not "ROUTER_CORE" in line:
+                    if "ROUTER_CORE" not in line:
                         all_lines_router_core = False
                         break
         except BaseException:

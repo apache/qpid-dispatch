@@ -413,7 +413,7 @@ class TcpAdaptor(TestCase):
         # stop echo servers
         for rtr in cls.router_order:
             server = cls.echo_servers.get(rtr)
-            if not server is None:
+            if server is not None:
                 cls.logger.log("TCP_TEST Stopping echo server %s" % rtr)
                 server.wait()
         super(TcpAdaptor, cls).tearDownClass()

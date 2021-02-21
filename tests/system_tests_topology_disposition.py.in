@@ -518,7 +518,7 @@ class DeleteSpuriousConnector (MessagingHandler):
         self.first_received          = None
 
     def debug_print(self, text) :
-        if self.debug == True:
+        if self.debug:
             print("%.6lf %s" % (time.time(), text))
 
     # Shut down everything and exit.
@@ -656,7 +656,7 @@ class DeleteSpuriousConnector (MessagingHandler):
     def on_accepted(self, event) :
         if self.first_received is None :
             self.first_received = time.time()
-            if not self.first_released is None :
+            if self.first_released is not None :
                 self.debug_print("Accepted first message. %d messages released in %.6lf seconds" %
                                  (self.n_released, self.first_received - self.first_released))
         self.n_accepted += 1
@@ -838,7 +838,7 @@ class TopologyDisposition (MessagingHandler):
         self.debug_print("state transition to : %s -- because %s" % (self.state, message))
 
     def debug_print(self, text) :
-        if self.debug == True:
+        if self.debug:
             print("%.6lf %s" % (time.time(), text))
 
     # Shut down everything and exit.

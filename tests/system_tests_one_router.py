@@ -2143,7 +2143,7 @@ class StripMessageAnnotationsCustom (MessagingHandler) :
 
     def on_message(self, event) :
         self.n_received += 1
-        if not 'custom-annotation' in event.message.annotations :
+        if 'custom-annotation' not in event.message.annotations :
             self.bail('custom annotation not found')
             return
         if event.message.annotations['custom-annotation'] != '1/Custom_Annotation' :
@@ -2282,13 +2282,13 @@ class StripMessageAnnotationsNoAddTrace (MessagingHandler) :
         # No annotations should get stripped -- neither the
         # ones that the router adds, not the custome one that
         # I added.
-        if not 'x-opt-qd.ingress' in notes :
+        if 'x-opt-qd.ingress' not in notes :
             self.bail('x-opt-qd.ingress annotation missing')
             return
-        if not 'x-opt-qd.trace' in notes :
+        if 'x-opt-qd.trace' not in notes :
             self.bail('x-opt-qd.trace annotation missing')
             return
-        if not 'Canis_meus' in notes :
+        if 'Canis_meus' not in notes :
             self.bail('Canis_meus annotation missing')
             return
 
@@ -2371,7 +2371,7 @@ class StripMessageAnnotationsBoth (MessagingHandler) :
         if 'x-opt-qd.trace' in notes :
             self.bail('x-opt-qd.trace annotation not stripped')
             return
-        if not 'Canis_meus' in notes :
+        if 'Canis_meus' not in notes :
             self.bail('Canis_meus annotation missing')
             return
 

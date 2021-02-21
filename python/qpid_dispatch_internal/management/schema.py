@@ -445,7 +445,7 @@ class EntityType(object):
 
     def attribute(self, name):
         """Get the AttributeType for name"""
-        if not name in self.attributes and not name in dict_keys(self.deprecated_attributes):
+        if name not in self.attributes and name not in dict_keys(self.deprecated_attributes):
             raise ValidationError("Unknown attribute '%s' for '%s'" % (name, self))
         if self.attributes.get(name):
             return self.attributes[name]
@@ -494,7 +494,7 @@ class EntityType(object):
                     deprecation_name = attr.deprecation_name
                     if deprecation_name:
                         value = attributes.get(deprecation_name)
-                        if not value is None:
+                        if value is not None:
                             # Both name and deprecation name have values
                             # For example, both dir and direction of linkRoute have been specified, This is
                             # illegal. Just fail.
@@ -514,7 +514,7 @@ class EntityType(object):
     def allowed(self, op, body):
         """Raise exception if op is not a valid operation on entity."""
         op = op.upper()
-        if not op in self.operations:
+        if op not in self.operations:
             raise NotImplementedStatus("Operation '%s' not implemented for '%s' %s" % (
                 op, self.name, self.operations))
 

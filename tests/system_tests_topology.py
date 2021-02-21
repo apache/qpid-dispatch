@@ -379,7 +379,7 @@ class TopologyFailover (MessagingHandler):
         self.debug_print("state transition to : %s -- because %s" % (self.state, message))
 
     def debug_print(self, text) :
-        if self.debug == True:
+        if self.debug:
             print("%s %s" % (time.time(), text))
 
     # Shut down everything and exit.

@@ -152,7 +152,7 @@ class OversizeMessageTransferTest(MessagingHandler):
         if self.shut_down:
             return
         if event.connection == self.sender_conn:
-            if not event.connection.remote_condition is None:
+            if event.connection.remote_condition is not None:
                 if event.connection.remote_condition.name == OVERSIZE_CONDITION_NAME and \
                    event.connection.remote_condition.description == OVERSIZE_CONDITION_DESC:
                     self.logger.log("on_connection_remote_close: sender closed with correct condition")

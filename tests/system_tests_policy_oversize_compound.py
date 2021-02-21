@@ -181,7 +181,7 @@ class OversizeMessageTransferTest(MessagingHandler):
             m = Message(body=body_msg)
             self.messages.append(m)
 
-        if not self.receiver_host is None:
+        if self.receiver_host is not None:
             self.logger.log("on_start: opening receiver connection to %s" % (self.receiver_host.addresses[0]))
             self.receiver_conn = event.container.connect(self.receiver_host.addresses[0])
 
@@ -228,7 +228,7 @@ class OversizeMessageTransferTest(MessagingHandler):
         if self.shut_down:
             return
         if event.connection == self.sender_conn:
-            if not event.connection.remote_condition is None:
+            if event.connection.remote_condition is not None:
                 if event.connection.remote_condition.name == OVERSIZE_CONDITION_NAME and \
                    event.connection.remote_condition.description == OVERSIZE_CONDITION_DESC:
                     self.logger.log("on_connection_remote_close: sender closed with correct condition")
@@ -320,7 +320,7 @@ class OversizeMessageTransferTest(MessagingHandler):
         self.error = "Container error"
         self.logger.log(self.error)
         self.sender_conn.close()
-        if not self.receiver is None:
+        if self.receiver is not None:
             self.receiver_conn.close()
         self.timer.cancel()
 
@@ -510,7 +510,7 @@ class OversizeMulticastTransferTest(MessagingHandler):
         if self.shut_down:
             return
         if event.connection == self.sender_conn:
-            if not event.connection.remote_condition is None:
+            if event.connection.remote_condition is not None:
                 if event.connection.remote_condition.name == OVERSIZE_CONDITION_NAME and \
                    event.connection.remote_condition.description == OVERSIZE_CONDITION_DESC:
                     self.logger.log("on_connection_remote_close: sender closed with correct condition")

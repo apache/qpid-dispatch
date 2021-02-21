@@ -110,19 +110,19 @@ def main_except(argv):
     del argv[0]
     comn.args = p.parse_args(argv)
 
-    if not comn.args.time_start is None:
+    if comn.args.time_start is not None:
         try:
             comn.args.time_start = datetime.datetime.strptime(comn.args.time_start, "%Y-%m-%d %H:%M:%S.%f")
         except BaseException:
             sys.exit("ERROR: Failed to parse time_start '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_start)
 
-    if not comn.args.time_end is None:
+    if comn.args.time_end is not None:
         try:
             comn.args.time_end = datetime.datetime.strptime(comn.args.time_end, "%Y-%m-%d %H:%M:%S.%f")
         except BaseException:
             sys.exit("ERROR: Failed to parse time_end '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_end)
 
-    if not comn.args.log_modules is None:
+    if comn.args.log_modules is not None:
         l = [x.strip() for x in comn.args.log_modules.split(",")]
         comn.verbatim_include_list = [x for x in l if len(x) > 0]
 

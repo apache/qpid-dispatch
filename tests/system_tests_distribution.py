@@ -3264,7 +3264,7 @@ class RoutingTest (MessagingHandler):
                     self.event_injector.trigger(self.address_ready_event)
                     self.status = "address ready"
                     self.sent_address_ready = True
-            elif self.done == True and \
+            elif self.done and \
                     response.status_code == 200 and \
                     self.waiting_for_address_to_go_away and \
                     response.containerCount == 0 and \
