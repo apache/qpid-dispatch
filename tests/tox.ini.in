@@ -18,7 +18,7 @@
 #
 
 [tox]
-envlist = py27,py35,py36,py37,py38
+envlist = py27,py36,py37,py38,py39
 skipsdist = True
 minversion = ${TOX_VERSION}
 skip_missing_interpreters = True
@@ -41,9 +41,6 @@ deps = hacking>=1.1.0
 [testenv:py27]
 basepython = python2.7
 
-[testenv:py35]
-basepython = python3.5
-
 [testenv:py36]
 basepython = python3.6
 
@@ -53,3 +50,5 @@ basepython = python3.7
 [testenv:py38]
 basepython = python3.8
 
+[testenv:py39]
+basepython = python3.9
