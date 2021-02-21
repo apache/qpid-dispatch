@@ -29,10 +29,10 @@ from system_test import TestCase, Qdrouterd, main_module
 from system_test import unittest
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 
+
 class ProtocolFamilyTest(TestCase):
     @classmethod
     def setUpClass(cls):
-
         """
         Starts three routers with various listeners and connectors.
         There is a call to wait_router_connected to make sure that the routers are able to communicate with each
@@ -43,7 +43,7 @@ class ProtocolFamilyTest(TestCase):
         def router(name, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
 
                 # No protocolFamily is specified for this listener.
                 # This will test if the router defaults host to 127.0.0.1 and if the router auto-detects protocol family
@@ -51,7 +51,7 @@ class ProtocolFamilyTest(TestCase):
                 ('listener', {'port': cls.tester.get_port()}),
 
                 # Specify host as 127.0.0.1 and protocol family as IPv4
-                ('listener', {'host': '127.0.0.1', 'protocolFamily': 'IPv4','port': cls.tester.get_port()}),
+                ('listener', {'host': '127.0.0.1', 'protocolFamily': 'IPv4', 'port': cls.tester.get_port()}),
 
                 # Specify protocol family as IPv4 but don't specify any host
                 # This will test if the router defaults the host field to 127.0.0.1
@@ -85,23 +85,23 @@ class ProtocolFamilyTest(TestCase):
                [
                    ('listener', {'host': '::1', 'role': 'inter-router', 'protocolFamily': 'IPv6', 'port': inter_router_port})
                ]
-        )
+               )
 
         router('B',
                [
                    # Tests an IPv6 connector
                    ('connector', {'host': '::1', 'role': 'inter-router', 'protocolFamily': 'IPv6', 'port': inter_router_port}),
                    ('listener', {'host': '127.0.0.1', 'role': 'inter-router', 'port': inter_router_ipv4_port})
-                ]
+               ]
 
-        )
+               )
 
         router('C',
                [
                    # Tests an IPv4 connector
                    ('connector', {'host': '127.0.0.1', 'role': 'inter-router', 'port': inter_router_ipv4_port})
                ]
-        )
+               )
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
         cls.routers[2].wait_router_connected('QDR.B')

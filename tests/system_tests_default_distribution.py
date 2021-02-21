@@ -51,14 +51,15 @@ class DefaultDistributionTest(TestCase):
 
     def run_qdstat(self, args, regexp=None, address=None):
         p = self.popen(
-            ['qdstat', '--bus', str(address or self.address), '--timeout', str(TIMEOUT) ] + args,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            ['qdstat', '--bus', str(address or self.address), '--timeout', str(TIMEOUT)] + args,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        if regexp:
+            assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
         return out
 
     def test_create_unavailable_sender(self):
@@ -121,6 +122,7 @@ class UnavailableBase(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
 class UnavailableSender(UnavailableBase):
     def __init__(self, address):
         super(UnavailableSender, self).__init__(address)
@@ -137,6 +139,7 @@ class UnavailableSender(UnavailableBase):
         # "Node not found"
         self.sender = event.container.create_sender(self.conn, self.dest, name=self.link_name)
 
+
 class UnavailableReceiver(UnavailableBase):
     def __init__(self, address):
         super(UnavailableReceiver, self).__init__(address)
@@ -152,6 +155,7 @@ class UnavailableReceiver(UnavailableBase):
         # The router will not allow this link to be established. It will close the link with an error of
         # "Node not found"
         self.receiver = event.container.create_receiver(self.conn, self.dest, name=self.link_name)
+
 
 class UnavailableAnonymousSender(MessagingHandler):
     def __init__(self, address):

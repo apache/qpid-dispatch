@@ -24,18 +24,21 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+
 class Address(str):
     """A router address. Immutable, hashable.
     Subclasses str, so inherits all hash, comparison etc. properties.
     Provides a central place for logic to construct addresses of various types.
     """
 
-    AMQP="amqp:"
-    TOPO="_topo"
+    AMQP = "amqp:"
+    TOPO = "_topo"
 
-    def __new__(self, addr): # Subclassing immutable type, must use __new__ not __init__
-        if addr.startswith(self.AMQP): return str.__new__(addr)
-        else: return str.__new__(Address, "%s/%s" % (self.AMQP, addr))
+    def __new__(self, addr):  # Subclassing immutable type, must use __new__ not __init__
+        if addr.startswith(self.AMQP):
+            return str.__new__(addr)
+        else:
+            return str.__new__(Address, "%s/%s" % (self.AMQP, addr))
 
     @classmethod
     def mobile(cls, path):
@@ -52,7 +55,8 @@ class Address(str):
         @param area: Routing area (placeholder)
         """
         addr = "%s/%s/%s" % (cls.TOPO, area, router_id)
-        if path: addr = "%s/%s" % (addr, path)
+        if path:
+            addr = "%s/%s" % (addr, path)
         return Address(addr)
 
     def __repr__(self): return "Address(%r)" % str(self)

@@ -27,13 +27,15 @@ from __future__ import absolute_import
 
 from subprocess import Popen, PIPE, CalledProcessError
 
-import re, sys
+import re
+import sys
 
 IS_PY2 = sys.version_info[0] == 2
 if IS_PY2:
     PY_STRING_TYPE = basestring  # noqa: F821
 else:
     PY_STRING_TYPE = str
+
 
 def check_output(args, stdin=None, stderr=None, shell=False, universal_newlines=False, **kwargs):
     """
@@ -52,12 +54,13 @@ def check_output(args, stdin=None, stderr=None, shell=False, universal_newlines=
         raise e
     return out
 
+
 def help2txt(help_out):
     VALUE = r"(?:[\w-]+|<[^>]+>)"
     DEFAULT = r"(?: +\([^)]+\))?"
-    OPTION = r"-[\w-]+(?:[ =]%s)?%s" % (VALUE, DEFAULT) # -opt[(=| )value][(default)]
+    OPTION = r"-[\w-]+(?:[ =]%s)?%s" % (VALUE, DEFAULT)  # -opt[(=| )value][(default)]
     OPTIONS = r"%s(?:, *%s)*" % (OPTION, OPTION)        # opt[,opt...]
-    HELP = r"(?:[ \t]+\w.*$)|(?:(?:\n[ \t]+[^-\s].*$)+)" # same line or following lines indented.
+    HELP = r"(?:[ \t]+\w.*$)|(?:(?:\n[ \t]+[^-\s].*$)+)"  # same line or following lines indented.
     OPT_HELP = r"^\s+(%s)(%s)" % (OPTIONS, HELP)
     SUBHEAD = r"^((?: +\w+)*):$"
 
@@ -66,11 +69,12 @@ def help2txt(help_out):
         help_out = help_out.decode()
 
     options = re.search("^Options:$", help_out, re.IGNORECASE | re.MULTILINE)
-    if (options): help_out = help_out[options.end():]
+    if (options):
+        help_out = help_out[options.end():]
     result = ""
 
     def heading(text, depth):
-        return "%s %s\n\n" % ("="*depth, text)
+        return "%s %s\n\n" % ("=" * depth, text)
 
     for item in re.finditer(r"%s|%s" % (OPT_HELP, SUBHEAD), help_out, re.IGNORECASE | re.MULTILINE):
         if item.group(3):
@@ -79,12 +83,14 @@ def help2txt(help_out):
             result += "%s\n:   %s\n\n" % (item.group(1), re.sub(r"\s+", " ", item.group(2)).strip())
     return result
 
+
 def main(argv):
-    if len(argv) < 2: raise ValueError("Wrong number of arguments\nUsage %s"
-                                       " <program> [args,...]" % argv[0])
+    if len(argv) < 2:
+        raise ValueError("Wrong number of arguments\nUsage %s"
+                         " <program> [args,...]" % argv[0])
     program = argv[1:]
     print(help2txt(check_output(program)))
 
+
 if __name__ == "__main__":
     main(sys.argv)
-

@@ -41,6 +41,7 @@ import amqp_detail
 import common
 import text
 
+
 class RestartRecord():
     def __init__(self, _router, _line, _lineno):
         self.router = _router
@@ -54,6 +55,7 @@ class RestartRecord():
     def __repr__(self):
         return "%d instance %d start %s #%d" % (self.router.log_index, self.router.instance,
                                                 self.datetime, self.lineno)
+
 
 class Router():
     '''A single dispatch boot-and-run instance from a log file'''
@@ -124,7 +126,6 @@ class Router():
         # details: for each connection, for each session, for each link, whaaa?
         self.details = None
 
-
     def discover_connection_facts(self, comn):
         '''
         Discover all the connections in this router-instance log
@@ -163,7 +164,7 @@ class Router():
             if item.data.name == "open" and item.data.direction == text.direction_in():
                 if item.data.conn_id in self.conn_peer:
                     sys.exit('ERROR: file: %s connection %s has multiple connection peers' % (
-                    self.fn, id))
+                        self.fn, id))
                 self.conn_peer[id] = item.data.conn_peer
                 self.conn_peer_display[id] = comn.shorteners.short_peer_names.translate(
                     item.data.conn_peer, True)
@@ -203,8 +204,9 @@ def which_router_tod(router_list, at_time):
         return (router_list[0], 0)
     for i in range(1, len(router_list)):
         if at_time < router_list[i].restart_rec.datetime:
-            return (router_list[i-1], i-1)
-    return (router_list[-1], len(router_list)-1)
+            return (router_list[i - 1], i - 1)
+    return (router_list[-1], len(router_list) - 1)
+
 
 def which_router_id_tod(routers, id, at_time):
     '''
@@ -218,7 +220,6 @@ def which_router_id_tod(routers, id, at_time):
         if routerlist[0].container_name == id:
             return which_router_tod(routerlist, at_time)
     return (None, 0)
-
 
 
 if __name__ == "__main__":

@@ -200,6 +200,7 @@ class RouterTestIdFailCtrlChar(TestCase):
             print("output: ", out)
             assert False, "AttributeError not in process output"
 
+
 class RouterTestIdFailWhiteSpace(TestCase):
     """
     This test case sets up a router using a configuration router id

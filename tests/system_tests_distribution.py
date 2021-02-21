@@ -23,22 +23,23 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import sys
-from proton          import Message
-from system_test     import TestCase, Qdrouterd, main_module, TIMEOUT, SkipIfNeeded, TestTimeout
-from system_test     import unittest
+from proton import Message
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, SkipIfNeeded, TestTimeout
+from system_test import unittest
 from proton.handlers import MessagingHandler
-from proton.reactor  import Container, LinkOption, ApplicationEvent, EventInjector
+from proton.reactor import Container, LinkOption, ApplicationEvent, EventInjector
 
 
-#------------------------------------------------
+# ------------------------------------------------
 # Helper classes for all tests.
-#------------------------------------------------
+# ------------------------------------------------
 
 
 class AddressCheckResponse(object):
     """
     Convenience class for the responses returned by an AddressChecker.
     """
+
     def __init__(self, status_code, status_description, attrs):
         self.status_code        = status_code
         self.status_description = status_description
@@ -48,29 +49,28 @@ class AddressCheckResponse(object):
         return self.attrs[key]
 
 
-
-class AddressChecker ( object ):
+class AddressChecker (object):
     """
     Format address-query messages and parse the responses.
     """
-    def __init__ ( self, reply_addr ):
+
+    def __init__(self, reply_addr):
         self.reply_addr = reply_addr
 
-    def parse_address_query_response ( self, msg ):
+    def parse_address_query_response(self, msg):
         ap = msg.properties
-        return AddressCheckResponse ( ap['statusCode'], ap['statusDescription'], msg.body )
+        return AddressCheckResponse(ap['statusCode'], ap['statusDescription'], msg.body)
 
-    def make_address_query ( self, name ):
+    def make_address_query(self, name):
         ap = {'operation': 'READ', 'type': 'org.apache.qpid.dispatch.router.address', 'name': name}
-        return Message ( properties=ap, reply_to=self.reply_addr )
+        return Message(properties=ap, reply_to=self.reply_addr)
 
-    def make_addresses_query ( self ):
+    def make_addresses_query(self):
         ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router.address'}
-        return Message ( properties=ap, reply_to=self.reply_addr )
+        return Message(properties=ap, reply_to=self.reply_addr)
 
 
-
-class AddressCheckerTimeout ( object ):
+class AddressCheckerTimeout (object):
     def __init__(self, parent):
         self.parent = parent
 
@@ -108,18 +108,16 @@ class DistributionSkipMapper(object):
             }
 
 
-#------------------------------------------------
+# ------------------------------------------------
 # END Helper classes for all tests.
-#------------------------------------------------
+# ------------------------------------------------
 
 
-
-
-#================================================================
+# ================================================================
 #     Setup
-#================================================================
+# ================================================================
 
-class DistributionTests ( TestCase ):
+class DistributionTests (TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -132,68 +130,66 @@ class DistributionTests ( TestCase ):
         """
         super(DistributionTests, cls).setUpClass()
 
-
         cls.linkroute_prefix   = "0.0.0.0/linkroute"
         cls.waypoint_prefix_1  = "0.0.0.0/process_1"
         cls.waypoint_prefix_2  = "0.0.0.0/process_2"
         cls.waypoint_prefix_3  = "0.0.0.0/process_3"
 
-        #-----------------------------------------------------
+        # -----------------------------------------------------
         # Container IDs are what associate route containers
         # with links -- for the linkroute tests and the
         # waypoint tests.
-        #-----------------------------------------------------
-        cls.container_ids = [ 'ethics_gradient',
-                              'honest_mistake',
-                              'frank_exchange_of_views',
-                              'zero_gravitas',
-                              'yawning_angel'
-                            ]
+        # -----------------------------------------------------
+        cls.container_ids = ['ethics_gradient',
+                             'honest_mistake',
+                             'frank_exchange_of_views',
+                             'zero_gravitas',
+                             'yawning_angel'
+                             ]
 
-        #-----------------------------------------------------
+        # -----------------------------------------------------
         # Here are some chunks of configuration that will be
         # the same on all routers.
-        #-----------------------------------------------------
+        # -----------------------------------------------------
 
         linkroute_configuration =             \
-        [
-            ( 'linkRoute',
-              { 'prefix': cls.linkroute_prefix,
-                'direction': 'in',
-                'containerId': cls.container_ids[0]
-              }
-            ),
-            ( 'linkRoute',
-              { 'prefix': cls.linkroute_prefix,
-                'direction': 'out',
-                'containerId': cls.container_ids[0]
-              }
-            )
-        ]
-
+            [
+                ('linkRoute',
+                 {'prefix': cls.linkroute_prefix,
+                  'direction': 'in',
+                  'containerId': cls.container_ids[0]
+                  }
+                 ),
+                ('linkRoute',
+                 {'prefix': cls.linkroute_prefix,
+                  'direction': 'out',
+                  'containerId': cls.container_ids[0]
+                  }
+                 )
+            ]
 
         single_waypoint_configuration =        \
-        [
-            ( 'address',
-              { 'prefix': cls.waypoint_prefix_1,
-                'waypoint': 'yes'
-              }
-            ),
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_1 + '.waypoint',
-                'containerId': cls.container_ids[1],
-                'direction': 'in'
-              }
-            ),
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_1 + '.waypoint',
-                'containerId': cls.container_ids[1],
-                'direction': 'out'
-              }
-            )
-        ]
+            [
+                ('address',
+                 {'prefix': cls.waypoint_prefix_1,
+                  'waypoint': 'yes'
+                  }
+                 ),
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_1 + '.waypoint',
+                  'containerId': cls.container_ids[1],
+                  'direction': 'in'
+                  }
+                 ),
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_1 + '.waypoint',
+                  'containerId': cls.container_ids[1],
+                  'direction': 'out'
+                  }
+                 )
+            ]
 
-        #-------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # The phase-number is used by the router as an addition
         # to the address for the link. To chain these two waypoints
         # together in a serial fashion, we explicitly declare their
@@ -206,57 +202,56 @@ class DistributionTests ( TestCase ):
         #        back from process to router: phase 2
         #
         # Because of those two "phase 1" markings, messages coming back
-        # into the router from Waypoint 1 get routed back outbound to 
+        # into the router from Waypoint 1 get routed back outbound to
         # Waypoint 2.
         #
         # Because the address configuration specifies that phase 2 is
-        # the egress phase, messages coming into the router from that 
+        # the egress phase, messages coming into the router from that
         # autolink are finally routed to the client receiver.
-        #-------------------------------------------------------------------
+        # -------------------------------------------------------------------
         serial_waypoint_configuration =  \
-        [
-            ( 'address',
-              { 'prefix': cls.waypoint_prefix_2,
-                'ingressPhase' : 0,    # into the waypoint-process
-                'egressPhase'  : 2,    # out of the waypoint process
-              }
-            ),
+            [
+                ('address',
+                 {'prefix': cls.waypoint_prefix_2,
+                  'ingressPhase': 0,    # into the waypoint-process
+                  'egressPhase': 2,    # out of the waypoint process
+                  }
+                 ),
 
-            # Waypoint 1 configuration --------------------------
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_2 + '.waypoint',
-                'phase' : 0,
-                'containerId': cls.container_ids[2],
-                'direction': 'out'    # out-of-router
-              }
-            ),
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_2 + '.waypoint',
-                'phase' : 1,
-                'containerId': cls.container_ids[2],
-                'direction': 'in'    # into-router
-              }
-            ),
+                # Waypoint 1 configuration --------------------------
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_2 + '.waypoint',
+                  'phase' : 0,
+                  'containerId': cls.container_ids[2],
+                  'direction': 'out'    # out-of-router
+                  }
+                 ),
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_2 + '.waypoint',
+                  'phase' : 1,
+                  'containerId': cls.container_ids[2],
+                  'direction': 'in'    # into-router
+                  }
+                 ),
 
-            # Waypoint 2 configuration --------------------------
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_2 + '.waypoint',
-                'phase' : 1,   # out-of-router
-                'containerId': cls.container_ids[2],
-                'direction': 'out'
-              }
-            ),
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_2 + '.waypoint',
-                'phase' : 2,   # into-router
-                'containerId': cls.container_ids[2],
-                'direction': 'in'
-              }
-            )
-        ]
+                # Waypoint 2 configuration --------------------------
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_2 + '.waypoint',
+                  'phase' : 1,   # out-of-router
+                  'containerId': cls.container_ids[2],
+                  'direction': 'out'
+                  }
+                 ),
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_2 + '.waypoint',
+                  'phase' : 2,   # into-router
+                  'containerId': cls.container_ids[2],
+                  'direction': 'in'
+                  }
+                 )
+            ]
 
-
-        #-------------------------------------------------------------
+        # -------------------------------------------------------------
         # In a parallel waypoint configuration, we use the default
         # phase numbers: toward the waypoint is phase 0, back from
         # the waypoint into the router is phase 1.
@@ -264,65 +259,62 @@ class DistributionTests ( TestCase ):
         # shorthand for "ingress is phase 0, egress is phase 1"
         # By making two identical waypoints, they will be used in
         # parallel rather than serial.
-        #-------------------------------------------------------------
+        # -------------------------------------------------------------
         parallel_waypoint_configuration =  \
-        [
-            ( 'address',
-              { 'prefix': cls.waypoint_prefix_3,
-                'waypoint': 'yes'
-              }
-            ),
+            [
+                ('address',
+                 {'prefix': cls.waypoint_prefix_3,
+                  'waypoint': 'yes'
+                  }
+                 ),
 
-            #  Waypoint 1 configuration ----------------------
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_3 + '.waypoint',
-                'containerId': cls.container_ids[3],
-                'direction': 'in'
-              }
-            ),
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_3 + '.waypoint',
-                'containerId': cls.container_ids[3],
-                'direction': 'out'
-              }
-            ),
+                #  Waypoint 1 configuration ----------------------
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_3 + '.waypoint',
+                  'containerId': cls.container_ids[3],
+                  'direction': 'in'
+                  }
+                 ),
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_3 + '.waypoint',
+                  'containerId': cls.container_ids[3],
+                  'direction': 'out'
+                  }
+                 ),
 
-            #  Waypoint 2 configuration ----------------------
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_3 + '.waypoint',
-                'containerId': cls.container_ids[3],
-                'direction': 'in'
-              }
-            ),
-            ( 'autoLink',
-              { 'address': cls.waypoint_prefix_3 + '.waypoint',
-                'containerId': cls.container_ids[3],
-                'direction': 'out'
-              }
-            )
-        ]
-
+                #  Waypoint 2 configuration ----------------------
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_3 + '.waypoint',
+                  'containerId': cls.container_ids[3],
+                  'direction': 'in'
+                  }
+                 ),
+                ('autoLink',
+                 {'address': cls.waypoint_prefix_3 + '.waypoint',
+                  'containerId': cls.container_ids[3],
+                  'direction': 'out'
+                  }
+                 )
+            ]
 
         def router(name, more_config):
 
-            config = [ ('router',  {'mode': 'interior', 'id': name}),
-                       ('address', {'prefix': 'closest',   'distribution': 'closest'}),
-                       ('address', {'prefix': 'balanced',  'distribution': 'balanced'}),
-                       ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
-                     ]                                 \
-                     + linkroute_configuration         \
-                     + single_waypoint_configuration   \
-                     + serial_waypoint_configuration   \
-                     + parallel_waypoint_configuration \
-                     + more_config
+            config = [('router',  {'mode': 'interior', 'id': name}),
+                      ('address', {'prefix': 'closest',   'distribution': 'closest'}),
+                      ('address', {'prefix': 'balanced',  'distribution': 'balanced'}),
+                      ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
+                      ]                                 \
+                + linkroute_configuration         \
+                + single_waypoint_configuration   \
+                + serial_waypoint_configuration   \
+                + parallel_waypoint_configuration \
+                + more_config
 
             config = Qdrouterd.Config(config)
 
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
 
         cls.routers = []
-
-
 
         #
         #     Connection picture
@@ -375,121 +367,120 @@ class DistributionTests ( TestCase ):
         cls.A_D_cost =   50
         cls.B_D_cost =  100
 
-
-        router ( 'A',
-                 [
-                    ( 'listener',
-                      { 'port': A_client_port,
-                        'role': 'normal',
-                        'stripAnnotations': 'no'
-                      }
+        router('A',
+               [
+                   ('listener',
+                    {'port': A_client_port,
+                     'role': 'normal',
+                     'stripAnnotations': 'no'
+                     }
                     ),
-                    ( 'listener',
-                      {  'role': 'inter-router',
-                         'port': A_inter_router_port_1
-                      }
+                   ('listener',
+                    {'role': 'inter-router',
+                     'port': A_inter_router_port_1
+                     }
                     ),
-                    ( 'listener',
-                      {  'role': 'inter-router',
-                         'port': A_inter_router_port_2
-                      }
+                   ('listener',
+                    {'role': 'inter-router',
+                     'port': A_inter_router_port_2
+                     }
                     ),
-                    ( 'listener',
-                      { 'port': A_route_container_port,  # route-container is listener number 3
-                        'stripAnnotations': 'no',
-                        'role': 'route-container'
-                      }
+                   ('listener',
+                    {'port': A_route_container_port,  # route-container is listener number 3
+                     'stripAnnotations': 'no',
+                     'role': 'route-container'
+                     }
                     )
-                 ]
+               ]
                )
 
-        router ( 'B',
-                 [
-                    ( 'listener',
-                      { 'port': B_client_port,
-                        'role': 'normal',
-                        'stripAnnotations': 'no'
-                      }
+        router('B',
+               [
+                   ('listener',
+                    {'port': B_client_port,
+                     'role': 'normal',
+                     'stripAnnotations': 'no'
+                     }
                     ),
-                    ( 'listener',
-                      {  'role': 'inter-router',
-                         'port': B_inter_router_port_1
-                      }
+                   ('listener',
+                    {'role': 'inter-router',
+                     'port': B_inter_router_port_1
+                     }
                     ),
-                    ( 'listener',
-                      {  'role': 'inter-router',
-                         'port': B_inter_router_port_2
-                      }
+                   ('listener',
+                    {'role': 'inter-router',
+                     'port': B_inter_router_port_2
+                     }
                     ),
-                    ( 'listener',
-                      { 'port': B_route_container_port,  # route-container is number 3
-                        'stripAnnotations': 'no',
-                        'role': 'route-container'
-                      }
+                   ('listener',
+                    {'port': B_route_container_port,  # route-container is number 3
+                     'stripAnnotations': 'no',
+                     'role': 'route-container'
+                     }
                     ),
-                    ( 'connector',
-                      {  'name': 'connectorToA',
-                         'role': 'inter-router',
-                         'port': A_inter_router_port_1,
-                         'cost':  cls.A_B_cost
-                      }
+                   ('connector',
+                    {'name': 'connectorToA',
+                     'role': 'inter-router',
+                     'port': A_inter_router_port_1,
+                     'cost': cls.A_B_cost
+                     }
                     )
-                 ]
+               ]
                )
 
-        router ( 'C',
-                 [
-                    ( 'listener',
-                      { 'port': C_client_port,
-                        'role': 'normal',
-                        'stripAnnotations': 'no'
-                      }
+        router('C',
+               [
+                   ('listener',
+                    {'port': C_client_port,
+                     'role': 'normal',
+                     'stripAnnotations': 'no'
+                     }
                     ),
-                    ( 'listener',
-                       { 'port': C_route_container_port,  # route-container is number 1
-                         'stripAnnotations': 'no',
-                         'role': 'route-container'
-                       }
+                   ('listener',
+                    {'port': C_route_container_port,  # route-container is number 1
+                     'stripAnnotations': 'no',
+                     'role': 'route-container'
+                     }
                     ),
-                    ( 'connector',
-                      {  'name': 'connectorToB',
-                         'role': 'inter-router',
-                         'port': B_inter_router_port_1,
-                         'cost' : cls.B_C_cost
-                      }
+                   ('connector',
+                    {'name': 'connectorToB',
+                     'role': 'inter-router',
+                     'port': B_inter_router_port_1,
+                     'cost' : cls.B_C_cost
+                     }
                     )
-                 ]
+               ]
                )
 
-        router ( 'D',
-                 [
-                    ( 'listener',
-                      { 'port': D_client_port,
-                        'role': 'normal',
-                        'stripAnnotations': 'no'
-                      }
+        router('D',
+               [
+                   ('listener',
+                    {'port': D_client_port,
+                     'role': 'normal',
+                     'stripAnnotations': 'no'
+                     }
                     ),
-                    ( 'listener',
-                       { 'port': D_route_container_port,  # route-container is number 1
-                         'stripAnnotations': 'no',
-                         'role': 'route-container'
-                       }
+                   ('listener',
+                    {'port': D_route_container_port,  # route-container is number 1
+                     'stripAnnotations': 'no',
+                     'role': 'route-container'
+                     }
                     ),
-                    ( 'connector',
-                      {  'name': 'connectorToA',
-                         'role': 'inter-router',
-                         'port': A_inter_router_port_2,
-                         'cost' : cls.A_D_cost
-                      }
+                   ('connector',
+                    {'name': 'connectorToA',
+                     'role': 'inter-router',
+                     'port': A_inter_router_port_2,
+                     'cost' : cls.A_D_cost
+                     }
                     ),
-                    ( 'connector',
-                      {  'name': 'connectorToB',
-                         'role': 'inter-router',
-                         'port': B_inter_router_port_2,
-                         'cost' : cls.B_D_cost
-                      }
+                   ('connector',
+                    {'name': 'connectorToB',
+                     'role': 'inter-router',
+                     'port': B_inter_router_port_2,
+                     'cost' : cls.B_D_cost
+                     }
                     )
-                 ]
+               ]
                )
 
         router_A = cls.routers[0]
@@ -511,108 +502,98 @@ class DistributionTests ( TestCase ):
         cls.C_addr = router_C.addresses[0]
         cls.D_addr = router_D.addresses[0]
 
-
     @SkipIfNeeded(DistributionSkipMapper.skip['test_01'], 'Test skipped during development.')
-    def test_01_targeted_sender_AC ( self ):
-        name='test_01'
-        test = TargetedSenderTest ( name, self.A_addr, self.C_addr, "closest/01" )
+    def test_01_targeted_sender_AC(self):
+        name = 'test_01'
+        test = TargetedSenderTest(name, self.A_addr, self.C_addr, "closest/01")
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_02'], 'Test skipped during development.')
-    def test_02_targeted_sender_DC ( self ):
-        name='test_02'
-        test = TargetedSenderTest ( name, self.D_addr, self.C_addr, "closest/02" )
+    def test_02_targeted_sender_DC(self):
+        name = 'test_02'
+        test = TargetedSenderTest(name, self.D_addr, self.C_addr, "closest/02")
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_03'], 'Test skipped during development.')
-    def test_03_anonymous_sender_AC ( self ):
-        name='test_03'
-        test = AnonymousSenderTest ( name, self.A_addr, self.C_addr )
+    def test_03_anonymous_sender_AC(self):
+        name = 'test_03'
+        test = AnonymousSenderTest(name, self.A_addr, self.C_addr)
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_04'], 'Test skipped during development.')
-    def test_04_anonymous_sender_DC ( self ):
-        name='test_04'
-        test = AnonymousSenderTest ( name, self.D_addr, self.C_addr )
+    def test_04_anonymous_sender_DC(self):
+        name = 'test_04'
+        test = AnonymousSenderTest(name, self.D_addr, self.C_addr)
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_05'], 'Test skipped during development.')
-    def test_05_dynamic_reply_to_AC ( self ):
-        name='test_05'
-        test = DynamicReplyTo ( name, self.A_addr, self.C_addr )
+    def test_05_dynamic_reply_to_AC(self):
+        name = 'test_05'
+        test = DynamicReplyTo(name, self.A_addr, self.C_addr)
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_06'], 'Test skipped during development.')
-    def test_06_dynamic_reply_to_DC ( self ):
-        name='test_06'
-        test = DynamicReplyTo ( name, self.D_addr, self.C_addr )
+    def test_06_dynamic_reply_to_DC(self):
+        name = 'test_06'
+        test = DynamicReplyTo(name, self.D_addr, self.C_addr)
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_07'], 'Test skipped during development.')
-    def test_07_linkroute ( self ):
-        name='test_07'
-        test = LinkAttachRouting ( name,
-                                   self.container_ids[0],
-                                   self.C_addr,
-                                   self.A_route_container_addr,
-                                   self.linkroute_prefix,
-                                   "addr_07"
+    def test_07_linkroute(self):
+        name = 'test_07'
+        test = LinkAttachRouting(name,
+                                 self.container_ids[0],
+                                 self.C_addr,
+                                 self.A_route_container_addr,
+                                 self.linkroute_prefix,
+                                 "addr_07"
                                  )
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_08'], 'Test skipped during development.')
-    def test_08_linkroute_check_only ( self ):
-        name='test_08'
-        test = LinkAttachRoutingCheckOnly ( name,
-                                            self.container_ids[0],
-                                            self.C_addr,
-                                            self.A_route_container_addr,
-                                            self.linkroute_prefix,
-                                            "addr_08"
+    def test_08_linkroute_check_only(self):
+        name = 'test_08'
+        test = LinkAttachRoutingCheckOnly(name,
+                                          self.container_ids[0],
+                                          self.C_addr,
+                                          self.A_route_container_addr,
+                                          self.linkroute_prefix,
+                                          "addr_08"
                                           )
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_09'], 'Test skipped during development.')
-    def test_09_closest_linear ( self ):
-        name='test_09'
-        test = ClosestTest ( name,
-                             self.A_addr,
-                             self.B_addr,
-                             self.C_addr,
-                             "addr_09",
-                             print_debug=False
+    def test_09_closest_linear(self):
+        name = 'test_09'
+        test = ClosestTest(name,
+                           self.A_addr,
+                           self.B_addr,
+                           self.C_addr,
+                           "addr_09",
+                           print_debug=False
                            )
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_10'], 'Test skipped during development.')
-    def test_10_closest_mesh ( self ):
-        name='test_10'
-        test = ClosestTest ( name,
-                             self.A_addr,
-                             self.B_addr,
-                             self.D_addr,
-                             "addr_10"
+    def test_10_closest_mesh(self):
+        name = 'test_10'
+        test = ClosestTest(name,
+                           self.A_addr,
+                           self.B_addr,
+                           self.D_addr,
+                           "addr_10"
                            )
         test.run()
-        self.assertEqual ( None, test.error )
+        self.assertEqual(None, test.error)
 
         #
         #     Cost picture for balanced distribution tests.
@@ -683,8 +664,8 @@ class DistributionTests ( TestCase ):
         #
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_11'], 'Test skipped during development.')
-    def test_11_balanced_linear ( self ):
-        name='test_11'
+    def test_11_balanced_linear(self):
+        name = 'test_11'
         # slop is how much the second two values may diverge from
         # the expected.  But they still must sum to total - A.
         total      = 100
@@ -698,25 +679,24 @@ class DistributionTests ( TestCase ):
         slop = 1
         omit_middle_receiver = False
 
-        test = BalancedTest ( name,
-                              self.A_addr,
-                              self.B_addr,
-                              self.C_addr,
-                              "addr_11",
-                              total,
-                              expected_A,
-                              expected_B,
-                              expected_C,
-                              slop,
-                              omit_middle_receiver
+        test = BalancedTest(name,
+                            self.A_addr,
+                            self.B_addr,
+                            self.C_addr,
+                            "addr_11",
+                            total,
+                            expected_A,
+                            expected_B,
+                            expected_C,
+                            slop,
+                            omit_middle_receiver
                             )
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_12'], 'Test skipped during development.')
-    def test_12_balanced_linear_omit_middle_receiver ( self ):
-        name='test_12'
+    def test_12_balanced_linear_omit_middle_receiver(self):
+        name = 'test_12'
         # If we omit the middle receiver, then router A will count
         # up to cost ( A, B ) and the keep counting up a further
         # cost ( B, C ) before it starts to spill over.
@@ -738,21 +718,20 @@ class DistributionTests ( TestCase ):
         slop = 1
         omit_middle_receiver = True
 
-        test = BalancedTest ( name,
-                              self.A_addr,
-                              self.B_addr,
-                              self.C_addr,
-                              "addr_12",
-                              total,
-                              expected_A,
-                              expected_B,
-                              expected_C,
-                              slop,
-                              omit_middle_receiver
+        test = BalancedTest(name,
+                            self.A_addr,
+                            self.B_addr,
+                            self.C_addr,
+                            "addr_12",
+                            total,
+                            expected_A,
+                            expected_B,
+                            expected_C,
+                            slop,
+                            omit_middle_receiver
                             )
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
         #     Reasoning for the triangular balanced case:
         #
@@ -810,60 +789,58 @@ class DistributionTests ( TestCase ):
         #       2. B and D sum to 100 - A
         #       3. B and D are both with 1 of their expected values.
         #
+
     @SkipIfNeeded(DistributionSkipMapper.skip['test_13'], 'Test skipped during development.')
-    def test_13_balanced_mesh ( self ):
-        name='test_13'
+    def test_13_balanced_mesh(self):
+        name = 'test_13'
         total      = 100
         expected_A = 54
         expected_B = 43
         expected_D = 3
         slop       = 1
         omit_middle_receiver = False
-        test = BalancedTest ( name,
-                              self.A_addr,
-                              self.B_addr,
-                              self.D_addr,
-                              "addr_13",
-                              total,
-                              expected_A,
-                              expected_B,
-                              expected_D,
-                              slop,
-                              omit_middle_receiver
+        test = BalancedTest(name,
+                            self.A_addr,
+                            self.B_addr,
+                            self.D_addr,
+                            "addr_13",
+                            total,
+                            expected_A,
+                            expected_B,
+                            expected_D,
+                            slop,
+                            omit_middle_receiver
                             )
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_14'], 'Test skipped during development.')
-    def test_14_multicast_linear ( self ):
-        name='test_14'
-        test = MulticastTest ( name,
-                               self.A_addr,
-                               self.B_addr,
-                               self.C_addr,
-                               "addr_14"
+    def test_14_multicast_linear(self):
+        name = 'test_14'
+        test = MulticastTest(name,
+                             self.A_addr,
+                             self.B_addr,
+                             self.C_addr,
+                             "addr_14"
                              )
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_15'], 'Test skipped during development.')
-    def test_15_multicast_mesh ( self ):
-        name='test_15'
-        test = MulticastTest ( name,
-                               self.A_addr,
-                               self.B_addr,
-                               self.D_addr,
-                               "addr_15"
+    def test_15_multicast_mesh(self):
+        name = 'test_15'
+        test = MulticastTest(name,
+                             self.A_addr,
+                             self.B_addr,
+                             self.D_addr,
+                             "addr_15"
                              )
         test.run()
-        self.assertEqual ( None, test.error )
-
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_16'], 'Test skipped during development.')
-    def test_16_linkroute_linear_all_local ( self ) :
-        name='test_16'
+    def test_16_linkroute_linear_all_local(self) :
+        name = 'test_16'
         """
         This test should route all senders' link-attaches
         to the local containers on router A.
@@ -873,10 +850,10 @@ class DistributionTests ( TestCase ):
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABC is linear.
-        routers = ( self.A_route_container_addr,
-                    self.B_route_container_addr,
-                    self.C_route_container_addr
-                  )
+        routers = (self.A_route_container_addr,
+                   self.B_route_container_addr,
+                   self.C_route_container_addr
+                   )
 
         # NOTE : about these 3-tuples.
         # The positions in these tuples correspond to the routers passed
@@ -885,14 +862,14 @@ class DistributionTests ( TestCase ):
         # test make its senders.
 
         # Tell the test on which routers to make its link-container cnxs.
-        where_to_make_connections                = ( 2, 2, 2 )
-        where_the_routed_link_attaches_should_go = ( 4, 0, 0 )
+        where_to_make_connections                = (2, 2, 2)
+        where_the_routed_link_attaches_should_go = (4, 0, 0)
 
         # Tell the test how to check for the address being ready.
         n_local_containers = 2
         n_remote_routers   = 2
 
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
         # This is the instruction-list that the test looks at as various
         # milestones are met during testing. If a given event happens,
         # and if it matches the event in the current step of the instructions,
@@ -901,58 +878,56 @@ class DistributionTests ( TestCase ):
         # These instructions lists make the test more flexible, so I can get
         # different behavior without writing *almost* the same code mutiple
         # times.
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
 
         # note: if 'done' is present in an action, it always means 'succeed now'.
         # If there had been a failure, that would have been caught in an
         # earlier part of the action.
 
         instructions = [
-                         # Once the link-routable address is ready to use in
-                         # the router network, create 4 senders.
-                         {
-                           'event'  : 'address_ready',
-                           'action' : { 'fn'   : 'make_senders',
-                                         'arg' : 4
-                                      }
-                         },
-                         # In this action, the list-argument to the function
-                         # shows how we expect link-attach routes to be
-                         # distributed: 4 to the first router,
-                         # none to the other two.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : where_the_routed_link_attaches_should_go,
-                                      }
-                         },
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : {'fn'    : 'none',
-                                       'done'  : 'succeed'
-                                      }
-                         }
-                       ]
+            # Once the link-routable address is ready to use in
+            # the router network, create 4 senders.
+            {
+                'event'  : 'address_ready',
+                'action' : {'fn'   : 'make_senders',
+                            'arg' : 4
+                            }
+            },
+            # In this action, the list-argument to the function
+            # shows how we expect link-attach routes to be
+            # distributed: 4 to the first router,
+            # none to the other two.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': where_the_routed_link_attaches_should_go,
+                            }
+            },
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'    : 'none',
+                            'done'  : 'succeed'
+                            }
+            }
+        ]
 
-        test = RoutingTest ( name,
-                             self.container_ids[0],
-                             self.A_addr,  # all senders are attached here
-                             routers,
-                             self.linkroute_prefix,
-                             addr_suffix,
-                             instructions,
-                             where_to_make_connections,
-                             n_local_containers,
-                             n_remote_routers
+        test = RoutingTest(name,
+                           self.container_ids[0],
+                           self.A_addr,  # all senders are attached here
+                           routers,
+                           self.linkroute_prefix,
+                           addr_suffix,
+                           instructions,
+                           where_to_make_connections,
+                           n_local_containers,
+                           n_remote_routers
                            )
-        test.run ( )
-        self.assertEqual ( None, test.error )
-
-
+        test.run()
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_17'], 'Test skipped during development.')
-    def test_17_linkroute_linear_all_B ( self ) :
-        name='test_17'
+    def test_17_linkroute_linear_all_B(self) :
+        name = 'test_17'
         """
         This test should route all senders' link-attaches
         to the remote connections on router B.
@@ -962,10 +937,10 @@ class DistributionTests ( TestCase ):
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABC is linear.
-        routers = ( self.A_route_container_addr,
-                    self.B_route_container_addr,
-                    self.C_route_container_addr
-                  )
+        routers = (self.A_route_container_addr,
+                   self.B_route_container_addr,
+                   self.C_route_container_addr
+                   )
 
         # NOTE : about these 3-tuples.
         # The positions in these tuples correspond to the routers passed
@@ -974,14 +949,14 @@ class DistributionTests ( TestCase ):
         # test make its senders.
 
         # Tell the test on which routers to make its link-container cnxs.
-        where_to_make_connections                = ( 0, 2, 2 )
-        where_the_routed_link_attaches_should_go = ( 0, 4, 0 )
+        where_to_make_connections                = (0, 2, 2)
+        where_the_routed_link_attaches_should_go = (0, 4, 0)
 
         # Tell the test how to check for the address being ready.
         n_local_containers = 0
         n_remote_routers   = 2
 
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
         # This is the instruction-list that the test looks at as various
         # milestones are met during testing. If a given event happens,
         # and if it matches the event in the current step of the instructions,
@@ -990,58 +965,56 @@ class DistributionTests ( TestCase ):
         # These instructions lists make the test more flexible, so I can get
         # different behavior without writing *almost* the same code mutiple
         # times.
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
 
         # note: if 'done' is present in an action, it always means 'succeed now'.
         # If there had been a failure, that would have been caught in an
         # earlier part of the action.
 
         instructions = [
-                         # Once the link-routable address is ready to use in
-                         # the router network, create 4 senders.
-                         {
-                           'event'  : 'address_ready',
-                           'action' : { 'fn'   : 'make_senders',
-                                         'arg' : 4
-                                      }
-                         },
-                         # In this action, the list-argument to the function
-                         # shows how we expect link-attach routes to be
-                         # distributed: 4 to router B,
-                         # none anywhere else.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : where_the_routed_link_attaches_should_go,
-                                      }
-                         },
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : {'fn'    : 'none',
-                                       'done'  : 'succeed'
-                                      }
-                         }
-                       ]
+            # Once the link-routable address is ready to use in
+            # the router network, create 4 senders.
+            {
+                'event'  : 'address_ready',
+                'action' : {'fn'   : 'make_senders',
+                            'arg' : 4
+                            }
+            },
+            # In this action, the list-argument to the function
+            # shows how we expect link-attach routes to be
+            # distributed: 4 to router B,
+            # none anywhere else.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': where_the_routed_link_attaches_should_go,
+                            }
+            },
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'    : 'none',
+                            'done'  : 'succeed'
+                            }
+            }
+        ]
 
-        test = RoutingTest ( name,
-                             self.container_ids[0],
-                             self.A_addr,  # all senders are attached here
-                             routers,
-                             self.linkroute_prefix,
-                             addr_suffix,
-                             instructions,
-                             where_to_make_connections,
-                             n_local_containers,
-                             n_remote_routers
+        test = RoutingTest(name,
+                           self.container_ids[0],
+                           self.A_addr,  # all senders are attached here
+                           routers,
+                           self.linkroute_prefix,
+                           addr_suffix,
+                           instructions,
+                           where_to_make_connections,
+                           n_local_containers,
+                           n_remote_routers
                            )
-        test.run ( )
-        self.assertEqual ( None, test.error )
-
-
+        test.run()
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_18'], 'Test skipped during development.')
-    def test_18_linkroute_linear_all_C ( self ) :
-        name='test_18'
+    def test_18_linkroute_linear_all_C(self) :
+        name = 'test_18'
         """
         This test should route all senders' link-attaches
         to the remote connections on router C.
@@ -1051,10 +1024,10 @@ class DistributionTests ( TestCase ):
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABC is linear.
-        routers = ( self.A_route_container_addr,
-                    self.B_route_container_addr,
-                    self.C_route_container_addr
-                  )
+        routers = (self.A_route_container_addr,
+                   self.B_route_container_addr,
+                   self.C_route_container_addr
+                   )
 
         # NOTE : about these 3-tuples.
         # The positions in these tuples correspond to the routers passed
@@ -1063,14 +1036,14 @@ class DistributionTests ( TestCase ):
         # test make its senders.
 
         # Tell the test on which routers to make its link-container cnxs.
-        where_to_make_connections                = ( 0, 0, 2 )
-        where_the_routed_link_attaches_should_go = ( 0, 0, 4 )
+        where_to_make_connections                = (0, 0, 2)
+        where_the_routed_link_attaches_should_go = (0, 0, 4)
 
         # Tell the test how to check for the address being ready.
         n_local_containers = 0
         n_remote_routers   = 1
 
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
         # This is the instruction-list that the test looks at as various
         # milestones are met during testing. If a given event happens,
         # and if it matches the event in the current step of the instructions,
@@ -1079,57 +1052,56 @@ class DistributionTests ( TestCase ):
         # These instructions lists make the test more flexible, so I can get
         # different behavior without writing *almost* the same code mutiple
         # times.
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
 
         # note: if 'done' is present in an action, it always means 'succeed now'.
         # If there had been a failure, that would have been caught in an
         # earlier part of the action.
 
         instructions = [
-                         # Once the link-routable address is ready to use in
-                         # the router network, create 4 senders.
-                         {
-                           'event'  : 'address_ready',
-                           'action' : { 'fn'   : 'make_senders',
-                                         'arg' : 4
-                                      }
-                         },
-                         # In this action, the list-argument to the function
-                         # shows how we expect link-attach routes to be
-                         # distributed: 4 to router B,
-                         # none anywhere else.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : where_the_routed_link_attaches_should_go
-                                      }
-                         },
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : {'fn'    : 'none',
-                                       'done'  : 'succeed'
-                                      }
-                         }
-                       ]
+            # Once the link-routable address is ready to use in
+            # the router network, create 4 senders.
+            {
+                'event'  : 'address_ready',
+                'action' : {'fn'   : 'make_senders',
+                            'arg' : 4
+                            }
+            },
+            # In this action, the list-argument to the function
+            # shows how we expect link-attach routes to be
+            # distributed: 4 to router B,
+            # none anywhere else.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn'   : 'check_receiver_distribution',
+                            'arg'  : where_the_routed_link_attaches_should_go
+                            }
+            },
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'    : 'none',
+                            'done'  : 'succeed'
+                            }
+            }
+        ]
 
-        test = RoutingTest ( name,
-                             self.container_ids[0],
-                             self.A_addr,  # all senders are attached here
-                             routers,
-                             self.linkroute_prefix,
-                             addr_suffix,
-                             instructions,
-                             where_to_make_connections,
-                             n_local_containers,
-                             n_remote_routers
+        test = RoutingTest(name,
+                           self.container_ids[0],
+                           self.A_addr,  # all senders are attached here
+                           routers,
+                           self.linkroute_prefix,
+                           addr_suffix,
+                           instructions,
+                           where_to_make_connections,
+                           n_local_containers,
+                           n_remote_routers
                            )
-        test.run ( )
-        self.assertEqual ( None, test.error )
-
+        test.run()
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_19'], 'Test skipped during development.')
-    def test_19_linkroute_linear_kill ( self ) :
-        name='test_19'
+    def test_19_linkroute_linear_kill(self) :
+        name = 'test_19'
         """
         Start out as usual, making four senders and seeing their link-attaches
         routed to router A (local). But then kill the two route-container
@@ -1141,10 +1113,10 @@ class DistributionTests ( TestCase ):
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABC is linear.
-        routers = ( self.A_route_container_addr,
-                    self.B_route_container_addr,
-                    self.C_route_container_addr
-                  )
+        routers = (self.A_route_container_addr,
+                   self.B_route_container_addr,
+                   self.C_route_container_addr
+                   )
 
         # NOTE : about these 3-tuples.
         # The positions in these tuples correspond to the routers passed
@@ -1153,18 +1125,18 @@ class DistributionTests ( TestCase ):
         # test make its senders.
 
         # Tell the test on which routers to make its link-container cnxs.
-        where_to_make_connections = ( 2, 2, 2 )
+        where_to_make_connections = (2, 2, 2)
 
         # And where to expect the resulting link-attaches to end up.
-        first_4                   = ( 4, 0, 0 )   # All go to A
-        second_4                  = ( 4, 4, 0 )   # New ones go to B
-        third_4                   = ( 4, 4, 4 )   # New ones go to C
+        first_4                   = (4, 0, 0)   # All go to A
+        second_4                  = (4, 4, 0)   # New ones go to B
+        third_4                   = (4, 4, 4)   # New ones go to C
 
         # Tell the test how to check for the address being ready.
         n_local_containers = 0
         n_remote_routers   = 2
 
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
         # This is the instruction-list that the test looks at as various
         # milestones are met during testing. If a given event happens,
         # and if it matches the event in the current step of the instructions,
@@ -1173,112 +1145,110 @@ class DistributionTests ( TestCase ):
         # These instructions lists make the test more flexible, so I can get
         # different behavior without writing *almost* the same code mutiple
         # times.
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
 
         # note: if 'done' is present in an action, it always means 'succeed now'.
         # If there had been a failure, that would have been caught in an
         # earlier part of the action.
 
         instructions = [
-                         # Once the link-routable address is ready to use in
-                         # the router network, create 4 senders.
-                         {
-                           'event'  : 'address_ready',
-                           'action' : { 'fn'   : 'make_senders',
-                                        'arg'  : 4
-                                      }
-                         },
-                         # Check the distribution of the first four
-                         # link-attach routings, then go immediately
-                         # to the next instruction step.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : first_4
-                                      }
-                         },
-                         # After we see that the first 4 senders have
-                         # had their link-attaches routed to the right place,
-                         # (which will be router A), close all route-container
-                         # connections to that router.
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : { 'fn'   : 'kill_connections',
-                                        'arg'  : 0
-                                      }
-                         },
-                         # Once the route-container connections on A are
-                         # closed, make 4 new senders
-                         {
-                           'event'  : 'connections_closed',
-                           'action' : { 'fn'   : 'make_senders',
-                                        'arg'  : 4
-                                      }
-                         },
-                         # The link-attaches from these 4 new senders
-                         # should now all have gone to the route-container
-                         # connections on router B.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : second_4
-                                      }
-                         },
-                         # If we receive confirmation that the link-attaches
-                         # have gone to the right place, now we kill
-                         # connections on router B.
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : { 'fn'   : 'kill_connections',
-                                        'arg'  : 1
-                                      }
-                         },
-                         # Once the route-container connections on B are
-                         # closed, make 4 new senders
-                         {
-                           'event'  : 'connections_closed',
-                           'action' : { 'fn'   : 'make_senders',
-                                        'arg'  : 4
-                                      }
-                         },
-                         # The link-attaches from these 4 new senders
-                         # should now all have gone to the route-container
-                         # connections on router C.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : third_4
-                                      }
-                         },
-                         # If we receive confirmation that the link-attaches
-                         # have gone to the right place, we succeed.
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : { 'fn'   : 'none',
-                                        'done' : 'succeed'
-                                      }
-                         }
-                       ]
+            # Once the link-routable address is ready to use in
+            # the router network, create 4 senders.
+            {
+                'event'  : 'address_ready',
+                'action' : {'fn'   : 'make_senders',
+                            'arg'  : 4
+                            }
+            },
+            # Check the distribution of the first four
+            # link-attach routings, then go immediately
+            # to the next instruction step.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn'   : 'check_receiver_distribution',
+                            'arg'  : first_4
+                            }
+            },
+            # After we see that the first 4 senders have
+            # had their link-attaches routed to the right place,
+            # (which will be router A), close all route-container
+            # connections to that router.
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'   : 'kill_connections',
+                            'arg'  : 0
+                            }
+            },
+            # Once the route-container connections on A are
+            # closed, make 4 new senders
+            {
+                'event'  : 'connections_closed',
+                'action' : {'fn'   : 'make_senders',
+                            'arg'  : 4
+                            }
+            },
+            # The link-attaches from these 4 new senders
+            # should now all have gone to the route-container
+            # connections on router B.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn'   : 'check_receiver_distribution',
+                            'arg'  : second_4
+                            }
+            },
+            # If we receive confirmation that the link-attaches
+            # have gone to the right place, now we kill
+            # connections on router B.
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'   : 'kill_connections',
+                            'arg'  : 1
+                            }
+            },
+            # Once the route-container connections on B are
+            # closed, make 4 new senders
+            {
+                'event'  : 'connections_closed',
+                'action' : {'fn'   : 'make_senders',
+                            'arg'  : 4
+                            }
+            },
+            # The link-attaches from these 4 new senders
+            # should now all have gone to the route-container
+            # connections on router C.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn'   : 'check_receiver_distribution',
+                            'arg'  : third_4
+                            }
+            },
+            # If we receive confirmation that the link-attaches
+            # have gone to the right place, we succeed.
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'   : 'none',
+                            'done' : 'succeed'
+                            }
+            }
+        ]
 
-        test = RoutingTest ( name,
-                             self.container_ids[0],
-                             self.A_addr,  # all senders are attached here
-                             routers,
-                             self.linkroute_prefix,
-                             addr_suffix,
-                             instructions,
-                             where_to_make_connections,
-                             n_local_containers,
-                             n_remote_routers
+        test = RoutingTest(name,
+                           self.container_ids[0],
+                           self.A_addr,  # all senders are attached here
+                           routers,
+                           self.linkroute_prefix,
+                           addr_suffix,
+                           instructions,
+                           where_to_make_connections,
+                           n_local_containers,
+                           n_remote_routers
                            )
-        test.run ( )
-        self.assertEqual ( None, test.error )
-
-
+        test.run()
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_20'], 'Test skipped during development.')
-    def test_20_linkroute_mesh_all_local ( self ) :
-        name='test_20'
+    def test_20_linkroute_mesh_all_local(self) :
+        name = 'test_20'
         #
         #                c           c
         # senders --->   A --------- B
@@ -1301,10 +1271,10 @@ class DistributionTests ( TestCase ):
         # Choose which routers to give the test.
         # This choice controls topology.  ABD is triangular,
         # i.e. 3-mesh.
-        routers = ( self.A_route_container_addr,
-                    self.B_route_container_addr,
-                    self.D_route_container_addr
-                  )
+        routers = (self.A_route_container_addr,
+                   self.B_route_container_addr,
+                   self.D_route_container_addr
+                   )
 
         # NOTE : about these 3-tuples.
         # The positions in these tuples correspond to the routers passed
@@ -1313,14 +1283,14 @@ class DistributionTests ( TestCase ):
         # test make its senders.
 
         # Tell the test on which routers to make its link-container cnxs.
-        where_to_make_connections                = ( 2, 2, 2 )
-        where_the_routed_link_attaches_should_go = ( 4, 0, 0 )
+        where_to_make_connections                = (2, 2, 2)
+        where_the_routed_link_attaches_should_go = (4, 0, 0)
 
         # Tell the test how to check for the address being ready.
         n_local_containers = 2
         n_remote_routers   = 2
 
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
         # This is the instruction-list that the test looks at as various
         # milestones are met during testing. If a given event happens,
         # and if it matches the event in the current step of the instructions,
@@ -1329,57 +1299,56 @@ class DistributionTests ( TestCase ):
         # These instructions lists make the test more flexible, so I can get
         # different behavior without writing *almost* the same code mutiple
         # times.
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
 
         # note: if 'done' is present in an action, it always means 'succeed now'.
         # If there had been a failure, that would have been caught in an
         # earlier part of the action.
 
         instructions = [
-                         # Once the link-routable address is ready to use in
-                         # the router network, create 4 senders.
-                         {
-                           'event'  : 'address_ready',
-                           'action' : { 'fn'   : 'make_senders',
-                                         'arg' : 4
-                                      }
-                         },
-                         # In this action, the list-argument to the function
-                         # shows how we expect link-attach routes to be
-                         # distributed: 4 to the first router,
-                         # none to the other two.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : where_the_routed_link_attaches_should_go,
-                                      }
-                         },
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : {'fn'    : 'none',
-                                       'done'  : 'succeed'
-                                      }
-                         }
-                       ]
+            # Once the link-routable address is ready to use in
+            # the router network, create 4 senders.
+            {
+                'event'  : 'address_ready',
+                'action' : {'fn'   : 'make_senders',
+                            'arg' : 4
+                            }
+            },
+            # In this action, the list-argument to the function
+            # shows how we expect link-attach routes to be
+            # distributed: 4 to the first router,
+            # none to the other two.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': where_the_routed_link_attaches_should_go,
+                            }
+            },
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'    : 'none',
+                            'done'  : 'succeed'
+                            }
+            }
+        ]
 
-        test = RoutingTest ( name,
-                             self.container_ids[0],
-                             self.A_addr,  # all senders are attached here
-                             routers,
-                             self.linkroute_prefix,
-                             addr_suffix,
-                             instructions,
-                             where_to_make_connections,
-                             n_local_containers,
-                             n_remote_routers
+        test = RoutingTest(name,
+                           self.container_ids[0],
+                           self.A_addr,  # all senders are attached here
+                           routers,
+                           self.linkroute_prefix,
+                           addr_suffix,
+                           instructions,
+                           where_to_make_connections,
+                           n_local_containers,
+                           n_remote_routers
                            )
-        test.run ( )
-        self.assertEqual ( None, test.error )
-
+        test.run()
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_21'], 'Test skipped during development.')
-    def test_21_linkroute_mesh_nonlocal ( self ) :
-        name='test_21'
+    def test_21_linkroute_mesh_nonlocal(self) :
+        name = 'test_21'
         #
         #                            c
         # senders --->   A --------- B
@@ -1402,10 +1371,10 @@ class DistributionTests ( TestCase ):
         # Choose which routers to give the test.
         # This choice controls topology.  ABD is triangular
         # i.e. 3-mesh.
-        routers = ( self.A_route_container_addr,
-                    self.B_route_container_addr,
-                    self.D_route_container_addr
-                  )
+        routers = (self.A_route_container_addr,
+                   self.B_route_container_addr,
+                   self.D_route_container_addr
+                   )
 
         # NOTE : about these 3-tuples.
         # The positions in these tuples correspond to the routers passed
@@ -1414,14 +1383,14 @@ class DistributionTests ( TestCase ):
         # test make its senders.
 
         # Tell the test on which routers to make its link-container cnxs.
-        where_to_make_connections                = ( 0, 2, 2 )
-        where_the_routed_link_attaches_should_go = ( 0, 2, 2 )
+        where_to_make_connections                = (0, 2, 2)
+        where_the_routed_link_attaches_should_go = (0, 2, 2)
 
         # Tell the test how to check for the address being ready.
         n_local_containers = 0
         n_remote_routers   = 2
 
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
         # This is the instruction-list that the test looks at as various
         # milestones are met during testing. If a given event happens,
         # and if it matches the event in the current step of the instructions,
@@ -1430,59 +1399,56 @@ class DistributionTests ( TestCase ):
         # These instructions lists make the test more flexible, so I can get
         # different behavior without writing *almost* the same code mutiple
         # times.
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
 
         # note: if 'done' is present in an action, it always means 'succeed now'.
         # If there had been a failure, that would have been caught in an
         # earlier part of the action.
 
         instructions = [
-                         # Once the link-routable address is ready to use in
-                         # the router network, create 4 senders.
-                         {
-                           'event'  : 'address_ready',
-                           'action' : { 'fn'   : 'make_senders',
-                                         'arg' : 4
-                                      }
-                         },
-                         # In this action, the list-argument to the function
-                         # shows how we expect link-attach routes to be
-                         # distributed: 4 to router B,
-                         # none anywhere else.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : where_the_routed_link_attaches_should_go,
-                                      }
-                         },
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : {'fn'    : 'none',
-                                       'done'  : 'succeed'
-                                      }
-                         }
-                       ]
+            # Once the link-routable address is ready to use in
+            # the router network, create 4 senders.
+            {
+                'event'  : 'address_ready',
+                'action' : {'fn'   : 'make_senders',
+                            'arg' : 4
+                            }
+            },
+            # In this action, the list-argument to the function
+            # shows how we expect link-attach routes to be
+            # distributed: 4 to router B,
+            # none anywhere else.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': where_the_routed_link_attaches_should_go,
+                            }
+            },
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'    : 'none',
+                            'done'  : 'succeed'
+                            }
+            }
+        ]
 
-        test = RoutingTest ( name,
-                             self.container_ids[0],
-                             self.A_addr,  # all senders are attached here
-                             routers,
-                             self.linkroute_prefix,
-                             addr_suffix,
-                             instructions,
-                             where_to_make_connections,
-                             n_local_containers,
-                             n_remote_routers
+        test = RoutingTest(name,
+                           self.container_ids[0],
+                           self.A_addr,  # all senders are attached here
+                           routers,
+                           self.linkroute_prefix,
+                           addr_suffix,
+                           instructions,
+                           where_to_make_connections,
+                           n_local_containers,
+                           n_remote_routers
                            )
-        test.run ( )
-        self.assertEqual ( None, test.error )
-
-
-
+        test.run()
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_22'], 'Test skipped during development.')
-    def test_22_linkroute_mesh_kill ( self ) :
-        name='test_22'
+    def test_22_linkroute_mesh_kill(self) :
+        name = 'test_22'
 
         #               c           c
         # senders --->   A --------- B
@@ -1502,10 +1468,10 @@ class DistributionTests ( TestCase ):
         # Choose which routers to give the test.
         # This choice controls topology.  ABD is triangular
         # i.e. 3-mesh.
-        routers = ( self.A_route_container_addr,
-                    self.B_route_container_addr,
-                    self.D_route_container_addr
-                  )
+        routers = (self.A_route_container_addr,
+                   self.B_route_container_addr,
+                   self.D_route_container_addr
+                   )
 
         # NOTE : about these 3-tuples.
         # The positions in these tuples correspond to the routers passed
@@ -1514,16 +1480,16 @@ class DistributionTests ( TestCase ):
         # test make its senders.
 
         # Tell the test on which routers to make its link-container cnxs.
-        where_to_make_connections = ( 2, 2, 2 )
-        first_four                = ( 4, 0, 0 )
-        second_four               = ( 4, 2, 2 )
-        third_four                = ( 4, 2, 6 )
+        where_to_make_connections = (2, 2, 2)
+        first_four                = (4, 0, 0)
+        second_four               = (4, 2, 2)
+        third_four                = (4, 2, 6)
 
         # Tell the test how to check for the address being ready.
         n_local_containers = 1
         n_remote_routers   = 2
 
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
         # This is the instruction-list that the test looks at as various
         # milestones are met during testing. If a given event happens,
         # and if it matches the event in the current step of the instructions,
@@ -1532,172 +1498,170 @@ class DistributionTests ( TestCase ):
         # These instructions lists make the test more flexible, so I can get
         # different behavior without writing *almost* the same code mutiple
         # times.
-        #-----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
 
         # note: if 'done' is present in an action, it always means 'succeed now'.
         # If there had been a failure, that would have been caught in an
         # earlier part of the action.
 
         instructions = [
-                         # Once the link-routable address is ready to use in
-                         # the router network, create 4 senders.
-                         {
-                           'event'  : 'address_ready',
-                           'action' : { 'fn'   : 'make_senders',
-                                         'arg' : 4
-                                      }
-                         },
-                         # In this action, the list-argument to the function
-                         # shows how we expect link-attach routes to be
-                         # distributed: 4 to router B,
-                         # none anywhere else.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : first_four,
-                                      }
-                         },
-                         # After we see that the first 4 senders have
-                         # had their link-attaches routed to the right place,
-                         # (which will be router A), close all route-container
-                         # connections to that router.
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : { 'fn'   : 'kill_connections',
-                                        'arg'  : 0
-                                      }
-                         },
-                         # Once the route-container connections on A are
-                         # closed, make 4 new senders
-                         {
-                           'event'  : 'connections_closed',
-                           'action' : { 'fn'   : 'make_senders',
-                                        'arg'  : 4
-                                      }
-                         },
-                         # The link-attaches from these 4 new senders
-                         # should now all have gone to the route-container
-                         # connections on router B.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : second_four
-                                      }
-                         },
-                         # If we receive confirmation that the link-attaches
-                         # have gone to the right place, we ruthlessly
-                         # kill the next set of connections. Will we stop at
-                         # nothing to defeat this code ?!??!?
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : { 'fn'   : 'kill_connections',
-                                        'arg'  : 1
-                                      }
-                         },
-                         # Once the route-container connections on B are
-                         # closed, make 4 new senders
-                         {
-                           'event'  : 'connections_closed',
-                           'action' : { 'fn'   : 'make_senders',
-                                        'arg'  : 4
-                                      }
-                         },
-                         # The link-attaches from these 4 new senders
-                         # should now all have gone to the route-container
-                         # connections on router C.
-                         {
-                           'event'  : 'got_receivers',
-                           'action' : { 'fn'   : 'check_receiver_distribution',
-                                        'arg'  : third_four
-                                      }
-                         },
-                         # If we receive confirmation that the link-attaches
-                         # have gone to the right place, we succeed.
-                         {
-                           'event'  : 'receiver_distribution_ok',
-                           'action' : { 'fn'   : 'none',
-                                        'done' : 'succeed'
-                                      }
-                         }
-                       ]
+            # Once the link-routable address is ready to use in
+            # the router network, create 4 senders.
+            {
+                'event'  : 'address_ready',
+                'action' : {'fn'   : 'make_senders',
+                            'arg' : 4
+                            }
+            },
+            # In this action, the list-argument to the function
+            # shows how we expect link-attach routes to be
+            # distributed: 4 to router B,
+            # none anywhere else.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn': 'check_receiver_distribution',
+                            'arg': first_four,
+                            }
+            },
+            # After we see that the first 4 senders have
+            # had their link-attaches routed to the right place,
+            # (which will be router A), close all route-container
+            # connections to that router.
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'   : 'kill_connections',
+                            'arg'  : 0
+                            }
+            },
+            # Once the route-container connections on A are
+            # closed, make 4 new senders
+            {
+                'event'  : 'connections_closed',
+                'action' : {'fn'   : 'make_senders',
+                            'arg'  : 4
+                            }
+            },
+            # The link-attaches from these 4 new senders
+            # should now all have gone to the route-container
+            # connections on router B.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn'   : 'check_receiver_distribution',
+                            'arg'  : second_four
+                            }
+            },
+            # If we receive confirmation that the link-attaches
+            # have gone to the right place, we ruthlessly
+            # kill the next set of connections. Will we stop at
+            # nothing to defeat this code ?!??!?
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'   : 'kill_connections',
+                            'arg'  : 1
+                            }
+            },
+            # Once the route-container connections on B are
+            # closed, make 4 new senders
+            {
+                'event'  : 'connections_closed',
+                'action' : {'fn'   : 'make_senders',
+                            'arg'  : 4
+                            }
+            },
+            # The link-attaches from these 4 new senders
+            # should now all have gone to the route-container
+            # connections on router C.
+            {
+                'event'  : 'got_receivers',
+                'action' : {'fn'   : 'check_receiver_distribution',
+                            'arg'  : third_four
+                            }
+            },
+            # If we receive confirmation that the link-attaches
+            # have gone to the right place, we succeed.
+            {
+                'event'  : 'receiver_distribution_ok',
+                'action' : {'fn'   : 'none',
+                            'done' : 'succeed'
+                            }
+            }
+        ]
 
-        test = RoutingTest ( name,
-                             self.container_ids[0],
-                             self.A_addr,  # all senders are attached here
-                             routers,
-                             self.linkroute_prefix,
-                             addr_suffix,
-                             instructions,
-                             where_to_make_connections,
-                             n_local_containers,
-                             n_remote_routers
+        test = RoutingTest(name,
+                           self.container_ids[0],
+                           self.A_addr,  # all senders are attached here
+                           routers,
+                           self.linkroute_prefix,
+                           addr_suffix,
+                           instructions,
+                           where_to_make_connections,
+                           n_local_containers,
+                           n_remote_routers
                            )
-        test.run ( )
-        self.assertEqual ( None, test.error )
-
+        test.run()
+        self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_23'], 'Test skipped during development.')
-    def test_23_waypoint ( self ) :
-        name='test_23'
-        test = WaypointTest ( name,
-                              self.container_ids[1],
-                              self.A_addr,
-                              self.B_addr,
-                              self.C_route_container_addr,
-                              self.waypoint_prefix_1 + '.waypoint'
+    def test_23_waypoint(self) :
+        name = 'test_23'
+        test = WaypointTest(name,
+                            self.container_ids[1],
+                            self.A_addr,
+                            self.B_addr,
+                            self.C_route_container_addr,
+                            self.waypoint_prefix_1 + '.waypoint'
                             )
         test.run()
         self.assertEqual(None, test.error)
 
-
     @SkipIfNeeded(DistributionSkipMapper.skip['test_24'], 'Test skipped during development.')
-    def test_24_serial_waypoint_test ( self ):
-        name='test_24'
-        test = SerialWaypointTest ( name,
-                                    self.container_ids[2],
-                                    self.A_addr,
-                                    self.B_addr,
-                                    self.C_route_container_addr,
-                                    self.waypoint_prefix_2 + '.waypoint'
+    def test_24_serial_waypoint_test(self):
+        name = 'test_24'
+        test = SerialWaypointTest(name,
+                                  self.container_ids[2],
+                                  self.A_addr,
+                                  self.B_addr,
+                                  self.C_route_container_addr,
+                                  self.waypoint_prefix_2 + '.waypoint'
                                   )
         test.run()
         self.assertEqual(None, test.error)
 
     @SkipIfNeeded(DistributionSkipMapper.skip['test_25'], 'Test skipped during development.')
-    def test_25_parallel_waypoint_test ( self ):
-        name='test_25'
-        test = ParallelWaypointTest ( name,
-                                      self.container_ids[3],
-                                      self.A_addr,
-                                      self.B_addr,
-                                      self.C_route_container_addr,
-                                      self.waypoint_prefix_3 + '.waypoint'
+    def test_25_parallel_waypoint_test(self):
+        name = 'test_25'
+        test = ParallelWaypointTest(name,
+                                    self.container_ids[3],
+                                    self.A_addr,
+                                    self.B_addr,
+                                    self.C_route_container_addr,
+                                    self.waypoint_prefix_3 + '.waypoint'
                                     )
         test.run()
         self.assertEqual(None, test.error)
 
 
-
-
-
-#================================================================
+# ================================================================
 #     Tests
-#================================================================
-
+# ================================================================
 next_link_sequence = 1
+
+
 def link_name():
     global next_link_sequence
     name = "link-name.%d" % next_link_sequence
     next_link_sequence += 1
     return name
 
-class TargetedSenderTest ( MessagingHandler ):
+
+class TargetedSenderTest (MessagingHandler):
     """
     A 'targeted' sender is one in which we tell the router what
     address we want to send to. (As opposed to letting the router
     pass back an address to us.)
     """
-    def __init__ ( self, test_name, send_addr, recv_addr, destination ):
+
+    def __init__(self, test_name, send_addr, recv_addr, destination):
         super(TargetedSenderTest, self).__init__(prefetch=0)
         self.send_addr  = send_addr
         self.recv_addr  = recv_addr
@@ -1711,13 +1675,11 @@ class TargetedSenderTest ( MessagingHandler ):
         self.n_accepted = 0
         self.test_name = test_name
 
-
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d n_received=%d n_accepted=%d" % \
                      (self.n_sent, self.n_received, self.n_accepted)
         self.send_conn.close()
         self.recv_conn.close()
-
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
@@ -1727,22 +1689,18 @@ class TargetedSenderTest ( MessagingHandler ):
         self.receiver = event.container.create_receiver(self.recv_conn, self.dest)
         self.receiver.flow(self.n_expected)
 
-
     def send(self):
-      while self.sender.credit > 0 and self.n_sent < self.n_expected:
-        msg = Message(body=self.n_sent)
-        self.sender.send(msg)
-        self.n_sent += 1
-
+        while self.sender.credit > 0 and self.n_sent < self.n_expected:
+            msg = Message(body=self.n_sent)
+            self.sender.send(msg)
+            self.n_sent += 1
 
     def on_sendable(self, event):
         if self.n_sent < self.n_expected:
             self.send()
 
-
     def on_accepted(self, event):
         self.n_accepted += 1
-
 
     def on_message(self, event):
         self.n_received += 1
@@ -1752,10 +1710,8 @@ class TargetedSenderTest ( MessagingHandler ):
             self.recv_conn.close()
             self.timer.cancel()
 
-
     def run(self):
         Container(self).run()
-
 
 
 class DynamicTarget(LinkOption):
@@ -1765,8 +1721,7 @@ class DynamicTarget(LinkOption):
         link.target.address = None
 
 
-
-class AnonymousSenderTest ( MessagingHandler ):
+class AnonymousSenderTest (MessagingHandler):
     """
     An 'anonymous' sender is one in which we let the router tell
     us what address the sender should use.  It will pass back this
@@ -1791,13 +1746,11 @@ class AnonymousSenderTest ( MessagingHandler ):
         self.n_accepted = 0
         self.test_name  = test_name
 
-
-    def timeout ( self ):
+    def timeout(self):
         self.error = "Timeout Expired: n_sent=%d n_received=%d n_accepted=%d" % \
                      (self.n_sent, self.n_received, self.n_accepted)
         self.send_conn.close()
         self.recv_conn.close()
-
 
     def on_start(self, event):
         self.timer     = event.reactor.schedule(TIMEOUT, TestTimeout(self))
@@ -1805,13 +1758,11 @@ class AnonymousSenderTest ( MessagingHandler ):
         self.recv_conn = event.container.connect(self.recv_addr)
         self.sender    = event.container.create_sender(self.send_conn, options=DynamicTarget())
 
-
     def send(self):
         while self.sender.credit > 0 and self.n_sent < self.expected:
             self.n_sent += 1
             m = Message(address=self.address, body="Message %d of %d" % (self.n_sent, self.expected))
             self.sender.send(m)
-
 
     def on_link_opened(self, event):
         if event.sender == self.sender:
@@ -1819,15 +1770,12 @@ class AnonymousSenderTest ( MessagingHandler ):
             self.address = self.sender.remote_target.address
             self.receiver = event.container.create_receiver(self.recv_conn, self.address)
 
-
     def on_sendable(self, event):
         self.send()
-
 
     def on_message(self, event):
         if event.receiver == self.receiver:
             self.n_received += 1
-
 
     def on_accepted(self, event):
         self.n_accepted += 1
@@ -1836,16 +1784,12 @@ class AnonymousSenderTest ( MessagingHandler ):
             self.recv_conn.close()
             self.timer.cancel()
 
-
     def run(self):
         Container(self).run()
 
 
-
-
-
-#=======================================================================
-#=======================================================================
+# =======================================================================
+# =======================================================================
 class DynamicReplyTo(MessagingHandler):
     """
     In this test we have a separate 'client' and 'server' with separate
@@ -1855,6 +1799,7 @@ class DynamicReplyTo(MessagingHandler):
     the expected number of replies, or with failure if we time out before
     that happens.
     """
+
     def __init__(self, test_name, client_addr, server_addr):
         super(DynamicReplyTo, self).__init__(prefetch=10)
         self.client_addr        = client_addr
@@ -1880,7 +1825,6 @@ class DynamicReplyTo(MessagingHandler):
         self.num_attempts = 0
         self.addr_check_receiver = None
 
-
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d received_by_server=%d received_by_client=%d" % \
                      (self.n_sent, self.received_by_server, self.received_by_client)
@@ -1901,8 +1845,8 @@ class DynamicReplyTo(MessagingHandler):
         self.client_connection.close()
         self.server_connection.close()
 
-    def on_start( self, event):
-        self.timer             = event.reactor.schedule (TIMEOUT, TestTimeout(self))
+    def on_start(self, event):
+        self.timer             = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         # separate connections to simulate client and server.
         self.client_connection = event.container.connect(self.client_addr)
         self.server_connection = event.container.connect(self.server_addr)
@@ -1932,18 +1876,17 @@ class DynamicReplyTo(MessagingHandler):
                 self.addr_check_timer = event.reactor.schedule(3, AddressCheckerTimeout(self))
 
     def on_sendable(self, event):
-        if self.reply_to_addr == None:
+        if self.reply_to_addr is None:
             return
 
         if event.sender == self.client_sender:
             while event.sender.credit > 0 and self.n_sent < self.n_expected:
                 # We send to server, and tell it how to reply to the client.
-                request = Message ( body=self.n_sent,
-                                    address=self.dest,
-                                    reply_to=self.reply_to_addr )
-                event.sender.send ( request )
+                request = Message(body=self.n_sent,
+                                  address=self.dest,
+                                  reply_to=self.reply_to_addr)
+                event.sender.send(request)
                 self.n_sent += 1
-
 
     def on_message(self, event):
         if event.receiver == self.addr_check_receiver:
@@ -1963,8 +1906,8 @@ class DynamicReplyTo(MessagingHandler):
         # Server gets a request and responds to
         # the address that is embedded in the message.
         if event.receiver == self.server_receiver :
-            self.server_sender.send ( Message(address=event.message.reply_to,
-                                      body="Reply hazy, try again later.") )
+            self.server_sender.send(Message(address=event.message.reply_to,
+                                            body="Reply hazy, try again later."))
             self.received_by_server += 1
 
         # Client gets a response and counts it.
@@ -1973,25 +1916,23 @@ class DynamicReplyTo(MessagingHandler):
             if self.received_by_client == self.n_expected:
                 self.bail()
 
-
     def run(self):
         Container(self).run()
 
 
-
-
-class LinkAttachRoutingCheckOnly ( MessagingHandler ):
+class LinkAttachRoutingCheckOnly (MessagingHandler):
     """
     """
-    def __init__ ( self,
-                   test_name,
-                   container_id,
-                   client_host,
-                   linkroute_container_host,
-                   linkroute_prefix,
-                   addr_suffix
+
+    def __init__(self,
+                 test_name,
+                 container_id,
+                 client_host,
+                 linkroute_container_host,
+                 linkroute_prefix,
+                 addr_suffix
                  ):
-        super ( LinkAttachRoutingCheckOnly, self ).__init__(prefetch=0)
+        super(LinkAttachRoutingCheckOnly, self).__init__(prefetch=0)
         self.client_host               = client_host
         self.linkroute_container_host  = linkroute_container_host
         self.linkroute_prefix          = linkroute_prefix
@@ -2009,23 +1950,19 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
 
         self.debug = False
 
-
-    def debug_print ( self, message ) :
+    def debug_print(self, message) :
         if self.debug :
             print(message)
 
-
-    def timeout ( self ):
-        self.bail ( "Timeout Expired" )
-
+    def timeout(self):
+        self.bail("Timeout Expired")
 
     def address_check_timeout(self):
-        self.debug_print ( "address_check_timeout -------------" )
+        self.debug_print("address_check_timeout -------------")
         self.linkroute_check()
 
-
-    def bail ( self, text ):
-        self.debug_print ( "bail -------------" )
+    def bail(self, text):
+        self.debug_print("bail -------------")
         self.error = text
         self.linkroute_container_cnx.close()
         self.client_cnx.close()
@@ -2033,9 +1970,8 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
         if self.linkroute_check_timer:
             self.linkroute_check_timer.cancel()
 
-
     def on_start(self, event):
-        self.debug_print ( "on_start -------------" )
+        self.debug_print("on_start -------------")
         self.timer        = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.client_cnx = event.container.connect(self.client_host)
         self.linkroute_container_cnx  = event.container.connect(self.linkroute_container_host)
@@ -2049,39 +1985,36 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
         self.linkroute_check_receiver = event.container.create_receiver(self.client_cnx, dynamic=True)
         self.linkroute_check_sender   = event.container.create_sender(self.client_cnx, "$management")
 
-
-    def on_link_opened ( self, event ) :
-        self.debug_print ( "on_link_opened -------------" )
+    def on_link_opened(self, event) :
+        self.debug_print("on_link_opened -------------")
         if event.receiver == self.linkroute_check_receiver:
             event.receiver.flow(30)
             # Because we created the linkroute_check_receiver 'dynamic', when it opens
             # it will have its address filled in. That is the address we want our
             # AddressChecker replies to go to.
-            self.linkroute_checker = AddressChecker ( self.linkroute_check_receiver.remote_source.address )
+            self.linkroute_checker = AddressChecker(self.linkroute_check_receiver.remote_source.address)
             self.linkroute_check()
 
-
     def on_message(self, event):
-        self.debug_print ( "on_message -------------" )
+        self.debug_print("on_message -------------")
         if event.receiver == self.linkroute_check_receiver:
             # This is one of my route-readiness checking messages.
             response = self.linkroute_checker.parse_address_query_response(event.message)
-            self.debug_print ( "    status_code: %d   remoteCount: %d   containerCount: %d" % ( response.status_code, response.remoteCount, response.containerCount ) )
+            self.debug_print("    status_code: %d   remoteCount: %d   containerCount: %d" % (response.status_code, response.remoteCount, response.containerCount))
             if response.status_code == 200 and (response.remoteCount + response.containerCount) > 0:
                 # Step 3: got confirmation of link-attach knowledge fully propagated
                 # to Nearside router.  Now we can make the client sender without getting
                 # a No Path To Destination error.
                 self.client_sender = event.container.create_sender(self.client_cnx, self.link_routable_address)
                 # And we can quit checking.
-                self.bail ( None )
+                self.bail(None)
             else:
                 # If the latest check did not find the link-attack route ready,
                 # schedule another check a little while from now.
                 self.linkroute_check_timer = event.reactor.schedule(0.25, AddressCheckerTimeout(self))
 
-
-    def linkroute_check ( self ):
-        self.debug_print ( "linkroute_check -------------" )
+    def linkroute_check(self):
+        self.debug_print("linkroute_check -------------")
         # Send the message that will query the management code to discover
         # information about our destination address. We cannot make our payload
         # sender until the network is ready.
@@ -2089,8 +2022,7 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
         # BUGALERT: We have to prepend the 'D' to this linkroute prefix
         # because that's what the router does internally.  Someday this
         # may change.
-        self.linkroute_check_sender.send ( self.linkroute_checker.make_address_query("D" + self.linkroute_prefix) )
-
+        self.linkroute_check_sender.send(self.linkroute_checker.make_address_query("D" + self.linkroute_prefix))
 
     def run(self):
         container = Container(self)
@@ -2098,23 +2030,22 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
         container.run()
 
 
-
-
-class LinkAttachRouting ( MessagingHandler ):
+class LinkAttachRouting (MessagingHandler):
     """
     There are two hosts: near, and far.  The far host is the one that
     the route container will connect to, and it will receive our messages.
     The near host is what our sender will attach to.
     """
-    def __init__ ( self,
-                   test_name,
-                   container_id,
-                   nearside_host,
-                   farside_host,
-                   linkroute_prefix,
-                   addr_suffix
+
+    def __init__(self,
+                 test_name,
+                 container_id,
+                 nearside_host,
+                 farside_host,
+                 linkroute_prefix,
+                 addr_suffix
                  ):
-        super ( LinkAttachRouting, self ).__init__(prefetch=0)
+        super(LinkAttachRouting, self).__init__(prefetch=0)
         self.nearside_host         = nearside_host
         self.farside_host          = farside_host
         self.linkroute_prefix      = linkroute_prefix
@@ -2136,24 +2067,20 @@ class LinkAttachRouting ( MessagingHandler ):
         self.test_name    = test_name
         self.container_id = container_id
 
-
-    def timeout ( self ):
-        self.bail ( "Timeout Expired: n_sent=%d n_rcvd=%d n_settled=%d" %
-                    (self.n_sent, self.n_rcvd, self.n_settled) )
-
+    def timeout(self):
+        self.bail("Timeout Expired: n_sent=%d n_rcvd=%d n_settled=%d" %
+                  (self.n_sent, self.n_rcvd, self.n_settled))
 
     def address_check_timeout(self):
         self.linkroute_check()
 
-
-    def bail ( self, text ):
+    def bail(self, text):
         self.error = text
         self.farside_cnx.close()
         self.nearside_cnx.close()
         self.timer.cancel()
         if self.linkroute_check_timer:
             self.linkroute_check_timer.cancel()
-
 
     def on_start(self, event):
         self.timer        = event.reactor.schedule(TIMEOUT, TestTimeout(self))
@@ -2170,14 +2097,12 @@ class LinkAttachRouting ( MessagingHandler ):
         self.linkroute_check_receiver = event.container.create_receiver(self.nearside_cnx, dynamic=True)
         self.linkroute_check_sender   = event.container.create_sender(self.nearside_cnx, "$management")
 
-
     def on_link_opened(self, event):
         if event.receiver:
             event.receiver.flow(self.count)
         if event.receiver == self.linkroute_check_receiver:
             self.linkroute_checker = AddressChecker(self.linkroute_check_receiver.remote_source.address)
             self.linkroute_check()
-
 
     def on_message(self, event):
         if event.receiver == self.farside_receiver:
@@ -2201,8 +2126,7 @@ class LinkAttachRouting ( MessagingHandler ):
                 # schedule another check a little while from now.
                 self.linkroute_check_timer = event.reactor.schedule(0.25, AddressCheckerTimeout(self))
 
-
-    def on_link_opening ( self, event ):
+    def on_link_opening(self, event):
         if event.receiver:
             # Step 4.  At start-up, I connected to the route-container listener on
             # Farside, which makes me the route container.  So when a sender attaches
@@ -2216,22 +2140,19 @@ class LinkAttachRouting ( MessagingHandler ):
                 self.bail("Incorrect address on incoming receiver: got %s, expected %s" %
                           (event.receiver.remote_target.address, self.link_routable_address))
 
-
-    def on_sendable ( self, event ):
+    def on_sendable(self, event):
         # Step 5: once there is someone on the network who can receive
         # my messages, I get the go-ahead for my sender.
         if event.sender == self.nearside_sender:
             self.send()
 
-
-    def send ( self ):
+    def send(self):
         while self.nearside_sender.credit > 0 and self.n_sent < self.count:
             self.n_sent += 1
             m = Message(body="Message %d of %d" % (self.n_sent, self.count))
             self.nearside_sender.send(m)
 
-
-    def linkroute_check ( self ):
+    def linkroute_check(self):
         # Send the message that will query the management code to discover
         # information about our destination address. We cannot make our payload
         # sender until the network is ready.
@@ -2239,15 +2160,13 @@ class LinkAttachRouting ( MessagingHandler ):
         # BUGALERT: We have to prepend the 'D' to this linkroute prefix
         # because that's what the router does internally.  Someday this
         # may change.
-        self.linkroute_check_sender.send ( self.linkroute_checker.make_address_query("D" + self.linkroute_prefix) )
-
+        self.linkroute_check_sender.send(self.linkroute_checker.make_address_query("D" + self.linkroute_prefix))
 
     def on_settled(self, event):
         if event.sender == self.nearside_sender:
             self.n_settled += 1
             if self.n_settled == self.count:
-                self.bail ( None )
-
+                self.bail(None)
 
     def run(self):
         container = Container(self)
@@ -2255,10 +2174,7 @@ class LinkAttachRouting ( MessagingHandler ):
         container.run()
 
 
-
-
-
-class ClosestTest ( MessagingHandler ):
+class ClosestTest (MessagingHandler):
     """
     Test whether distance-based message routing works in a
     3-router network. The network may be linear or mesh,
@@ -2276,9 +2192,10 @@ class ClosestTest ( MessagingHandler ):
     router_1, and then 2 receivers each on all 3 routers.
 
     """
-    def __init__ ( self, test_name, router_1, router_2, router_3, addr_suffix,
-                   print_debug=False ):
-        super ( ClosestTest, self ).__init__(prefetch=0)
+
+    def __init__(self, test_name, router_1, router_2, router_3, addr_suffix,
+                 print_debug=False):
+        super(ClosestTest, self).__init__(prefetch=0)
         self.error       = None
         self.router_1    = router_1
         self.router_2    = router_2
@@ -2322,16 +2239,14 @@ class ClosestTest ( MessagingHandler ):
 
         self.print_debug = print_debug
 
-    def timeout ( self ):
+    def timeout(self):
         sys.stdout.flush()
-        self.bail ( "Timeout Expired " )
-
+        self.bail("Timeout Expired ")
 
     def address_check_timeout(self):
         self.addr_check()
 
-
-    def bail ( self, text ):
+    def bail(self, text):
         self.timer.cancel()
         self.error = text
         self.send_cnx.close()
@@ -2341,52 +2256,50 @@ class ClosestTest ( MessagingHandler ):
         if self.addr_check_timer:
             self.addr_check_timer.cancel()
 
-
-    def on_start ( self, event ):
-        self.timer    = event.reactor.schedule  ( TIMEOUT, TestTimeout(self) )
-        self.send_cnx = event.container.connect ( self.router_1 )
-        self.cnx_1    = event.container.connect ( self.router_1 )
-        self.cnx_2    = event.container.connect ( self.router_2 )
-        self.cnx_3    = event.container.connect ( self.router_3 )
+    def on_start(self, event):
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.send_cnx = event.container.connect(self.router_1)
+        self.cnx_1    = event.container.connect(self.router_1)
+        self.cnx_2    = event.container.connect(self.router_2)
+        self.cnx_3    = event.container.connect(self.router_3)
 
         # Warning!
         # The two receiver-links on each router must be given
         # explicit distinct names, or we will in fact only get
         # one link.  And then wonder why receiver 2 on each
         # router isn't getting any messages.
-        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name=link_name() )
-        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name=link_name() )
+        self.recv_1_a  = event.container.create_receiver(self.cnx_1, self.dest, name=link_name())
+        self.recv_1_b  = event.container.create_receiver(self.cnx_1, self.dest, name=link_name())
 
-        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name=link_name() )
-        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name=link_name() )
+        self.recv_2_a  = event.container.create_receiver(self.cnx_2,  self.dest, name=link_name())
+        self.recv_2_b  = event.container.create_receiver(self.cnx_2,  self.dest, name=link_name())
 
-        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name=link_name() )
-        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name=link_name() )
+        self.recv_3_a  = event.container.create_receiver(self.cnx_3,  self.dest, name=link_name())
+        self.recv_3_b  = event.container.create_receiver(self.cnx_3,  self.dest, name=link_name())
 
-        self.recv_1_a.flow ( self.n_expected )
-        self.recv_2_a.flow ( self.n_expected )
-        self.recv_3_a.flow ( self.n_expected )
+        self.recv_1_a.flow(self.n_expected)
+        self.recv_2_a.flow(self.n_expected)
+        self.recv_3_a.flow(self.n_expected)
 
-        self.recv_1_b.flow ( self.n_expected )
-        self.recv_2_b.flow ( self.n_expected )
-        self.recv_3_b.flow ( self.n_expected )
+        self.recv_1_b.flow(self.n_expected)
+        self.recv_2_b.flow(self.n_expected)
+        self.recv_3_b.flow(self.n_expected)
 
-        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
+        self.addr_check_receiver = event.container.create_receiver(self.cnx_1, dynamic=True)
         self.addr_check_receiver.flow(100)
-        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management" )
+        self.addr_check_sender   = event.container.create_sender(self.cnx_1, "$management")
 
         self.m_sent_1 = False
         self.m_sent_2 = False
         self.m_sent_3 = False
 
-
     def on_link_opened(self, event):
         if event.receiver == self.addr_check_receiver:
             # my addr-check link has opened: make the addr_checker with the given address.
-            self.addr_checker = AddressChecker ( self.addr_check_receiver.remote_source.address )
+            self.addr_checker = AddressChecker(self.addr_check_receiver.remote_source.address)
             self.addr_check()
 
-    def on_message ( self, event ):
+    def on_message(self, event):
         if event.receiver == self.addr_check_receiver:
             # This is a response to one of my address-readiness checking messages.
             response = self.addr_checker.parse_address_query_response(event.message)
@@ -2396,7 +2309,7 @@ class ClosestTest ( MessagingHandler ):
                     # routers that know about the address. The network is ready.
                     # Now we can make the sender without getting a
                     # "No Path To Destination" error.
-                    self.sender = event.container.create_sender ( self.send_cnx, self.dest )
+                    self.sender = event.container.create_sender(self.send_cnx, self.dest)
 
                     if not self.m_sent_1:
                         self.m_sent_1 = True
@@ -2406,7 +2319,7 @@ class ClosestTest ( MessagingHandler ):
                             self.sender.send(msg)
                             self.n_sent_1 += 1
                         if self.print_debug:
-                            print ("First hundred sent")
+                            print("First hundred sent")
 
                     # And we can quit checking.
                     if self.addr_check_timer:
@@ -2455,7 +2368,7 @@ class ClosestTest ( MessagingHandler ):
             elif event.receiver == self.recv_3_a:
                 self.count_3_a += 1
                 if self.print_debug:
-                    print ("self.count_3_a", self.count_3_a)
+                    print("self.count_3_a", self.count_3_a)
             elif event.receiver == self.recv_3_b:
                 self.count_3_b += 1
                 if self.print_debug:
@@ -2470,10 +2383,10 @@ class ClosestTest ( MessagingHandler ):
                 self.recv_1_a.close()
                 self.recv_1_b.close()
                 if (self.count_2_a + self.count_2_b + self.count_3_a + self.count_3_b) > 0 :
-                    self.bail ( "error: routers 2 or 3 got messages before router 1 receivers were closed." )
+                    self.bail("error: routers 2 or 3 got messages before router 1 receivers were closed.")
                 # Make sure both receivers got some messages.
-                if (self.count_1_a < self.one_third/2 or  self.count_1_b < self.one_third/2) or (self.count_1_b != self.count_1_a):
-                    self.bail ( "error: recv_1_a and  recv_1_b did not get equal number of messages" )
+                if (self.count_1_a < self.one_third / 2 or self.count_1_b < self.one_third / 2) or (self.count_1_b != self.count_1_a):
+                    self.bail("error: recv_1_a and  recv_1_b did not get equal number of messages")
 
             elif self.n_received == 2 * self.one_third:
                 if self.print_debug:
@@ -2484,10 +2397,10 @@ class ClosestTest ( MessagingHandler ):
                 self.recv_2_a.close()
                 self.recv_2_b.close()
                 if (self.count_3_a + self.count_3_b) > 0 :
-                    self.bail ( "error: router 3 got messages before 2 was closed." )
+                    self.bail("error: router 3 got messages before 2 was closed.")
                 # Make sure both receivers got some messages.
-                if (self.count_2_a < self.one_third/2 or  self.count_2_b < self.one_third/2) or (self.count_2_b != self.count_2_a):
-                    self.bail ( "error: recv_2_a and  recv_2_b did not get equal number of messages" )
+                if (self.count_2_a < self.one_third / 2 or self.count_2_b < self.one_third / 2) or (self.count_2_b != self.count_2_a):
+                    self.bail("error: recv_2_a and  recv_2_b did not get equal number of messages")
 
             # By the time we reach the expected number of messages
             # we have closed the router_1 and router_2 receivers.  If the
@@ -2495,10 +2408,10 @@ class ClosestTest ( MessagingHandler ):
             if self.n_received >= self.n_expected :
                 if self.print_debug:
                     print("Third one third received")
-                if (self.count_3_a < self.one_third/2 or  self.count_3_b < self.one_third/2) or (self.count_3_b != self.count_3_a):
-                    self.bail ( "error: recv_3_a and  recv_3_b did not get equal number of messages" )
+                if (self.count_3_a < self.one_third / 2 or self.count_3_b < self.one_third / 2) or (self.count_3_b != self.count_3_a):
+                    self.bail("error: recv_3_a and  recv_3_b did not get equal number of messages")
                 else:
-                    self.bail ( None )
+                    self.bail(None)
 
     def on_link_closed(self, event):
         if event.receiver == self.recv_1_b or event.receiver == self.recv_1_a:
@@ -2508,7 +2421,7 @@ class ClosestTest ( MessagingHandler ):
                 self.recv_1_b_closed = True
             if self.recv_1_a_closed and self.recv_1_b_closed and not self.m_sent_2:
                 if self.print_debug:
-                    print ("self.recv_1_a_closed and self.recv_1_b_closed")
+                    print("self.recv_1_a_closed and self.recv_1_b_closed")
 
                 self.m_sent_2 = True
                 while self.n_sent_3 < self.one_third:
@@ -2527,10 +2440,10 @@ class ClosestTest ( MessagingHandler ):
             if self.recv_2_a_closed and self.recv_2_b_closed:
                 self.first_check = False
                 if self.print_debug:
-                    print ("self.recv_2_a_closed and self.recv_2_b_closed")
+                    print("self.recv_2_a_closed and self.recv_2_b_closed")
                 self.addr_check()
 
-    def addr_check ( self ):
+    def addr_check(self):
         # Send the message that will query the management code to discover
         # information about our destination address. We cannot make our payload
         # sender until the network is ready.
@@ -2538,18 +2451,14 @@ class ClosestTest ( MessagingHandler ):
         # BUGALERT: We have to prepend the 'M0' to this address prefix
         # because that's what the router does internally.  Someday this
         # may change.
-        self.addr_check_sender.send ( self.addr_checker.make_address_query("M0" + self.dest) )
-
+        self.addr_check_sender.send(self.addr_checker.make_address_query("M0" + self.dest))
 
     def run(self):
         container = Container(self)
         container.run()
 
 
-
-
-
-class BalancedTest ( MessagingHandler ):
+class BalancedTest (MessagingHandler):
     """
     This test is topology-agnostic. This code thinks of its nodes as 1, 2, 3.
     The caller knows if they are linear or triangular, or a tree.  It calculates
@@ -2558,20 +2467,21 @@ class BalancedTest ( MessagingHandler ):
     ( Slop can happen in some topologies when you can't tell whether spillover
     will happen first to node 2, or to node 3.
     """
-    def __init__ ( self,
-                   test_name,
-                   router_1,
-                   router_2,
-                   router_3,
-                   addr_suffix,
-                   total_messages,
-                   expected_1,
-                   expected_2,
-                   expected_3,
-                   slop,
-                   omit_middle_receiver
-                ):
-        super ( BalancedTest, self ).__init__(prefetch=0, auto_accept=False)
+
+    def __init__(self,
+                 test_name,
+                 router_1,
+                 router_2,
+                 router_3,
+                 addr_suffix,
+                 total_messages,
+                 expected_1,
+                 expected_2,
+                 expected_3,
+                 slop,
+                 omit_middle_receiver
+                 ):
+        super(BalancedTest, self).__init__(prefetch=0, auto_accept=False)
         self.error       = None
         self.router_3    = router_3
         self.router_2    = router_2
@@ -2604,16 +2514,13 @@ class BalancedTest ( MessagingHandler ):
         self.payload_sender = None
         self.test_name      = test_name
 
-
-    def timeout ( self ):
-        self.bail ( "Timeout Expired " )
-
+    def timeout(self):
+        self.bail("Timeout Expired ")
 
     def address_check_timeout(self):
         self.address_check()
 
-
-    def bail ( self, text ):
+    def bail(self, text):
         self.timer.cancel()
         self.error = text
         self.cnx_3.close()
@@ -2622,37 +2529,34 @@ class BalancedTest ( MessagingHandler ):
         if self.address_check_timer:
             self.address_check_timer.cancel()
 
+    def on_start(self, event):
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.cnx_3    = event.container.connect(self.router_3)
+        self.cnx_2    = event.container.connect(self.router_2)
+        self.cnx_1    = event.container.connect(self.router_1)
 
-    def on_start ( self, event ):
-        self.timer    = event.reactor.schedule  ( TIMEOUT, TestTimeout(self) )
-        self.cnx_3    = event.container.connect ( self.router_3 )
-        self.cnx_2    = event.container.connect ( self.router_2 )
-        self.cnx_1    = event.container.connect ( self.router_1 )
-
-        self.recv_3  = event.container.create_receiver ( self.cnx_3,  self.dest )
+        self.recv_3  = event.container.create_receiver(self.cnx_3,  self.dest)
         if self.omit_middle_receiver is False :
-            self.recv_2 = event.container.create_receiver ( self.cnx_2,  self.dest )
-        self.recv_1  = event.container.create_receiver ( self.cnx_1,  self.dest )
+            self.recv_2 = event.container.create_receiver(self.cnx_2,  self.dest)
+        self.recv_1  = event.container.create_receiver(self.cnx_1,  self.dest)
 
-        self.recv_3.flow ( self.total_messages )
+        self.recv_3.flow(self.total_messages)
         if self.omit_middle_receiver is False :
-            self.recv_2.flow ( self.total_messages )
-        self.recv_1.flow ( self.total_messages )
+            self.recv_2.flow(self.total_messages)
+        self.recv_1.flow(self.total_messages)
 
-        self.address_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
-        self.address_check_sender   = event.container.create_sender   ( self.cnx_1, "$management" )
-
+        self.address_check_receiver = event.container.create_receiver(self.cnx_1, dynamic=True)
+        self.address_check_sender   = event.container.create_sender(self.cnx_1, "$management")
 
     def on_link_opened(self, event):
         if event.receiver:
-            event.receiver.flow ( self.total_messages )
+            event.receiver.flow(self.total_messages)
         if event.receiver == self.address_check_receiver:
             # My address check-link has opened: make the address_checker
-            self.address_checker = AddressChecker ( self.address_check_receiver.remote_source.address )
+            self.address_checker = AddressChecker(self.address_check_receiver.remote_source.address)
             self.address_check()
 
-
-    def on_message ( self, event ):
+    def on_message(self, event):
 
         if self.n_received >= self.total_messages:
             return   # Sometimes you can get a message or two even after you have called bail().
@@ -2670,7 +2574,7 @@ class BalancedTest ( MessagingHandler ):
                 # Since I have 3 nodes, I want to see 1 subscriber (which is on the local router) and
                 # 2 remote routers that know about my destination address.
                 # Now we can safely make the payload sender without getting a 'No Path To Destination' error.
-                self.payload_sender = event.container.create_sender ( self.cnx_1, self.dest )
+                self.payload_sender = event.container.create_sender(self.cnx_1, self.dest)
                 # And we can quit checking.
                 if self.address_check_timer:
                     self.address_check_timer.cancel()
@@ -2683,9 +2587,12 @@ class BalancedTest ( MessagingHandler ):
         else:
             self.n_received += 1
 
-            if   event.receiver == self.recv_1: self.count_1 += 1
-            elif event.receiver == self.recv_2: self.count_2 += 1
-            elif event.receiver == self.recv_3: self.count_3 += 1
+            if event.receiver == self.recv_1:
+                self.count_1 += 1
+            elif event.receiver == self.recv_2:
+                self.count_2 += 1
+            elif event.receiver == self.recv_3:
+                self.count_3 += 1
 
             # I do not check for count_1 + count_2 + count_3 == total,
             # because it always will be due to how the code counts things.
@@ -2693,21 +2600,19 @@ class BalancedTest ( MessagingHandler ):
                 if abs(self.count_1 - self.expected_1) > self.slop or \
                    abs(self.count_2 - self.expected_2) > self.slop or \
                    abs(self.count_3 - self.expected_3) > self.slop  :
-                    self.bail ( "expected: ( %d, %d, %d )  got: ( %d, %d, %d )" % (self.expected_1, self.expected_2, self.expected_3, self.count_1, self.count_2, self.count_3) )
+                    self.bail("expected: ( %d, %d, %d )  got: ( %d, %d, %d )" % (self.expected_1, self.expected_2, self.expected_3, self.count_1, self.count_2, self.count_3))
                 else:
-                    self.bail ( None ) # All is well.
+                    self.bail(None)  # All is well.
 
-
-    def on_sendable ( self, event ):
+    def on_sendable(self, event):
         if self.n_sent < self.total_messages and event.sender == self.payload_sender :
-            msg = Message ( body     = "Hello, balanced.",
-                            address  = self.dest
+            msg = Message(body="Hello, balanced.",
+                          address=self.dest
                           )
-            self.payload_sender.send ( msg )
+            self.payload_sender.send(msg)
             self.n_sent += 1
 
-
-    def address_check ( self ):
+    def address_check(self):
         # Send the message that will query the management code to discover
         # information about our destination address. We cannot make our payload
         # sender until the network is ready.
@@ -2715,30 +2620,27 @@ class BalancedTest ( MessagingHandler ):
         # BUGALERT: We have to prepend the 'M0' to this address prefix
         # because that's what the router does internally.  Someday this
         # may change.
-        self.address_check_sender.send ( self.address_checker.make_address_query("M0" + self.dest) )
-
+        self.address_check_sender.send(self.address_checker.make_address_query("M0" + self.dest))
 
     def run(self):
         container = Container(self)
         container.run()
 
 
-
-
-
-class MulticastTest ( MessagingHandler ):
+class MulticastTest (MessagingHandler):
     """
     Using multicast, we should see all receivers get everything,
     whether the topology is linear or mesh.
     """
-    def __init__ ( self,
-                   test_name,
-                   router_1,
-                   router_2,
-                   router_3,
-                   addr_suffix
+
+    def __init__(self,
+                 test_name,
+                 router_1,
+                 router_2,
+                 router_3,
+                 addr_suffix
                  ):
-        super ( MulticastTest, self ).__init__(prefetch=0)
+        super(MulticastTest, self).__init__(prefetch=0)
         self.error       = None
         self.router_1    = router_1
         self.router_2    = router_2
@@ -2765,15 +2667,13 @@ class MulticastTest ( MessagingHandler ):
         self.bailed              = False
         self.test_name           = test_name
 
-    def timeout ( self ):
-        self.bail ( "Timeout Expired " )
-
+    def timeout(self):
+        self.bail("Timeout Expired ")
 
     def address_check_timeout(self):
         self.addr_check()
 
-
-    def bail ( self, text ):
+    def bail(self, text):
         self.timer.cancel()
         self.error = text
         self.send_cnx.close()
@@ -2783,62 +2683,58 @@ class MulticastTest ( MessagingHandler ):
         if self.addr_check_timer:
             self.addr_check_timer.cancel()
 
-
-    def on_start ( self, event ):
-        self.timer    = event.reactor.schedule  ( TIMEOUT, TestTimeout(self) )
-        self.send_cnx = event.container.connect ( self.router_1 )
-        self.cnx_1    = event.container.connect ( self.router_1 )
-        self.cnx_2    = event.container.connect ( self.router_2 )
-        self.cnx_3    = event.container.connect ( self.router_3 )
+    def on_start(self, event):
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.send_cnx = event.container.connect(self.router_1)
+        self.cnx_1    = event.container.connect(self.router_1)
+        self.cnx_2    = event.container.connect(self.router_2)
+        self.cnx_3    = event.container.connect(self.router_3)
 
         # Warning!
         # The two receiver-links on each router must be given
         # explicit distinct names, or we will in fact only get
         # one link.  And then wonder why receiver 2 on each
         # router isn't getting any messages.
-        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name=link_name() )
-        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name=link_name() )
+        self.recv_1_a  = event.container.create_receiver(self.cnx_1, self.dest, name=link_name())
+        self.recv_1_b  = event.container.create_receiver(self.cnx_1, self.dest, name=link_name())
 
-        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name=link_name() )
-        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name=link_name() )
+        self.recv_2_a  = event.container.create_receiver(self.cnx_2,  self.dest, name=link_name())
+        self.recv_2_b  = event.container.create_receiver(self.cnx_2,  self.dest, name=link_name())
 
-        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name=link_name() )
-        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name=link_name() )
+        self.recv_3_a  = event.container.create_receiver(self.cnx_3,  self.dest, name=link_name())
+        self.recv_3_b  = event.container.create_receiver(self.cnx_3,  self.dest, name=link_name())
 
-        self.recv_1_a.flow ( self.n_to_send )
-        self.recv_2_a.flow ( self.n_to_send )
-        self.recv_3_a.flow ( self.n_to_send )
+        self.recv_1_a.flow(self.n_to_send)
+        self.recv_2_a.flow(self.n_to_send)
+        self.recv_3_a.flow(self.n_to_send)
 
-        self.recv_1_b.flow ( self.n_to_send )
-        self.recv_2_b.flow ( self.n_to_send )
-        self.recv_3_b.flow ( self.n_to_send )
+        self.recv_1_b.flow(self.n_to_send)
+        self.recv_2_b.flow(self.n_to_send)
+        self.recv_3_b.flow(self.n_to_send)
 
-        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
-        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management" )
-
+        self.addr_check_receiver = event.container.create_receiver(self.cnx_1, dynamic=True)
+        self.addr_check_sender   = event.container.create_sender(self.cnx_1, "$management")
 
     def on_link_opened(self, event):
         if event.receiver:
-            event.receiver.flow ( self.n_to_send )
+            event.receiver.flow(self.n_to_send)
         if event.receiver == self.addr_check_receiver:
             # my addr-check link has opened: make the addr_checker with the given address.
-            self.addr_checker = AddressChecker ( self.addr_check_receiver.remote_source.address )
+            self.addr_checker = AddressChecker(self.addr_check_receiver.remote_source.address)
             self.addr_check()
 
-
-    def on_sendable ( self, event ):
+    def on_sendable(self, event):
         if self.sender and self.n_sent < self.n_to_send :
-            msg = Message ( body     = "Hello, closest.",
-                            address  = self.dest
+            msg = Message(body="Hello, closest.",
+                          address=self.dest
                           )
-            dlv = self.sender.send ( msg )
+            dlv = self.sender.send(msg)
             self.n_sent += 1
             dlv.settle()
 
+    def on_message(self, event):
 
-    def on_message ( self, event ):
-
-        #if self.bailed is True :
+        # if self.bailed is True :
         #    return
 
         if event.receiver == self.addr_check_receiver:
@@ -2849,7 +2745,7 @@ class MulticastTest ( MessagingHandler ):
                 # routers that know about the address. The network is ready.
                 # Now we can make the sender without getting a
                 # "No Path To Destination" error.
-                self.sender = event.container.create_sender ( self.send_cnx, self.dest )
+                self.sender = event.container.create_sender(self.send_cnx, self.dest)
 
                 # And we can quit checking.
                 if self.addr_check_timer:
@@ -2865,7 +2761,7 @@ class MulticastTest ( MessagingHandler ):
 
             # Count the messages that have come in for
             # each receiver.
-            if   event.receiver == self.recv_1_a:
+            if event.receiver == self.recv_1_a:
                 self.count_1_a += 1
             elif event.receiver == self.recv_1_b:
                 self.count_1_b += 1
@@ -2883,15 +2779,13 @@ class MulticastTest ( MessagingHandler ):
                 # Our reception count should be 6x our send-count,
                 # and all receiver-counts should be equal.
                 if self.count_1_a == self.count_1_b and self.count_1_b == self.count_2_a and self.count_2_a == self.count_2_b and self.count_2_b == self.count_3_a and self.count_3_a == self.count_3_b :
-                    self.bail ( None )
+                    self.bail(None)
                     self.bailed = True
                 else:
-                    self.bail ( "receivers not equal: %d %d %d %d %d %d" % (self.count_1_a, self.count_1_b, self.count_2_a, self.count_2_b, self.count_3_a, self.count_3_b) )
+                    self.bail("receivers not equal: %d %d %d %d %d %d" % (self.count_1_a, self.count_1_b, self.count_2_a, self.count_2_b, self.count_3_a, self.count_3_b))
                     self.bailed = True
 
-
-
-    def addr_check ( self ):
+    def addr_check(self):
         # Send the message that will query the management code to discover
         # information about our destination address. We cannot make our payload
         # sender until the network is ready.
@@ -2899,17 +2793,14 @@ class MulticastTest ( MessagingHandler ):
         # BUGALERT: We have to prepend the 'M0' to this address prefix
         # because that's what the router does internally.  Someday this
         # may change.
-        self.addr_check_sender.send ( self.addr_checker.make_address_query("M0" + self.dest) )
-
+        self.addr_check_sender.send(self.addr_checker.make_address_query("M0" + self.dest))
 
     def run(self):
         container = Container(self)
         container.run()
 
 
-
-
-class RoutingTest ( MessagingHandler ):
+class RoutingTest (MessagingHandler):
     """
     Accept a network of three routers -- either linear or triangular,
     depending on what the caller chooses -- make some senders, and see
@@ -2931,19 +2822,19 @@ class RoutingTest ( MessagingHandler ):
     #      up to the point where it becomes dependent on the instruction
     #      list that is passed in from the caller.
 
-    def __init__ ( self,
-                   test_name,
-                   container_id,
-                   sender_host,
-                   route_container_addrs,
-                   linkroute_prefix,
-                   addr_suffix,
-                   instructions,
-                   where_to_make_connections,
-                   n_local_containers,
-                   n_remote_routers
+    def __init__(self,
+                 test_name,
+                 container_id,
+                 sender_host,
+                 route_container_addrs,
+                 linkroute_prefix,
+                 addr_suffix,
+                 instructions,
+                 where_to_make_connections,
+                 n_local_containers,
+                 n_remote_routers
                  ):
-        super ( RoutingTest, self ).__init__(prefetch=0)
+        super(RoutingTest, self).__init__(prefetch=0)
 
         self.debug     = False
         self.test_name = test_name
@@ -2992,7 +2883,7 @@ class RoutingTest ( MessagingHandler ):
         # Each dict will hold one of these:
         #    < cnx : receiver_count >
         # for each cnx on that router.
-        self.router_cnx_counts = [ dict(), dict(), dict() ]
+        self.router_cnx_counts = [dict(), dict(), dict()]
         self.cnx_status        = dict()
         self.waiting_for_address_to_go_away = False
         self.sent_address_ready = False
@@ -3000,25 +2891,22 @@ class RoutingTest ( MessagingHandler ):
         self.status = 'start up'
         self.container_id = container_id
 
-
-    def debug_print ( self, message ) :
+    def debug_print(self, message) :
         if self.debug :
             print(message)
 
-
     # If this happens, the test is hanging.
-    def timeout ( self ):
-        self.start_shutting_down ( "Timeout Expired while: %s" % self.status )
-
+    def timeout(self):
+        self.start_shutting_down("Timeout Expired while: %s" % self.status)
 
     # This helps us periodically send management queries
     # to learn when our address os ready to be used on the
     # router network.
+
     def address_check_timeout(self):
         self.linkroute_check()
 
-
-    #=================================================================
+    # =================================================================
     # The address-checker is always running.
     # When this function gets us into the mode of starting
     # to shut down, then we look for the linkroutable address
@@ -3028,15 +2916,14 @@ class RoutingTest ( MessagingHandler ):
     # with later tests (if one is run immediately after).
     # The next test will often (like, 20% of the time) get spurious
     # no route to destination errors.
-    #=================================================================
-    def start_shutting_down ( self, text ):
+    # =================================================================
+    def start_shutting_down(self, text):
         self.done = True
         self.error = text
         self.close_route_container_connections()
         self.waiting_for_address_to_go_away = True
 
-
-    def finish ( self ):
+    def finish(self):
         self.done = True
         self.sender_cnx.close()
         self.timer.cancel()
@@ -3044,11 +2931,10 @@ class RoutingTest ( MessagingHandler ):
             self.linkroute_check_timer.cancel()
         self.event_injector.close()
 
-
-    def on_start ( self, event ):
-        self.debug_print ( "\n\n%s ===========================================\n\n" % self.test_name )
-        self.debug_print ( "on_start -------------" )
-        self.timer = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
+    def on_start(self, event):
+        self.debug_print("\n\n%s ===========================================\n\n" % self.test_name)
+        self.debug_print("on_start -------------")
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         event.reactor.selectable(self.event_injector)
         self.sender_cnx = event.container.connect(self.sender_host)
 
@@ -3068,12 +2954,12 @@ class RoutingTest ( MessagingHandler ):
             how_many_for_this_router = self.where_to_make_connections[router]
             for j in range(how_many_for_this_router) :
                 route_container_addr = self.route_container_addrs[router]
-                cnx = event.container.connect ( route_container_addr )
+                cnx = event.container.connect(route_container_addr)
                 # In the dict of connections and actual receiver
                 # counts, store this cnx, and 0.
                 self.router_cnx_counts[router][cnx] = 0
                 self.cnx_status[cnx] = 1
-                self.debug_print ( "on_start: made cnx %s on router %d" % ( str(cnx), router ) )
+                self.debug_print("on_start: made cnx %s on router %d" % (str(cnx), router))
 
         # STEP 2 : Make a sender and receiver that we will use to tell when the router
         #          network is ready to handle our reoutable address. This sender will
@@ -3083,39 +2969,37 @@ class RoutingTest ( MessagingHandler ):
         #          dynamic.  That means that when we receive the on_link_opened event for
         #          it, we will be handed its address -- which we will then use as the reply-to
         #          address for the management queries we send.
-        self.linkroute_check_receiver = event.container.create_receiver ( self.sender_cnx, dynamic=True )
-        self.linkroute_check_sender   = event.container.create_sender   ( self.sender_cnx, "$management" )
+        self.linkroute_check_receiver = event.container.create_receiver(self.sender_cnx, dynamic=True)
+        self.linkroute_check_sender   = event.container.create_sender(self.sender_cnx, "$management")
 
-
-    #=================================================
+    # =================================================
     # custom event
     # The link-attach-routable address is ready
     # for use in the router network.
-    #=================================================
-    def on_address_ready ( self, event ):
+    # =================================================
+    def on_address_ready(self, event):
         # STEP 5 : Our link-attach routable address now has the expected
         #          number of local and remote receivers. Open for business!
         #          Time to start making sender-links to this address, and
         #          see where their link-attaches get routed to.
-        self.debug_print ( "on_address_ready -------------" )
-        current_step = self.instructions [ self.current_step_index ]
+        self.debug_print("on_address_ready -------------")
+        current_step = self.instructions[self.current_step_index]
         if current_step['event'] != 'address_ready' :
-            self.start_shutting_down ( "out-of-sequence event: address_ready while expecting %s" % current_step['event'] )
+            self.start_shutting_down("out-of-sequence event: address_ready while expecting %s" % current_step['event'])
         else :
             action = current_step['action']
             if action['fn'] == 'make_senders' :
                 self.status = 'making senders'
                 arg = int(action['arg'])
-                self.make_senders ( arg )
+                self.make_senders(arg)
                 self.expected_receivers = arg
                 self.receiver_count = 0
                 self.current_step_index += 1
-                self.debug_print ( "current step advance to %d" % self.current_step_index )
+                self.debug_print("current step advance to %d" % self.current_step_index)
             else :
-                self.start_shutting_down ( "on_address_ready: unexpected action fn %s" % action['fn'] )
+                self.start_shutting_down("on_address_ready: unexpected action fn %s" % action['fn'])
 
-
-    #=======================================================
+    # =======================================================
     # custom event
     # STEP 7 : The correct number of receiver-links,
     #          corresponding to the number of senders that
@@ -3125,90 +3009,87 @@ class RoutingTest ( MessagingHandler ):
     #                after this the behavior of the test
     #                changes based on the instruction list
     #                that it received from the caller.
-    #=======================================================
-    def on_got_receivers ( self, event ):
+    # =======================================================
+    def on_got_receivers(self, event):
 
         if self.done :
             return
 
-        self.debug_print ( "on_got_receivers -------------" )
-        current_step = self.instructions [ self.current_step_index ]
+        self.debug_print("on_got_receivers -------------")
+        current_step = self.instructions[self.current_step_index]
 
         if current_step['event'] != 'got_receivers' :
-            self.start_shutting_down ( "out-of-sequence event: got_receivers while expecting %s" % current_step['event'] )
+            self.start_shutting_down("out-of-sequence event: got_receivers while expecting %s" % current_step['event'])
         else :
-          action = current_step['action']
-          if action['fn'] != 'check_receiver_distribution' :
-              self.start_shutting_down ( "on_got_receivers: unexpected action fn %s" % action['fn'] )
-          else :
-              self.status = "checking receiver distribution"
-              error = self.check_receiver_distribution ( action['arg'] )
-              if error :
-                  self.debug_print ( "check_receiver_distribution error" )
-                  self.start_shutting_down ( error )
-              else:
-                  self.debug_print ( "receiver_distribution_ok" )
-                  self.event_injector.trigger ( self.receiver_distribution_ok_event )
-                  self.current_step_index += 1
-                  self.debug_print ( "current step advance to %d" % self.current_step_index )
+            action = current_step['action']
+            if action['fn'] != 'check_receiver_distribution' :
+                self.start_shutting_down("on_got_receivers: unexpected action fn %s" % action['fn'])
+            else :
+                self.status = "checking receiver distribution"
+                error = self.check_receiver_distribution(action['arg'])
+                if error :
+                    self.debug_print("check_receiver_distribution error")
+                    self.start_shutting_down(error)
+                else:
+                    self.debug_print("receiver_distribution_ok")
+                    self.event_injector.trigger(self.receiver_distribution_ok_event)
+                    self.current_step_index += 1
+                    self.debug_print("current step advance to %d" % self.current_step_index)
 
-
-
-    #=======================================================
+    # =======================================================
     # custom event
     # The receiver links that we got after creating some
     # senders went to the right place.
-    #=======================================================
-    def on_receiver_distribution_ok ( self, event ) :
-        self.debug_print ( "on_receiver_distribution_ok ------------" )
-        current_step = self.instructions [ self.current_step_index ]
+    # =======================================================
+
+    def on_receiver_distribution_ok(self, event) :
+        self.debug_print("on_receiver_distribution_ok ------------")
+        current_step = self.instructions[self.current_step_index]
 
         if current_step['event'] != 'receiver_distribution_ok' :
-            self.start_shutting_down ( "out-of-sequence event: receiver_distribution_ok while expecting %s" % current_step['event'] )
+            self.start_shutting_down("out-of-sequence event: receiver_distribution_ok while expecting %s" % current_step['event'])
         else :
             action = current_step['action']
             if action['fn'] == 'none' :
-                self.debug_print ( "on_receiver_distribution_ok: test succeeding." )
-                self.start_shutting_down ( None )
+                self.debug_print("on_receiver_distribution_ok: test succeeding.")
+                self.start_shutting_down(None)
             elif action['fn'] == 'kill_connections' :
                 router = int(action['arg'])
                 self.connections_to_be_closed = 2
                 self.connections_closed = 0
-                self.debug_print ( "on_receiver_distribution_ok: killing %d connections on router %d" % (self.connections_to_be_closed, router ) )
-                self.close_route_container_connections_on_router_n ( router )
+                self.debug_print("on_receiver_distribution_ok: killing %d connections on router %d" % (self.connections_to_be_closed, router))
+                self.close_route_container_connections_on_router_n(router)
                 self.current_step_index += 1
-                self.debug_print ( "current step advance to %d" % self.current_step_index )
+                self.debug_print("current step advance to %d" % self.current_step_index)
             else :
-                self.start_shutting_down ( "on_receiver_distribution_ok: unexpected action fn %s" % action['fn'] )
+                self.start_shutting_down("on_receiver_distribution_ok: unexpected action fn %s" % action['fn'])
 
-
-    #=======================================================
+    # =======================================================
     # custom event
     # We were told to close the connections on a router
     # and now all those connections have been closed.
-    #=======================================================
-    def on_connections_closed ( self, event ) :
-        self.debug_print ( "on_connections_closed ------------" )
-        current_step = self.instructions [ self.current_step_index ]
+    # =======================================================
+    def on_connections_closed(self, event) :
+        self.debug_print("on_connections_closed ------------")
+        current_step = self.instructions[self.current_step_index]
 
         if current_step['event'] != 'connections_closed' :
-            self.start_shutting_down ( "out-of-sequence event: connections_closed while expecting %s" % current_step['event'] )
+            self.start_shutting_down("out-of-sequence event: connections_closed while expecting %s" % current_step['event'])
         else :
             action = current_step['action']
             if action['fn'] == 'make_senders' :
                 self.status = 'making senders'
                 arg = int(action['arg'])
-                self.make_senders ( arg )
+                self.make_senders(arg)
                 self.expected_receivers = arg
                 self.receiver_count = 0
-                self.debug_print ( "now expecting %d new receivers." % self.expected_receivers )
+                self.debug_print("now expecting %d new receivers." % self.expected_receivers)
                 self.current_step_index += 1
-                self.debug_print ( "current step advance to %d" % self.current_step_index )
+                self.debug_print("current step advance to %d" % self.current_step_index)
             else :
-                self.start_shutting_down ( "on_connections_closed: unexpected action fn %s" % action['fn'] )
+                self.start_shutting_down("on_connections_closed: unexpected action fn %s" % action['fn'])
 
-
-    def print_receiver_distribution ( self ) :
+    def print_receiver_distribution(self) :
         print("receiver distribution:")
         for router in range(len(self.router_cnx_counts)) :
             print("    router %s" % router)
@@ -3217,23 +3098,22 @@ class RoutingTest ( MessagingHandler ):
                 print("        cnx: %s receivers: %s"
                       % (cnx, cnx_dict[cnx]))
 
-
-    def get_receiver_distribution ( self ) :
+    def get_receiver_distribution(self) :
         threeple = ()
         for router in range(len(self.router_cnx_counts)) :
             cnx_dict = self.router_cnx_counts[router]
             sum_for_this_router = 0
             for cnx in cnx_dict :
                 sum_for_this_router += cnx_dict[cnx]
-            threeple = threeple + ( sum_for_this_router, )
+            threeple = threeple + (sum_for_this_router, )
         return threeple
 
-    #=====================================================
+    # =====================================================
     # Check the count of how many receivers came in for
     # each connection compared to what was expected.
-    #=====================================================
-    def check_receiver_distribution ( self, expected_receiver_counts ) :
-        self.debug_print ( "check_receiver_distribution expecting: %s" % str(expected_receiver_counts) )
+    # =====================================================
+    def check_receiver_distribution(self, expected_receiver_counts) :
+        self.debug_print("check_receiver_distribution expecting: %s" % str(expected_receiver_counts))
         if self.debug :
             self.print_receiver_distribution()
         for router in range(len(self.router_cnx_counts)) :
@@ -3246,13 +3126,12 @@ class RoutingTest ( MessagingHandler ):
 
             expected = expected_receiver_counts[router]
             if actual != expected :
-                return "expected: %s -- got: %s" % ( str(expected_receiver_counts), str(self.get_receiver_distribution()) )
+                return "expected: %s -- got: %s" % (str(expected_receiver_counts), str(self.get_receiver_distribution()))
             router += 1
-        self.debug_print ( "expected: %s -- got: %s" % ( str(expected_receiver_counts), str(self.get_receiver_distribution()) ) )
+        self.debug_print("expected: %s -- got: %s" % (str(expected_receiver_counts), str(self.get_receiver_distribution())))
         return None
 
-
-    def close_route_container_connections ( self ) :
+    def close_route_container_connections(self) :
         self.status = "closing route container connections"
         for router in range(len(self.router_cnx_counts)) :
             cnx_dict = self.router_cnx_counts[router]
@@ -3260,36 +3139,33 @@ class RoutingTest ( MessagingHandler ):
                 if self.cnx_status[cnx] :
                     cnx.close()
 
-
-    def close_route_container_connections_on_router_n ( self, n ) :
+    def close_route_container_connections_on_router_n(self, n) :
         self.status = "closing route container connections on router %d" % n
-        self.debug_print ( "close_route_container_connections_on_router_n %d" % n )
+        self.debug_print("close_route_container_connections_on_router_n %d" % n)
         cnx_dict = self.router_cnx_counts[n]
         for cnx in cnx_dict :
             if self.cnx_status[cnx] :
                 cnx.close()
 
-
-    #=====================================================================
+    # =====================================================================
     # When a new receiver is handed to us (because a link-attach from a
     # sender has been routed to one of our route-container connections)
     # increment the number associated with that connection.
     # Also indicate to the caller whether this was indeed one of the
     # route-container connections that we made.
-    #=====================================================================
-    def increment_router_cnx_receiver_count ( self, new_cnx ) :
+    # =====================================================================
+    def increment_router_cnx_receiver_count(self, new_cnx) :
         for router in range(len(self.router_cnx_counts)) :
             cnx_dict = self.router_cnx_counts[router]
             for cnx in cnx_dict :
                 if cnx == new_cnx :
                     # This cnx has been awarded a new receiver.
                     cnx_dict[cnx] += 1
-                    self.debug_print ( "receiver went to router %d" % router )
+                    self.debug_print("receiver went to router %d" % router)
                     return True
         return False
 
-
-    def this_is_one_of_my_connections ( self, test_cnx ) :
+    def this_is_one_of_my_connections(self, test_cnx) :
         for router in range(len((self.router_cnx_counts))) :
             cnx_dict = self.router_cnx_counts[router]
             for cnx in cnx_dict :
@@ -3297,11 +3173,10 @@ class RoutingTest ( MessagingHandler ):
                     return True
         return False
 
-
-    def on_link_opened ( self, event ):
-        self.debug_print ( "on_link_opened -------------" )
+    def on_link_opened(self, event):
+        self.debug_print("on_link_opened -------------")
         if self.done :
-          return
+            return
 
         if event.receiver == self.linkroute_check_receiver:
             # STEP 3 : the link for our address-checker is now opening and
@@ -3312,60 +3187,57 @@ class RoutingTest ( MessagingHandler ):
 
             # If the linkroute readiness checker can't strike oil in 30
             # tries, we are seriously out of luck, and will soon time out.
-            event.receiver.flow ( 30 )
+            event.receiver.flow(30)
             self.linkroute_checker = AddressChecker(self.linkroute_check_receiver.remote_source.address)
             self.linkroute_check()
         else :
-          if event.receiver :
-              # STEP 6 : This receiver-link has been given to us because
-              # a link-attach from one of our senders got routed somewhere.
-              # Note where it got routed to, and count it. This count will
-              # be compared to what was expected. This comparison is the
-              # purpose of this test.
-              this_is_one_of_mine = self.increment_router_cnx_receiver_count ( event.receiver.connection )
-              if this_is_one_of_mine :
-                  self.receiver_count += 1
-                  self.debug_print ( "on_link_opened: got %d of %d expected receivers." % (self.receiver_count, self.expected_receivers) )
-                  if self.receiver_count == self.expected_receivers :
-                      self.event_injector.trigger ( self.got_receivers_event )
+            if event.receiver :
+                # STEP 6 : This receiver-link has been given to us because
+                # a link-attach from one of our senders got routed somewhere.
+                # Note where it got routed to, and count it. This count will
+                # be compared to what was expected. This comparison is the
+                # purpose of this test.
+                this_is_one_of_mine = self.increment_router_cnx_receiver_count(event.receiver.connection)
+                if this_is_one_of_mine :
+                    self.receiver_count += 1
+                    self.debug_print("on_link_opened: got %d of %d expected receivers." % (self.receiver_count, self.expected_receivers))
+                    if self.receiver_count == self.expected_receivers :
+                        self.event_injector.trigger(self.got_receivers_event)
 
-
-    def on_connection_closed ( self, event ):
-        self.debug_print ( "on_connection_closed -------------" )
-        if self.this_is_one_of_my_connections ( event.connection ) :
+    def on_connection_closed(self, event):
+        self.debug_print("on_connection_closed -------------")
+        if self.this_is_one_of_my_connections(event.connection) :
             self.cnx_status[event.connection] = 0
             self.connections_closed += 1
             if self.connections_to_be_closed :
-                self.debug_print ( "on_connection_closed : %d of %d closed : %s" % (self.connections_closed, self.connections_to_be_closed, str(event.connection)) )
+                self.debug_print("on_connection_closed : %d of %d closed : %s" % (self.connections_closed, self.connections_to_be_closed, str(event.connection)))
                 if self.connections_closed == self.connections_to_be_closed :
                     # Reset both of these counters here, because
                     # they are only used each time we get a 'close connections'
                     # instruction, to keep track of its progress.
                     self.connections_to_be_closed = 0
                     self.cconnections_closed      = 0
-                    self.event_injector.trigger ( self.connections_closed_event )
+                    self.event_injector.trigger(self.connections_closed_event)
 
-
-    #=================================================
+    # =================================================
     # All senders get attached to the first router.
-    #=================================================
-    def make_senders ( self, n ):
-        self.debug_print ( "making %d senders" % n )
+    # =================================================
+    def make_senders(self, n):
+        self.debug_print("making %d senders" % n)
         for i in range(n):
-            sender = self.sender_container.create_sender ( self.sender_cnx,
-                                                           self.link_routable_address,
-                                                           name=link_name()
+            sender = self.sender_container.create_sender(self.sender_cnx,
+                                                         self.link_routable_address,
+                                                         name=link_name()
                                                          )
-            self.my_senders.append ( sender )
+            self.my_senders.append(sender)
 
-
-    #=================================================================
+    # =================================================================
     # The only messages I care about in this test are the management
     # ones I send to determine when the router network is ready
     # to start routing my sender-attaches.
-    #=================================================================
-    def on_message ( self, event ):
-        self.debug_print ( "on_message -------------" )
+    # =================================================================
+    def on_message(self, event):
+        self.debug_print("on_message -------------")
         if event.receiver == self.linkroute_check_receiver:
 
             # STEP 4 : we have a response to our management query, to see
@@ -3373,13 +3245,13 @@ class RoutingTest ( MessagingHandler ):
             #          The checker will parse it for us, and the caller of
             #          this test has told us how many local containers and
             #          how many remote receivers to expect for our address.
-            response = self.linkroute_checker.parse_address_query_response ( event.message )
+            response = self.linkroute_checker.parse_address_query_response(event.message)
             self.linkroute_check_count += 1
 
-            self.debug_print ( "on_message: got %d local %d remote" % (response.containerCount, response.remoteCount) )
+            self.debug_print("on_message: got %d local %d remote" % (response.containerCount, response.remoteCount))
 
-            if self.done != True                                  and \
-               response.status_code == 200                        and \
+            if self.done != True and \
+               response.status_code == 200 and \
                response.containerCount >= self.n_local_containers and \
                response.remoteCount >= self.n_remote_routers :
                 # We are at the start of the test, looking for the
@@ -3389,22 +3261,21 @@ class RoutingTest ( MessagingHandler ):
                 # event once.
                 if not self.sent_address_ready :
                     self.sender_container = event.container
-                    self.event_injector.trigger ( self.address_ready_event )
+                    self.event_injector.trigger(self.address_ready_event)
                     self.status = "address ready"
-                    self.sent_address_ready = True;
-            elif self.done == True                   and \
-                 response.status_code == 200         and \
-                 self.waiting_for_address_to_go_away and \
-                 response.containerCount == 0        and \
-                 response.remoteCount == 0 :
+                    self.sent_address_ready = True
+            elif self.done and \
+                    response.status_code == 200 and \
+                    self.waiting_for_address_to_go_away and \
+                    response.containerCount == 0 and \
+                    response.remoteCount == 0 :
                 # We are at the end of the test, looking for the
                 # address to be forgotten to use all over the network.
-                self.finish ( )
+                self.finish()
 
-            self.linkroute_check_timer = event.reactor.schedule ( 0.25, AddressCheckerTimeout(self))
+            self.linkroute_check_timer = event.reactor.schedule(0.25, AddressCheckerTimeout(self))
 
-
-    #==========================================================================
+    # ==========================================================================
     # Send the message that will query the management code to discover
     # information about our destination address. We cannot make our payload
     # sender until the network is ready.
@@ -3412,11 +3283,10 @@ class RoutingTest ( MessagingHandler ):
     # BUGALERT: We have to prepend the 'D' to this linkroute prefix
     # because that's what the router does internally.  Someday this
     # may change.
-    #==========================================================================
-    def linkroute_check ( self ):
+    # ==========================================================================
+    def linkroute_check(self):
         self.status = "waiting for address to be ready"
-        self.linkroute_check_sender.send ( self.linkroute_checker.make_address_query("D" + self.linkroute_prefix) )
-
+        self.linkroute_check_sender.send(self.linkroute_checker.make_address_query("D" + self.linkroute_prefix))
 
     def run(self):
         container = Container(self)
@@ -3424,11 +3294,7 @@ class RoutingTest ( MessagingHandler ):
         container.run()
 
 
-
-
-
-
-class WaypointTest ( MessagingHandler ):
+class WaypointTest (MessagingHandler):
     """
     Messages from a client sender to a client receiver are first
     diverted out of the router into a separate waypoint receiver,
@@ -3437,13 +3303,14 @@ class WaypointTest ( MessagingHandler ):
     The message then returns from the waypoint sender back to the
     router, and then arrives at the client receiver.
     """
-    def __init__ ( self,
-                   test_name,
-                   container_id,
-                   client_host_1,
-                   client_host_2,
-                   route_container_host,
-                   destination
+
+    def __init__(self,
+                 test_name,
+                 container_id,
+                 client_host_1,
+                 client_host_2,
+                 route_container_host,
+                 destination
                  ):
         super(WaypointTest, self).__init__()
         self.client_host_1        = client_host_1
@@ -3462,29 +3329,29 @@ class WaypointTest ( MessagingHandler ):
         self.messages_per_sender = 10
 
         self.senders   = [
-                           {
-                             'sender'  : None,
-                             'to_send' : 0,
-                             'n_sent'  : 0
-                           },
+            {
+                'sender'  : None,
+                'to_send' : 0,
+                'n_sent'  : 0
+            },
 
-                           {
-                             'sender'  : None,
-                             'to_send' : 0,
-                             'n_sent'  : 0
-                           }
-                         ]
+            {
+                'sender'  : None,
+                'to_send' : 0,
+                'n_sent'  : 0
+            }
+        ]
         self.receivers = [
-                           {
-                             'receiver'   : None,
-                             'n_received' : 0
-                           },
+            {
+                'receiver'   : None,
+                'n_received' : 0
+            },
 
-                           {
-                             'receiver'   : None,
-                             'n_received' : 0
-                           }
-                         ]
+            {
+                'receiver'   : None,
+                'n_received' : 0
+            }
+        ]
 
         self.n_sent     = 0
         self.n_rcvd     = 0
@@ -3503,148 +3370,131 @@ class WaypointTest ( MessagingHandler ):
         self.debug     = False
         self.test_name = test_name
 
-
     def timeout(self):
-        self.bail ( "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru) )
+        self.bail("Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru))
 
-
-
-    def bail ( self, text ):
+    def bail(self, text):
         self.error = text
         self.route_container_connection.close()
         self.client_connection.close()
         self.timer.cancel()
 
-
-
-    def debug_print ( self, message ) :
+    def debug_print(self, message) :
         if self.debug :
             print(message)
 
-
-
-    def send_from_client ( self, sender, n_messages, sender_index ):
+    def send_from_client(self, sender, n_messages, sender_index):
         n_sent = 0
-        self.debug_print ( "send_from_client -------------------" );
+        self.debug_print("send_from_client -------------------")
         while sender.credit > 0 and n_sent < n_messages:
             n_sent      += 1
             self.n_sent += 1
-            msg = Message ( body=n_sent )
-            self.debug_print ( "    send_from_client -- sender: %d n_sent: %d" % ( sender_index, n_sent ) )
-            sender.send ( msg )
+            msg = Message(body=n_sent)
+            self.debug_print("    send_from_client -- sender: %d n_sent: %d" % (sender_index, n_sent))
+            sender.send(msg)
             # We send from a client
             self.n_transitions += 1
 
-
-
-    def send_from_waypoint ( self ):
-        self.debug_print ( "send_from_waypoint ---------------------" )
+    def send_from_waypoint(self):
+        self.debug_print("send_from_waypoint ---------------------")
 
         if len(self.waypoint_queue) <= 0 :
-          self.debug_print ( "    waypoint queue is empty." )
-          return
+            self.debug_print("    waypoint queue is empty.")
+            return
 
         while self.waypoint_sender.credit > 0 and len(self.waypoint_queue) > 0:
             m = self.waypoint_queue.pop()
             message_content_number = m.body
-            self.debug_print ( "    send_from_waypoint num is %d " % message_content_number )
-            self.waypoint_sender.send ( m )
+            self.debug_print("    send_from_waypoint num is %d " % message_content_number)
+            self.waypoint_sender.send(m)
             self.n_thru += 1
             # We send from a waypoint.
             self.n_transitions += 1
 
-
-
-    def on_start ( self, event ):
-        self.timer = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
-        self.client_connection = event.container.connect ( self.client_host_1 )
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.client_connection = event.container.connect(self.client_host_1)
 
         # Creating this connection is what gets things started.  When we make this
         # connection to a route container address, the router will look at our
         # containerId, and will at that time instantiate any associated autolinks.
-        self.route_container_connection = event.container.connect ( self.route_container_host )
+        self.route_container_connection = event.container.connect(self.route_container_host)
 
-        self.debug_print ( "    creating clients for connection" )
+        self.debug_print("    creating clients for connection")
         for i in range(len(self.senders)) :
             sender   = self.senders[i]
             receiver = self.receivers[i]
 
-            sender['sender'] = event.container.create_sender ( self.client_connection,
-                                                               self.destination,
-                                                               name=link_name() )
+            sender['sender'] = event.container.create_sender(self.client_connection,
+                                                             self.destination,
+                                                             name=link_name())
             sender['to_send'] = self.messages_per_sender
             sender['n_sent']  = 0
 
-            receiver['receiver'] = event.container.create_receiver ( self.client_connection,
-                                                                     self.destination,
-                                                                     name=link_name() )
+            receiver['receiver'] = event.container.create_receiver(self.client_connection,
+                                                                   self.destination,
+                                                                   name=link_name())
             receiver['n_received'] = 0
 
-
-
     def on_link_opening(self, event):
-        self.debug_print ( "on_link_opening -------------------------- " )
+        self.debug_print("on_link_opening -------------------------- ")
         if event.sender:
-            self.debug_print ( "    sender: %s" % event.sender.remote_source.address )
+            self.debug_print("    sender: %s" % event.sender.remote_source.address)
             event.sender.source.address = event.sender.remote_source.address
             event.sender.open()
             if event.sender.remote_source.address == self.destination:
-                self.debug_print ( "    that's one of my waypoint senders: %s" % self.destination )
+                self.debug_print("    that's one of my waypoint senders: %s" % self.destination)
                 self.waypoint_sender = event.sender
 
         elif event.receiver:
-            self.debug_print ( "    receiver: %s" % event.receiver.remote_target.address )
+            self.debug_print("    receiver: %s" % event.receiver.remote_target.address)
             event.receiver.target.address = event.receiver.remote_target.address
             event.receiver.open()
             if event.receiver.remote_target.address == self.destination:
-                self.debug_print ( "    that's one of mine." )
+                self.debug_print("    that's one of mine.")
                 self.waypoint_receiver = event.receiver
-                self.waypoint_receiver.flow ( 1000 )
+                self.waypoint_receiver.flow(1000)
 
-
-
-    def on_sendable ( self, event ):
-        self.debug_print ( "on_sendable ---------------------------- " )
+    def on_sendable(self, event):
+        self.debug_print("on_sendable ---------------------------- ")
         for i in range(len(self.senders)) :
             sender = self.senders[i]
             if sender['sender'] == event.sender :
                 if sender['n_sent'] < sender['to_send'] :
-                    self.send_from_client ( sender['sender'], sender['to_send'], i )
+                    self.send_from_client(sender['sender'], sender['to_send'], i)
                     sender['n_sent'] = sender['to_send']
-                    self.debug_print ( "    sent %d" % sender['n_sent'] )
+                    self.debug_print("    sent %d" % sender['n_sent'])
                     return
         if event.sender == self.waypoint_sender :
-            self.send_from_waypoint ( )
+            self.send_from_waypoint()
 
-
-    def on_message ( self, event ):
-        self.debug_print ( "on_message ---------------------------- " )
+    def on_message(self, event):
+        self.debug_print("on_message ---------------------------- ")
         if event.receiver == self.waypoint_receiver :
-            self.debug_print ( "    waypoint receiver" )
+            self.debug_print("    waypoint receiver")
             m = Message(body=event.message.body)
             # We receive to a waypoint.
             self.n_transitions += 1
             self.waypoint_queue.append(m)
-            self.debug_print ( "    queue depth is now %d" % len(self.waypoint_queue) )
-            self.send_from_waypoint ( )
+            self.debug_print("    queue depth is now %d" % len(self.waypoint_queue))
+            self.send_from_waypoint()
         else :
             for i in range(len(self.receivers)) :
-                self.debug_print ( "    client receiver" )
+                self.debug_print("    client receiver")
                 receiver = self.receivers[i]
                 if event.receiver == receiver['receiver'] :
                     message_content_number = event.message.body
                     receiver['n_received'] += 1
                     # We receive to a client.
                     self.n_transitions += 1
-                    self.debug_print ( "    client receiver %d has %d messages." % ( i, receiver['n_received'] ) )
+                    self.debug_print("    client receiver %d has %d messages." % (i, receiver['n_received']))
                     self.n_rcvd += 1
                     if self.n_rcvd >= self.n_expected and self.n_thru >= self.n_expected:
                         if self.n_transitions != self.n_expected_transitions :
-                            self.bail ( "expected %d transitions, but got %d" % ( self.n_expected_transitions, self.n_transitions ) )
+                            self.bail("expected %d transitions, but got %d" % (self.n_expected_transitions, self.n_transitions))
                         else :
-                            self.debug_print ( "    success" )
-                            self.bail ( None )
-
+                            self.debug_print("    success")
+                            self.bail(None)
 
     def run(self):
         container = Container(self)
@@ -3652,10 +3502,7 @@ class WaypointTest ( MessagingHandler ):
         container.run()
 
 
-
-
-
-class SerialWaypointTest ( MessagingHandler ):
+class SerialWaypointTest (MessagingHandler):
     """
     Messages from a client sender on their way to a client receiver are
     first re-routed to two separate waypoint 'processes', in serial.
@@ -3664,13 +3511,14 @@ class SerialWaypointTest ( MessagingHandler ):
     senders that pop them off the fifos and send them.  This simulates
     either a broker, or some arbitrary processing on the message.
     """
-    def __init__ ( self,
-                   test_name,
-                   container_id,
-                   client_host_1,
-                   client_host_2,
-                   route_container_host,
-                   destination
+
+    def __init__(self,
+                 test_name,
+                 container_id,
+                 client_host_1,
+                 client_host_2,
+                 route_container_host,
+                 destination
                  ):
         super(SerialWaypointTest, self).__init__()
         self.client_host_1        = client_host_1
@@ -3684,53 +3532,52 @@ class SerialWaypointTest ( MessagingHandler ):
 
         self.route_container_connection = None
 
-
         # There are 2 sending clients and 2 receiving clients
         # only because I wanted to have more than 1, and 2
         # appeared to be the next available integer.
         # This has nothing to do with the fact that there are
         # 2 waypoints.
         self.senders = [
-                         { 'sender'  : None,
-                           'to_send' : self.messages_per_sender,
-                           'n_sent'  : 0
-                         },
-                         { 'sender'  : None,
-                           'to_send' : self.messages_per_sender,
-                           'n_sent'  : 0
-                         }
-                       ]
+            {'sender'  : None,
+             'to_send' : self.messages_per_sender,
+             'n_sent'  : 0
+             },
+            {'sender'  : None,
+             'to_send' : self.messages_per_sender,
+             'n_sent'  : 0
+             }
+        ]
 
         self.receivers = [
-                           { 'receiver'   : None,
-                             'n_received' : 0
-                           },
-                           { 'receiver'   : None,
-                             'n_received' : 0
-                           }
-                         ]
+            {'receiver'   : None,
+             'n_received' : 0
+             },
+            {'receiver'   : None,
+             'n_received' : 0
+             }
+        ]
 
         self.n_waypoint_senders   = 0
         self.n_waypoint_receivers = 0
 
         self.waypoints = [
-                           { 'sender'     : None,
-                             'n_sent'     : 0,
-                             'receiver'   : None,
-                             'n_received' : 0,
-                             'queue'      : [],
-                             'n_sent'     : 0,
-                             'name'       : '1'
-                           },
-                           { 'sender'     : None,
-                             'n_sent'     : 0,
-                             'receiver'   : None,
-                             'n_received' : 0,
-                             'queue'      : [],
-                             'n_sent'     : 0,
-                             'name'       : '2'
-                           }
-                         ]
+            {'sender'     : None,
+             'n_sent'     : 0,
+             'receiver'   : None,
+             'n_received' : 0,
+             'queue'      : [],
+             'n_sent'     : 0,
+             'name'       : '1'
+             },
+            {'sender'     : None,
+             'n_sent'     : 0,
+             'receiver'   : None,
+             'n_received' : 0,
+             'queue'      : [],
+             'n_sent'     : 0,
+             'name'       : '2'
+             }
+        ]
 
         self.n_sent = 0
         self.n_rcvd = 0
@@ -3748,128 +3595,115 @@ class SerialWaypointTest ( MessagingHandler ):
         self.debug     = False
         self.test_name = test_name
 
-
     def timeout(self):
-        self.bail ( "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru) )
+        self.bail("Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru))
 
-
-    def bail ( self, text ):
+    def bail(self, text):
         self.error = text
         self.route_container_connection.close()
         for cnx in self.sender_connections :
-          cnx.close()
+            cnx.close()
         self.timer.cancel()
 
-
-    def debug_print ( self, message ) :
+    def debug_print(self, message) :
         if self.debug :
             print(message)
 
-
-    def send_from_client ( self, sender, n_messages, sender_index ):
+    def send_from_client(self, sender, n_messages, sender_index):
         n_sent = 0
         while sender.credit > 0 and n_sent < n_messages:
-            msg = Message ( body=n_sent )
-            sender.send ( msg )
+            msg = Message(body=n_sent)
+            sender.send(msg)
             n_sent             += 1
             self.n_sent        += 1
             self.n_transitions += 1
-            self.debug_print ( "send_from_client -- sender: %d n_sent: %d" % ( sender_index, n_sent ) )
+            self.debug_print("send_from_client -- sender: %d n_sent: %d" % (sender_index, n_sent))
 
-
-
-    def send_from_waypoint ( self, waypoint ):
-        self.debug_print ( "send_from_waypoint ------------------------------" )
+    def send_from_waypoint(self, waypoint):
+        self.debug_print("send_from_waypoint ------------------------------")
 
         while waypoint['sender'].credit > 0 and len(waypoint['queue']) > 0:
             m = waypoint['queue'].pop()
             message_content_number = m.body
-            waypoint['sender'].send ( m )
+            waypoint['sender'].send(m)
             waypoint['n_sent'] += 1
             self.n_thru        += 1
             self.n_transitions += 1
-            self.debug_print ( "send_from_waypoint %s is %d " % ( waypoint['name'], message_content_number) )
+            self.debug_print("send_from_waypoint %s is %d " % (waypoint['name'], message_content_number))
 
-
-
-    def on_start ( self, event ):
-        self.timer = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
-        self.sender_connections.append ( event.container.connect(self.client_host_1) )
-        self.sender_connections.append ( event.container.connect(self.client_host_2) )
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.sender_connections.append(event.container.connect(self.client_host_1))
+        self.sender_connections.append(event.container.connect(self.client_host_2))
         # Creating this connection is what gets things started.  When we make this
         # connection to a route container address, the router will look at our
         # containerId, and will at that time instantiate any associated autolinks.
-        self.route_container_connection = event.container.connect ( self.route_container_host )
-
+        self.route_container_connection = event.container.connect(self.route_container_host)
 
         for i in range(len(self.sender_connections)) :
             cnx = self.sender_connections[i]
             sender   = self.senders[i]
             receiver = self.receivers[i]
 
-            sender['sender'] = event.container.create_sender ( cnx,
-                                                               self.destination,
-                                                               name=link_name() )
+            sender['sender'] = event.container.create_sender(cnx,
+                                                             self.destination,
+                                                             name=link_name())
             sender['to_send'] = self.messages_per_sender
             sender['n_sent']  = 0
 
-            receiver['receiver'] = event.container.create_receiver ( cnx,
-                                                                     self.destination,
-                                                                     name=link_name() )
+            receiver['receiver'] = event.container.create_receiver(cnx,
+                                                                   self.destination,
+                                                                   name=link_name())
             receiver['n_received'] = 0
 
+    def on_link_opening(self, event):
 
-    def on_link_opening ( self, event ):
-
-        self.debug_print ( "on_link_opening -------------------------- " )
+        self.debug_print("on_link_opening -------------------------- ")
 
         if event.sender:
-            self.debug_print ( "    sender: %s" % event.sender.remote_source.address )
+            self.debug_print("    sender: %s" % event.sender.remote_source.address)
             event.sender.source.address = event.sender.remote_source.address
             event.sender.open()
             if event.sender.remote_source.address == self.destination:
                 if self.n_waypoint_senders < 2 :
-                    self.debug_print ( "    store this as one of my waypoint senders." )
+                    self.debug_print("    store this as one of my waypoint senders.")
                     self.waypoints[self.n_waypoint_senders]['sender'] = event.sender
                     self.n_waypoint_senders += 1
 
         elif event.receiver:
-            self.debug_print ( "    receiver: %s" % event.receiver.remote_target.address )
+            self.debug_print("    receiver: %s" % event.receiver.remote_target.address)
             event.receiver.target.address = event.receiver.remote_target.address
             event.receiver.open()
             if event.receiver.remote_target.address == self.destination:
-                self.debug_print ( "    store this as one of my waypoint receivers." )
+                self.debug_print("    store this as one of my waypoint receivers.")
                 if self.n_waypoint_receivers < 2 :
                     self.waypoints[self.n_waypoint_receivers]['receiver'] = event.receiver
                     self.n_waypoint_receivers += 1
 
-
-
-    def on_sendable ( self, event ):
-        self.debug_print ( "on_sendable ------------------------------" )
+    def on_sendable(self, event):
+        self.debug_print("on_sendable ------------------------------")
         for index in range(len(self.senders)) :
             sender = self.senders[index]
             if event.sender == sender['sender'] :
-                self.debug_print ( "    client sender %d" % index )
+                self.debug_print("    client sender %d" % index)
                 if sender['n_sent'] < sender['to_send'] :
-                    self.debug_print ( "    sending %d" % sender['to_send'] )
-                    self.send_from_client ( sender['sender'], sender['to_send'], index )
+                    self.debug_print("    sending %d" % sender['to_send'])
+                    self.send_from_client(sender['sender'], sender['to_send'], index)
                     sender['n_sent'] = sender['to_send']  # n_sent = n_to_send
                 else :
-                    self.debug_print ( "    this sender is already finished." )
+                    self.debug_print("    this sender is already finished.")
                 return
 
         for j in range(len(self.waypoints)) :
             sender = self.waypoints[j]['sender']
             if event.sender == sender :
-                self.debug_print ( "    waypoint_sender %d" % j )
-                self.send_from_waypoint ( self.waypoints[j] )
+                self.debug_print("    waypoint_sender %d" % j)
+                self.send_from_waypoint(self.waypoints[j])
                 return
-
 
     def on_message(self, event):
 
-        self.debug_print ( "on_message --------------------------- " )
+        self.debug_print("on_message --------------------------- ")
 
         # Is this one of our client receivers ?
         for i in range(len(self.receivers)) :
@@ -3877,33 +3711,31 @@ class SerialWaypointTest ( MessagingHandler ):
             if event.receiver == receiver['receiver'] :
                 receiver['n_received'] += 1
                 self.n_transitions     += 1
-                self.debug_print ("    client receiver %d has %d messages." % ( i, receiver['n_received'] ) )
+                self.debug_print("    client receiver %d has %d messages." % (i, receiver['n_received']))
                 message_content_number = event.message.body
                 self.n_rcvd += 1
                 if self.n_rcvd >= self.n_expected_received and self.n_thru >= self.n_expected_received:
-                    self.debug_print ( "DONE -- self.n_rcvd: %d   self.n_thru: %d" % ( self.n_rcvd, self.n_thru ) )
+                    self.debug_print("DONE -- self.n_rcvd: %d   self.n_thru: %d" % (self.n_rcvd, self.n_thru))
                     if self.debug :
-                        self.report ( )
-                    self.check_results_and_bail ( )
+                        self.report()
+                    self.check_results_and_bail()
                     return
 
         # Is this one of our waypoint receivers ?
         for j in range(len(self.waypoints)) :
             waypoint = self.waypoints[j]
             if event.receiver == waypoint['receiver'] :
-                m = Message ( body=event.message.body )
-                waypoint [ 'queue' ].append ( m )
-                waypoint [ 'n_received' ] += 1
+                m = Message(body=event.message.body)
+                waypoint['queue'].append(m)
+                waypoint['n_received'] += 1
                 self.n_transitions        += 1
-                self.debug_print ( "    message received at waypoint %d, queue depth is now %d" % (j, len(waypoint['queue'])))
-                self.send_from_waypoint ( waypoint )
+                self.debug_print("    message received at waypoint %d, queue depth is now %d" % (j, len(waypoint['queue'])))
+                self.send_from_waypoint(waypoint)
 
-
-
-    def check_results_and_bail ( self ) :
+    def check_results_and_bail(self) :
 
         if self.n_expected_transitions != self.n_transitions :
-            self.bail ( "total transitions were %d, but %d were expected." % ( self.n_transitions, self.n_expected_transitions ) )
+            self.bail("total transitions were %d, but %d were expected." % (self.n_transitions, self.n_expected_transitions))
             return
 
         mps                 = self.messages_per_sender
@@ -3918,8 +3750,8 @@ class SerialWaypointTest ( MessagingHandler ):
         for i in range(n_senders) :
             sndr = self.senders[i]
             if sndr['n_sent'] != mps :
-              self.bail ( "sender %d sent %d messages instead of %d" % ( i, sndr['n_sent'], mps ) )
-              return
+                self.bail("sender %d sent %d messages instead of %d" % (i, sndr['n_sent'], mps))
+                return
 
         n_waypoints = len(self.waypoints)
         total_expected_waypoint_receptions = total_messages_sent * n_waypoints
@@ -3929,7 +3761,7 @@ class SerialWaypointTest ( MessagingHandler ):
             total_actual_waypoint_receptions += self.waypoints[i]['n_received']
 
         if total_actual_waypoint_receptions != total_expected_waypoint_receptions :
-            self.bail ( "total waypoint receptions were %d, but %d were expected." % ( total_actual_waypoint_receptions, total_expected_waypoint_receptions) )
+            self.bail("total waypoint receptions were %d, but %d were expected." % (total_actual_waypoint_receptions, total_expected_waypoint_receptions))
             return
 
         total_messages_received = 0
@@ -3938,34 +3770,30 @@ class SerialWaypointTest ( MessagingHandler ):
             total_messages_received += this_receiver_got
 
         if total_messages_received != total_messages_sent :
-            self.bail ( "total_messages_received: %d but %d were expected." % (total_messages_received, total_messages_sent) )
+            self.bail("total_messages_received: %d but %d were expected." % (total_messages_received, total_messages_sent))
             return
 
-        self.debug_print ( "\nsuccess\n" )
-        self.bail ( None )
+        self.debug_print("\nsuccess\n")
+        self.bail(None)
 
-
-
-    def report ( self ) :
+    def report(self) :
         print("\n\n==========================================================\nreport\n")
 
         for i in range(len(self.senders)) :
-            print("    client sender %d sent %d messages." % ( i, self.senders[i]['n_sent']))
+            print("    client sender %d sent %d messages." % (i, self.senders[i]['n_sent']))
 
         print("\n")
 
         for i in range(len(self.waypoints)) :
-            print("    waypoint %d received %d messages." % ( i, self.waypoints[i]['n_received']))
-            print("    waypoint %d sent     %d messages." % ( i, self.waypoints[i]['n_sent']))
+            print("    waypoint %d received %d messages." % (i, self.waypoints[i]['n_received']))
+            print("    waypoint %d sent     %d messages." % (i, self.waypoints[i]['n_sent']))
 
         print("\n")
 
         for i in range(len(self.receivers)) :
-            print("    client receiver %d received %d messages." % ( i, self.receivers[i]['n_received'] ))
+            print("    client receiver %d received %d messages." % (i, self.receivers[i]['n_received']))
 
         print("\nend report\n=========================================================\n\n")
-
-
 
     def run(self):
         container = Container(self)
@@ -3973,9 +3801,7 @@ class SerialWaypointTest ( MessagingHandler ):
         container.run()
 
 
-
-
-class ParallelWaypointTest ( MessagingHandler ):
+class ParallelWaypointTest (MessagingHandler):
     """
     Messages from a client sender on their way to a client receiver are
     first re-routed to one of two separate waypoint 'processes', in parallel.
@@ -3984,15 +3810,16 @@ class ParallelWaypointTest ( MessagingHandler ):
     senders that pop them off the fifos and send them.  This simulates
     either a broker, or some arbitrary processing on the message.
     """
-    def __init__ ( self,
-                   test_name,
-                   container_id,
-                   client_host_1,
-                   client_host_2,
-                   route_container_host,
-                   destination
+
+    def __init__(self,
+                 test_name,
+                 container_id,
+                 client_host_1,
+                 client_host_2,
+                 route_container_host,
+                 destination
                  ):
-        super ( ParallelWaypointTest, self ). __init__()
+        super(ParallelWaypointTest, self). __init__()
         self.client_host_1        = client_host_1
         self.client_host_2        = client_host_2
         self.route_container_host = route_container_host
@@ -4005,46 +3832,46 @@ class ParallelWaypointTest ( MessagingHandler ):
         self.route_container_connection = None
 
         self.senders = [
-                         { 'sender'  : None,
-                           'to_send' : self.messages_per_sender,
-                           'n_sent'  : 0
-                         },
-                         { 'sender'  : None,
-                           'to_send' : self.messages_per_sender,
-                           'n_sent'  : 0
-                         }
-                       ]
+            {'sender'  : None,
+             'to_send' : self.messages_per_sender,
+             'n_sent'  : 0
+             },
+            {'sender'  : None,
+             'to_send' : self.messages_per_sender,
+             'n_sent'  : 0
+             }
+        ]
 
         self.receivers = [
-                           { 'receiver'   : None,
-                             'n_received' : 0
-                           },
-                           { 'receiver'   : None,
-                             'n_received' : 0
-                           }
-                         ]
+            {'receiver'   : None,
+             'n_received' : 0
+             },
+            {'receiver'   : None,
+             'n_received' : 0
+             }
+        ]
 
         self.n_waypoint_senders   = 0
         self.n_waypoint_receivers = 0
 
         self.waypoints = [
-                           { 'sender'     : None,
-                             'n_sent'     : 0,
-                             'receiver'   : None,
-                             'n_received' : 0,
-                             'queue'      : [],
-                             'n_sent'     : 0,
-                             'name'       : '1'
-                           },
-                           { 'sender'     : None,
-                             'n_sent'     : 0,
-                             'receiver'   : None,
-                             'n_received' : 0,
-                             'queue'      : [],
-                             'n_sent'     : 0,
-                             'name'       : '2'
-                           }
-                         ]
+            {'sender'     : None,
+             'n_sent'     : 0,
+             'receiver'   : None,
+             'n_received' : 0,
+             'queue'      : [],
+             'n_sent'     : 0,
+             'name'       : '1'
+             },
+            {'sender'     : None,
+             'n_sent'     : 0,
+             'receiver'   : None,
+             'n_received' : 0,
+             'queue'      : [],
+             'n_sent'     : 0,
+             'name'       : '2'
+             }
+        ]
 
         self.n_sent = 0
         self.n_rcvd = 0
@@ -4063,127 +3890,115 @@ class ParallelWaypointTest ( MessagingHandler ):
 
         self.test_name = test_name
 
-
     def timeout(self):
-        self.bail ( "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru) )
+        self.bail("Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru))
 
-
-    def bail ( self, text ):
+    def bail(self, text):
         self.error = text
         self.route_container_connection.close()
         for cnx in self.sender_connections :
-          cnx.close()
+            cnx.close()
         self.timer.cancel()
 
-
-    def debug_print ( self, message ) :
+    def debug_print(self, message) :
         if self.debug :
             print(message)
 
-
-    def send_from_client ( self, sender, n_messages, sender_index ):
+    def send_from_client(self, sender, n_messages, sender_index):
         n_sent = 0
         while sender.credit > 0 and n_sent < n_messages:
-            msg = Message ( body=n_sent )
-            sender.send ( msg )
+            msg = Message(body=n_sent)
+            sender.send(msg)
             n_sent             += 1
             self.n_sent        += 1
             self.n_transitions += 1
-            self.debug_print ( "send_from_client -- sender: %d n_sent: %d" % ( sender_index, n_sent ) )
+            self.debug_print("send_from_client -- sender: %d n_sent: %d" % (sender_index, n_sent))
 
-
-
-    def send_from_waypoint ( self, waypoint ):
-        self.debug_print ( "send_from_waypoint ------------------------------" )
+    def send_from_waypoint(self, waypoint):
+        self.debug_print("send_from_waypoint ------------------------------")
 
         while waypoint['sender'].credit > 0 and len(waypoint['queue']) > 0:
             m = waypoint['queue'].pop()
             message_content_number = m.body
-            waypoint['sender'].send ( m )
+            waypoint['sender'].send(m)
             waypoint['n_sent'] += 1
             self.n_thru        += 1
             self.n_transitions += 1
-            self.debug_print ( "send_from_waypoint %s is %d " % ( waypoint['name'], message_content_number) )
+            self.debug_print("send_from_waypoint %s is %d " % (waypoint['name'], message_content_number))
 
-
-
-    def on_start ( self, event ):
-        self.timer = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
-        self.sender_connections.append ( event.container.connect(self.client_host_1) )
-        self.sender_connections.append ( event.container.connect(self.client_host_2) )
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.sender_connections.append(event.container.connect(self.client_host_1))
+        self.sender_connections.append(event.container.connect(self.client_host_2))
         # Creating this connection is what gets things started.  When we make this
         # connection to a route container address, the router will look at our
         # containerId, and will at that time instantiate any associated autolinks.
         # We will get an 'on_link_opening' for each of them.
-        self.route_container_connection = event.container.connect ( self.route_container_host )
+        self.route_container_connection = event.container.connect(self.route_container_host)
 
         for i in range(len(self.sender_connections)) :
             cnx = self.sender_connections[i]
             sender   = self.senders[i]
             receiver = self.receivers[i]
 
-            sender['sender'] = event.container.create_sender ( cnx,
-                                                               self.destination,
-                                                               name=link_name() )
+            sender['sender'] = event.container.create_sender(cnx,
+                                                             self.destination,
+                                                             name=link_name())
             sender['to_send'] = self.messages_per_sender
             sender['n_sent']  = 0
-            receiver['receiver'] = event.container.create_receiver ( cnx,
-                                                                     self.destination,
-                                                                     name=link_name() )
+            receiver['receiver'] = event.container.create_receiver(cnx,
+                                                                   self.destination,
+                                                                   name=link_name())
             receiver['n_received'] = 0
 
+    def on_link_opening(self, event):
 
-    def on_link_opening ( self, event ):
-
-        self.debug_print ( "on_link_opening -------------------------- " )
+        self.debug_print("on_link_opening -------------------------- ")
 
         if event.sender:
-            self.debug_print ( "    sender: %s" % event.sender.remote_source.address )
+            self.debug_print("    sender: %s" % event.sender.remote_source.address)
             event.sender.source.address = event.sender.remote_source.address
             event.sender.open()
             if event.sender.remote_source.address == self.destination:
                 if self.n_waypoint_senders < 2 :
-                    self.debug_print ( "    store this as one of my waypoint senders." )
+                    self.debug_print("    store this as one of my waypoint senders.")
                     self.waypoints[self.n_waypoint_senders]['sender'] = event.sender
                     self.n_waypoint_senders += 1
 
         elif event.receiver:
-            self.debug_print ( "    receiver: %s" % event.receiver.remote_target.address )
+            self.debug_print("    receiver: %s" % event.receiver.remote_target.address)
             event.receiver.target.address = event.receiver.remote_target.address
             event.receiver.open()
             if event.receiver.remote_target.address == self.destination:
-                self.debug_print ( "    store this as one of my waypoint receivers." )
+                self.debug_print("    store this as one of my waypoint receivers.")
                 if self.n_waypoint_receivers < 2 :
                     self.waypoints[self.n_waypoint_receivers]['receiver'] = event.receiver
                     self.n_waypoint_receivers += 1
 
-
-
-    def on_sendable ( self, event ):
-        self.debug_print ( "on_sendable ------------------------------" )
+    def on_sendable(self, event):
+        self.debug_print("on_sendable ------------------------------")
         for index in range(len(self.senders)) :
             sender = self.senders[index]
             if event.sender == sender['sender'] :
-                self.debug_print ( "    client sender %d" % index )
+                self.debug_print("    client sender %d" % index)
                 if sender['n_sent'] < sender['to_send'] :
-                    self.debug_print ( "    sending %d" % sender['to_send'] )
-                    self.send_from_client ( sender['sender'], sender['to_send'], index )
+                    self.debug_print("    sending %d" % sender['to_send'])
+                    self.send_from_client(sender['sender'], sender['to_send'], index)
                     sender['n_sent'] = sender['to_send']  # n_sent = n_to_send
                 else :
-                    self.debug_print ( "    this sender is already finished." )
+                    self.debug_print("    this sender is already finished.")
                 return
 
         for j in range(len(self.waypoints)) :
             sender = self.waypoints[j]['sender']
             if event.sender == sender :
-                self.debug_print ( "    waypoint_sender %d" % j )
-                self.send_from_waypoint ( self.waypoints[j] )
+                self.debug_print("    waypoint_sender %d" % j)
+                self.send_from_waypoint(self.waypoints[j])
                 return
-
 
     def on_message(self, event):
 
-        self.debug_print ( "on_message --------------------------- " )
+        self.debug_print("on_message --------------------------- ")
 
         # Is this one of our client receivers ?
         for i in range(len(self.receivers)) :
@@ -4191,33 +4006,31 @@ class ParallelWaypointTest ( MessagingHandler ):
             if event.receiver == receiver['receiver'] :
                 receiver['n_received'] += 1
                 self.n_transitions     += 1
-                self.debug_print ("    client receiver %d has %d messages." % ( i, receiver['n_received'] ) )
+                self.debug_print("    client receiver %d has %d messages." % (i, receiver['n_received']))
                 message_content_number = event.message.body
                 self.n_rcvd += 1
                 if self.n_rcvd >= self.n_expected_received and self.n_thru >= self.n_expected_received:
-                    self.debug_print ( "DONE -- self.n_rcvd: %d   self.n_thru: %d" % ( self.n_rcvd, self.n_thru ) )
+                    self.debug_print("DONE -- self.n_rcvd: %d   self.n_thru: %d" % (self.n_rcvd, self.n_thru))
                     if self.debug :
-                        self.report ( )
-                    self.check_results_and_bail ( )
+                        self.report()
+                    self.check_results_and_bail()
                     return
 
         # Is this one of our waypoint receivers ?
         for j in range(len(self.waypoints)) :
             waypoint = self.waypoints[j]
             if event.receiver == waypoint['receiver'] :
-                m = Message ( body=event.message.body )
-                waypoint [ 'queue' ].append ( m )
-                waypoint [ 'n_received' ] += 1
+                m = Message(body=event.message.body)
+                waypoint['queue'].append(m)
+                waypoint['n_received'] += 1
                 self.n_transitions        += 1
-                self.debug_print ( "    message received at waypoint %d, queue depth is now %d" % (j, len(waypoint['queue'])))
-                self.send_from_waypoint ( waypoint )
+                self.debug_print("    message received at waypoint %d, queue depth is now %d" % (j, len(waypoint['queue'])))
+                self.send_from_waypoint(waypoint)
 
-
-
-    def check_results_and_bail ( self ) :
+    def check_results_and_bail(self) :
 
         if self.n_expected_transitions != self.n_transitions :
-            self.bail ( "total transitions were %d, but %d were expected." % ( self.n_transitions, self.n_expected_transitions ) )
+            self.bail("total transitions were %d, but %d were expected." % (self.n_transitions, self.n_expected_transitions))
             return
 
         mps                 = self.messages_per_sender
@@ -4232,8 +4045,8 @@ class ParallelWaypointTest ( MessagingHandler ):
         for i in range(n_senders) :
             sndr = self.senders[i]
             if sndr['n_sent'] != mps :
-              self.bail ( "sender %d sent %d messages instead of %d" % ( i, sndr['n_sent'], mps ) )
-              return
+                self.bail("sender %d sent %d messages instead of %d" % (i, sndr['n_sent'], mps))
+                return
 
         n_waypoints = len(self.waypoints)
 
@@ -4247,7 +4060,7 @@ class ParallelWaypointTest ( MessagingHandler ):
             total_actual_waypoint_receptions += self.waypoints[i]['n_received']
 
         if total_actual_waypoint_receptions != total_expected_waypoint_receptions :
-            self.bail ( "total waypoint receptions were %d, but %d were expected." % ( total_actual_waypoint_receptions, total_expected_waypoint_receptions) )
+            self.bail("total waypoint receptions were %d, but %d were expected." % (total_actual_waypoint_receptions, total_expected_waypoint_receptions))
             return
 
         # Finally, our client receivers must receiv one message
@@ -4258,34 +4071,30 @@ class ParallelWaypointTest ( MessagingHandler ):
             total_messages_received += this_receiver_got
 
         if total_messages_received != total_messages_sent :
-            self.bail ( "total_messages_received: %d but %d were expected." % (total_messages_received, total_messages_sent) )
+            self.bail("total_messages_received: %d but %d were expected." % (total_messages_received, total_messages_sent))
             return
 
-        self.debug_print ( "\nsuccess\n" )
-        self.bail ( None )
+        self.debug_print("\nsuccess\n")
+        self.bail(None)
 
-
-
-    def report ( self ) :
+    def report(self) :
         print("\n\n==========================================================\nreport\n")
 
         for i in range(len(self.senders)) :
-            print("    client sender %d sent %d messages." % ( i, self.senders[i]['n_sent'] ))
+            print("    client sender %d sent %d messages." % (i, self.senders[i]['n_sent']))
 
         print("\n")
 
         for i in range(len(self.waypoints)) :
-            print("    waypoint %d received %d messages." % ( i, self.waypoints[i]['n_received'] ))
-            print("    waypoint %d sent     %d messages." % ( i, self.waypoints[i]['n_sent'] ))
+            print("    waypoint %d received %d messages." % (i, self.waypoints[i]['n_received']))
+            print("    waypoint %d sent     %d messages." % (i, self.waypoints[i]['n_sent']))
 
         print("\n")
 
         for i in range(len(self.receivers)) :
-            print( "    client receiver %d received %d messages." % ( i, self.receivers[i]['n_received'] ))
+            print("    client receiver %d received %d messages." % (i, self.receivers[i]['n_received']))
 
         print("\nend report\n=========================================================\n\n")
-
-
 
     def run(self):
         container = Container(self)

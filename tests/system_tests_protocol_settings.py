@@ -28,6 +28,7 @@ from proton.utils import BlockingConnection
 import subprocess
 import sys
 
+
 class MaxFrameMaxSessionFramesTest(TestCase):
     """System tests setting proton negotiated size max-frame-size and incoming-window"""
     @classmethod
@@ -384,7 +385,7 @@ class ConnectorSettingsNondefaultTest(TestCase):
         cls.routers[1].wait_router_connected('QDR.A')
 
     def test_connector_default(self):
-        with  open('../setUpClass/A.log', 'r') as router_log:
+        with open('../setUpClass/A.log', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "<- @open" in s]
             # nondefaults

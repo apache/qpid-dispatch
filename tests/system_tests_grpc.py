@@ -17,7 +17,8 @@
 # under the License.
 #
 
-import os, sys
+import os
+import sys
 from time import sleep, ctime
 import system_test
 from system_test import TestCase, Qdrouterd, QdManager, Process, SkipIfNeeded, TIMEOUT

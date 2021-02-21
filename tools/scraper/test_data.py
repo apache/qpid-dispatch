@@ -27,6 +27,7 @@ from __future__ import print_function
 import sys
 import traceback
 
+
 class TestData():
     '''
     Extract list of test log lines from a data file.
@@ -34,6 +35,7 @@ class TestData():
     Embedding the lines as a python source code data statement involves escaping
     double quotes and runs the risk of corrupting the data.
     '''
+
     def __init__(self, fn="test_data/test_data.txt"):
         with open(fn, 'r') as f:
             self.lines = [line.rstrip('\n') for line in f]
@@ -47,7 +49,7 @@ if __name__ == "__main__":
     try:
         datasource = TestData()
         for line in datasource.data():
-            print (line)
+            print(line)
         pass
     except:
         traceback.print_exc(file=sys.stdout)

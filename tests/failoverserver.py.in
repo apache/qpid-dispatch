@@ -24,7 +24,9 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import signal, optparse, sys
+import signal
+import optparse
+import sys
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import symbol

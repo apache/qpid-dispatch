@@ -57,8 +57,8 @@ def web_page_head():
 <title>Adverbl Analysis - qpid-dispatch router logs</title>
 
 <style>
-    * { 
-    font-family: sans-serif; 
+    * {
+    font-family: sans-serif;
 }
 table {
     border-collapse: collapse;
@@ -76,7 +76,7 @@ function node_is_visible(node)
 {
   if(dojo.isString(node))
     node = dojo.byId(node);
-  if(!node) 
+  if(!node)
     return false;
   return node.style.display == "block";
 }

@@ -17,7 +17,8 @@
 # under the License.
 #
 
-import argparse, sys
+import argparse
+import sys
 from itertools import combinations
 
 from qpid_dispatch_internal.tools.command import (main,
@@ -29,13 +30,17 @@ from qpid_dispatch_internal.tools.command import (main,
 
 from system_test import unittest
 
+
 def mock_error(self, message):
     raise ValueError(message)
+
 
 argparse.ArgumentParser.error = mock_error
 
 # Since BusManager file is definded in tools/qdmanage.in -> tools/qdmanage
 # otherwise it could be just imported
+
+
 class FakeBusManager:
     def displayGeneral(self): pass
     def displayConnections(self): pass
@@ -53,7 +58,9 @@ class FakeBusManager:
     def displayLog(self): pass
     def show_all(self): pass
 
+
 FBM = FakeBusManager
+
 
 class TestParseArgsQdstat(unittest.TestCase):
     def setUp(self):
@@ -64,7 +71,7 @@ class TestParseArgsQdstat(unittest.TestCase):
 
     def test_parse_args_qdstat_mutually_exclusive(self):
         options1 = ["-g", "-c",
-                    "-l","-n","-e","-a","-m","--autolinks","--linkroutes","--log",
+                    "-l", "-n", "-e", "-a", "-m", "--autolinks", "--linkroutes", "--log",
                     "--all-entities"]
         options2 = ["-r", "--all-routers"]
 
@@ -77,7 +84,7 @@ class TestParseArgsQdstat(unittest.TestCase):
         _call_pairs(options2)
 
     def test_parse_args_qdstat_default(self):
-        args = parse_args_qdstat(FBM, argv = [])
+        args = parse_args_qdstat(FBM, argv=[])
         self.assertEqual(FBM.displayGeneral.__name__, args.show)
 
     def test_parse_args_qdstat_method_show_matching(self):
@@ -103,6 +110,7 @@ class TestParseArgsQdstat(unittest.TestCase):
 
         args = self.parser.parse_args(["--limit", "1"])
         self.assertEqual(1, args.limit)
+
 
 class TestParseArgsQdmanage(unittest.TestCase):
     def setUp(self):
@@ -143,13 +151,13 @@ class TestMain(unittest.TestCase):
 
         self.assertEqual(0, main(run_success))
         failed_runs = [
-            #run_raises_UsageError, ##uncomment this exposes bug
+            # run_raises_UsageError, ##uncomment this exposes bug
             run_raises_Exception,
             run_raises_KeyboardInterrupt,
         ]
         for run in failed_runs:
             self.assertEqual(1, main(run))
 
+
 if __name__ == '__main__':
     unittest.main()
-

@@ -40,7 +40,7 @@ DUMMY = "org.apache.qpid.dispatch.dummy"
 
 CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
 
-TOTAL_ENTITIES=35   # for tests that check the total # of entities
+TOTAL_ENTITIES = 35   # for tests that check the total # of entities
 
 
 class QdmanageTest(TestCase):
@@ -57,10 +57,10 @@ class QdmanageTest(TestCase):
         config_1 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'R1'}),
             ('sslProfile', {'name': 'server-ssl',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'password': 'server-password'}),
             ('listener', {'port': cls.tester.get_port()}),
 
             ('connector', {'role': 'inter-router', 'port': cls.inter_router_port}),
@@ -97,12 +97,14 @@ class QdmanageTest(TestCase):
     def assert_entity_equal(self, expect, actual, copy=None):
         """Copy keys in copy from actual to idenity, then assert maps equal."""
         if copy:
-            for k in copy: expect[k] = actual[k]
+            for k in copy:
+                expect[k] = actual[k]
         self.assertEqual(expect, actual)
 
     def assert_entities_equal(self, expect, actual, copy=None):
         """Do assert_entities_equal on a list of maps."""
-        for e, a in zip(expect, actual): self.assert_entity_equal(e, a, copy)
+        for e, a in zip(expect, actual):
+            self.assert_entity_equal(e, a, copy)
 
     def test_crud(self):
 
@@ -156,7 +158,7 @@ class QdmanageTest(TestCase):
     def test_query(self):
 
         def long_type(name):
-            return u'org.apache.qpid.dispatch.'+name
+            return u'org.apache.qpid.dispatch.' + name
 
         types = ['listener', 'log', 'router']
         long_types = [long_type(name) for name in types]
@@ -167,7 +169,7 @@ class QdmanageTest(TestCase):
             self.assertIn(t, qall_types)
 
         qlistener = json.loads(self.run_qdmanage('query --type=listener'))
-        self.assertEqual([long_type('listener')]*2, [e['type'] for e in qlistener])
+        self.assertEqual([long_type('listener')] * 2, [e['type'] for e in qlistener])
         self.assertEqual(self.router_1.ports[0], int(qlistener[0]['port']))
 
         qattr = json.loads(self.run_qdmanage('query type name'))
@@ -249,15 +251,15 @@ class QdmanageTest(TestCase):
         # Each value returned by the above query should be
         # a log, and each log should contain an entry for each
         # log level.
-        log_levels = [ 'criticalCount',
-                       'debugCount',
-                       'errorCount',
-                       'infoCount',
-                       'noticeCount',
-                       'traceCount',
-                       'warningCount'
-                     ]
-        n_log_levels = len ( log_levels )
+        log_levels = ['criticalCount',
+                      'debugCount',
+                      'errorCount',
+                      'infoCount',
+                      'noticeCount',
+                      'traceCount',
+                      'warningCount'
+                      ]
+        n_log_levels = len(log_levels)
 
         good_logs = 0
 
@@ -272,7 +274,7 @@ class QdmanageTest(TestCase):
             if log_levels_present == n_log_levels:
                 good_logs += 1
 
-        self.assertEqual ( good_logs, len(logs) )
+        self.assertEqual(good_logs, len(logs))
 
     def test_update(self):
         exception = False
@@ -359,7 +361,6 @@ class QdmanageTest(TestCase):
         self.assertEqual(output['dir'], 'out')
         self.assertEqual(output['direction'], 'out')
 
-
     def test_specify_container_id_connection_auto_link(self):
         long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
         create_command = 'CREATE --type=' + long_type + ' addr=abc containerId=id1 connection=conn1 direction=out'
@@ -435,12 +436,12 @@ class QdmanageTest(TestCase):
     def test_create_delete_ssl_profile(self):
         ssl_profile_name = 'ssl-profile-test'
         ssl_create_command = 'CREATE --type=sslProfile certFile=' + self.ssl_file('server-certificate.pem') + \
-                         ' privateKeyFile=' + self.ssl_file('server-private-key.pem') + ' password=server-password' + \
-                         ' name=' + ssl_profile_name + ' caCertFile=' + self.ssl_file('ca-certificate.pem')
+            ' privateKeyFile=' + self.ssl_file('server-private-key.pem') + ' password=server-password' + \
+            ' name=' + ssl_profile_name + ' caCertFile=' + self.ssl_file('ca-certificate.pem')
         output = json.loads(self.run_qdmanage(ssl_create_command))
         self.assertEqual(output['name'], ssl_profile_name)
         self.run_qdmanage('DELETE --type=sslProfile --name=' +
-        ssl_profile_name)
+                          ssl_profile_name)
 
     def test_delete_connection(self):
         """
@@ -482,9 +483,9 @@ class QdmanageTest(TestCase):
         pcount = 0
         for p in config:
             query_command = 'CREATE --type=' + long_type + \
-                                             ' pattern=' + p[0] + \
-                                             ' distribution=' + p[1] + \
-                                             ' name=Pattern' + str(pcount)
+                ' pattern=' + p[0] + \
+                ' distribution=' + p[1] + \
+                ' name=Pattern' + str(pcount)
             self.run_qdmanage(query_command)
             pcount += 1
 
@@ -507,7 +508,7 @@ class QdmanageTest(TestCase):
         pcount = 0
         for p in config:
             query_command = 'DELETE --type=' + long_type + \
-                                             ' --name=Pattern' + str(pcount)
+                ' --name=Pattern' + str(pcount)
             self.run_qdmanage(query_command)
             pcount += 1
 
@@ -585,7 +586,7 @@ class QdmanageTest(TestCase):
                 self.logger.log("Test success!")
                 success = True
                 break
-                
+
         if not success:
             self.logger.dump()
 

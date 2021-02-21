@@ -39,15 +39,15 @@ from proton import Delivery
 from system_test import AsyncTestSender, AsyncTestReceiver, TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout, unittest
 
 
-MAX_FRAME=1023
-LINK_CAPACITY=250
-W_THREADS=2
+MAX_FRAME = 1023
+LINK_CAPACITY = 250
+W_THREADS = 2
 LARGE_PAYLOAD = ("X" * MAX_FRAME) * 19
 
 # check for leaks of the following entities
-ALLOC_STATS=["qd_message_t",
-             "qd_buffer_t",
-             "qdr_delivery_t"]
+ALLOC_STATS = ["qd_message_t",
+               "qd_buffer_t",
+               "qdr_delivery_t"]
 
 
 class MulticastLinearTest(TestCase):
@@ -152,28 +152,28 @@ class MulticastLinearTest(TestCase):
              'receivers':   ['R-EA1-1', 'R-EA1-2'],
              'subscribers': 2,
              'remotes':     0
-            },
+             },
             # Interior router INT_A:
             {'router':      cls.INT_A,
              'senders':     ['S-INT_A-1'],
              'receivers':   ['R-INT_A-1', 'R-INT_A-2'],
              'subscribers': 3,
              'remotes':     1,
-            },
+             },
             # Interior router INT_B:
             {'router':      cls.INT_B,
              'senders':     [],
              'receivers':   ['R-INT_B-1', 'R-INT_B-2'],
              'subscribers': 3,
              'remotes':     1,
-            },
+             },
             # edge router EB1
             {'router':      cls.EB1,
              'senders':     [],
              'receivers':   ['R-EB1-1', 'R-EB1-2'],
              'subscribers': 2,
              'remotes':     0,
-            }
+             }
         ]
 
     def _get_alloc_stats(self, router, stats):
@@ -445,6 +445,7 @@ class SendPresettled(LinkOption):
     """
     All messages are sent presettled
     """
+
     def apply(self, link):
         link.snd_settle_mode = Link.SND_SETTLED
         link.rcv_settle_mode = Link.RCV_FIRST
@@ -454,6 +455,7 @@ class SendMixed(LinkOption):
     """
     Messages may be sent unsettled or settled
     """
+
     def apply(self, link):
         link.snd_settle_mode = Link.SND_MIXED
         link.rcv_settle_mode = Link.RCV_FIRST
@@ -463,6 +465,7 @@ class Link1Ack(LinkOption):
     """
     Messages will be sent unsettled
     """
+
     def apply(self, link):
         link.snd_settle_mode = Link.SND_UNSETTLED
         link.rcv_settle_mode = Link.RCV_FIRST
@@ -473,6 +476,7 @@ class Link3Ack(LinkOption):
     Messages will be sent unsettled and the receiver will wait for sender to
     settle first.
     """
+
     def apply(self, link):
         link.snd_settle_mode = Link.SND_UNSETTLED
         link.rcv_settle_mode = Link.RCV_SECOND
@@ -482,6 +486,7 @@ class MulticastBase(MessagingHandler):
     """
     Common multicast boilerplate code
     """
+
     def __init__(self, config, count, body, topic=None, **handler_kwargs):
         super(MulticastBase, self).__init__(**handler_kwargs)
         self.msg_count = count
@@ -490,8 +495,8 @@ class MulticastBase(MessagingHandler):
         self.body = body
 
         # totals
-        self.n_senders = 0;
-        self.n_receivers = 0;
+        self.n_senders = 0
+        self.n_receivers = 0
         self.n_sent = 0
         self.n_received = 0
         self.n_settled = 0
@@ -639,6 +644,7 @@ class MulticastPresettled(MulticastBase):
     Test multicast forwarding for presettled transfers.
     Verifies that all messages are settled by the sender
     """
+
     def __init__(self, config, count, body, settlement_mode):
         # use a large prefetch to prevent drops
         super(MulticastPresettled, self).__init__(config,
@@ -715,6 +721,7 @@ class MulticastPresettledRxFail(MulticastPresettled):
     """
     Spontaneously close a receiver or connection on message received
     """
+
     def __init__(self, config, count, drop_clients, detach, body):
         super(MulticastPresettledRxFail, self).__init__(config, count, body, SendPresettled())
         self.drop_clients = drop_clients
@@ -749,8 +756,9 @@ class MulticastUnsettled3Ack(MulticastBase):
     Send count messages per sender, senders wait for terminal outcome from
     receivers before settling
     """
+
     def __init__(self, config, count, body, outcomes=None):
-        pfetch = int((count + 1)/2)
+        pfetch = int((count + 1) / 2)
         super(MulticastUnsettled3Ack, self).__init__(config,
                                                      count,
                                                      body,
@@ -830,6 +838,7 @@ class MulticastUnsettled1Ack(MulticastUnsettled3Ack):
     """
     Sender sends unsettled, the receiver sets outcome and immediately settles
     """
+
     def __init__(self, config, count, body, outcomes=None):
         super(MulticastUnsettled1Ack, self).__init__(config,
                                                      count,
@@ -866,6 +875,7 @@ class MulticastUnsettledRxFail(MulticastUnsettled3Ack):
     """
     Spontaneously close a receiver or connection on message received
     """
+
     def __init__(self, config, count, drop_clients, detach, body):
         super(MulticastUnsettledRxFail, self).__init__(config, count, body)
         self.drop_clients = drop_clients
@@ -899,6 +909,7 @@ class MulticastUnsettled3AckMA(MulticastUnsettled3Ack):
     """
     Try 3 Ack, but with a bunch of user Message Annotations (why not?)
     """
+
     def __init__(self, config, count, body, outcomes=None):
         super(MulticastUnsettled3AckMA, self).__init__(config,
                                                        count,
@@ -907,11 +918,11 @@ class MulticastUnsettled3AckMA(MulticastUnsettled3Ack):
         self._huge_ma = {
             "my-key": "my-data",
             "my-other-key": "my-other-data",
-            "my-map": { "my-map-key1": "X",
-                        "my-map-key2": 0x12,
-                        "my-map-key3": "+0123456789" * 101,
-                        "my-map-list": [i for i in range(97)]
-            },
+            "my-map": {"my-map-key1": "X",
+                       "my-map-key2": 0x12,
+                       "my-map-key3": "+0123456789" * 101,
+                       "my-map-list": [i for i in range(97)]
+                       },
             "my-last-key": "so long, folks!"
         }
 
@@ -938,6 +949,7 @@ class MulticastCreditBlocked(MessagingHandler):
     the sending link has opened a short timer is started.  It is expected that
     on_sendable() is NOT invoked before the timer expires.
     """
+
     def __init__(self, address, target=None, timeout=2, **handler_kwargs):
         super(MulticastCreditBlocked, self).__init__(**handler_kwargs)
         self.target = target

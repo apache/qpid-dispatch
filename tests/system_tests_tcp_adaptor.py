@@ -52,6 +52,7 @@ try:
 except ImportError:
     class TCP_echo_client(object):
         pass
+
     class TCP_echo_server(object):
         pass
 
@@ -64,12 +65,14 @@ except ImportError:
     DISABLE_SELECTOR_TESTS = True
     DISABLE_SELECTOR_REASON = "Python selectors module is not available on this platform."
 
+
 class Logger():
     """
     Record event logs as existing Logger. Also add:
     * ofile  - optional file opened in 'append' mode to which each log line is written
     TODO: Replace system_test Logger with this after merging dev-protocol-adaptors branch
     """
+
     def __init__(self,
                  title="Logger",
                  print_to_console=False,
@@ -84,7 +87,7 @@ class Logger():
     def log(self, msg):
         ts = Timestamp()
         if self.save_for_dump:
-            self.logs.append( (ts, msg) )
+            self.logs.append((ts, msg))
         if self.print_to_console:
             print("%s %s" % (ts, msg))
             sys.stdout.flush()
@@ -215,7 +218,7 @@ class TcpAdaptor(TestCase):
                             'address': 'ES_' + rtr,
                             'siteId': cls.site}
                 tup = [(('tcpListener', listener))]
-                listeners.extend( tup )
+                listeners.extend(tup)
             config.extend(listeners)
 
             if extra:
@@ -263,7 +266,7 @@ class TcpAdaptor(TestCase):
                              (rtr, tcp_listener, cls.tcp_client_listener_ports[rtr][tcp_listener]))
             p_out.append("%s_nodest_listener=%d" %
                          (rtr, cls.nodest_listener_ports[rtr]))
-            #p_out.append("%s_http_listener=%d" %
+            # p_out.append("%s_http_listener=%d" %
             #             (rtr, cls.http_listener_ports[rtr]))
         p_out.append("inter_router_port_AB=%d" % inter_router_port_AB)
         p_out.append("inter_router_port_BC=%d" % inter_router_port_BC)
@@ -410,7 +413,7 @@ class TcpAdaptor(TestCase):
         # stop echo servers
         for rtr in cls.router_order:
             server = cls.echo_servers.get(rtr)
-            if not server is None:
+            if server is not None:
                 cls.logger.log("TCP_TEST Stopping echo server %s" % rtr)
                 server.wait()
         super(TcpAdaptor, cls).tearDownClass()
@@ -424,6 +427,7 @@ class TcpAdaptor(TestCase):
         Provide poll interface for checking done/error.
         Provide wait/join to shut down.
         """
+
         def __init__(self, test_name, client_n, logger, client, server, size, count, print_client_logs):
             """
             Launch an echo client upon construction.
@@ -501,6 +505,7 @@ class TcpAdaptor(TestCase):
         For the concurrent tcp tests this class describes one of the client-
         server echo pairs and the traffic pattern between them.
         """
+
         def __init__(self, client_rtr, server_rtr, sizes=None, counts=None):
             self.client_rtr = client_rtr
             self.server_rtr = server_rtr
@@ -547,7 +552,7 @@ class TcpAdaptor(TestCase):
                     break
                 # Make sure servers are still up
                 for rtr in TcpAdaptor.router_order:
-                    es =TcpAdaptor.echo_servers[rtr]
+                    es = TcpAdaptor.echo_servers[rtr]
                     if es.error is not None:
                         self.logger.log("TCP_TEST %s Server %s stopped with error: %s" %
                                         (test_name, es.prefix, es.error))
@@ -600,7 +605,7 @@ class TcpAdaptor(TestCase):
 
         except Exception as exc:
             result = "TCP_TEST %s failed. Exception: %s" % \
-                              (test_name, traceback.format_exc())
+                (test_name, traceback.format_exc())
 
         return result
 
@@ -703,5 +708,5 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     unittest.main(main_module())

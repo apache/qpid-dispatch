@@ -26,7 +26,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import itertools, re
+import itertools
+import re
 import sys
 
 
@@ -35,6 +36,7 @@ if sys.version_info[0] > 2:
     # luckily all strings are unicode to start with
     def unicode(s):
         return s
+
     def dict_iteritems(d):
         return iter(d.items())
 else:
@@ -42,16 +44,17 @@ else:
         return d.iteritems()
 
 
-
 def clean_dict(items, **kwargs):
     """
     @param items: A mapping or iterable of pairs.
     @return: dict containing items + kwargs without any None values. All keys are unicode.
     """
-    if isinstance(items, dict): items = dict_iteritems(items)
+    if isinstance(items, dict):
+        items = dict_iteritems(items)
     return dict((unicode(k), v) for k, v in itertools.chain(items,
                                                             dict_iteritems(kwargs))
                 if v is not None)
+
 
 class EntityBase(object):
     """
@@ -123,27 +126,35 @@ class EntityBase(object):
                       key=lambda k: self._SPECIAL.get(k, 3))
         return "Entity(%s)" % ", ".join("%s=%s" % (k, self.attributes[k]) for k in keys)
 
+
 def update(entity, values):
     """Update entity from values
     @param entity: an Entity
     @param values: a map of values
     """
-    for k, v in dict_iteritems(values): entity[k] = v
+    for k, v in dict_iteritems(values):
+        entity[k] = v
+
 
 SEPARATOR_RE = re.compile(r' |_|-|\.')
 
+
 def camelcase(str, capital=False):
     """Convert string str with ' ', '_', '.' or '-' separators to camelCase."""
-    if not str: return ''
+    if not str:
+        return ''
     words = SEPARATOR_RE.split(str)
     first = words[0]
-    if capital: first = first[0].upper() + first[1:]
+    if capital:
+        first = first[0].upper() + first[1:]
     return first + ''.join([w.capitalize() for w in words[1:]])
+
 
 CAPS_RE = re.compile('[A-Z]')
 
+
 def uncamelcase(str, separator='_'):
     """Convert camelCase string str to string with separator, e.g. camel_case"""
-    if len(str) == 0: return str
-    return str[0] + CAPS_RE.sub(lambda m: separator+m.group(0).lower(), str[1:])
-
+    if len(str) == 0:
+        return str
+    return str[0] + CAPS_RE.sub(lambda m: separator + m.group(0).lower(), str[1:])

@@ -23,11 +23,14 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys, signal, optparse
+import sys
+import signal
+import optparse
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Array, Data, symbol, UNDESCRIBED
 from cproton import pn_sasl_config_path
+
 
 class AuthService(MessagingHandler):
     def __init__(self, address):
@@ -37,7 +40,7 @@ class AuthService(MessagingHandler):
         self.allow('admin', '*', ['send', 'recv'])
         self.allow('guest', 'foo', ['send', 'recv'])
         self.listener = None
-        self.tmo = 0.1 # seconds
+        self.tmo = 0.1  # seconds
         self.stop_req = False
 
     def allow(self, user, address, permissions):
@@ -73,6 +76,7 @@ class AuthService(MessagingHandler):
         else:
             event.reactor.schedule(self.tmo, self)
 
+
 parser = optparse.OptionParser(usage="usage: %prog [options]",
                                description="test authentication and authorization service")
 parser.add_option("-a", "--address", default="localhost:55671",
@@ -87,8 +91,10 @@ if opts.config:
 
 handler = AuthService(opts.address)
 
+
 def sigterm_handler(_signo, _stack_frame):
     handler.stop()
+
 
 signal.signal(signal.SIGTERM, sigterm_handler)
 

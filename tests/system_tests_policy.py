@@ -23,7 +23,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest as unittest
-import os, json, re, signal
+import os
+import json
+import re
+import signal
 import sys
 import time
 
@@ -37,6 +40,7 @@ from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 from qpid_dispatch_internal.compat import dict_iteritems
 from test_broker import FakeBroker
+
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -89,7 +93,7 @@ class AbsoluteConnectionCountLimit(TestCase):
         except ConnectionException:
             denied = True
 
-        self.assertTrue(denied) # assert if connection that should not open did open
+        self.assertTrue(denied)  # assert if connection that should not open did open
 
         bc1.close()
         bc2.close()
@@ -97,6 +101,7 @@ class AbsoluteConnectionCountLimit(TestCase):
         policystats = json.loads(self.run_qdmanage('query --type=policy'))
         self.assertTrue(policystats[0]["connectionsDenied"] == 1)
         self.assertTrue(policystats[0]["totalDenials"] == 1)
+
 
 class LoadPolicyFromFolder(TestCase):
     """
@@ -112,10 +117,10 @@ class LoadPolicyFromFolder(TestCase):
         ipv6_enabled = is_ipv6_enabled()
 
         policy_config_path = os.path.join(DIR, 'policy-1')
-        replacements = {'{IPV6_LOOPBACK}':', ::1'}
+        replacements = {'{IPV6_LOOPBACK}': ', ::1'}
         for f in os.listdir(policy_config_path):
             if f.endswith(".json.in"):
-                with open(policy_config_path+"/"+f[:-3], 'w') as outfile:
+                with open(policy_config_path + "/" + f[:-3], 'w') as outfile:
                     with open(policy_config_path + "/" + f) as infile:
                         for line in infile:
                             for src, target in dict_iteritems(replacements):
@@ -336,12 +341,12 @@ class SenderReceiverLimits(TestCase):
         # To accomodate the file lag this test may retry reading the log file.
         verified = False
         for tries in range(5):
-            with  open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
+            with open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
                 log_lines = router_log.read().split("\n")
                 close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
                 verified = len(close_lines) == 1
             if verified:
-                break;
+                break
             print("system_tests_policy, SenderReceiverLimits, test_verify_z_connection_stats: delay to wait for log to be written")
             sys.stdout.flush()
             time.sleep(1)
@@ -539,7 +544,7 @@ class InterrouterLinksAllowed(TestCase):
         cls.routers[1].teardown()
 
     def test_01_router_links_allowed(self):
-        with  open(self.routers[0].outfile + '.out', 'r') as router_log:
+        with open(self.routers[0].outfile + '.out', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             disallow_lines = [s for s in log_lines if "link disallowed" in s]
             self.assertTrue(len(disallow_lines) == 0, msg='Inter-router links should be allowed but some were blocked by policy.')
@@ -559,10 +564,10 @@ class VhostPolicyNameField(TestCase):
         ipv6_enabled = is_ipv6_enabled()
 
         policy_config_path = os.path.join(DIR, 'policy-1')
-        replacements = {'{IPV6_LOOPBACK}':', ::1'}
+        replacements = {'{IPV6_LOOPBACK}': ', ::1'}
         for f in os.listdir(policy_config_path):
             if f.endswith(".json.in"):
-                with open(policy_config_path+"/"+f[:-3], 'w') as outfile:
+                with open(policy_config_path + "/" + f[:-3], 'w') as outfile:
                     with open(policy_config_path + "/" + f) as infile:
                         for line in infile:
                             for src, target in dict_iteritems(replacements):
@@ -703,7 +708,6 @@ class VhostPolicyNameField(TestCase):
 }
 """
 
-
     def test_01_id_vs_hostname(self):
         # verify current vhost count
         rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
@@ -737,7 +741,7 @@ class VhostPolicyNameField(TestCase):
         try:
             self.run_qdmanage('update --type=vhost --name=dispatch-918 --stdin',
                               input=self.both_policy())
-            self.assertTrue(False) # should not be able to update 'id'
+            self.assertTrue(False)  # should not be able to update 'id'
         except Exception as e:
             pass
 
@@ -779,7 +783,7 @@ class PolicyLinkNamePatternTest(TestCase):
 
         cls.router = cls.tester.qdrouterd('PolicyLinkNamePatternTest', config, wait=False)
         try:
-            cls.router.wait_ready(timeout = 5)
+            cls.router.wait_ready(timeout=5)
         except Exception as e:
             pass
 
@@ -1005,7 +1009,7 @@ class PolicyHostamePatternTest(TestCase):
 
         cls.router = cls.tester.qdrouterd('PolicyVhostNamePatternTest', config, wait=True)
         try:
-            cls.router.wait_ready(timeout = 5)
+            cls.router.wait_ready(timeout=5)
         except Exception:
             pass
 
@@ -1246,6 +1250,7 @@ class VhostPolicyConnLimit(TestCase):
         bc2.connection.close()
         bc3.connection.close()
 
+
 class ClientAddressValidator(MessagingHandler):
     """
     Base client class used to validate vhost policies through
@@ -1302,6 +1307,7 @@ class ReceiverAddressValidator(ClientAddressValidator):
     Receiver implementation used to validate vhost policies
     applied to source addresses.
     """
+
     def __init__(self, url):
         super(ReceiverAddressValidator, self).__init__(url)
 
@@ -1319,6 +1325,7 @@ class SenderAddressValidator(ClientAddressValidator):
     Sender implementation used to validate vhost policies
     applied to target addresses.
     """
+
     def __init__(self, url):
         super(SenderAddressValidator, self).__init__(url)
 
@@ -1340,6 +1347,7 @@ class ConnectorPolicyMisconfiguredClient(FakeBroker):
     This client is targeted by a misconfigured connector whose policy
     causes an immediate connection close.
     '''
+
     def __init__(self, url, container_id=None):
         self.connection_opening = 0
         self.connection_opened = 0
@@ -1379,7 +1387,7 @@ class ConnectorPolicyMisconfiguredClient(FakeBroker):
     def on_connection_opening(self, event):
         self.connection_opening += 1
         super(ConnectorPolicyMisconfiguredClient, self).on_connection_opening(event)
-        
+
     def on_connection_opened(self, event):
         self.connection_opened += 1
         super(ConnectorPolicyMisconfiguredClient, self).on_connection_opened(event)
@@ -1394,12 +1402,12 @@ class ConnectorPolicyMisconfigured(TestCase):
     to open the connection if the policy is not defined
     """
     remoteListenerPort = None
-    
+
     @classmethod
     def setUpClass(cls):
         """Start the router"""
         super(ConnectorPolicyMisconfigured, cls).setUpClass()
-        cls.remoteListenerPort = cls.tester.get_port();
+        cls.remoteListenerPort = cls.tester.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
@@ -1408,7 +1416,7 @@ class ConnectorPolicyMisconfigured(TestCase):
                            'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
                            'host': '127.0.0.1', 'role': 'normal',
                            'port': cls.remoteListenerPort, 'policyVhost': 'nosuch'
-                            }),
+                           }),
 
             ('vhost', {
                 'hostname': '0.0.0.0', 'maxConnections': 2,
@@ -1441,18 +1449,20 @@ class ConnectorPolicyMisconfigured(TestCase):
     def test_30_connector_policy_misconfigured(self):
         url = "127.0.0.1:%d" % self.remoteListenerPort
         tc = ConnectorPolicyMisconfiguredClient(url, "tc")
-        while tc.connection_error == 0 and tc._error == None:
+        while tc.connection_error == 0 and tc._error is None:
             time.sleep(0.1)
         tc.join()
         self.assertTrue(tc.connection_error == 1)
-        
+
 #
+
 
 class ConnectorPolicyClient(FakeBroker):
     '''
     This client is targeted by a configured connector whose policy
     allows certain sources and targets.
     '''
+
     def __init__(self, url, container_id=None):
         self.connection_opening = 0
         self.connection_opened = 0
@@ -1480,13 +1490,13 @@ class ConnectorPolicyClient(FakeBroker):
                 if not self.request_in_flight:
                     if self.sender_request != "":
                         sndr = self._container.create_sender(
-                                self._connections[0], self.sender_request)
+                            self._connections[0], self.sender_request)
                         self.senders.append(sndr)
                         self.request_in_flight = True
                         self.sender_request = ""
                     elif self.receiver_request != "":
                         rcvr = self._container.create_receiver(
-                                self._connections[0], self.receiver_request)
+                            self._connections[0], self.receiver_request)
                         self.receivers.append(rcvr)
                         self.request_in_flight = True
                         self.receiver_request = ""
@@ -1498,7 +1508,7 @@ class ConnectorPolicyClient(FakeBroker):
                         self.req_close_receiver = False
                     elif self.req_anonymous_sender:
                         sndr = self._container.create_sender(
-                                self._connections[0], name="anon")
+                            self._connections[0], name="anon")
                         self.senders.append(sndr)
                         self.request_in_flight = True
                         self.req_anonymous_sender = False
@@ -1593,7 +1603,7 @@ class ConnectorPolicySrcTgt(TestCase):
     def setUpClass(cls):
         """Start the router"""
         super(ConnectorPolicySrcTgt, cls).setUpClass()
-        cls.remoteListenerPort = cls.tester.get_port();
+        cls.remoteListenerPort = cls.tester.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
@@ -1602,7 +1612,7 @@ class ConnectorPolicySrcTgt(TestCase):
                            'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
                            'host': '127.0.0.1', 'role': 'normal',
                            'port': cls.remoteListenerPort, 'policyVhost': 'test'
-                            }),
+                           }),
             # Set up the prefix 'node' as a prefix for waypoint addresses
             ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
             # Create a pair of default auto-links for 'node.1'
@@ -1627,14 +1637,14 @@ class ConnectorPolicySrcTgt(TestCase):
     def test_31_connector_policy(self):
         url = "127.0.0.1:%d" % self.remoteListenerPort
         cpc = ConnectorPolicyClient(url, "cpc")
-        while cpc.connection_opened == 0 and cpc._error == None:
+        while cpc.connection_opened == 0 and cpc._error is None:
             time.sleep(0.1)
         time.sleep(0.05)
-        self.assertTrue(cpc.connection_error == 0) # expect connection to stay up
+        self.assertTrue(cpc.connection_error == 0)  # expect connection to stay up
         self.assertTrue(cpc._error is None)
 
         # senders that should work
-        for addr in ["examples", "$management", "playtime"]: # allowed targets
+        for addr in ["examples", "$management", "playtime"]:  # allowed targets
             try:
                 res = cpc.try_sender(addr)
             except:
@@ -1652,7 +1662,7 @@ class ConnectorPolicySrcTgt(TestCase):
             self.assertTrue(res)
 
         # receivers that should fail
-        for addr in ["$management", "a/bad/addr"]: # denied sources
+        for addr in ["$management", "a/bad/addr"]:  # denied sources
             res = cpc.try_receiver(addr)
             self.assertFalse(res)
 
@@ -1681,7 +1691,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
     def setUpClass(cls):
         """Start the router"""
         super(ConnectorPolicyNSndrRcvr, cls).setUpClass()
-        cls.remoteListenerPort = cls.tester.get_port();
+        cls.remoteListenerPort = cls.tester.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
@@ -1690,7 +1700,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
                            'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
                            'host': '127.0.0.1', 'role': 'normal',
                            'port': cls.remoteListenerPort, 'policyVhost': 'test'
-                            }),
+                           }),
             # Set up the prefix 'node' as a prefix for waypoint addresses
             ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
             # Create a pair of default auto-links for 'node.1'
@@ -1719,10 +1729,10 @@ class ConnectorPolicyNSndrRcvr(TestCase):
     def test_32_connector_policy_max_sndr_rcvr(self):
         url = "127.0.0.1:%d" % self.remoteListenerPort
         cpc = ConnectorPolicyClient(url, "cpc")
-        while cpc.connection_opened == 0 and cpc._error == None:
+        while cpc.connection_opened == 0 and cpc._error is None:
             time.sleep(0.1)
         time.sleep(0.05)
-        self.assertTrue(cpc.connection_error == 0) # expect connection to stay up
+        self.assertTrue(cpc.connection_error == 0)  # expect connection to stay up
         self.assertTrue(cpc._error is None)
 
         # senders that should work
@@ -1760,7 +1770,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             self.assertFalse(res)
 
         # close a sender and verify that another one only may open
-        addr="skyblue"
+        addr = "skyblue"
         cpc.close_sender()
 
         for i in range(1):
@@ -1816,7 +1826,7 @@ class VhostPolicyConfigHashPattern(TestCase):
         cls.router = cls.tester.qdrouterd('vhost-policy-config-hash-pattern', config, wait=False)
         cls.timed_out = False
         try:
-            cls.router.wait_ready(timeout = 5)
+            cls.router.wait_ready(timeout=5)
         except Exception:
             cls.timed_out = True
 
@@ -1834,11 +1844,12 @@ class PolicyConnectionAliasTest(MessagingHandler):
     The hostname is expected to be an alias for a vhost. When the alias selects
     the vhost then the connection is allowed.
     """
+
     def __init__(self, test_host, target_hostname, send_address, print_to_console=False):
         super(PolicyConnectionAliasTest, self).__init__()
-        self.test_host = test_host # router listener
-        self.target_hostname = target_hostname # vhost name for AMQP Open
-        self.send_address = send_address # dummy address allowed by policy
+        self.test_host = test_host  # router listener
+        self.target_hostname = target_hostname  # vhost name for AMQP Open
+        self.send_address = send_address  # dummy address allowed by policy
 
         self.test_conn = None
         self.dummy_sender = None
@@ -1884,7 +1895,7 @@ class PolicyConnectionAliasTest(MessagingHandler):
             self._shut_down_test()
 
     def on_unhandled(self, method, *args):
-        pass # self.logger.log("on_unhandled %s" % (method))
+        pass  # self.logger.log("on_unhandled %s" % (method))
 
     def _shut_down_test(self):
         self.shut_down = True
@@ -1938,7 +1949,7 @@ class PolicyVhostAlias(TestCase):
                                    'allowDynamicSource': 'true'
                                }
                            }
-                })
+                           })
             ]
 
             config = Qdrouterd.Config(config)

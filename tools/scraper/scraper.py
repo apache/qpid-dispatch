@@ -110,19 +110,19 @@ def main_except(argv):
     del argv[0]
     comn.args = p.parse_args(argv)
 
-    if not comn.args.time_start is None:
+    if comn.args.time_start is not None:
         try:
             comn.args.time_start = datetime.datetime.strptime(comn.args.time_start, "%Y-%m-%d %H:%M:%S.%f")
         except:
             sys.exit("ERROR: Failed to parse time_start '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_start)
 
-    if not comn.args.time_end is None:
+    if comn.args.time_end is not None:
         try:
             comn.args.time_end = datetime.datetime.strptime(comn.args.time_end, "%Y-%m-%d %H:%M:%S.%f")
         except:
             sys.exit("ERROR: Failed to parse time_end '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_end)
 
-    if not comn.args.log_modules is None:
+    if comn.args.log_modules is not None:
         l = [x.strip() for x in comn.args.log_modules.split(",")]
         comn.verbatim_include_list = [x for x in l if len(x) > 0]
 
@@ -402,7 +402,7 @@ def main_except(argv):
                 print("<td>%s</td><td><a href=\"#cd_%s\">%s</a></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
                       "<td>%d</td><td>%s</td> %s </tr>" %
                       (rid, id, id, rtr.conn_dir[id], peerconnid, peer, rtr.conn_log_lines[id], n_links,
-                       rtr.conn_xfer_bytes[id], conn_details.counts.show_table_data() ))
+                       rtr.conn_xfer_bytes[id], conn_details.counts.show_table_data()))
                 tLines += rtr.conn_log_lines[id]
                 tBytes += rtr.conn_xfer_bytes[id]
     print(
@@ -482,12 +482,14 @@ def main_except(argv):
     # loop to print table with no expanded data
     print("<h4>With transfer data (N=%d)</h4>" % len(w_data))
     print("<table><tr><th>Address</th> <th>N Links</th> <th>Frames</th> <th>Transfers</th> <th>Unsettled</th> </tr>")
-    for line in w_data: print(line)
+    for line in w_data:
+        print(line)
     print("</table>")
 
     print("<h4>With no transfer data (N=%d)</h4>" % len(wo_data))
     print("<table><tr><th>Address</th> <th>N Links</th> <th>Frames</th> <th>Transfers</th> <th>Unsettled</th> </tr>")
-    for line in wo_data: print(line)
+    for line in wo_data:
+        print(line)
     print("</table>")
 
     # loop to print expandable sub tables
@@ -533,7 +535,7 @@ def main_except(argv):
             for rtr in rtrlist:
                 rtr.details.show_html()
     else:
-        print ("details suppressed<br>")
+        print("details suppressed<br>")
     print("<hr>")
 
     # noteworthy log lines: highlight errors and stuff
@@ -546,7 +548,7 @@ def main_except(argv):
     n_aborted = 0
     n_drain = 0
     n_unsettled = 0
-    n_unsettled_no_parent = 0 # without link/session can't match xfers with dispositions
+    n_unsettled_no_parent = 0  # without link/session can't match xfers with dispositions
     for plf in tree:
         if plf.data.amqp_error:
             n_errors += 1
@@ -562,9 +564,9 @@ def main_except(argv):
             n_drain += 1
         if common.transfer_is_possibly_unsettled(plf):
             if plf.data.no_parent_link:
-                n_unsettled_no_parent += 1 # possibly unsettled
+                n_unsettled_no_parent += 1  # possibly unsettled
             else:
-                n_unsettled += 1 # probably unsettled
+                n_unsettled += 1  # probably unsettled
     # amqp errors
     print("<a href=\"javascript:toggle_node('noteworthy_errors')\">%s%s</a> AMQP errors: %d<br>" %
           (text.lozenge(), text.nbsp(), n_errors))
@@ -683,47 +685,47 @@ def main_except(argv):
     print("<a name=\"c_messageprogress\"></a>")
     print("<h3>Message progress</h3>")
     if not comn.args.skip_msg_progress:
-      for i in range(0, comn.shorteners.short_data_names.len()):
-        sname = comn.shorteners.short_data_names.shortname(i)
-        size = 0
-        for plf in comn.shorteners.short_data_names.customers(sname):
-            size = plf.data.transfer_size
-            break
-        print("<a name=\"%s\"></a> <h4>%s (%s)" % (sname, sname, size))
-        print(" <span> <a href=\"javascript:toggle_node('%s')\"> %s</a>" % ("data_" + sname, text.lozenge()))
-        print(" <div width=\"100%%\"; style=\"display:none; font-weight: normal; margin-bottom: 2px\" id=\"%s\">" %
-              ("data_" + sname))
-        print(" ", comn.shorteners.short_data_names.longname(i, True))
-        print("</div> </span>")
-        print("</h4>")
-        print("<table>")
-        print(
-            "<tr><th>Src</th> <th>Time</th> <th>Router</th> <th>ConnId</th> <th>Dir</th> <th>ConnId</th> <th>Peer</th> "
-            "<th>T delta</th> <th>T elapsed</th><th>Settlement</th><th>S elapsed</th></tr>")
-        t0 = None
-        tlast = None
-        for plf in comn.shorteners.short_data_names.customers(sname):
-            if t0 is None:
-                t0 = plf.datetime
-                tlast = plf.datetime
-                delta = "0.000000"
-                epsed = "0.000000"
-            else:
-                delta = time_offset(plf.datetime, tlast)
-                epsed = time_offset(plf.datetime, t0)
-                tlast = plf.datetime
-            sepsed = ""
-            if plf.data.final_disposition is not None:
-                sepsed = time_offset(plf.data.final_disposition.datetime, t0)
-            rid = plf.router.iname
-            peerconnid = "%s" % comn.conn_peers_connid.get(plf.data.conn_id, "")
-            peer = plf.router.conn_peer_display.get(plf.data.conn_id, "")  # peer container id
-            print("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> "
-                  "<td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> </tr>" %
-                  (plf.adverbl_link_to(), plf.datetime, rid, plf.data.conn_id, plf.data.direction,
-                   peerconnid, peer, delta, epsed,
-                   plf.data.disposition_display, sepsed))
-        print("</table>")
+        for i in range(0, comn.shorteners.short_data_names.len()):
+            sname = comn.shorteners.short_data_names.shortname(i)
+            size = 0
+            for plf in comn.shorteners.short_data_names.customers(sname):
+                size = plf.data.transfer_size
+                break
+            print("<a name=\"%s\"></a> <h4>%s (%s)" % (sname, sname, size))
+            print(" <span> <a href=\"javascript:toggle_node('%s')\"> %s</a>" % ("data_" + sname, text.lozenge()))
+            print(" <div width=\"100%%\"; style=\"display:none; font-weight: normal; margin-bottom: 2px\" id=\"%s\">" %
+                  ("data_" + sname))
+            print(" ", comn.shorteners.short_data_names.longname(i, True))
+            print("</div> </span>")
+            print("</h4>")
+            print("<table>")
+            print(
+                "<tr><th>Src</th> <th>Time</th> <th>Router</th> <th>ConnId</th> <th>Dir</th> <th>ConnId</th> <th>Peer</th> "
+                "<th>T delta</th> <th>T elapsed</th><th>Settlement</th><th>S elapsed</th></tr>")
+            t0 = None
+            tlast = None
+            for plf in comn.shorteners.short_data_names.customers(sname):
+                if t0 is None:
+                    t0 = plf.datetime
+                    tlast = plf.datetime
+                    delta = "0.000000"
+                    epsed = "0.000000"
+                else:
+                    delta = time_offset(plf.datetime, tlast)
+                    epsed = time_offset(plf.datetime, t0)
+                    tlast = plf.datetime
+                sepsed = ""
+                if plf.data.final_disposition is not None:
+                    sepsed = time_offset(plf.data.final_disposition.datetime, t0)
+                rid = plf.router.iname
+                peerconnid = "%s" % comn.conn_peers_connid.get(plf.data.conn_id, "")
+                peer = plf.router.conn_peer_display.get(plf.data.conn_id, "")  # peer container id
+                print("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> "
+                      "<td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> </tr>" %
+                      (plf.adverbl_link_to(), plf.datetime, rid, plf.data.conn_id, plf.data.direction,
+                       peerconnid, peer, delta, epsed,
+                       plf.data.disposition_display, sepsed))
+            print("</table>")
 
     print("<hr>")
 
@@ -809,6 +811,7 @@ def main_except(argv):
 
     PEER_COST_REBOOT = -1
     PEER_COST_ABSENT = 0
+
     def new_costs_row(val):
         """
         return a costs row.
@@ -835,7 +838,7 @@ def main_except(argv):
     for c in cl:
         if c.event == "ls":
             # link state computed costs and router reachability
-            plf = c.router # cruel overload here: router is a parsed line not a router
+            plf = c.router  # cruel overload here: router is a parsed line not a router
             # Processing: Computed costs: {u'A': 1, u'C': 51L, u'B': 101L}
             print("<tr><td>%s</td> <td>%s</td>" % (plf.datetime, ("%s#%d" % (plf.router.iname, plf.lineno))))
             try:
@@ -879,8 +882,8 @@ def main_except(argv):
             for c_rtr in interior_rtrs:
                 for r_rtr in interior_rtrs:
                     if r_rtr != c_rtr \
-                            and (cur_costs[r_rtr][c_rtr] != cur_costs[c_rtr][r_rtr] \
-                            or cur_costs[c_rtr][r_rtr] <= PEER_COST_ABSENT):
+                            and (cur_costs[r_rtr][c_rtr] != cur_costs[c_rtr][r_rtr]
+                                 or cur_costs[c_rtr][r_rtr] <= PEER_COST_ABSENT):
                         costs_stable = False
                         break
                 if not costs_stable:
@@ -932,7 +935,6 @@ def main_except(argv):
 
     print("<hr>")
 
-
     # Emit data for source to be processed by seq-diag-gen utility
     if comn.args.sequence:
         print("<a name=\"c_sequence\"></a>")
@@ -942,7 +944,7 @@ def main_except(argv):
             rid = comn.router_display_names[rtr.log_index]
             peer = rtr.conn_peer_display.get(plf.data.conn_id, "")
             if peer.startswith("<"):
-                peer = peer[peer.find(">")+1:]
+                peer = peer[peer.find(">") + 1:]
                 peer = peer[:peer.find("<")]
             # TODO: differentiate between peer sender and peer receiver
             # This is not so easy as test code uses the same container id for all connections
@@ -950,17 +952,17 @@ def main_except(argv):
             # to same router.
             if peer.startswith("peer"):
                 peer += "_" + rid
-            #TODO handle EOS, connection open/close lines
+            # TODO handle EOS, connection open/close lines
             if (not plf.data.sdorg_str == "" and
                 not plf.data.direction == "" and
-                not plf.data.sdorg_str.startswith("HELP")):
+                    not plf.data.sdorg_str.startswith("HELP")):
                 print("%s|%s|%s|%s|%s|%s|<br>" % (plf.datetime, rid, plf.data.direction, peer, plf.data.sdorg_str, ("%s#%d" % (plf.prefixi, plf.lineno))))
             else:
                 if plf.data.is_scraper:
                     print("%s|%s|%s|%s|%s|%s|<br>" % (plf.datetime, rid, "->", rid, plf.data.sdorg_str,
-                                                 ("%s#%d" % (plf.prefixi, plf.lineno))))
+                                                      ("%s#%d" % (plf.prefixi, plf.lineno))))
             #import pdb
-            #pdb.set_trace()
+            # pdb.set_trace()
         print("<hr>")
 
     print("</body>")

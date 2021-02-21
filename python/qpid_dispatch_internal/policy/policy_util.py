@@ -27,11 +27,15 @@ import binascii
 
 #
 #
+
+
 class PolicyError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return str(self.value)
+
 
 def is_ipv6_enabled():
     """
@@ -47,6 +51,7 @@ def is_ipv6_enabled():
 
     return ipv6_enabled
 
+
 class HostStruct(object):
     """
     HostStruct represents a single, binary socket address from getaddrinfo
@@ -60,7 +65,6 @@ class HostStruct(object):
     if is_ipv6_enabled():
         families.append(socket.AF_INET6)
         famnames.append("IPv6")
-
 
     def __init__(self, hostname):
         """
@@ -88,7 +92,7 @@ class HostStruct(object):
                                               hostname)
             if not foundFirst:
                 raise PolicyError("HostStruct: '%s' did not resolve to one of the supported address family" %
-                        hostname)
+                                  hostname)
             self.name = hostname
             self.saddr = saddr
             self.family = sfamily
@@ -113,6 +117,8 @@ class HostStruct(object):
 
 #
 #
+
+
 class HostAddr(object):
     """
     Provide HostIP address ranges and comparison functions.
@@ -179,10 +185,10 @@ class HostAddr(object):
 
     def memcmp(self, a, b):
         res = 0
-        for i in range(0,len(a)):
+        for i in range(0, len(a)):
             if a[i] > b[i]:
                 res = 1
-                break;
+                break
             elif a[i] < b[i]:
                 res = -1
                 break
@@ -226,6 +232,8 @@ class HostAddr(object):
 
 #
 #
+
+
 class PolicyAppConnectionMgr(object):
     """
     Track policy user/host connection limits and statistics for one app.
@@ -243,6 +251,7 @@ class PolicyAppConnectionMgr(object):
     per_user_state : { 'user1' : [conn1, conn2, conn3],
                        'user2' : [conn4, conn5] }
     """
+
     def __init__(self, maxconn, maxconnperuser, maxconnperhost):
         """
         The object is constructed with the policy limits and zeroed counts.
@@ -263,7 +272,7 @@ class PolicyAppConnectionMgr(object):
 
     def __str__(self):
         res = ("Connection Limits: total: %s, per user: %s, per host: %s\n" %
-            (self.max_total, self.max_per_user, self.max_per_host))
+               (self.max_total, self.max_per_user, self.max_per_host))
         res += ("Connections Statistics: total approved: %s, total denied: %s" %
                 (self.connections_approved, self.connections_denied))
         res += ("Connection State: total current: %s" % self.connections_active)
@@ -313,10 +322,10 @@ class PolicyAppConnectionMgr(object):
         allowbyhost  = n_host < max_per_host
 
         if allowbytotal and allowbyuser and allowbyhost:
-            if not user in self.per_user_state:
+            if user not in self.per_user_state:
                 self.per_user_state[user] = []
             self.per_user_state[user].append(conn_id)
-            if not host in self.per_host_state:
+            if host not in self.per_host_state:
                 self.per_host_state[host] = []
             self.per_host_state[host].append(conn_id)
             self.connections_active += 1
@@ -343,7 +352,6 @@ class PolicyAppConnectionMgr(object):
         self.connections_active -= 1
         self.per_user_state[user].remove(conn_id)
         self.per_host_state[host].remove(conn_id)
-
 
     def count_other_denial(self):
         """

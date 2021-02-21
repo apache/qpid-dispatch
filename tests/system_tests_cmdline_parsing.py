@@ -35,6 +35,7 @@ from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, Process, wait_port
 from system_test import unittest
 
+
 class CommandLineTest(TestCase):
     """
     System tests for command line arguments parsing
@@ -53,7 +54,7 @@ class CommandLineTest(TestCase):
         cls.config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': CommandLineTest.name}),
             ('listener', {'port': CommandLineTest.testport}),
-            ('log',{'module':'DEFAULT', 'enable':'trace+', 'includeSource': 'true', 'outputFile': os.getcwd()+"/"+CommandLineTest.name+'.log'})
+            ('log', {'module': 'DEFAULT', 'enable': 'trace+', 'includeSource': 'true', 'outputFile': os.getcwd() + "/" + CommandLineTest.name + '.log'})
         ])
 
     def run_qdrouterd_as_daemon(self, config_file_name, pid_file_name):
@@ -85,7 +86,6 @@ class CommandLineTest(TestCase):
         except OSError as ex:
             raise Exception("%s\n%s" % (ex, out))
 
-
     def test_01_config_relative_path(self):
         """
         Starts qdrouterd as daemon, enforcing a config file name with
@@ -93,9 +93,10 @@ class CommandLineTest(TestCase):
         """
 
         try:
-            self.run_qdrouterd_as_daemon("test-router", os.getcwd()+'/test.pid')
+            self.run_qdrouterd_as_daemon("test-router", os.getcwd() + '/test.pid')
         except OSError as ex:
             self.fail(ex)
+
 
 class CommandLineTest2(TestCase):
     """
@@ -116,7 +117,7 @@ class CommandLineTest2(TestCase):
         cls.config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': CommandLineTest2.testname}),
             ('listener', {'port': CommandLineTest2.testport}),
-            ('log',{'module':'DEFAULT', 'enable':'trace+', 'includeSource': 'true', 'output': os.getcwd()+"/"+CommandLineTest2.name+'.log'})
+            ('log', {'module': 'DEFAULT', 'enable': 'trace+', 'includeSource': 'true', 'output': os.getcwd() + "/" + CommandLineTest2.name + '.log'})
         ])
 
     def run_qdrouterd_as_daemon(self, config_file_name, pid_file_name):
@@ -148,7 +149,6 @@ class CommandLineTest2(TestCase):
         except OSError as ex:
             raise Exception("%s\n%s" % (ex, out))
 
-
     def test_02_config_full_path(self):
         """
         Starts qdrouterd as daemon, enforcing a config file name with
@@ -157,7 +157,7 @@ class CommandLineTest2(TestCase):
 
         try:
             self.run_qdrouterd_as_daemon(os.getcwd() + "/test-router-2.conf",
-                                pid_file_name=os.getcwd()+'/test.pid')
+                                         pid_file_name=os.getcwd() + '/test.pid')
         except OSError as ex:
             self.fail(ex)
 

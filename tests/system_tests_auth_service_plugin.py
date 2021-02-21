@@ -72,20 +72,20 @@ sql_select: dummy select
         print('launching auth service...')
         auth_service_port = cls.tester.get_port()
         cls.tester.qdrouterd('auth_service', Qdrouterd.Config([
-                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': auth_service_port,
-                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
-                     ('router', {'workerThreads': 1,
-                                 'id': 'auth_service',
-                                 'mode': 'standalone',
-                                 'saslConfigName': 'tests-mech-PLAIN',
-                                 'saslConfigPath': os.getcwd()})
+            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': auth_service_port,
+                          'saslMechanisms': 'PLAIN', 'authenticatePeer': 'yes'}),
+            ('router', {'workerThreads': 1,
+                        'id': 'auth_service',
+                        'mode': 'standalone',
+                        'saslConfigName': 'tests-mech-PLAIN',
+                        'saslConfigPath': os.getcwd()})
         ])).wait_ready()
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
-                     ('authServicePlugin', {'name':'myauth', 'host': '127.0.0.1', 'port': auth_service_port}),
-                     ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin':'myauth', 'saslMechanisms':'PLAIN'}),
-                     ('router', {'mode': 'standalone', 'id': 'router'})
+            ('authServicePlugin', {'name': 'myauth', 'host': '127.0.0.1', 'port': auth_service_port}),
+            ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin': 'myauth', 'saslMechanisms': 'PLAIN'}),
+            ('router', {'mode': 'standalone', 'id': 'router'})
         ])).wait_ready()
 
     @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
@@ -132,21 +132,21 @@ class AuthServicePluginDeprecatedTest(AuthServicePluginTest):
         print('launching auth service...')
         auth_service_port = cls.tester.get_port()
         cls.tester.qdrouterd('auth_service', Qdrouterd.Config([
-                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': auth_service_port,
-                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
-                     ('router', {'workerThreads': 1,
-                                 'id': 'auth_service',
-                                 'mode': 'standalone',
-                                 'saslConfigName': 'tests-mech-PLAIN',
-                                 'saslConfigPath': os.getcwd()})
+            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': auth_service_port,
+                          'saslMechanisms': 'PLAIN', 'authenticatePeer': 'yes'}),
+            ('router', {'workerThreads': 1,
+                        'id': 'auth_service',
+                        'mode': 'standalone',
+                        'saslConfigName': 'tests-mech-PLAIN',
+                        'saslConfigPath': os.getcwd()})
         ])).wait_ready()
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
-                     ('authServicePlugin', {'name':'myauth', 'authService': '127.0.0.1:%d' % auth_service_port}),
-                     ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal',
-                                   'saslPlugin':'myauth', 'saslMechanisms':'PLAIN'}),
-                     ('router', {'mode': 'standalone', 'id': 'router'})
+            ('authServicePlugin', {'name': 'myauth', 'authService': '127.0.0.1:%d' % auth_service_port}),
+            ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal',
+                          'saslPlugin': 'myauth', 'saslMechanisms': 'PLAIN'}),
+            ('router', {'mode': 'standalone', 'id': 'router'})
         ])).wait_ready()
 
 
@@ -181,4 +181,3 @@ class SimpleConnect(MessagingHandler):
 
 if __name__ == '__main__':
     unittest.main(main_module())
-

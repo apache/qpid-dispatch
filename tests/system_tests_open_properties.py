@@ -158,7 +158,7 @@ class OpenPropertiesConfigTest(TestCase):
                                 "key4": False,
                                 "key5": None,
                                 "key6": ["x", False, "z", None]
-                    },
+                                },
                 },
                 "None": None,
                 "True": True,
@@ -183,7 +183,7 @@ class OpenPropertiesConfigTest(TestCase):
                           'port': self.tester.get_port(),
                           'openProperties': op
                       })
-            ]
+                      ]
 
             router = self.tester.qdrouterd(name, Qdrouterd.Config(config),
                                            wait=client_class.wait)
@@ -204,6 +204,7 @@ class OpenPropertiesQdManageTest(TestCase):
     """
     Tests creating openProperties via qdmanage tool
     """
+
     def _valid_properties_check(self, client_class):
         """
         Test a few different valid property maps
@@ -234,7 +235,7 @@ class OpenPropertiesQdManageTest(TestCase):
                                 "key4": False,
                                 "key5": None,
                                 "key6": ["x", False, "z", None]
-                    },
+                                },
                 },
                 "None": None,
                 "True": True,
@@ -257,7 +258,7 @@ class OpenPropertiesQdManageTest(TestCase):
             config = [('router', {'id': name}),
                       ('listener', {
                           'port': self.tester.get_port()})
-            ]
+                      ]
 
             router = self.tester.qdrouterd(name,
                                            Qdrouterd.Config(config),
@@ -349,14 +350,13 @@ class OpenPropertiesBadConfigTest(TestCase):
                           'port': self.tester.get_port(),
                           'openProperties': op
                       })
-            ]
+                      ]
 
             router = self.tester.qdrouterd(name, Qdrouterd.Config(config),
                                            wait=False,
                                            expect=Process.EXIT_FAIL)
             router.wait(timeout=TIMEOUT)
             self.assertTrue(self._find_in_output(router.outfile + '.out', err))
-
 
     def test_02_invalid_role_check(self):
         """
@@ -376,7 +376,7 @@ class OpenPropertiesBadConfigTest(TestCase):
                                   "foo": "bar",
                               }
                           })
-                ]
+                          ]
 
                 router = self.tester.qdrouterd(name, Qdrouterd.Config(config),
                                                wait=False,
@@ -386,6 +386,5 @@ class OpenPropertiesBadConfigTest(TestCase):
                 self.assertTrue(self._find_in_output(router.outfile + '.out', err))
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     unittest.main(main_module())
-

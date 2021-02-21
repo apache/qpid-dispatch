@@ -28,6 +28,7 @@ from system_test import unittest
 from qpid_dispatch.management.client import Node
 from proton import SSLDomain
 
+
 class QdSSLUseridTest(TestCase):
 
     @staticmethod
@@ -48,107 +49,107 @@ class QdSSLUseridTest(TestCase):
 
             # sha1
             ('sslProfile', {'name': 'server-ssl1',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': '1',
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': '1',
+                            'password': 'server-password'}),
 
             # sha256
             ('sslProfile', {'name': 'server-ssl2',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': '2',
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': '2',
+                            'password': 'server-password'}),
 
             # sha512
             ('sslProfile', {'name': 'server-ssl3',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': '5',
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': '5',
+                            'password': 'server-password'}),
 
             # sha256 combination
             ('sslProfile', {'name': 'server-ssl4',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': '2noucs',
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': '2noucs',
+                            'password': 'server-password'}),
 
             # sha1 combination
             ('sslProfile', {'name': 'server-ssl5',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': '1cs',
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': '1cs',
+                            'password': 'server-password'}),
 
             # sha512 combination
             ('sslProfile', {'name': 'server-ssl6',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': 'cs5',
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': 'cs5',
                             # Use the env: prefix TLS_SERVER_PASSWORD. The TLS_SERVER_PASSWORD
                             # is set to 'server-password'
-                             'password': 'env:TLS_SERVER_PASSWORD'}),
+                            'password': 'env:TLS_SERVER_PASSWORD'}),
 
             # no fingerprint field
             ('sslProfile', {'name': 'server-ssl7',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': 'nsuco',
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': 'nsuco',
+                            'password': 'server-password'}),
 
             # no fingerprint field variation
             ('sslProfile', {'name': 'server-ssl8',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': 'scounl',
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': 'scounl',
+                            'password': 'server-password'}),
 
-            #no uidFormat
+            # no uidFormat
             ('sslProfile', {'name': 'server-ssl9',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                             # Use the prefix 'file:' for the password. This should read the file and
                             # use the password from the file.
-                             'password': 'file:' + cls.ssl_file('server-password-file.txt')}),
+                            'password': 'file:' + cls.ssl_file('server-password-file.txt')}),
 
             # one component of uidFormat is invalid (x), this will result in an error in the fingerprint calculation.
             # The user_id will fall back to proton's pn_transport_get_user
             ('sslProfile', {'name': 'server-ssl10',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': '1x',
-                             'uidNameMappingFile': ssl_profile2_json,
-                             'password': 'server-password'}),
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': '1x',
+                            'uidNameMappingFile': ssl_profile2_json,
+                            'password': 'server-password'}),
 
             # All components in the uidFormat are unrecognized, pn_get_transport_user will be returned
             ('sslProfile', {'name': 'server-ssl11',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': 'abxd',
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': 'abxd',
                             # Use the prefix 'literal:'. This makes sure we maintain
-                            #backward compatability
-                             'password': 'literal:server-password'}),
+                            # backward compatability
+                            'password': 'literal:server-password'}),
 
             ('sslProfile', {'name': 'server-ssl12',
-                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                             'certFile': cls.ssl_file('server-certificate.pem'),
-                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'uidFormat': '1',
-                             'uidNameMappingFile': ssl_profile1_json,
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'uidFormat': '1',
+                            'uidNameMappingFile': ssl_profile1_json,
                             # Use the pass: followed by the actual password
-                             'password': 'pass:server-password'}),
+                            'password': 'pass:server-password'}),
 
             # should translate a display name
             # specifying both passwordFile and password, password takes precedence.
@@ -232,9 +233,9 @@ class QdSSLUseridTest(TestCase):
             @param opts: Parsed optoins including connection_options()
         """
         certificate, key, trustfile, password = ssl_options_dict.get('ssl-certificate'), \
-                                                ssl_options_dict.get('ssl-key'), \
-                                                ssl_options_dict.get('ssl-trustfile'), \
-                                                ssl_options_dict.get('ssl-password')
+            ssl_options_dict.get('ssl-key'), \
+            ssl_options_dict.get('ssl-trustfile'), \
+            ssl_options_dict.get('ssl-password')
 
         if not (certificate or trustfile):
             return None
@@ -281,32 +282,32 @@ class QdSSLUseridTest(TestCase):
         addr = self.address(4).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("3eccbf1a2f3e46da823c63a9da9158983cb495a3;US;NC",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[4][0])
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[4][0])
 
         addr = self.address(5).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("US;NC;c6de3a340014b0f8a1d2b41d22e414fc5756494ffa3c8760bbff56f3aa9f179a5a6eae09413fd7a6afbf36b5fb4bad8795c2836774acfe00a701797cc2a3a9ab",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[5][0])
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[5][0])
 
         addr = self.address(6).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("127.0.0.1;NC;Dev;US;Client",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[6][0])
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[6][0])
 
         addr = self.address(7).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("NC;US;Client;Dev;127.0.0.1;Raleigh",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[7][0])
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[7][0])
 
         addr = self.address(8).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("C=US,ST=NC,L=Raleigh,OU=Dev,O=Client,CN=127.0.0.1",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[8][0])
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[8][0])
 
         addr = self.address(9).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("C=US,ST=NC,L=Raleigh,OU=Dev,O=Client,CN=127.0.0.1",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[9][0])
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[9][0])
 
         addr = self.address(10).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)

@@ -162,7 +162,7 @@ class RouterTestSslClient(RouterTestSslBase):
                 OPENSSL_ALLOW_TLSV1_1 = OPENSSL_MIN_VER <= ssl.TLSVersion.TLSv1_1 <= OPENSSL_MAX_VER
                 OPENSSL_ALLOW_TLSV1_2 = OPENSSL_MIN_VER <= ssl.TLSVersion.TLSv1_2 <= OPENSSL_MAX_VER
                 OPENSSL_ALLOW_TLSV1_3 = OPENSSL_HAS_TLSV1_3 and PROTON_HAS_TLSV1_3 \
-                                    and OPENSSL_MIN_VER <= ssl.TLSVersion.TLSv1_3 <= OPENSSL_MAX_VER
+                    and OPENSSL_MIN_VER <= ssl.TLSVersion.TLSv1_3 <= OPENSSL_MAX_VER
         else:
             # At this point we are not able to precisely determine what are the minimum and maximum
             # TLS versions allowed in the system, so tests will be disabled
@@ -332,17 +332,17 @@ class RouterTestSslClient(RouterTestSslBase):
 
         if cls.OPENSSL_ALLOW_TLSV1_3:
             conf += [
-            # TLSv1.3 only
-            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_TLS13,
-                          'authenticatePeer': 'no',
-                          'sslProfile': 'ssl-profile-tls13'}),
-            # SSL Profile for TLSv1.3
-            ('sslProfile', {'name': 'ssl-profile-tls13',
-                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                            'certFile': cls.ssl_file('server-certificate.pem'),
-                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                            'protocols': 'TLSv1.3',
-                            'password': 'server-password'})
+                # TLSv1.3 only
+                ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_TLS13,
+                              'authenticatePeer': 'no',
+                              'sslProfile': 'ssl-profile-tls13'}),
+                # SSL Profile for TLSv1.3
+                ('sslProfile', {'name': 'ssl-profile-tls13',
+                                'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                                'certFile': cls.ssl_file('server-certificate.pem'),
+                                'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                                'protocols': 'TLSv1.3',
+                                'password': 'server-password'})
 
             ]
 
@@ -458,7 +458,7 @@ class RouterTestSslClient(RouterTestSslBase):
         Expects TLSv1 only is allowed
         """
         self.assertEqual(self.get_expected_tls_result([True, False, False, False]),
-                          self.get_allowed_protocols(self.PORT_TLS1))
+                         self.get_allowed_protocols(self.PORT_TLS1))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls11_only(self):
@@ -466,7 +466,7 @@ class RouterTestSslClient(RouterTestSslBase):
         Expects TLSv1.1 only is allowed
         """
         self.assertEqual(self.get_expected_tls_result([False, True, False, False]),
-                          self.get_allowed_protocols(self.PORT_TLS11))
+                         self.get_allowed_protocols(self.PORT_TLS11))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls12_only(self):
@@ -474,7 +474,7 @@ class RouterTestSslClient(RouterTestSslBase):
         Expects TLSv1.2 only is allowed
         """
         self.assertEqual(self.get_expected_tls_result([False, False, True, False]),
-                          self.get_allowed_protocols(self.PORT_TLS12))
+                         self.get_allowed_protocols(self.PORT_TLS12))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls13_only(self):
@@ -482,7 +482,7 @@ class RouterTestSslClient(RouterTestSslBase):
         Expects TLSv1.3 only is allowed
         """
         self.assertEqual(self.get_expected_tls_result([False, False, False, True]),
-                          self.get_allowed_protocols(self.PORT_TLS13))
+                         self.get_allowed_protocols(self.PORT_TLS13))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_tls11_only(self):
@@ -490,7 +490,7 @@ class RouterTestSslClient(RouterTestSslBase):
         Expects TLSv1 and TLSv1.1 only are allowed
         """
         self.assertEqual(self.get_expected_tls_result([True, True, False, False]),
-                          self.get_allowed_protocols(self.PORT_TLS1_TLS11))
+                         self.get_allowed_protocols(self.PORT_TLS1_TLS11))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_tls12_only(self):
@@ -498,7 +498,7 @@ class RouterTestSslClient(RouterTestSslBase):
         Expects TLSv1 and TLSv1.2 only are allowed
         """
         self.assertEqual(self.get_expected_tls_result([True, False, True, False]),
-                          self.get_allowed_protocols(self.PORT_TLS1_TLS12))
+                         self.get_allowed_protocols(self.PORT_TLS1_TLS12))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls11_tls12_only(self):
@@ -506,7 +506,7 @@ class RouterTestSslClient(RouterTestSslBase):
         Expects TLSv1.1 and TLSv1.2 only are allowed
         """
         self.assertEqual(self.get_expected_tls_result([False, True, True, False]),
-                          self.get_allowed_protocols(self.PORT_TLS11_TLS12))
+                         self.get_allowed_protocols(self.PORT_TLS11_TLS12))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls_all(self):
@@ -514,7 +514,7 @@ class RouterTestSslClient(RouterTestSslBase):
         Expects all supported versions: TLSv1, TLSv1.1, TLSv1.2 and TLSv1.3 to be allowed
         """
         self.assertEqual(self.get_expected_tls_result([True, True, True, True]),
-                          self.get_allowed_protocols(self.PORT_TLS_ALL))
+                         self.get_allowed_protocols(self.PORT_TLS_ALL))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_ssl_invalid(self):
@@ -915,19 +915,19 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
         pattern = " SERVER (error) SSL CA configuration failed"
         host_port_1 = self.CONNECTOR_HOST + ":" + str(self.PORT_TLS_ALL_1)
         host_port_2 = self.CONNECTOR_HOST + ":" + str(self.PORT_TLS_ALL_2)
-        sleep_time = 0.1 # seconds
-        poll_duration = 60.0 # seconds
+        sleep_time = 0.1  # seconds
+        poll_duration = 60.0  # seconds
         verified = False
         for tries in range(int(poll_duration / sleep_time)):
             logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
             if os.path.exists(logfile):
-                with  open(logfile, 'r') as router_log:
+                with open(logfile, 'r') as router_log:
                     log_lines = router_log.read().split("\n")
                 e1_lines = [s for s in log_lines if pattern in s and host_port_1 in s]
                 e2_lines = [s for s in log_lines if pattern in s and host_port_2 in s]
                 verified = len(e1_lines) > 0 and len(e2_lines) > 0
                 if verified:
-                    break;
+                    break
             time.sleep(sleep_time)
         self.assertTrue(verified, "Log line containing '%s' not seen for both connectors in QDR.B log" % pattern)
 
@@ -937,13 +937,13 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
         for tries in range(int(poll_duration / sleep_time)):
             logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
             if os.path.exists(logfile):
-                with  open(logfile, 'r') as router_log:
+                with open(logfile, 'r') as router_log:
                     log_lines = router_log.read().split("\n")
                 e1_lines = [s for s in log_lines if pattern1 in s]
                 e2_lines = [s for s in log_lines if pattern2 in s]
                 verified = len(e1_lines) > 0 and len(e2_lines) > 0
                 if verified:
-                    break;
+                    break
             time.sleep(sleep_time)
         self.assertTrue(verified, "Log line containing '%s' or '%s' not seen in QDR.B log" % (pattern1, pattern2))
 
@@ -1067,18 +1067,18 @@ class RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA(RouterT
 
         # Poll for a while until the connector error shows up in router B's log
         pattern = "Connection to localhost:%s failed:" % self.PORT_TLS_ALL
-        sleep_time = 0.1 # seconds
-        poll_duration = 60.0 # seconds
+        sleep_time = 0.1  # seconds
+        poll_duration = 60.0  # seconds
         verified = False
         for tries in range(int(poll_duration / sleep_time)):
             logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
             if os.path.exists(logfile):
-                with  open(logfile, 'r') as router_log:
+                with open(logfile, 'r') as router_log:
                     log_lines = router_log.read().split("\n")
                 e_lines = [s for s in log_lines if pattern in s]
                 verified = len(e_lines) > 0
                 if verified:
-                    break;
+                    break
             time.sleep(sleep_time)
         self.assertTrue(verified, "Log line containing '%s' not seen in QDR.B log" % pattern)
 
@@ -1087,7 +1087,6 @@ class RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA(RouterT
         self.assertTrue(router_nodes)
         node = "QDR.B"
         self.assertNotIn(node, router_nodes, msg=("%s should not be connected" % node))
-
 
 
 if __name__ == '__main__':
