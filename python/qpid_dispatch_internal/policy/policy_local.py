@@ -319,7 +319,7 @@ class PolicyCompiler(object):
                          ]:
                 if isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)) and val.lower() in ['true', 'false']:
                     val = True if val == 'true' else False
-                if not isinstance(val, bool):
+                if not type(val) is bool:
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal boolean value '%s'." %
                                   (vhostname, usergroup, key, val))
                     return False
@@ -461,7 +461,7 @@ class PolicyCompiler(object):
                     return False
                 policy_out[key] = val
             elif key in [PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
-                if not isinstance(val, bool):
+                if not type(val) is bool:
                     errors.append("Policy vhost '%s' option '%s' must be of type 'bool' but is '%s'" %
                                   (name, key, type(val)))
                     return False
@@ -483,7 +483,7 @@ class PolicyCompiler(object):
                     val.append(vtest)
                 policy_out[key] = val
             elif key in [PolicyKeys.KW_GROUPS]:
-                if not isinstance(val, dict):
+                if not type(val) is dict:
                     errors.append("Policy vhost '%s' option '%s' must be of type 'dict' but is '%s'" %
                                   (name, key, type(val)))
                     return False
