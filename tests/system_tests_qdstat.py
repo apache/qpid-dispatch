@@ -32,6 +32,7 @@ from proton import Url, SSLDomain, SSLUnavailable, SASL
 from system_test import main_module, SkipIfNeeded
 from proton.utils import BlockingConnection
 
+
 class QdstatTest(system_test.TestCase):
     """Test qdstat tool output"""
     @classmethod
@@ -45,20 +46,21 @@ class QdstatTest(system_test.TestCase):
 
     def run_qdstat(self, args, regexp=None, address=None):
         if args:
-            popen_args = ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args
+            popen_args = ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT)] + args
         else:
             popen_args = ['qdstat', '--bus',
                           str(address or self.router.addresses[0]),
                           '--timeout', str(system_test.TIMEOUT)]
 
         p = self.popen(popen_args,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
-            universal_newlines=True)
+                       name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+                       universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        if regexp:
+            assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
         return out
 
     def test_help(self):
@@ -189,7 +191,7 @@ class QdstatTest(system_test.TestCase):
 
             # make sure the priority found is a hyphen or a legal number
             if pri[0] == '-':
-                pass # naked hypnen is allowed
+                pass  # naked hypnen is allowed
             else:
                 self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
                 priority = int(pri[0])
@@ -213,11 +215,11 @@ class QdstatTest(system_test.TestCase):
         # extract the number in the priority column of every address
         for i in range(HEADER_ROW + 1, len(lines) - 1):
             line = lines[i].split(',')
-            pri = line[PRI_COL][1:-1] # unquoted value
+            pri = line[PRI_COL][1:-1]  # unquoted value
 
             # make sure the priority found is a hyphen or a legal number
             if pri == '-':
-                pass # naked hypnen is allowed
+                pass  # naked hypnen is allowed
             else:
                 priority = int(pri)
                 # make sure the priority is from -1 to 9
@@ -320,7 +322,6 @@ class QdstatTest(system_test.TestCase):
         self.assertEqual(in_links, COUNT)
         self.assertEqual(out_links, COUNT)
 
-
         # Run qdstat with a limit less than 10,000
         outs = self.run_qdstat(['--links', '--limit=2000'])
         out_list = outs.split("\n")
@@ -419,7 +420,6 @@ class QdstatTest(system_test.TestCase):
                 links += 1
         self.assertEqual(links, COUNT*2)
 
-
         # This test would fail without the fix for DISPATCH-974
         outs = self.run_qdstat(['--address'])
         out_list = outs.split("\n")
@@ -491,20 +491,21 @@ class QdstatTestVhostPolicy(system_test.TestCase):
 
     def run_qdstat(self, args, regexp=None, address=None):
         if args:
-            popen_args = ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args
+            popen_args = ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT)] + args
         else:
             popen_args = ['qdstat', '--bus',
                           str(address or self.router.addresses[0]),
                           '--timeout', str(system_test.TIMEOUT)]
 
         p = self.popen(popen_args,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
-            universal_newlines=True)
+                       name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+                       universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        if regexp:
+            assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
         return out
 
     def test_vhost(self):
@@ -546,8 +547,6 @@ class QdstatTestVhostPolicy(system_test.TestCase):
         self.assertIn("remote hosts", out)
 
 
-
-
 class QdstatLinkPriorityTest(system_test.TestCase):
     """Need 2 routers to get inter-router links for the link priority test"""
     @classmethod
@@ -573,7 +572,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
 
     def run_qdstat(self, args):
         p = self.popen(
-            ['qdstat', '--bus', str(self.address()), '--timeout', str(system_test.TIMEOUT) ] + args,
+            ['qdstat', '--bus', str(self.address()), '--timeout', str(system_test.TIMEOUT)] + args,
             name='qdstat-'+self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
@@ -601,7 +600,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
                 pri = re.findall(r'[-\d]+', lines[i][priority_column:])
                 # make sure the priority found is a number
                 self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
-                self.assertTrue(pri[0] != '-') # naked hypen disallowed
+                self.assertTrue(pri[0] != '-')  # naked hypen disallowed
                 priority = int(pri[0])
                 # make sure the priority is from 0 to 9
                 self.assertTrue(priority >= 0, "Priority was less than 0")
@@ -612,7 +611,6 @@ class QdstatLinkPriorityTest(system_test.TestCase):
 
         # make sure that all priorities are present in the list (currently 0-9)
         self.assertEqual(len(priorities.keys()), 10, "Not all priorities are present")
-
 
     def test_link_priority_csv(self):
         HEADER_ROW = 4
@@ -648,7 +646,6 @@ class QdstatLinkPriorityTest(system_test.TestCase):
         # make sure that all priorities are present in the list (currently 0-9)
         self.assertEqual(len(priorities.keys()), 10, "Not all priorities are present")
 
-
     def _test_links_all_routers(self, command):
         out = self.run_qdstat(command)
 
@@ -662,7 +659,6 @@ class QdstatLinkPriorityTest(system_test.TestCase):
 
     def test_links_all_routers_csv(self):
         self._test_links_all_routers(['--links', '--all-routers', '--csv'])
-
 
     def _test_all_entities(self, command):
         out = self.run_qdstat(command)
@@ -703,6 +699,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
 
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)
+
     class QdstatSslTest(system_test.TestCase):
         """Test qdstat tool output"""
 
@@ -727,10 +724,10 @@ try:
                             'workerThreads': 1,
                             'saslConfigName': 'tests-mech-EXTERNAL'}),
                 ('sslProfile', {'name': 'server-ssl',
-                                 'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                                 'certFile': cls.ssl_file('server-certificate.pem'),
-                                 'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                                 'password': 'server-password'}),
+                                'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                                'certFile': cls.ssl_file('server-certificate.pem'),
+                                'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                                'password': 'server-password'}),
                 ('listener', {'port': cls.tester.get_port()}),
                 ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'yes'}),
                 ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'no'}),
@@ -742,24 +739,25 @@ try:
         def run_qdstat(self, args, regexp=None, address=None):
             p = self.popen(
                 ['qdstat', '--bus', str(address or self.router.addresses[0]), '--ssl-disable-peer-name-verify',
-                 '--timeout', str(system_test.TIMEOUT) ] + args,
+                 '--timeout', str(system_test.TIMEOUT)] + args,
                 name='qdstat-'+self.id(), stdout=PIPE, expect=None,
                 universal_newlines=True)
 
             out = p.communicate()[0]
             assert p.returncode == 0, \
                 "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-            if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+            if regexp:
+                assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
             return out
 
         def get_ssl_args(self):
             args = dict(
-                sasl_external = ['--sasl-mechanisms', 'EXTERNAL'],
-                trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
-                bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
-                client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
-                client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')],
-                client_pass = ['--ssl-password', 'client-password'])
+                sasl_external=['--sasl-mechanisms', 'EXTERNAL'],
+                trustfile=['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
+                bad_trustfile=['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
+                client_cert=['--ssl-certificate', self.ssl_file('client-certificate.pem')],
+                client_key=['--ssl-key', self.ssl_file('client-private-key.pem')],
+                client_pass=['--ssl-password', 'client-password'])
             args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
 
             return args
@@ -769,7 +767,7 @@ try:
             See test_ssl_* below.
             """
             args = self.get_ssl_args()
-            addrs = [self.router.addresses[i] for i in range(4)];
+            addrs = [self.router.addresses[i] for i in range(4)]
             urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs))
             urls.update(zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
                             (Url(a, scheme="amqps") for a in addrs)))
@@ -809,8 +807,8 @@ try:
         def test_ssl_bad_trustfile_to_strict(self):
             self.ssl_test_bad('strict_s', ['bad_trustfile'])
 
-
         # Require-auth SSL listener
+
         def test_ssl_none_to_auth(self):
             self.ssl_test_bad('auth', [])
 
@@ -832,8 +830,8 @@ try:
         def test_ssl_cert_explicit_external_to_auth(self):
             self.ssl_test('auth_s', ['sasl_external', 'client_cert_all'])
 
-
         # Unsecured SSL listener, allows non-SSL
+
         def test_ssl_none_to_unsecured(self):
             self.ssl_test('unsecured', [])
 
@@ -859,18 +857,20 @@ except SSLUnavailable:
 
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)
+
     class QdstatSslTestSslPasswordFile(QdstatSslTest):
         """
         Tests the --ssl-password-file command line parameter
         """
+
         def get_ssl_args(self):
             args = dict(
-                sasl_external = ['--sasl-mechanisms', 'EXTERNAL'],
-                trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
-                bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
-                client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
-                client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')],
-                client_pass = ['--ssl-password-file', self.ssl_file('client-password-file.txt')])
+                sasl_external=['--sasl-mechanisms', 'EXTERNAL'],
+                trustfile=['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
+                bad_trustfile=['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
+                client_cert=['--ssl-certificate', self.ssl_file('client-certificate.pem')],
+                client_key=['--ssl-key', self.ssl_file('client-private-key.pem')],
+                client_pass=['--ssl-password-file', self.ssl_file('client-password-file.txt')])
             args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
 
             return args
@@ -882,6 +882,7 @@ except SSLUnavailable:
 
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)
+
     class QdstatSslNoExternalTest(system_test.TestCase):
         """Test qdstat can't connect without sasl_mech EXTERNAL"""
 
@@ -906,10 +907,10 @@ try:
                             'workerThreads': 1,
                             'saslConfigName': 'tests-mech-NOEXTERNAL'}),
                 ('sslProfile', {'name': 'server-ssl',
-                                 'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                                 'certFile': cls.ssl_file('server-certificate.pem'),
-                                 'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                                 'password': 'server-password'}),
+                                'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                                'certFile': cls.ssl_file('server-certificate.pem'),
+                                'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                                'password': 'server-password'}),
                 ('listener', {'port': cls.tester.get_port()}),
                 ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'yes'}),
                 ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'no'}),
@@ -920,13 +921,14 @@ try:
 
         def run_qdstat(self, args, regexp=None, address=None):
             p = self.popen(
-                ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
+                ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT)] + args,
                 name='qdstat-'+self.id(), stdout=PIPE, expect=None,
                 universal_newlines=True)
             out = p.communicate()[0]
             assert p.returncode == 0, \
                 "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-            if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+            if regexp:
+                assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
             return out
 
         def ssl_test(self, url_name, arg_names):
@@ -934,14 +936,14 @@ try:
             See test_ssl_* below.
             """
             args = dict(
-                trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
-                bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
-                client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
-                client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')],
-                client_pass = ['--ssl-password', 'client-password'])
+                trustfile=['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
+                bad_trustfile=['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
+                client_cert=['--ssl-certificate', self.ssl_file('client-certificate.pem')],
+                client_key=['--ssl-key', self.ssl_file('client-private-key.pem')],
+                client_pass=['--ssl-password', 'client-password'])
             args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
 
-            addrs = [self.router.addresses[i] for i in range(4)];
+            addrs = [self.router.addresses[i] for i in range(4)]
             urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs))
             urls.update(zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
                             (Url(a, scheme="amqps") for a in addrs)))

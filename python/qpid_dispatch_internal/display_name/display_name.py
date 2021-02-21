@@ -38,6 +38,7 @@ from ..router.message import Message
 from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_ERROR, LOG_TRACE, LOG_STACK_LIMIT
 import json
 
+
 class SSLProfile(object):
     def __init__(self, profile_name, profile_file):
         super(SSLProfile, self).__init__()
@@ -52,6 +53,7 @@ class SSLProfile(object):
     def __repr__(self):
         return "SSLProfile(%s)" % ", ".join("%s=%s" % (k, self.cache[k]) for k in self.cache.keys())
 
+
 class DisplayNameService(object):
 
     def __init__(self):
@@ -62,7 +64,7 @@ class DisplayNameService(object):
         self.log_adapter = LogAdapter("DISPLAYNAME")
 
     def log(self, level, text):
-        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        info = traceback.extract_stack(limit=2)[0]  # Caller frame info
         self.log_adapter.log(level, text, info[0], info[1])
 
     def add(self, profile_name, profile_file_location):
@@ -96,5 +98,3 @@ class DisplayNameService(object):
             return user_name if user_name else user_id
         else:
             return user_id
-
-

@@ -121,7 +121,7 @@ class LinkRouteLookupTest(TestCase):
                    ('linkRoute', {'pattern': 'org.apache.B.#',
                                   'containerId': 'FakeBrokerB',
                                   'direction': 'out'})
-                ])
+               ])
         cls.INT_B = cls.routers[-1]
         cls.INT_B.edge_listener = cls.INT_B.addresses[1]
         cls.INT_B.broker_connector = cls.INT_B.connector_addresses[1]

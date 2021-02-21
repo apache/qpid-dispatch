@@ -17,4 +17,3 @@
 # under the License.
 #
 """Qpid Dispatch internal policy package."""
-

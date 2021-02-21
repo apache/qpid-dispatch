@@ -55,6 +55,7 @@ class RequestMsg(object):
     A 'hardcoded' HTTP request message.  This class writes its request
     message to the HTTPConnection.
     """
+
     def __init__(self, method, target, headers=None, body=None):
         self.method = method
         self.target = target
@@ -78,6 +79,7 @@ class ResponseMsg(object):
     A 'hardcoded' HTTP response message.  This class writes its response
     message when called by the HTTPServer via the BaseHTTPRequestHandler
     """
+
     def __init__(self, status, version=None, reason=None,
                  headers=None, body=None, error=False):
         self.status = status
@@ -110,6 +112,7 @@ class ResponseValidator(object):
     """
     Validate a response as received by the HTTP client
     """
+
     def __init__(self, status=200, expect_headers=None, expect_body=None):
         if expect_headers is None:
             expect_headers = {}
@@ -208,7 +211,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                         body += data[:-2]
                     else:
                         self.rfile.readline()  # discard last \r\n
-                        break;
+                        break
                 return body
         return self.rfile.read()
 
@@ -224,6 +227,7 @@ class MyHTTPServer(HTTPServer):
     """
     Adds a switch to the HTTPServer to allow it to exit gracefully
     """
+
     def __init__(self, addr, handler_cls, testcases):
         self.system_tests = testcases
         self.request_count = 0
@@ -242,6 +246,7 @@ class TestServer(object):
     """
     A HTTPServer running in a separate thread
     """
+
     def __init__(self, server_port, client_port, tests, handler_cls=None):
         self._logger = Logger(title="TestServer", print_to_console=False)
         self._client_port = client_port
@@ -290,6 +295,7 @@ class ThreadedTestClient(object):
     """
     An HTTP client running in a separate thread
     """
+
     def __init__(self, tests, port, repeat=1):
         self._id = uuid.uuid4().hex
         self._conn_addr = ("127.0.0.1:%s" % port)
@@ -392,13 +398,13 @@ class Http1AdaptorManagementTest(TestCase):
 
         config = [
             ('router', {'mode': 'standalone',
-                            'id': 'HTTP1MgmtTest',
+                        'id': 'HTTP1MgmtTest',
                         'allowUnsettledMulticast': 'yes'}),
             ('listener', {'role': 'normal',
                           'port': cls.tester.get_port()}),
             ('address', {'prefix': 'closest',   'distribution': 'closest'}),
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
-            ]
+        ]
 
         config = Qdrouterd.Config(config)
         cls.router = cls.tester.qdrouterd('HTTP1MgmtTest', config, wait=True)
@@ -454,7 +460,7 @@ class Http1AdaptorManagementTest(TestCase):
                 if "http/1.x" in item["protocol"]:
                     hconns += 1
             if hconns == 0:
-                break;
+                break
             sleep(0.25)
             retry -= 1
 
@@ -608,7 +614,7 @@ class Http1AdaptorOneRouterTest(TestCase):
              ResponseValidator(expect_headers={"App-Header-1": "Value 01",
                                                "Content-Length": "10",
                                                "App-Header-2": "Value 02"})
-            ),
+             ),
             (RequestMsg("HEAD", "/HEAD/test_02",
                         headers={"Content-Length": "0"}),
              ResponseMsg(200, headers={"App-Header-1": "Value 01",
@@ -642,7 +648,7 @@ class Http1AdaptorOneRouterTest(TestCase):
                          + b'000\r\n'
                          + b'\r\n'),
              ResponseValidator(expect_body=b'12345678abcdefghijklmno')
-            ),
+             ),
             (RequestMsg("POST", "/POST/test_02",
                         headers={"App-Header-1": "Value 01",
                                  "Transfer-Encoding": "chunked"},
@@ -654,7 +660,7 @@ class Http1AdaptorOneRouterTest(TestCase):
                                   "Content-Length": "9"},
                          body=b'Hi There!'),
              ResponseValidator(expect_body=b'Hi There!')
-            ),
+             ),
         ],
         #
         # PUT
@@ -672,7 +678,7 @@ class Http1AdaptorOneRouterTest(TestCase):
                                   "Content-length": "3"},
                          body=b'ABC'),
              ResponseValidator(status=201, expect_body=b'ABC')
-            ),
+             ),
 
             (RequestMsg("PUT", "/PUT/test_02",
                         headers={"Put-Header-1": "Value 01",
@@ -683,7 +689,7 @@ class Http1AdaptorOneRouterTest(TestCase):
                                   "Transfer-Encoding": "chunked"},
                          body=b'1\r\n$\r\n0\r\n\r\n'),
              ResponseValidator(status=201, expect_body=b'$')
-            ),
+             ),
         ]
     }
 
@@ -774,7 +780,7 @@ class Http1AdaptorOneRouterTest(TestCase):
              ResponseValidator(expect_headers={"App-Header-1": "Value 01",
                                                "Content-Length": "10",
                                                "App-Header-2": "Value 02"})
-            ),
+             ),
 
             (RequestMsg("HEAD", "/HEAD/test_03",
                         headers={"Content-Length": "0"}),
@@ -794,7 +800,7 @@ class Http1AdaptorOneRouterTest(TestCase):
                          headers={"Response-Header": "whatever"},
                          body=b'12345678abcdefghijklmno'),
              ResponseValidator(expect_body=b'12345678abcdefghijklmno')
-            ),
+             ),
             (RequestMsg("POST", "/POST/test_02",
                         headers={"App-Header-1": "Value 01",
                                  "Content-Length": "5"},
@@ -804,7 +810,7 @@ class Http1AdaptorOneRouterTest(TestCase):
                                   "Content-Length": "9"},
                          body=b'Hi There!'),
              ResponseValidator(expect_body=b'Hi There!')
-            ),
+             ),
         ],
         #
         # PUT
@@ -820,7 +826,7 @@ class Http1AdaptorOneRouterTest(TestCase):
                                   "Content-length": "3"},
                          body=b'ABC'),
              ResponseValidator(status=201, expect_body=b'ABC')
-            ),
+             ),
 
             (RequestMsg("PUT", "/PUT/test_02",
                         headers={"Put-Header-1": "Value 01",
@@ -830,10 +836,9 @@ class Http1AdaptorOneRouterTest(TestCase):
                          headers={"Response-Header": "whatever"},
                          body=b'No Content Length'),
              ResponseValidator(status=201, expect_body=b'No Content Length')
-            ),
+             ),
         ]
     }
-
 
     @classmethod
     def setUpClass(cls):
@@ -887,7 +892,7 @@ class Http1AdaptorOneRouterTest(TestCase):
                 ('httpListener', {'port': cls.http_listener10_port,
                                   'protocolVersion': 'HTTP1',
                                   'address': 'testServer10'})
-               ])
+                ])
 
         cls.INT_A = cls.routers[0]
         cls.INT_A.listener = cls.INT_A.addresses[0]
@@ -984,6 +989,7 @@ class Http1AdaptorOneRouterTest(TestCase):
             self.assertEqual(s.get('details').get('GET:200'), 6)
             self.assertEqual(s.get('details').get('GET:204'), 1)
             self.assertEqual(s.get('details').get('POST:200'), 2)
+
         def assert_approximately_equal(a, b):
             self.assertTrue((abs(a - b) / a) < 0.1)
         if stats[0].get('direction') == 'out':
@@ -1051,7 +1057,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
         router('INT.A', 'interior',
                [('listener', {'role': 'edge', 'port': cls.INTA_edge1_port}),
                 ('listener', {'role': 'edge', 'port': cls.INTA_edge2_port}),
-               ])
+                ])
         cls.INT_A = cls.routers[0]
         cls.INT_A.listener = cls.INT_A.addresses[0]
 
@@ -1064,7 +1070,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                 ('httpListener', {'port': cls.http_listener10_port,
                                   'protocolVersion': 'HTTP1',
                                   'address': 'testServer10'})
-               ])
+                ])
         cls.EA1 = cls.routers[1]
         cls.EA1.listener = cls.EA1.addresses[0]
 
@@ -1077,7 +1083,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                 ('httpConnector', {'port': cls.http_server10_port,
                                    'protocolVersion': 'HTTP1',
                                    'address': 'testServer10'})
-               ])
+                ])
         cls.EA2 = cls.routers[-1]
         cls.EA2.listener = cls.EA2.addresses[0]
 
@@ -1107,7 +1113,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                              headers={"Test-Header": "/PUT/test_01_concurrent_requests_11",
                                       "Content-Length": "0"}),
                  ResponseValidator(status=201)
-                )],
+                 )],
 
             "GET": [
                 (RequestMsg("GET", "/GET/test_01_concurrent_requests_11_small",
@@ -1136,7 +1142,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                              + b'13\r\nEND OF TRANSMISSION\r\n'
                              + b'0\r\n\r\n'),
                  ResponseValidator(status=200)
-                )],
+                 )],
         }
 
         TESTS_10 = {
@@ -1150,7 +1156,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                              headers={"Test-Header": "/POST/test_01_concurrent_requests_10",
                                       "Content-Length": "0"}),
                  ResponseValidator(status=201)
-                )],
+                 )],
 
             "GET": [
                 (RequestMsg("GET", "/GET/test_01_concurrent_requests_10_small",
@@ -1171,7 +1177,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                              body=b'G' * 393196
                              + b'END OF TRANSMISSION'),
                  ResponseValidator(status=200)
-                )],
+                 )],
         }
         server11 = TestServer(server_port=self.http_server11_port,
                               client_port=self.http_listener11_port,
@@ -1224,7 +1230,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                                       "Content-Type": "text/plain;charset=utf-8"},
                              body=b'test_02_credit_replenish'),
                  ResponseValidator(status=200),
-                ),
+                 ),
             ]
         }
         server = TestServer(server_port=self.http_server11_port,
@@ -1253,7 +1259,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                                       "Content-Type": "text/plain;charset=utf-8"},
                              body=b'test_03_server_reconnect'),
                  ResponseValidator(status=200),
-                ),
+                 ),
             ]
         }
 
@@ -1304,7 +1310,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                                       "Content-Type": "text/plain;charset=utf-8"},
                              body=b'test_04_fjord_pining'),
                  ResponseValidator(status=200),
-                ),
+                 ),
             ]
         }
 
@@ -1329,7 +1335,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                                       "Content-Type": "text/plain;charset=utf-8"},
                              body=b'test_04_fjord_pining'),
                  ResponseValidator(status=503),
-                ),
+                 ),
             ]
         }
 
@@ -1431,15 +1437,15 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                                       self.http_listener11_port,
                                       repeat=2)
         client11.wait()
-        self.assertIsNone(client11.error);
-        self.assertEqual(4, client11.count);
+        self.assertIsNone(client11.error)
+        self.assertEqual(4, client11.count)
 
         client10 = ThreadedTestClient(TESTS_10,
                                       self.http_listener10_port,
                                       repeat=2)
         client10.wait()
         self.assertIsNone(client10.error)
-        self.assertEqual(4, client10.count);
+        self.assertEqual(4, client10.count)
 
         server11.wait()
         server10.wait()
@@ -1449,6 +1455,7 @@ class FakeHttpServerBase(object):
     """
     A very base socket server to simulate HTTP server behaviors
     """
+
     def __init__(self, host='', port=80, bufsize=1024):
         super(FakeHttpServerBase, self).__init__()
         self.host = host
@@ -1463,7 +1470,8 @@ class FakeHttpServerBase(object):
         self.do_connect()
         while True:
             data = self.conn.recv(bufsize)
-            if not data: break
+            if not data:
+                break
             self.do_data(data)
         self.do_close()
 
@@ -1566,7 +1574,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                              target="testServer",
                              message=msg)
         ts.wait()
-        self.assertEqual(1, ts.rejected);
+        self.assertEqual(1, ts.rejected)
 
         msg = Message(body="NO REPLY TO " + body_filler)
         msg.id = 1
@@ -1574,7 +1582,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                              target="testServer",
                              message=msg)
         ts.wait()
-        self.assertEqual(1, ts.rejected);
+        self.assertEqual(1, ts.rejected)
 
         msg = Message(body="NO SUBJECT " + body_filler)
         msg.id = 1
@@ -1583,7 +1591,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                              target="testServer",
                              message=msg)
         ts.wait()
-        self.assertEqual(1, ts.rejected);
+        self.assertEqual(1, ts.rejected)
 
         msg = Message(body="NO APP PROPERTIES " + body_filler)
         msg.id = 1
@@ -1593,7 +1601,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                              target="testServer",
                              message=msg)
         ts.wait()
-        self.assertEqual(1, ts.rejected);
+        self.assertEqual(1, ts.rejected)
 
         # TODO: fix body parsing (returns NEED_MORE)
         # msg = Message(body="INVALID BODY " + body_filler)
@@ -1625,7 +1633,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                             headers={"Content-Length": "000"}),
                  None,
                  None,
-                ),
+                 ),
             ]
         }
 
@@ -1645,7 +1653,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                              target=req.reply_to,
                              message=resp)
         ts.wait()
-        self.assertEqual(1, ts.rejected);
+        self.assertEqual(1, ts.rejected)
         client.wait()
         self.assertIsNotNone(client.error)
 
@@ -1661,7 +1669,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                              target=req.reply_to,
                              message=resp)
         ts.wait()
-        self.assertEqual(1, ts.rejected);
+        self.assertEqual(1, ts.rejected)
         client.wait()
         self.assertIsNotNone(client.error)
 
@@ -1677,7 +1685,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                              target=req.reply_to,
                              message=resp)
         ts.wait()
-        self.assertEqual(1, ts.rejected);
+        self.assertEqual(1, ts.rejected)
         client.wait()
         self.assertIsNotNone(client.error)
 
@@ -1706,7 +1714,6 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                                   self.http_listener_port)
         self.assertIsNone(error)
         self.assertEqual(1, count)
-
 
 
 class Http1AdaptorQ2Standalone(TestCase):
@@ -1744,7 +1751,6 @@ class Http1AdaptorQ2Standalone(TestCase):
         config = Qdrouterd.Config(config)
         cls.INT_A = cls.tester.qdrouterd("TestBadEndpoints", config, wait=True)
         cls.INT_A.listener = cls.INT_A.addresses[0]
-
 
     def _write_until_full(self, sock, data, timeout):
         """

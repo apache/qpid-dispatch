@@ -25,10 +25,12 @@ from __future__ import print_function
 from .data import MessageRA, MessageLSU, MessageLSR
 from ..dispatch import LOG_TRACE
 
+
 class LinkStateEngine(object):
     """
     This module is responsible for running the Link State protocol.
     """
+
     def __init__(self, container):
         self.container = container
         self.node_tracker = container.node_tracker
@@ -38,10 +40,8 @@ class LinkStateEngine(object):
         self.last_ra_time = 0
         self.mobile_seq   = 0
 
-
     def set_mobile_seq(self, mobile_seq):
         self.mobile_seq = mobile_seq
-
 
     def tick(self, now):
         interval = self.ra_interval_stable
@@ -50,18 +50,15 @@ class LinkStateEngine(object):
         if now - self.last_ra_time >= interval:
             self.send_ra(now)
 
-
     def handle_ra(self, msg, now):
         if msg.id == self.id:
             return
         self.node_tracker.ra_received(msg.id, msg.version, msg.ls_seq, msg.mobile_seq, msg.instance, now)
 
-
     def handle_lsu(self, msg, now):
         if msg.id == self.id:
             return
         self.node_tracker.link_state_received(msg.id, msg.version, msg.ls, msg.instance, now)
-
 
     def handle_lsr(self, msg, now):
         if msg.id == self.id:
@@ -72,12 +69,10 @@ class LinkStateEngine(object):
         self.container.send('amqp:/_topo/%s/%s/qdrouter' % (msg.area, msg.id), smsg)
         self.container.log_ls(LOG_TRACE, "SENT: %r" % smsg)
 
-
     def send_lsr(self, _id):
         msg = MessageLSR(None, self.id)
         self.container.send('amqp:/_topo/0/%s/qdrouter' % _id, msg)
         self.container.log_ls(LOG_TRACE, "SENT: %r to: %s" % (msg, _id))
-
 
     def send_ra(self, now):
         self.last_ra_time = now

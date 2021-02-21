@@ -23,7 +23,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest as unittest
-import os, json, re, signal
+import os
+import json
+import re
+import signal
 import sys
 import time
 
@@ -46,6 +49,7 @@ OVERSIZE_CONDITION_DESC = "Message size exceeded"
 # oversize is allowed or denied by an ingress edge router but also
 # denied by the uplink interior router.
 
+
 class OversizeMessageTransferTest(MessagingHandler):
     """
     This test connects a sender and a receiver. Then it tries to send _count_
@@ -61,6 +65,7 @@ class OversizeMessageTransferTest(MessagingHandler):
     With expect_block=False sender messages should be received normally.
     The test is a success when n_accepted == count.
     """
+
     def __init__(self, sender_host, receiver_host, test_address,
                  message_size=100000, count=10, expect_block=True, print_to_console=False):
         super(OversizeMessageTransferTest, self).__init__()
@@ -196,8 +201,8 @@ class OversizeMessageTransferTest(MessagingHandler):
             self._shut_down_test()
         else:
             done = (self.n_connection_error == 1) \
-                    if self.expect_block else \
-                    (self.n_sent == self.count and self.n_rcvd == self.count)
+                if self.expect_block else \
+                (self.n_sent == self.count and self.n_rcvd == self.count)
 
             if done:
                 self.logger.log("TEST DONE!!!")
@@ -235,7 +240,6 @@ class OversizeMessageTransferTest(MessagingHandler):
             self.error = "Container run exception: %s" % (e)
             self.logger.log(self.error)
             self.logger.dump()
-
 
 
 # For the next test case define max sizes for each router.
@@ -303,7 +307,7 @@ class MaxMessageSizeBlockOversize(TestCase):
                                    'allowDynamicSource': 'true'
                                }
                            }
-                })
+                           })
             ]
 
             if extra:
@@ -693,7 +697,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.dump()
         self.assertTrue(test.error is None)
 
-
     def test_59_allow_undersize_EA1_INTB(self):
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
                                            MaxMessageSizeBlockOversize.INT_B,
@@ -706,7 +709,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.dump()
         self.assertTrue(test.error is None)
 
-
     def test_5a_allow_undersize_EA1_EA1(self):
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
                                            MaxMessageSizeBlockOversize.EA1,
@@ -718,7 +720,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("test_5a test error: %s" % (test.error))
             test.logger.dump()
         self.assertTrue(test.error is None)
-
 
     def test_5b_allow_undersize_EA1_EB1(self):
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
@@ -744,7 +745,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.dump()
         self.assertTrue(test.error is None)
 
-
     def test_5d_allow_undersize_EB1_INTB(self):
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
                                            MaxMessageSizeBlockOversize.INT_B,
@@ -756,7 +756,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("test_5d test error: %s" % (test.error))
             test.logger.dump()
         self.assertTrue(test.error is None)
-
 
     def test_5e_allow_undersize_EB1_EA1(self):
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
@@ -770,7 +769,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.dump()
         self.assertTrue(test.error is None)
 
-
     def test_5f_allow_undersize_EB1_EB1(self):
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
                                            MaxMessageSizeBlockOversize.EB1,
@@ -782,7 +780,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("test_5f test error: %s" % (test.error))
             test.logger.dump()
         self.assertTrue(test.error is None)
-
 
     def test_s32_allow_gt_signed_32bit_max(self):
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.S32,

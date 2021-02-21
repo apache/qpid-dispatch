@@ -33,7 +33,17 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re, sys
+import errno
+import os
+import time
+import socket
+import random
+import subprocess
+import shutil
+import unittest
+import __main__
+import re
+import sys
 import functools
 from datetime import datetime
 from subprocess import PIPE, STDOUT
@@ -96,19 +106,23 @@ def find_exe(program):
                 return exe_file
     return None
 
+
 # The directory where this module lives. Used to locate static configuration files etc.
 DIR = os.path.dirname(__file__)
+
 
 def _check_requirements():
     """If requirements are missing, return a message, else return empty string."""
     missing = MISSING_MODULES
     required_exes = ['qdrouterd']
-    missing += ["No exectuable %s"%e for e in required_exes if not find_exe(e)]
+    missing += ["No exectuable %s" % e for e in required_exes if not find_exe(e)]
 
     if missing:
-        return "%s: %s"%(__name__, ", ".join(missing))
+        return "%s: %s" % (__name__, ", ".join(missing))
+
 
 MISSING_REQUIREMENTS = _check_requirements()
+
 
 def retry_delay(deadline, delay, max_delay):
     """For internal use in retry. Sleep as required
@@ -119,9 +133,11 @@ def retry_delay(deadline, delay, max_delay):
     time.sleep(min(delay, remaining))
     return min(delay*2, max_delay)
 
+
 # Valgrind significantly slows down the response time of the router, so use a
 # long default timeout
 TIMEOUT = float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 60))
+
 
 def retry(function, timeout=TIMEOUT, delay=.001, max_delay=1):
     """Call function until it returns a true value or timeout expires.
@@ -137,6 +153,7 @@ def retry(function, timeout=TIMEOUT, delay=.001, max_delay=1):
             delay = retry_delay(deadline, delay, max_delay)
             if delay is None:
                 return None
+
 
 def retry_exception(function, timeout=TIMEOUT, delay=.001, max_delay=1, exception_test=None):
     """Call function until it returns without exception or timeout expires.
@@ -157,6 +174,7 @@ def retry_exception(function, timeout=TIMEOUT, delay=.001, max_delay=1, exceptio
             if delay is None:
                 raise
 
+
 def get_local_host_socket(protocol_family='IPv4'):
     if protocol_family == 'IPv4':
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -166,6 +184,7 @@ def get_local_host_socket(protocol_family='IPv4'):
         host = '::1'
 
     return s, host
+
 
 def port_available(port, protocol_family='IPv4'):
     """Return true if connecting to host:port gives 'connection refused'."""
@@ -180,6 +199,7 @@ def port_available(port, protocol_family='IPv4'):
 
     s.close()
     return available
+
 
 def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     """Wait up to timeout for port (on host) to be connectable.
@@ -205,11 +225,13 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     except Exception as e:
         raise Exception("wait_port timeout on host %s port %s: %s" % (host, port, e))
 
+
 def wait_ports(ports, **retry_kwargs):
     """Wait up to timeout for all ports (on host) to be connectable.
     Takes same keyword arguments as retry to control the timeout"""
     for port, protocol_family in dict_iteritems(ports):
         wait_port(port=port, protocol_family=protocol_family, **retry_kwargs)
+
 
 def message(**properties):
     """Convenience to create a proton.Message with properties set"""
@@ -231,6 +253,7 @@ class Process(subprocess.Popen):
     EXIT_FAIL = 1               # Exit status 1
 
     unique_id = 0
+
     @classmethod
     def unique(cls, name):
         cls.unique_id += 1
@@ -277,12 +300,12 @@ class Process(subprocess.Popen):
             with open(self.outfile + '.out') as f:
                 raise RuntimeError("Process %s error: %s\n%s\n%s\n>>>>\n%s<<<<" % (
                     self.pid, msg, ' '.join(self.args),
-                    self.outfile + '.cmd', f.read()));
+                    self.outfile + '.cmd', f.read()))
 
         status = self.poll()
         if status is None:      # Still running
             self.terminate()
-            if self.expect != None and  self.expect != Process.RUNNING:
+            if self.expect != None and self.expect != Process.RUNNING:
                 error("still running")
             self.expect = 0     # Expect clean exit after terminate
             status = self.wait()
@@ -340,6 +363,8 @@ class HttpServer(Process):
         super(HttpServer, self).__init__(args, name=name, expect=expect)
 
 # A HTTP2 Server that will respond to requests made via the router
+
+
 class Http2Server(HttpServer):
     def __init__(self, name=None, listen_port=None, wait=True,
                  py_string='python3', perform_teardown=True, cl_args=None,
@@ -401,9 +426,9 @@ class Qdrouterd(Process):
         """
 
         DEFAULTS = {
-            'listener': {'host':'0.0.0.0', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120',
+            'listener': {'host': '0.0.0.0', 'saslMechanisms': 'ANONYMOUS', 'idleTimeoutSeconds': '120',
                          'authenticatePeer': 'no', 'role': 'normal'},
-            'connector': {'host':'127.0.0.1', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120'},
+            'connector': {'host': '127.0.0.1', 'saslMechanisms': 'ANONYMOUS', 'idleTimeoutSeconds': '120'},
             'router': {'mode': 'standalone', 'id': 'QDR'}
         }
 
@@ -418,8 +443,8 @@ class Qdrouterd(Process):
             """Fill in default values in gconfiguration"""
             for name, props in self:
                 if name in Qdrouterd.Config.DEFAULTS:
-                    for n,p in dict_iteritems(Qdrouterd.Config.DEFAULTS[name]):
-                        props.setdefault(n,p)
+                    for n, p in dict_iteritems(Qdrouterd.Config.DEFAULTS[name]):
+                        props.setdefault(n, p)
 
         def __str__(self):
             """Generate config file content. Calls default() first."""
@@ -434,7 +459,7 @@ class Qdrouterd(Process):
                     result += "".join(["%s%s: %s,\n" % (tabs(level + 1),
                                                         json.dumps(k),
                                                         json.dumps(v))
-                                       for k,v in item.items()])
+                                       for k, v in item.items()])
                     result += "%s}" % tabs(level)
                     return result
                 return "%s" %  item
@@ -450,7 +475,7 @@ class Qdrouterd(Process):
 
             self.defaults()
             # top level list of tuples ('section-name', dict)
-            return "".join(["%s {\n%s}\n"%(n, attributes(p, 1)) for n, p in self])
+            return "".join(["%s {\n%s}\n" % (n, attributes(p, 1)) for n, p in self])
 
     def __init__(self, name=None, config=Config(), pyinclude=None, wait=True,
                  perform_teardown=True, cl_args=None, expect=Process.RUNNING):
@@ -462,7 +487,8 @@ class Qdrouterd(Process):
         cl_args = cl_args or []
         self.config = copy(config)
         self.perform_teardown = perform_teardown
-        if not name: name = self.config.router_id
+        if not name:
+            name = self.config.router_id
         assert name
         # setup log and debug dump files
         self.dumpfile = os.path.abspath('%s-qddebug.txt' % name)
@@ -471,7 +497,7 @@ class Qdrouterd(Process):
         if not default_log:
             self.logfile = "%s.log" % name
             config.append(
-                ('log', {'module':'DEFAULT', 'enable':'trace+',
+                ('log', {'module': 'DEFAULT', 'enable': 'trace+',
                          'includeSource': 'true', 'outputFile': self.logfile}))
         else:
             self.logfile = default_log[0][1].get('outputfile')
@@ -500,7 +526,8 @@ class Qdrouterd(Process):
         if self._management:
             try:
                 self._management.close()
-            except: pass
+            except:
+                pass
             self._management = None
 
         if not self.perform_teardown:
@@ -559,7 +586,7 @@ class Qdrouterd(Process):
                                      self.config.router_id)
                     tail = tail_file(os.path.join(self.outdir, self.logfile))
                     for ln in tail:
-                        sys.stderr.write("%s" % ln);
+                        sys.stderr.write("%s" % ln)
                     sys.stderr.write("\n<<<<\n")
                 sys.stderr.flush()
             except OSError:
@@ -668,6 +695,7 @@ class Qdrouterd(Process):
         Block until address has no subscribers
         """
         a_type = 'org.apache.qpid.dispatch.router.address'
+
         def check():
             addrs = self.management.query(a_type).get_dicts()
             rc = list(filter(lambda a: a['name'].find(address) != -1,
@@ -844,7 +872,7 @@ class TestCase(unittest.TestCase, Tester):  # pylint: disable=too-many-public-me
     def assert_fair(self, seq):
         avg = sum(seq)/len(seq)
         for i in seq:
-            assert i > avg/2, "Work not fairly distributed: %s"%seq
+            assert i > avg/2, "Work not fairly distributed: %s" % seq
 
     if not hasattr(unittest.TestCase, 'assertRegex'):
         def assertRegex(self, text, regexp, msg=None):
@@ -871,6 +899,7 @@ class SkipIfNeeded(object):
     condition must be provided (skip parameter) to define whether
     or not the test will be skipped.
     """
+
     def __init__(self, skip, reason):
         """
         :param skip: if True the method wont be called
@@ -972,6 +1001,7 @@ class AsyncTestReceiver(MessagingHandler):
         kwargs = {'source': self.source}
         rcv = event.container.create_receiver(event.connection,
                                               **kwargs)
+
     def on_link_opened(self, event):
         self._ready.set()
 
@@ -1076,7 +1106,7 @@ class AsyncTestSender(MessagingHandler):
             self._conn = None
 
     def on_accepted(self, event):
-        self.accepted += 1;
+        self.accepted += 1
         event.delivery.settle()
 
     def on_released(self, event):
@@ -1109,10 +1139,12 @@ class AsyncTestSender(MessagingHandler):
             self._conn.close()
             self._conn = None
 
+
 class QdManager(object):
     """
     A means to invoke qdmanage during a testcase
     """
+
     def __init__(self, tester=None, address=None, timeout=TIMEOUT,
                  router_id=None,
                  edge_router_id=None):
@@ -1135,8 +1167,8 @@ class QdManager(object):
         p = self._tester.popen(
             ['qdmanage'] + cmd.split(' ')
             + self.router + ['--bus', address or self._address,
-               '--indent=-1',
-               '--timeout', str(timeout or self._timeout)],
+                             '--indent=-1',
+                             '--timeout', str(timeout or self._timeout)],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
             universal_newlines=True)
         out = p.communicate(input)[0]
@@ -1204,7 +1236,6 @@ class MgmtMsgProxy(object):
 
         def __getattr__(self, key):
             return self.attrs[key]
-
 
     def __init__(self, reply_addr):
         self.reply_addr = reply_addr
@@ -1291,6 +1322,7 @@ class TestTimeout(object):
     A callback object for MessagingHandler class
     parent: A MessagingHandler with a timeout() method
     """
+
     def __init__(self, parent):
         self.parent = parent
 
@@ -1303,6 +1335,7 @@ class PollTimeout(object):
     A callback object for MessagingHandler scheduled timers
     parent: A MessagingHandler with a poll_timeout() method
     """
+
     def __init__(self, parent):
         self.parent = parent
 
@@ -1320,6 +1353,7 @@ def get_link_info(name, address):
         if item.get('name') == name:
             return item
     return None
+
 
 def has_mobile_dest_in_address_table(address, dest):
     qdm = QdManager(address=address)
@@ -1351,6 +1385,7 @@ class Timestamp(object):
     """
     Time stamps for logging.
     """
+
     def __init__(self):
         self.ts = datetime.now()
 
@@ -1373,7 +1408,7 @@ class Logger(object):
     def log(self, msg):
         ts = Timestamp()
         if self.save_for_dump:
-            self.logs.append( (ts, msg) )
+            self.logs.append((ts, msg))
         if self.print_to_console:
             print("%s %s" % (ts, msg))
             sys.stdout.flush()

@@ -86,7 +86,7 @@ class LinkRouteTest(TestCase):
         def router(name, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
             ] + connection
 
             config = Qdrouterd.Config(config)
@@ -156,7 +156,7 @@ class LinkRouteTest(TestCase):
                    ('linkRoute', {'pattern': 'a.*.toD.#', 'direction': 'in'}),
                    ('linkRoute', {'pattern': 'a.*.toD.#', 'direction': 'out'})
 
-                ]
+               ]
                )
         router('D',  # sink for QDR.D routes
                [
@@ -174,7 +174,7 @@ class LinkRouteTest(TestCase):
         sleep(2)
 
     def run_qdstat_linkRoute(self, address, args=None):
-        cmd = ['qdstat', '--bus', str(address), '--timeout', str(TIMEOUT) ] + ['--linkroute']
+        cmd = ['qdstat', '--bus', str(address), '--timeout', str(TIMEOUT)] + ['--linkroute']
         if args:
             cmd = cmd + args
         p = self.popen(
@@ -480,7 +480,7 @@ class LinkRouteTest(TestCase):
                     raise Exception("Expected route '%s' to expire!" % route)
                 sleep(0.1)
             except NotFoundStatus:
-                break;
+                break
 
         node_A.close()
         node_B.close()
@@ -889,7 +889,7 @@ class DeliveryTagsTest(MessagingHandler):
             # router so that the address Dpulp.task can show up on the remoteCount
             i = 0
             while continue_loop:
-                if i > 100: # If we have run the read command for more than hundred times and we still do not have
+                if i > 100:  # If we have run the read command for more than hundred times and we still do not have
                     # the remoteCount set to 1, there is a problem, just exit out of the function instead
                     # of looping to infinity.
                     self.receiver_connection.close()
@@ -930,9 +930,9 @@ class DeliveryTagsTest(MessagingHandler):
 
 class CloseWithUnsettledTest(MessagingHandler):
     ##
-    ## This test sends a message across an attach-routed link.  While the message
-    ## is unsettled, the client link is closed.  The test is ensuring that the
-    ## router does not crash during the closing of the links.
+    # This test sends a message across an attach-routed link.  While the message
+    # is unsettled, the client link is closed.  The test is ensuring that the
+    # router does not crash during the closing of the links.
     ##
     def __init__(self, normal_addr, route_addr):
         super(CloseWithUnsettledTest, self).__init__(prefetch=0, auto_accept=False)
@@ -978,8 +978,8 @@ class CloseWithUnsettledTest(MessagingHandler):
 
 class DynamicSourceTest(MessagingHandler):
     ##
-    ## This test verifies that a dynamic source can be propagated via link-route to
-    ## a route-container.
+    # This test verifies that a dynamic source can be propagated via link-route to
+    # a route-container.
     ##
     def __init__(self, normal_addr, route_addr):
         super(DynamicSourceTest, self).__init__(prefetch=0, auto_accept=False)
@@ -1002,7 +1002,7 @@ class DynamicSourceTest(MessagingHandler):
         if event.connection == self.conn_route:
             self.conn_normal = event.container.connect(self.normal_addr)
         elif event.connection == self.conn_normal:
-            self.receiver = event.container.create_receiver(self.conn_normal, None, dynamic=True,options=DynamicNodeProperties({"x-opt-qd.address":u"pulp.task.abc"}))
+            self.receiver = event.container.create_receiver(self.conn_normal, None, dynamic=True, options=DynamicNodeProperties({"x-opt-qd.address": u"pulp.task.abc"}))
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
@@ -1035,8 +1035,8 @@ class DynamicTarget(LinkOption):
 
 class DynamicTargetTest(MessagingHandler):
     ##
-    ## This test verifies that a dynamic source can be propagated via link-route to
-    ## a route-container.
+    # This test verifies that a dynamic source can be propagated via link-route to
+    # a route-container.
     ##
     def __init__(self, normal_addr, route_addr):
         super(DynamicTargetTest, self).__init__(prefetch=0, auto_accept=False)
@@ -1059,8 +1059,7 @@ class DynamicTargetTest(MessagingHandler):
         if event.connection == self.conn_route:
             self.conn_normal = event.container.connect(self.normal_addr)
         elif event.connection == self.conn_normal:
-            self.sender = event.container.create_sender(self.conn_normal, None, options=\
-                                                        [DynamicTarget(), DynamicNodeProperties({"x-opt-qd.address":u"pulp.task.abc"})])
+            self.sender = event.container.create_sender(self.conn_normal, None, options=[DynamicTarget(), DynamicNodeProperties({"x-opt-qd.address": u"pulp.task.abc"})])
 
     def on_link_opened(self, event):
         if event.sender == self.sender:
@@ -1087,7 +1086,7 @@ class DynamicTargetTest(MessagingHandler):
 
 class DetachNoCloseTest(MessagingHandler):
     ##
-    ## This test verifies that link-detach (not close) is propagated properly
+    # This test verifies that link-detach (not close) is propagated properly
     ##
     def __init__(self, normal_addr, route_addr):
         super(DetachNoCloseTest, self).__init__(prefetch=0, auto_accept=False)
@@ -1125,7 +1124,7 @@ class DetachNoCloseTest(MessagingHandler):
             self.sender.detach()
         if event.receiver == self.receiver:
             ##
-            ## Test passed, we expected a detach on the propagated sender and back
+            # Test passed, we expected a detach on the propagated sender and back
             ##
             self.stop()
 
@@ -1150,7 +1149,7 @@ class DetachNoCloseTest(MessagingHandler):
 
 class DetachMixedCloseTest(MessagingHandler):
     ##
-    ## This test verifies that link-detach (not close) is propagated properly
+    # This test verifies that link-detach (not close) is propagated properly
     ##
     def __init__(self, normal_addr, route_addr):
         super(DetachMixedCloseTest, self).__init__(prefetch=0, auto_accept=False)
@@ -1197,7 +1196,7 @@ class DetachMixedCloseTest(MessagingHandler):
 
         if event.receiver == self.receiver:
             ##
-            ## Test Passed
+            # Test Passed
             ##
             self.stop()
 
@@ -1262,7 +1261,7 @@ class EchoDetachReceived(MessagingHandler):
     def on_link_opened(self, event):
         if event.receiver:
             if event.receiver.name in list(self.receiver_dict):
-                self.receiver_attaches+=1
+                self.receiver_attaches += 1
             # The response receiver attaches have been received. The receiver sent attaches which was link routed
             # all the way to the 'broker' router and the response attaches have come back.
             # It is now time to create the sender.
@@ -1318,6 +1317,7 @@ class TerminusAddrTest(MessagingHandler):
     pulp.task.terminusTestReceiver address shows up with an 'in' and 'out'
 
     """
+
     def __init__(self, sender_address, listening_address, query_address_sending, query_address_listening):
         super(TerminusAddrTest, self).__init__()
         self.sender_address = sender_address
@@ -1352,7 +1352,7 @@ class TerminusAddrTest(MessagingHandler):
             # router so that the address Dpulp.task can show up on the remoteCount
             i = 0
             while continue_loop:
-                if i > 100: # If we have run the read command for more than hundred times and we still do not have
+                if i > 100:  # If we have run the read command for more than hundred times and we still do not have
                     # the remoteCount set to 1, there is a problem, just exit out of the function instead
                     # of looping to infinity.
                     self.receiver_connection.close()
@@ -1418,6 +1418,7 @@ class TerminusAddrTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
 class MultiLinkSendReceive(MessagingHandler):
     class SendState(object):
         def __init__(self, link):
@@ -1429,7 +1430,7 @@ class MultiLinkSendReceive(MessagingHandler):
 
         def send(self, subject, body):
             if not self.sent:
-                self.link.send(Message(subject=subject,body=body,address=self.link.target.address))
+                self.link.send(Message(subject=subject, body=body, address=self.link.target.address))
                 self.sent = True
 
         def on_accepted(self):
@@ -1591,6 +1592,7 @@ class SessionKiller(FakeBroker):
     """DISPATCH-1092: force a session close when the link closes.  This should
     cause the router to re-create the session when the next client attaches.
     """
+
     def __init__(self, url):
         super(SessionKiller, self).__init__(url)
 
@@ -1605,6 +1607,7 @@ class FakeBrokerDrain(FakeBroker):
     when drain is issued by a receiver connected to the router on a
     link routed address
     """
+
     def __init__(self, url):
         super(FakeBrokerDrain, self).__init__(url)
         self.first_flow_received = False
@@ -1782,7 +1785,6 @@ class ConnectionLinkRouteTest(TestCase):
 
     _AS_TYPE = "org.apache.qpid.dispatch.router.connection.linkRoute"
 
-
     @classmethod
     def setUpClass(cls):
         super(ConnectionLinkRouteTest, cls).setUpClass()
@@ -1818,9 +1820,9 @@ class ConnectionLinkRouteTest(TestCase):
                            'host': '0.0.0.0',
                            'port': b_port,
                            'saslMechanisms': 'ANONYMOUS'})]
-            ]
+        ]
 
-        cls.routers=[]
+        cls.routers = []
         for c in configs:
             config = Qdrouterd.Config(c)
             cls.routers.append(cls.tester.qdrouterd(config=config, wait=False))
@@ -1839,14 +1841,14 @@ class ConnectionLinkRouteTest(TestCase):
         # file fails
         config = [('router', {'mode': 'interior', 'id': 'QDR.X'}),
                   ('listener', {'role': 'normal',
-                           'host': '0.0.0.0',
-                           'port': self.tester.get_port(),
-                           'saslMechanisms': 'ANONYMOUS'}),
+                                'host': '0.0.0.0',
+                                'port': self.tester.get_port(),
+                                'saslMechanisms': 'ANONYMOUS'}),
 
                   ('connection.linkRoute',
                    {'pattern': "i/am/bad",
                     'direction': "out"})
-        ]
+                  ]
 
         cfg = Qdrouterd.Config(config)
         # we expect the router to fail
@@ -1910,12 +1912,12 @@ class ConnectionLinkRouteTest(TestCase):
     def test_address_propagation(self):
         # test service that creates and deletes connection link routes
         fs = ConnLinkRouteService(self.QDR_A.addresses[1], container_id="FakeService",
-                                  config = [("clr1",
-                                             {"pattern": "flea.*",
-                                              "direction": "out"}),
-                                            ("clr2",
-                                             {"pattern": "flea.*",
-                                              "direction": "in"})])
+                                  config=[("clr1",
+                                           {"pattern": "flea.*",
+                                            "direction": "out"}),
+                                          ("clr2",
+                                           {"pattern": "flea.*",
+                                            "direction": "in"})])
         self.assertEqual(2, len(fs.values))
 
         # the address should propagate to A and B
@@ -1934,7 +1936,7 @@ class ConnectionLinkRouteTest(TestCase):
             self.assertTrue(time() < deadline)
             sleep(0.1)
 
-        fs.join();
+        fs.join()
 
     # simple forwarding tests with auto delete
     def test_send_receive(self):
@@ -1944,12 +1946,12 @@ class ConnectionLinkRouteTest(TestCase):
 
         # connect broker to A route-container
         fs = ConnLinkRouteService(self.QDR_A.addresses[1], container_id="FakeService",
-                                  config = [("clr1",
-                                             {"pattern": "flea.*",
-                                              "direction": "out"}),
-                                            ("clr2",
-                                             {"pattern": "flea.*",
-                                              "direction": "in"})])
+                                  config=[("clr1",
+                                           {"pattern": "flea.*",
+                                            "direction": "out"}),
+                                          ("clr2",
+                                           {"pattern": "flea.*",
+                                            "direction": "in"})])
         self.assertEqual(2, len(fs.values))
 
         # wait for the address to propagate to B
@@ -2125,6 +2127,7 @@ class ConnLinkRouteMgmtProxy(object):
     While the connection remains open the connection scoped links will remain
     configured and active
     """
+
     def __init__(self, bconn, credit=250):
         self._receiver = bconn.create_receiver(address=None, dynamic=True, credit=credit)
         self._sender = bconn.create_sender(address="$management")
@@ -2136,6 +2139,7 @@ class ConnLinkRouteMgmtProxy(object):
         f = getattr(self._proxy, key)
         if not callable(f):
             return f
+
         def _func(*args, **kwargs):
             self._sender.send(f(*args, **kwargs))
             return self._proxy.response(self._receiver.receive())
@@ -2145,13 +2149,14 @@ class ConnLinkRouteMgmtProxy(object):
 class InvalidTagTest(MessagingHandler):
     """Verify that a message with an invalid tag length is rejected
     """
+
     def __init__(self, router_addr):
         super(InvalidTagTest, self).__init__(auto_accept=False, auto_settle=False)
         self.test_conn = None
         self.test_address = router_addr
-        self.tx_ct = 0;
-        self.accept_ct = 0;
-        self.reject_ct = 0;
+        self.tx_ct = 0
+        self.accept_ct = 0
+        self.reject_ct = 0
         self.error = None
 
     def timeout(self):
@@ -2198,6 +2203,7 @@ class InvalidTagTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
 class Dispatch1428(TestCase):
     """
     Sets up 2 routers (one of which are acting as brokers (QDR.A)).
@@ -2222,7 +2228,7 @@ class Dispatch1428(TestCase):
         def router(name, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
             ] + connection
 
             config = Qdrouterd.Config(config)
@@ -2244,7 +2250,6 @@ class Dispatch1428(TestCase):
                ]
                )
         sleep(2)
-
 
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
         p = self.popen(
@@ -2290,7 +2295,6 @@ class Dispatch1428(TestCase):
         # All link routes created in this test MUST be activated before
         # we can continue further testing.
         self.assertTrue(all_link_routes_activated)
-
 
         first = SendReceive("%s/foo" % self.routers[1].addresses[0], "%s/foo" % self.routers[0].addresses[0])
         first.run()
@@ -2353,6 +2357,7 @@ class DispositionSniffer(MessagingHandler):
     Capture the outgoing delivery after the remote has set its terminal
     outcome.  Used by tests that need to examine the delivery state
     """
+
     def __init__(self, send_url):
         super(DispositionSniffer, self).__init__(auto_accept=False,
                                                  auto_settle=False)
@@ -2449,7 +2454,7 @@ class LinkRoute3Hop(TestCase):
              # the routes
              ('linkRoute', {'prefix': 'closest/test-client', 'containerId': 'FakeService', 'direction': 'in'}),
              ('linkRoute', {'prefix': 'closest/test-client', 'containerId': 'FakeService', 'direction': 'out'})
-            ],
+             ],
             # QDR.B:
             [('router', {'mode': 'interior', 'id': 'QDR.B'}),
              # for client connections
@@ -2464,7 +2469,7 @@ class LinkRoute3Hop(TestCase):
                            'saslMechanisms': 'ANONYMOUS'}),
              ('linkRoute', {'prefix': 'closest/test-client', 'direction': 'in'}),
              ('linkRoute', {'prefix': 'closest/test-client', 'direction': 'out'})
-            ],
+             ],
             # QDR.C
             [('router', {'mode': 'interior', 'id': 'QDR.C'}),
              # for client connections
@@ -2479,10 +2484,10 @@ class LinkRoute3Hop(TestCase):
                             'saslMechanisms': 'ANONYMOUS'}),
              ('linkRoute', {'prefix': 'closest/test-client', 'direction': 'in'}),
              ('linkRoute', {'prefix': 'closest/test-client', 'direction': 'out'})
-            ]
+             ]
         ]
 
-        cls.routers=[]
+        cls.routers = []
         for c in configs:
             config = Qdrouterd.Config(c)
             cls.routers.append(cls.tester.qdrouterd(config=config, wait=False))
@@ -2630,6 +2635,7 @@ class LinkRoute3Hop(TestCase):
         sending extended state via a link route.
         """
         pass
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

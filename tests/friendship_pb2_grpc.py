@@ -15,25 +15,25 @@ class FriendshipStub(object):
             channel: A grpc.Channel.
         """
         self.Create = channel.unary_unary(
-                '/Friendship/Create',
-                request_serializer=friendship__pb2.Person.SerializeToString,
-                response_deserializer=friendship__pb2.CreateResult.FromString,
-                )
+            '/Friendship/Create',
+            request_serializer=friendship__pb2.Person.SerializeToString,
+            response_deserializer=friendship__pb2.CreateResult.FromString,
+        )
         self.ListFriends = channel.unary_stream(
-                '/Friendship/ListFriends',
-                request_serializer=friendship__pb2.PersonEmail.SerializeToString,
-                response_deserializer=friendship__pb2.Person.FromString,
-                )
+            '/Friendship/ListFriends',
+            request_serializer=friendship__pb2.PersonEmail.SerializeToString,
+            response_deserializer=friendship__pb2.Person.FromString,
+        )
         self.CommonFriendsCount = channel.stream_unary(
-                '/Friendship/CommonFriendsCount',
-                request_serializer=friendship__pb2.PersonEmail.SerializeToString,
-                response_deserializer=friendship__pb2.CommonFriendsResult.FromString,
-                )
+            '/Friendship/CommonFriendsCount',
+            request_serializer=friendship__pb2.PersonEmail.SerializeToString,
+            response_deserializer=friendship__pb2.CommonFriendsResult.FromString,
+        )
         self.MakeFriends = channel.stream_stream(
-                '/Friendship/MakeFriends',
-                request_serializer=friendship__pb2.FriendshipRequest.SerializeToString,
-                response_deserializer=friendship__pb2.FriendshipResponse.FromString,
-                )
+            '/Friendship/MakeFriends',
+            request_serializer=friendship__pb2.FriendshipRequest.SerializeToString,
+            response_deserializer=friendship__pb2.FriendshipResponse.FromString,
+        )
 
 
 class FriendshipServicer(object):
@@ -70,100 +70,101 @@ class FriendshipServicer(object):
 
 def add_FriendshipServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'Create': grpc.unary_unary_rpc_method_handler(
-                    servicer.Create,
-                    request_deserializer=friendship__pb2.Person.FromString,
-                    response_serializer=friendship__pb2.CreateResult.SerializeToString,
-            ),
-            'ListFriends': grpc.unary_stream_rpc_method_handler(
-                    servicer.ListFriends,
-                    request_deserializer=friendship__pb2.PersonEmail.FromString,
-                    response_serializer=friendship__pb2.Person.SerializeToString,
-            ),
-            'CommonFriendsCount': grpc.stream_unary_rpc_method_handler(
-                    servicer.CommonFriendsCount,
-                    request_deserializer=friendship__pb2.PersonEmail.FromString,
-                    response_serializer=friendship__pb2.CommonFriendsResult.SerializeToString,
-            ),
-            'MakeFriends': grpc.stream_stream_rpc_method_handler(
-                    servicer.MakeFriends,
-                    request_deserializer=friendship__pb2.FriendshipRequest.FromString,
-                    response_serializer=friendship__pb2.FriendshipResponse.SerializeToString,
-            ),
+        'Create': grpc.unary_unary_rpc_method_handler(
+            servicer.Create,
+            request_deserializer=friendship__pb2.Person.FromString,
+            response_serializer=friendship__pb2.CreateResult.SerializeToString,
+        ),
+        'ListFriends': grpc.unary_stream_rpc_method_handler(
+            servicer.ListFriends,
+            request_deserializer=friendship__pb2.PersonEmail.FromString,
+            response_serializer=friendship__pb2.Person.SerializeToString,
+        ),
+        'CommonFriendsCount': grpc.stream_unary_rpc_method_handler(
+            servicer.CommonFriendsCount,
+            request_deserializer=friendship__pb2.PersonEmail.FromString,
+            response_serializer=friendship__pb2.CommonFriendsResult.SerializeToString,
+        ),
+        'MakeFriends': grpc.stream_stream_rpc_method_handler(
+            servicer.MakeFriends,
+            request_deserializer=friendship__pb2.FriendshipRequest.FromString,
+            response_serializer=friendship__pb2.FriendshipResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'Friendship', rpc_method_handlers)
+        'Friendship', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
-
  # This class is part of an EXPERIMENTAL API.
+
+
 class Friendship(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
     def Create(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+               target,
+               options=(),
+               channel_credentials=None,
+               call_credentials=None,
+               insecure=False,
+               compression=None,
+               wait_for_ready=None,
+               timeout=None,
+               metadata=None):
         return grpc.experimental.unary_unary(request, target, '/Friendship/Create',
-            friendship__pb2.Person.SerializeToString,
-            friendship__pb2.CreateResult.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             friendship__pb2.Person.SerializeToString,
+                                             friendship__pb2.CreateResult.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def ListFriends(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                    target,
+                    options=(),
+                    channel_credentials=None,
+                    call_credentials=None,
+                    insecure=False,
+                    compression=None,
+                    wait_for_ready=None,
+                    timeout=None,
+                    metadata=None):
         return grpc.experimental.unary_stream(request, target, '/Friendship/ListFriends',
-            friendship__pb2.PersonEmail.SerializeToString,
-            friendship__pb2.Person.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                              friendship__pb2.PersonEmail.SerializeToString,
+                                              friendship__pb2.Person.FromString,
+                                              options, channel_credentials,
+                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def CommonFriendsCount(request_iterator,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                           target,
+                           options=(),
+                           channel_credentials=None,
+                           call_credentials=None,
+                           insecure=False,
+                           compression=None,
+                           wait_for_ready=None,
+                           timeout=None,
+                           metadata=None):
         return grpc.experimental.stream_unary(request_iterator, target, '/Friendship/CommonFriendsCount',
-            friendship__pb2.PersonEmail.SerializeToString,
-            friendship__pb2.CommonFriendsResult.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                              friendship__pb2.PersonEmail.SerializeToString,
+                                              friendship__pb2.CommonFriendsResult.FromString,
+                                              options, channel_credentials,
+                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def MakeFriends(request_iterator,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                    target,
+                    options=(),
+                    channel_credentials=None,
+                    call_credentials=None,
+                    insecure=False,
+                    compression=None,
+                    wait_for_ready=None,
+                    timeout=None,
+                    metadata=None):
         return grpc.experimental.stream_stream(request_iterator, target, '/Friendship/MakeFriends',
-            friendship__pb2.FriendshipRequest.SerializeToString,
-            friendship__pb2.FriendshipResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                               friendship__pb2.FriendshipRequest.SerializeToString,
+                                               friendship__pb2.FriendshipResponse.FromString,
+                                               options, channel_credentials,
+                                               insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

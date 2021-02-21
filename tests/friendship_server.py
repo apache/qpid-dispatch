@@ -31,6 +31,7 @@ class FriendShipService(FriendshipServicer):
     Implementation of the gRPC FriendshipServicer.
     See the friendship.proto definition for more info.
     """
+
     def __init__(self):
         self.people = list()
 

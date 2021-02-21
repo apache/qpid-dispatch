@@ -24,6 +24,7 @@ import json
 
 """Python class to hold message data"""
 
+
 class Message(object):
     """
     Holder for message attributes used by python IoAdapter send/receive.
@@ -49,7 +50,8 @@ class Message(object):
 
     def __repr__(self):
         return "%s(%s)" % (type(self).__name__,
-                           ", ".join("%s=%r"%(f, getattr(self, f)) for f in self._fields))
+                           ", ".join("%s=%r" % (f, getattr(self, f)) for f in self._fields))
+
 
 def simplify(msg):
     m = {}
@@ -60,6 +62,7 @@ def simplify(msg):
     if msg.content_type:
         m["content_type"] = msg.content_type
     return m
+
 
 def messages_to_json(msgs):
     return json.dumps([simplify(m) for m in msgs], indent=4)

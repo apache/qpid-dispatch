@@ -97,7 +97,7 @@ class RouterTestHttp(TestCase):
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'bad'}),
             ('listener', {'port': listen_port, 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
-            ('listener', {'port': listen_port, 'http':True})])
+            ('listener', {'port': listen_port, 'http': True})])
         r = Qdrouterd(name="expect_fail", config=config, wait=False)
         self.assertEqual(1, r.wait())
 
@@ -189,7 +189,8 @@ class RouterTestHttp(TestCase):
             self.assertRaises(HTTPError, urlopen, "http://localhost:%d/nosuch" % port)
 
         # Sequential calls on multiple ports
-        for port in r.ports: test(port)
+        for port in r.ports:
+            test(port)
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
@@ -197,13 +198,18 @@ class RouterTestHttp(TestCase):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None
                 self.start()
+
             def run(self):
-                try: test(self.port)
-                except Exception as e: self.ex = e
+                try:
+                    test(self.port)
+                except Exception as e:
+                    self.ex = e
         threads = [TestThread(p) for p in r.ports + r.ports]
-        for t in threads: t.join()
         for t in threads:
-            if t.ex: raise t.ex
+            t.join()
+        for t in threads:
+            if t.ex:
+                raise t.ex
 
         # https not configured
         self.assertRaises(URLError, urlopen, "https://localhost:%d/nosuch" % r.ports[0])
@@ -227,7 +233,8 @@ class RouterTestHttp(TestCase):
             assert('deliveries_redirected_to_fallback' in data)
 
         # Sequential calls on multiple ports
-        for port in r.ports: test(port)
+        for port in r.ports:
+            test(port)
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
@@ -235,13 +242,18 @@ class RouterTestHttp(TestCase):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None
                 self.start()
+
             def run(self):
-                try: test(self.port)
-                except Exception as e: self.ex = e
+                try:
+                    test(self.port)
+                except Exception as e:
+                    self.ex = e
         threads = [TestThread(p) for p in r.ports + r.ports]
-        for t in threads: t.join()
         for t in threads:
-            if t.ex: raise t.ex
+            t.join()
+        for t in threads:
+            if t.ex:
+                raise t.ex
 
     def test_http_healthz(self):
         config = Qdrouterd.Config([
@@ -256,7 +268,8 @@ class RouterTestHttp(TestCase):
             self.assertEqual(200, result.getcode())
 
         # Sequential calls on multiple ports
-        for port in r.ports: test(port)
+        for port in r.ports:
+            test(port)
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
@@ -264,13 +277,18 @@ class RouterTestHttp(TestCase):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None
                 self.start()
+
             def run(self):
-                try: test(self.port)
-                except Exception as e: self.ex = e
+                try:
+                    test(self.port)
+                except Exception as e:
+                    self.ex = e
         threads = [TestThread(p) for p in r.ports + r.ports]
-        for t in threads: t.join()
         for t in threads:
-            if t.ex: raise t.ex
+            t.join()
+        for t in threads:
+            if t.ex:
+                raise t.ex
 
     def test_https_get(self):
         def http_listener(**kwargs):
@@ -292,7 +310,7 @@ class RouterTestHttp(TestCase):
                             'privateKeyFile': self.ssl_file('server-private-key.pem'),
                             'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
                             'password': 'server-password'
-            }),
+                            }),
             http_listener(sslProfile='simple-ssl', requireSsl=False, authenticatePeer=False),
             http_listener(sslProfile='simple-ssl', requireSsl=True, authenticatePeer=False),
             http_listener(sslProfile='simple-ssl', requireSsl=True, authenticatePeer=True),

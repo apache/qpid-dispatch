@@ -27,7 +27,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 #from httplib import responses as STATUS_TEXT
-#from httplib import OK, NO_CONTENT, CREATED, \
+# from httplib import OK, NO_CONTENT, CREATED, \
 #    BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_SERVER_ERROR, NOT_IMPLEMENTED
 
 OK = 200
@@ -97,6 +97,7 @@ class ManagementError(Exception):
     @ivar status: integer status code.
     @ivar description: detailed description of error.
     """
+
     def __init__(self, status, description):
         self.status, self.description = status, description
         super(ManagementError, self).__init__(description)
@@ -110,18 +111,37 @@ class ManagementError(Exception):
         except KeyError:
             return ManagementError(status, description)
 
+
 def _error_class(status):
     """Create a ManagementError class for a particular status"""
     class Error(ManagementError):
         def __init__(self, description): ManagementError.__init__(self, status, description)
     return Error
 
-class BadRequestStatus(_error_class(BAD_REQUEST)): pass
-class UnauthorizedStatus(_error_class(UNAUTHORIZED)): pass
-class ForbiddenStatus(_error_class(FORBIDDEN)): pass
-class NotFoundStatus(_error_class(NOT_FOUND)): pass
-class InternalServerErrorStatus(_error_class(INTERNAL_SERVER_ERROR)): pass
-class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)): pass
+
+class BadRequestStatus(_error_class(BAD_REQUEST)):
+    pass
+
+
+class UnauthorizedStatus(_error_class(UNAUTHORIZED)):
+    pass
+
+
+class ForbiddenStatus(_error_class(FORBIDDEN)):
+    pass
+
+
+class NotFoundStatus(_error_class(NOT_FOUND)):
+    pass
+
+
+class InternalServerErrorStatus(_error_class(INTERNAL_SERVER_ERROR)):
+    pass
+
+
+class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)):
+    pass
+
 
 __all__ = [
     u"STATUS_TEXT", u"OK", u"NO_CONTENT", u"CREATED",

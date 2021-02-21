@@ -23,7 +23,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest as unittest
-import os, json, re, signal
+import os
+import json
+import re
+import signal
 import sys
 import time
 
@@ -74,6 +77,7 @@ OVER_UNDER = 200
 # the MulticastTransfer test does a single sender and four receivers.
 # Much of the logic between tests is duplicated. Remember to fix things in both tests.
 
+
 class OversizeMessageTransferTest(MessagingHandler):
     """
     This test connects a sender and a receiver. Then it tries to send _count_
@@ -98,6 +102,7 @@ class OversizeMessageTransferTest(MessagingHandler):
     * The remainder of the messages are going into a closed connection and
     will receive no settlement.
     """
+
     def __init__(self, test_class, sender_host, receiver_host, test_address,
                  message_size=100000, count=10, blocked_by_both=False, print_to_console=False):
         """
@@ -142,7 +147,7 @@ class OversizeMessageTransferTest(MessagingHandler):
         self.shut_down = False
 
         self.logger = Logger(title=("OversizeMessageTransferTest - %s" % (self.test_address)), print_to_console=print_to_console)
-        self.log_unhandled = False # verbose diagnostics of proton callbacks
+        self.log_unhandled = False  # verbose diagnostics of proton callbacks
 
     def timeout(self):
         current = ("check_done: sent=%d rcvd=%d rejected=%d aborted=%d connection_error:%d send_settled:%d" %
@@ -198,7 +203,7 @@ class OversizeMessageTransferTest(MessagingHandler):
                             self.test_address, self.n_sent, self.count, self.msg_size))
             self.sender.send(m)
             self.n_sent += 1
-        #if self.n_sent == self.count:
+        # if self.n_sent == self.count:
         #    self.log_unhandled = True
 
     def on_sendable(self, event):
@@ -265,7 +270,7 @@ class OversizeMessageTransferTest(MessagingHandler):
 
     def _current(self):
         return ("net_stable=%s sent=%d rcvd=%d rejected=%d aborted=%d connection_error:%d send_settled:%d" %
-                   (self.network_stable, self.n_sent, self.n_rcvd, self.n_rejected, self.n_aborted, self.n_connection_error, self.n_send_settled))
+                (self.network_stable, self.n_sent, self.n_rcvd, self.n_rejected, self.n_aborted, self.n_connection_error, self.n_send_settled))
 
     def _check_done(self):
         self.logger.log("check_done: " + self._current())
@@ -277,13 +282,13 @@ class OversizeMessageTransferTest(MessagingHandler):
                 # Blocked by interior only. Connection to edge stays up
                 # and all messages must be accounted for.
                 done = self.n_rejected == 1 and \
-                       self.n_send_settled == self.count
+                    self.n_send_settled == self.count
             else:
                 # Blocked by interior and edge. Expect edge connection to go down
                 # and some of our messaages arrive at edge after it has sent
                 # AMQP close. Those messages are never settled. TODO: Is that OK?
                 done = self.n_rejected == 1 and \
-                       self.n_connection_error == 1
+                    self.n_connection_error == 1
             if done:
                 self.logger.log("TEST DONE!!!")
                 # self.log_unhandled = True # verbose debugging
@@ -341,6 +346,7 @@ class OversizeMessageTransferTest(MessagingHandler):
             self.logger.dump()
         time.sleep(0.2)
 
+
 #
 # DISPATCH-975 Detect that an oversize message is blocked.
 # These tests check simple and compound blocking for multicast messages.
@@ -351,11 +357,13 @@ IDX_INTB = 1
 IDX_EA1 = 2
 IDX_EB1 = 3
 
+
 class OversizeMulticastTransferTest(MessagingHandler):
     """
     This test connects a sender and four receivers. Then it tries to send _count_
     number of messages of the given size through the router or router network.
     """
+
     def __init__(self, test_class, sender_host, routers, test_address, expect_receives,
                  blocked_by_ingress, blocked_by_interior,
                  message_size=100000, count=10, print_to_console=False):
@@ -379,32 +387,32 @@ class OversizeMulticastTransferTest(MessagingHandler):
         self.test_address = test_address
         self.msg_size = message_size
         self.count = count
-        self.expect_receives = expect_receives # router array
+        self.expect_receives = expect_receives  # router array
         self.blocked_by_ingress = blocked_by_ingress
         self.blocked_by_interior = blocked_by_interior
         self.messages = []
 
         self.sender_conn = None
-        self.receiver_conns = [None, None, None, None] # router array
+        self.receiver_conns = [None, None, None, None]  # router array
         self.error = None
         self.sender = None
-        self.receivers = [None, None, None, None] # router array
+        self.receivers = [None, None, None, None]  # router array
         self.proxy = None
 
         self.network_stable = False
         self.n_sent = 0
-        self.n_rcvds = [0, 0, 0, 0] # router array
+        self.n_rcvds = [0, 0, 0, 0]  # router array
         self.n_accepted = 0
         self.n_rejected = 0
         self.n_modified = 0
         self.n_released = 0
         self.n_send_settled = 0
-        self.n_aborteds = [0, 0, 0, 0] # router array
+        self.n_aborteds = [0, 0, 0, 0]  # router array
         self.n_connection_error = 0
         self.shut_down = False
 
         self.logger = Logger(title=("OversizeMulticastTransferTest - %s" % (self.test_address)), print_to_console=print_to_console)
-        self.log_unhandled = False # verbose diagnostics of proton callbacks
+        self.log_unhandled = False  # verbose diagnostics of proton callbacks
 
     def timeout(self):
         current = self._current()
@@ -468,7 +476,6 @@ class OversizeMulticastTransferTest(MessagingHandler):
         self._shut_down_test()
         raise Exception(self.error)
 
-
     def send(self):
         while self.sender.credit > 0 and self.n_sent < self.count:
             m = self.messages[self.n_sent]
@@ -476,7 +483,7 @@ class OversizeMulticastTransferTest(MessagingHandler):
                             self.test_address, self.n_sent, self.count, self.msg_size))
             self.sender.send(m)
             self.n_sent += 1
-        #if self.n_sent == self.count:
+        # if self.n_sent == self.count:
         #    self.log_unhandled = True
 
     def on_sendable(self, event):
@@ -547,7 +554,7 @@ class OversizeMulticastTransferTest(MessagingHandler):
 
     def _current(self):
         return ("net_stable:%s sent=%d rcvd=%s rejected=%d aborted=%s connection_error:%d send_settled:%d" %
-               (self.network_stable, self.n_sent, str(self.n_rcvds), self.n_rejected, str(self.n_aborteds), self.n_connection_error, self.n_send_settled))
+                (self.network_stable, self.n_sent, str(self.n_rcvds), self.n_rejected, str(self.n_aborteds), self.n_connection_error, self.n_send_settled))
 
     def _check_done(self):
         self.logger.log("check_done: " + self._current())
@@ -561,7 +568,7 @@ class OversizeMulticastTransferTest(MessagingHandler):
                     # and some of our messaages arrive at edge after it has sent
                     # AMQP close. Those messages are never settled. TODO: Is that OK?
                     done = self.n_rejected == 1 and \
-                           self.n_connection_error == 1
+                        self.n_connection_error == 1
                 else:
                     # Blocked by interior only. Connection to edge stays up
                     # and all messages must be accounted for.
@@ -571,12 +578,12 @@ class OversizeMulticastTransferTest(MessagingHandler):
                             if not self.n_rcvds[idx] == self.expect_receives[idx]:
                                 all_received = False
                     done = self.n_rejected <= 1 and \
-                           self.n_send_settled == self.count and \
-                           all_received
+                        self.n_send_settled == self.count and \
+                        all_received
             else:
                 # Blocked by edge should never deliver to interior
                 done = self.n_rejected == 1 and \
-                       self.n_connection_error == 1
+                    self.n_connection_error == 1
 
             if done:
                 self.logger.log("TEST DONE!!!")
@@ -657,19 +664,19 @@ class MaxMessageSizeBlockOversize(TestCase):
                 ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': max_size, 'defaultVhost': '$default'}),
                 ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
                 ('vhost', {'hostname': '$default', 'allowUnknownUser': 'true',
-                    'groups': {
-                        '$default': {
-                            'users': '*',
-                            'maxConnections': 100,
-                            'remoteHosts': '*',
-                            'sources': '*',
-                            'targets': '*',
-                            'allowAnonymousSender': True,
-                            'allowWaypointLinks': True,
-                            'allowDynamicSource': True
-                        }
-                    }
-                })
+                           'groups': {
+                               '$default': {
+                                   'users': '*',
+                                   'maxConnections': 100,
+                                   'remoteHosts': '*',
+                                   'sources': '*',
+                                   'targets': '*',
+                                   'allowAnonymousSender': True,
+                                   'allowWaypointLinks': True,
+                                   'allowDynamicSource': True
+                               }
+                           }
+                           })
             ]
 
             if extra:
@@ -765,12 +772,11 @@ class MaxMessageSizeBlockOversize(TestCase):
         :param routername:
         :return: (int, int) tuple with counts of lines in and lines out
         """
-        with  open("../setUpClass/%s.log" % routername, 'r') as router_log:
+        with open("../setUpClass/%s.log" % routername, 'r') as router_log:
             log_lines = router_log.read().split("\n")
         i_closed_lines = [s for s in log_lines if pattern in s and "<-" in s]
         o_closed_lines = [s for s in log_lines if pattern in s and "->" in s]
         return (len(i_closed_lines), len(o_closed_lines))
-
 
     # verify that a message can go through an edge EB1 and get blocked by interior INT.B
     #
@@ -785,6 +791,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #                               |        |    |199,800|
     #                               +--------+    +-------+
     #
+
     def test_60_block_oversize_EB1_INTB_at_INTB(self):
         ibefore, obefore = self.sense_n_closed_lines("EB1")
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize,
@@ -819,7 +826,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.dump()
             self.assertTrue(success, "Expected router to generate link close with condition: amqp:link:message-size-exceeded")
 
-
     # verify that a message can go through an edge EB1 and get blocked by interior INT.B
     #
     #  +-------+    +---------+    +---------+    +-------+
@@ -833,6 +839,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #   |        |                                |199,800|
     #   +--------+                                +-------+
     #
+
     def test_61_block_oversize_EB1_EA1_at_INTB(self):
         ibefore, obefore = self.sense_n_closed_lines("EB1")
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize,
@@ -858,7 +865,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.dump()
             self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
-
     # see what happens when a message must be blocked by edge and also by interior
     #
     #  +-------+    +---------+    +---------+    +-------+
@@ -872,6 +878,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #                               |        |    |200,200|
     #                               +--------+    +-------+
     #
+
     def test_70_block_oversize_EB1_INTB_at_both(self):
         ibefore, obefore = self.sense_n_closed_lines("EB1")
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize,
@@ -903,7 +910,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.dump()
             self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
-
     # Verify that a multicast can go through an edge EB1 and get blocked by interior INT.B
     #
     #  +-------+    +---------+    +---------+    +-------+
@@ -923,6 +929,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #                                             |199,800|
     #                                             +-------+
     #
+
     def test_80_block_multicast_EB1_INTB_at_INTB(self):
         ibefore, obefore = self.sense_n_closed_lines("EB1")
         count = 10
@@ -931,10 +938,10 @@ class MaxMessageSizeBlockOversize(TestCase):
                                              MaxMessageSizeBlockOversize.routers,
                                              "multicast/e80",
                                              [0, 0, 0, count],
-                                             blocked_by_ingress = False,
-                                             blocked_by_interior = True,
+                                             blocked_by_ingress=False,
+                                             blocked_by_interior=True,
                                              message_size=EB1_MAX_SIZE - OVER_UNDER,
-                                             count = count,
+                                             count=count,
                                              print_to_console=False)
         test.run()
         if test.error is not None:
@@ -952,7 +959,6 @@ class MaxMessageSizeBlockOversize(TestCase):
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
             self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
-
 
     # Verify that a multicast blocked by edge ingress goes to no receivers
     #
@@ -973,6 +979,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #  | 50,200|
     #  +-------+
     #
+
     def test_81_block_multicast_EA1(self):
         ibefore, obefore = self.sense_n_closed_lines("EA1")
         count = 10
@@ -981,10 +988,10 @@ class MaxMessageSizeBlockOversize(TestCase):
                                              MaxMessageSizeBlockOversize.routers,
                                              "multicast/e81",
                                              [0, 0, 0, 0],
-                                             blocked_by_ingress = True,
-                                             blocked_by_interior = False,
+                                             blocked_by_ingress=True,
+                                             blocked_by_interior=False,
                                              message_size=EA1_MAX_SIZE + OVER_UNDER,
-                                             count = count,
+                                             count=count,
                                              print_to_console=False)
         test.run()
         if test.error is not None:
@@ -1002,7 +1009,6 @@ class MaxMessageSizeBlockOversize(TestCase):
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
             self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
-
 
     # Verify that a multicast blocked by interior ingress goes to no receivers
     #
@@ -1023,6 +1029,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #               |100,200|
     #               +-------+
     #
+
     def test_82_block_multicast_INTA(self):
         ibefore, obefore = self.sense_n_closed_lines("INT.A")
         count = 10
@@ -1058,10 +1065,12 @@ class MaxMessageSizeBlockOversize(TestCase):
 # Link route
 #
 
+
 class Dummy(FakeBroker):
     """
     Open a link and sit there. No traffic is expected to reach this broker
     """
+
     def __init__(self, url, container_id):
         super(Dummy, self).__init__(url, container_id)
 
@@ -1096,19 +1105,19 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
                 ('linkRoute', {'prefix': 'oversize', 'containerId': 'FakeBroker', 'direction': 'in'}),
                 ('linkRoute', {'prefix': 'oversize', 'containerId': 'FakeBroker', 'direction': 'out'}),
                 ('vhost', {'hostname': '$default', 'allowUnknownUser': 'true',
-                    'groups': {
-                        '$default': {
-                            'users': '*',
-                            'maxConnections': 100,
-                            'remoteHosts': '*',
-                            'sources': '*',
-                            'targets': '*',
-                            'allowAnonymousSender': True,
-                            'allowWaypointLinks': True,
-                            'allowDynamicSource': True
-                        }
-                    }
-                })
+                           'groups': {
+                               '$default': {
+                                   'users': '*',
+                                   'maxConnections': 100,
+                                   'remoteHosts': '*',
+                                   'sources': '*',
+                                   'targets': '*',
+                                   'allowAnonymousSender': True,
+                                   'allowWaypointLinks': True,
+                                   'allowDynamicSource': True
+                               }
+                           }
+                           })
             ]
 
             if extra:
@@ -1160,10 +1169,10 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
                 ('listener', {'role': 'edge',
                               'port': cls.INTB_edge_port}),
                 ('connector',  {'name': 'FakeBroker',
-                               'role': 'route-container',
-                               'host': '127.0.0.1',
-                               'port': cls.fb_port,
-                               'saslMechanisms': 'ANONYMOUS'}),
+                                'role': 'route-container',
+                                'host': '127.0.0.1',
+                                'port': cls.fb_port,
+                                'saslMechanisms': 'ANONYMOUS'}),
                 ])
         cls.INT_B = cls.routers[1]
         cls.INT_B.listener = cls.INT_B.addresses[0]
@@ -1190,7 +1199,7 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
         cls.wait_router_network_connected()
 
         cls.fake_broker = Dummy("amqp://127.0.0.1:" + str(cls.fb_port),
-                                       container_id="FakeBroker")
+                                container_id="FakeBroker")
         cls.INT_B.wait_address("oversize",
                                containers=1, count=2)
 
@@ -1214,12 +1223,11 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
         :param routername:
         :return: (int, int) tuple with counts of lines in and lines out
         """
-        with  open("../setUpClass/%s.log" % routername, 'r') as router_log:
+        with open("../setUpClass/%s.log" % routername, 'r') as router_log:
             log_lines = router_log.read().split("\n")
         i_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_NAME in s and "<-" in s]
         o_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_NAME in s and "->" in s]
         return (len(i_closed_lines), len(o_closed_lines))
-
 
     # verify that a message can go through an edge EB1 and get blocked by interior INT.B
     #
@@ -1234,6 +1242,7 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
     #                               | broker |    |200,200|
     #                               +--------+    +-------+
     #
+
     def test_90_block_link_route_EB1_INTB(self):
         ibefore, obefore = self.sense_n_closed_lines("EB1")
         test = OversizeMessageTransferTest(MaxMessageSizeLinkRouteOversize,

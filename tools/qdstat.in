@@ -41,8 +41,10 @@ from qpid_dispatch_internal.tools.command import (parse_args_qdstat, main,
                                                   opts_url)
 from qpid_dispatch_internal.compat import UNICODE
 
+
 def get(obj, attr):
     return getattr(obj, attr, None)
+
 
 class BusManager(object):
 
@@ -71,12 +73,12 @@ class BusManager(object):
 
     def connAuth(self, conn):
         ##
-        ## Summarize the authentication for a connection:
-        ##   no-auth
-        ##   anonymous-user
-        ##   <user>(PLAIN)
-        ##   <user>(kerberos)
-        ##   <user>(x.509)
+        # Summarize the authentication for a connection:
+        # no-auth
+        # anonymous-user
+        # <user>(PLAIN)
+        # <user>(kerberos)
+        # <user>(x.509)
         ##
         if not conn.isAuthenticated:
             return "no-auth"
@@ -93,11 +95,11 @@ class BusManager(object):
 
     def connSecurity(self, conn):
         ##
-        ## Summarize the security of a connection:
-        ##   no-security
+        # Summarize the security of a connection:
+        # no-security
         ##   SSLv3 (cipher)
         ##   TLS (cipher)
-        ##   Kerberos
+        # Kerberos
         ##
         if not conn.isEncrypted:
             return "no-security"
@@ -123,7 +125,6 @@ class BusManager(object):
         self.displayRouterId()
         print("")
 
-
     def displayEdges(self, show_date_id=True):
         disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
@@ -135,10 +136,10 @@ class BusManager(object):
         heads.append(Header("security"))
         heads.append(Header("authentication"))
         heads.append(Header("tenant"))
-        
+
         rows = []
         objects = self.query('org.apache.qpid.dispatch.connection', limit=self.opts.limit)
-        
+
         if not objects:
             if show_date_id:
                 self.display_datetime_router_id()
@@ -149,7 +150,7 @@ class BusManager(object):
             self.display_datetime_router_id()
 
         has_active = False
-        
+
         first = objects[0]
         try:
             if first:
@@ -157,36 +158,36 @@ class BusManager(object):
                 has_active = True
         except:
             pass
-            
+
         if has_active:
             heads.append(Header("active"))
-        
+
         for conn in objects:
             if conn.role == "edge":
-               row = []
-               row.append(conn.identity)
-               row.append(conn.host)
-               row.append(conn.container)
-               row.append(conn.role)
-               row.append(conn.dir)
-               row.append(self.connSecurity(conn))
-               row.append(self.connAuth(conn))
-               row.append(self.noTrailingSlash(get(conn, 'tenant')))
-               if has_active:
-                   if conn.active:
-                       row.append("yes")
-                   else:
-                       row.append("no")
-               rows.append(row)
-        
+                row = []
+                row.append(conn.identity)
+                row.append(conn.host)
+                row.append(conn.container)
+                row.append(conn.role)
+                row.append(conn.dir)
+                row.append(self.connSecurity(conn))
+                row.append(self.connAuth(conn))
+                row.append(self.noTrailingSlash(get(conn, 'tenant')))
+                if has_active:
+                    if conn.active:
+                        row.append("yes")
+                    else:
+                        row.append("no")
+                rows.append(row)
+
         if rows:
             title = "Connections"
         else:
             return
-        
+
         dispRows = rows
-        disp.formattedTable(title, heads, dispRows)            
-        
+        disp.formattedTable(title, heads, dispRows)
+
     def displayConnections(self, show_date_id=True):
         disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
@@ -264,18 +265,25 @@ class BusManager(object):
                 return "%s:%s" % (phase, text)
         return "%s:%s" % (cls, text)
 
-
     def _addr_class(self, addr):
         if not addr:
             return ""
-        if addr[0] == 'M'  : return "mobile"
-        if addr[0] == 'R'  : return "router"
-        if addr[0] == 'A'  : return "area"
-        if addr[0] == 'L'  : return "local"
-        if addr[0] == 'T'  : return "topo"
-        if addr[0] in 'CE' : return "link-in"
-        if addr[0] in 'DF' : return "link-out"
-        if addr[0] == 'H'  : return "edge"
+        if addr[0] == 'M'  :
+            return "mobile"
+        if addr[0] == 'R'  :
+            return "router"
+        if addr[0] == 'A'  :
+            return "area"
+        if addr[0] == 'L'  :
+            return "local"
+        if addr[0] == 'T'  :
+            return "topo"
+        if addr[0] in 'CE' :
+            return "link-in"
+        if addr[0] in 'DF' :
+            return "link-out"
+        if addr[0] == 'H'  :
+            return "edge"
         return "unknown: %s" % addr[0]
 
     def _addr_text(self, addr):
@@ -337,7 +345,7 @@ class BusManager(object):
             rows.append(('Uptime',        TimeLong(router.uptimeSeconds)))
         except:
             pass
-            
+
         try:
             if router.memoryUsage > 0:
                 rows.append(('VmSize', NumKMG(router.memoryUsage,
@@ -544,7 +552,7 @@ class BusManager(object):
             title = "Routers in the Network"
             # Use gmtime to make times comparable across large networks.
             if lastTopoChange > 1.0:
-                topoLine = "\nLast Topology Change: " + strftime('%A %b %d %H:%M:%S %Y',gmtime(lastTopoChange)) + " GMT"
+                topoLine = "\nLast Topology Change: " + strftime('%A %b %d %H:%M:%S %Y', gmtime(lastTopoChange)) + " GMT"
                 title += topoLine
             sort = Sorter(heads, rows, 'router-id')
             dispRows = sort.getSorted()
@@ -695,7 +703,7 @@ class BusManager(object):
                     row.append(link_route.delExternalPrefix)
                     have_add_del_prefix = True
             except KeyError:
-                pass # added post 1.1.0
+                pass  # added post 1.1.0
             rows.append(row)
         title = "Link Routes"
         if have_add_del_prefix:
@@ -770,7 +778,6 @@ class BusManager(object):
                             [Header("VmSize", hdr_format),
                              Header("Pooled", Header.KiMiGi)],
                             [rows])
-
 
     def displayPolicy(self, show_date_id=True):
         disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
@@ -991,10 +998,8 @@ class BusManager(object):
                         vstat.hostname,
                         ustate,
                         ustates[ustate]
-                        ))
+                    ))
         disp.formattedTable("\nVhost User Stats", heads, rows)
-
-
 
     def displayLog(self):
         log = self.node.get_log(limit=self.opts.limit)
@@ -1039,7 +1044,7 @@ class BusManager(object):
             if len(all_nodes) < 2:
                 has_nodes = False
         else:
-           has_nodes = False
+            has_nodes = False
 
         return has_nodes, all_nodes
 
@@ -1050,7 +1055,7 @@ class BusManager(object):
             if len(all_nodes) < 2:
                 has_nodes = False
         else:
-           has_nodes = False
+            has_nodes = False
 
         return has_nodes, all_nodes
 
@@ -1061,7 +1066,7 @@ class BusManager(object):
             for node in nodes:
                 self.node.set_client(node[6:])
                 parts = node.split("/")
-                print ("Router ", parts[3])
+                print("Router ", parts[3])
                 print("")
                 if self.show.__name__ == 'show_all':
                     self.show(show_summary=False)
@@ -1071,6 +1076,7 @@ class BusManager(object):
         else:
             self.show()
 
+
 def run(argv):
     args = parse_args_qdstat(BusManager)
     bm = BusManager(args)
@@ -1078,6 +1084,7 @@ def run(argv):
         bm.display()
     finally:
         bm.close()
+
 
 if __name__ == "__main__":
     sys.exit(main(run))

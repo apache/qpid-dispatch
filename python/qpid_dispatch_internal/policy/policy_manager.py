@@ -33,10 +33,10 @@ from .policy_local import PolicyLocal
 from ..dispatch import LogAdapter, LOG_INFO, LOG_TRACE, LOG_DEBUG, LOG_ERROR, LOG_WARNING
 
 
-
 """
 Entity implementing the glue between the policy engine and the rest of the system.
 """
+
 
 class PolicyManager(object):
     """
@@ -52,11 +52,11 @@ class PolicyManager(object):
         self._use_hostname_patterns = False
 
     def log(self, level, text):
-        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        info = traceback.extract_stack(limit=2)[0]  # Caller frame info
         self.log_adapter.log(level, text, info[0], info[1])
 
     def _log(self, level, text):
-        info = traceback.extract_stack(limit=3)[0] # Caller's caller frame info
+        info = traceback.extract_stack(limit=3)[0]  # Caller's caller frame info
         self.log_adapter.log(level, text, info[0], info[1])
 
     def log_debug(self, text):
@@ -184,6 +184,8 @@ class PolicyManager(object):
 #
 #
 #
+
+
 def policy_lookup_vhost_alias(mgr, vhost):
     """
     Look up a vhost in the policy database
@@ -197,6 +199,8 @@ def policy_lookup_vhost_alias(mgr, vhost):
 #
 #
 #
+
+
 def policy_lookup_user(mgr, user, rhost, vhost, conn_name, conn_id):
     """
     Look up a user in the policy database
@@ -213,6 +217,8 @@ def policy_lookup_user(mgr, user, rhost, vhost, conn_name, conn_id):
 #
 #
 #
+
+
 def policy_close_connection(mgr, conn_id):
     """
     Close the connection.
@@ -226,6 +232,8 @@ def policy_close_connection(mgr, conn_id):
 #
 #
 #
+
+
 def policy_lookup_settings(mgr, vhost, name, upolicy):
     """
     Return settings for <vhost, usergroup> in upolicy map

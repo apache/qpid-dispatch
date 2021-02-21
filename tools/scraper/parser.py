@@ -40,6 +40,7 @@ Define how many characters to show.
 """
 SEQUENCE_TRANSFER_SIZE = 50
 
+
 def colorize_bg(what):
     # TODO: use the real colorize_bg
     return what
@@ -104,7 +105,7 @@ class LogLineData:
 
     def __init__(self):
         self.web_show_str = ""
-        self.sdorg_str = "" # text for sequence diagram source
+        self.sdorg_str = ""  # text for sequence diagram source
         self.name = ""
         self.conn_num = ""  # source router's undecorated conn num
         self.conn_id = ""  # decorated routerPrefixLetter'instanceNumber-conn_num
@@ -150,7 +151,7 @@ class LogLineData:
         self.is_policy_trace = False  # line is POLICY (trace)
         self.is_server_info = False  # line is SERVER (info)
         self.is_router_ls = False  # line is ROUTER_LS (info)
-        self.is_scraper = False # line is SCRAPER (any-level)
+        self.is_scraper = False  # line is SCRAPER (any-level)
         self.fid = ""  # Log line (frame) id as used in javascript code
         self.amqp_error = False
         self.link_class = "client"  # attach sees: normal, router, router-data (, management?)
@@ -332,7 +333,6 @@ class DescribedType:
                             break
                         subfields.append(fields[0])
                         del fields[0]
-
 
                 subtype = DescribedType()
                 subtype.parse_dtype_line(val, ' '.join(subfields))
@@ -537,7 +537,7 @@ class ParsedLogLine(object):
             res.web_show_str = ("<strong>%s</strong>  [%s] (%s %s-%s settled=%s state=%s)" %
                                 (res.name, res.channel, res.role, res.first, res.last, res.settled, res.disposition_state))
             res.sdorg_str = ("%s  [%s] (%s %s-%s settled=%s state=%s)" %
-                                (res.name, res.channel, res.role, res.first, res.last, res.settled, res.disposition_state))
+                             (res.name, res.channel, res.role, res.first, res.last, res.settled, res.disposition_state))
 
         elif perf == 0x16:
             # Performative: detach [channel, handle]
@@ -746,8 +746,8 @@ class ParsedLogLine(object):
                                 (res.name, colorize_bg(res.channel_handle), res.role, res.link_short_name_popup,
                                  res.source, res.target, res.link_class))
             res.sdorg_str =  ("%s %s %s %s (src: %s, tgt: %s)" %
-                                (res.name, res.channel_handle, res.role, res.link_short_name,
-                                 res.source, res.target))
+                              (res.name, res.channel_handle, res.role, res.link_short_name,
+                               res.source, res.target))
         elif perf == 0x14:
             # Performative: transfer [channel,handle] (id)
             self.transfer_short_name = self.shorteners.short_data_names.translate(res.transfer_bare, customer=self)
@@ -889,13 +889,13 @@ class ParsedLogLine(object):
                 sti += len(verbatim_module)
                 self.data.is_scraper = True
                 self.data.web_show_str = ("<strong>%s</strong> %s" % (verbatim_module, common.html_escape(self.line[sti:])))
-                stcp = self.line[sti:].find(')') # close paren after log level
+                stcp = self.line[sti:].find(')')  # close paren after log level
                 if stcp <  0:
                     stcp = 0
                 self.data.sdorg_str = self.line[sti + stcp + 1:]
                 return
             else:
-                assert False # verbatim module was found only moments ago...
+                assert False  # verbatim module was found only moments ago...
 
         # extract connection number
         sti = self.line.find(self.server_trace_key)
@@ -1020,7 +1020,7 @@ def parse_log_file(fn, log_index, comn):
     key3 = "ROUTER_LS (info)"  # a log line placed in separate pool of lines
     keys = [key1, key3]
     key4 = "ROUTER (info) Version:"  # router version line
-    key5 = "ROUTER (info) Router started in " # router mode
+    key5 = "ROUTER (info) Router started in "  # router mode
     with open(fn, 'r') as infile:
         for line in infile:
             if search_for_in_progress:

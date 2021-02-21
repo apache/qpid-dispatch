@@ -22,14 +22,17 @@
 from collections import defaultdict
 import common
 
+
 class ShortNameSorter():
     '''
     Class to hold registered name and TOD in a list for sort purposes:
       the lname was observed at this datetime.
     '''
+
     def __init__(self, lname, datetime):
         self.lname = lname
         self.datetime = datetime
+
 
 class ShortNames():
     '''
@@ -44,6 +47,7 @@ class ShortNames():
     * The dict index is the object name and the value is a list of log lines using that name
     * Sorting the customers puts their usage of the name in time order
     '''
+
     def __init__(self, prefixText, _threshold=25):
         self.longnames = []
         self.prefix = prefixText
@@ -114,7 +118,7 @@ class ShortNames():
         if not sname.startswith(self.prefix):
             raise ValueError("Short name '%s' does not start with prefix '%s'" % (sname, self.prefix))
         try:
-            lname = self.longnames[ int(sname[ (len(self.prefix) + 1): ])]
+            lname = self.longnames[int(sname[(len(self.prefix) + 1):])]
         except:
             raise ValueError("Short name '%s' did not translate to a long name" % (sname))
         return "<span title=\"" + common.html_escape(lname) + sname + "</span>"
@@ -136,8 +140,8 @@ class ShortNames():
         :return: null
         '''
         if len(self.longnames) > 0:
-            print ("<h3>" + self.prefix + " Name Index</h3>")
-            print ("<ul>")
+            print("<h3>" + self.prefix + " Name Index</h3>")
+            print("<ul>")
             for i in range(0, len(self.longnames)):
                 name = self.prefix + "_" + str(i)
                 dump_anchor = "<a name=\"%s_dump\"></a>" % (name)
@@ -146,8 +150,8 @@ class ShortNames():
                 line = self.longnames[i]
                 if log_strings:
                     line = common.strings_of_proton_log(line)
-                print ("<li> " + dump_anchor + name + " - " + common.html_escape(line) + "</li>")
-            print ("</ul>")
+                print("<li> " + dump_anchor + name + " - " + common.html_escape(line) + "</li>")
+            print("</ul>")
 
     def sort_customers(self):
         for c in common.dict_iterkeys(self.customer_dict):

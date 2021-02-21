@@ -45,11 +45,13 @@ how long it took for the transfer to reach router B. Similarly
 router B's details could show how long ago router A sent the transfer. 
 """
 
+
 class Counts():
     """
     Holds common count sets that can be rolled up from links to
     sessions to connections. Not for individual performatives.
     """
+
     def __init__(self):
         # amqp errors gleaned from any performative
         self.errors = 0    # amqp error - simple count
@@ -68,9 +70,9 @@ class Counts():
         self.drain = 0
         # link out of credit
         self.credit_not_evaluated = 0
-        self.no_credit = 0 # event count, excludes drain credit exhaustion
-        self.initial_no_credit_duration = datetime.timedelta() # before first credit
-        self.no_credit_duration = datetime.timedelta() # after credit issued and then exhausted
+        self.no_credit = 0  # event count, excludes drain credit exhaustion
+        self.initial_no_credit_duration = datetime.timedelta()  # before first credit
+        self.no_credit_duration = datetime.timedelta()  # after credit issued and then exhausted
 
     def highlight(self, name, value, color):
         """
@@ -137,7 +139,6 @@ class Counts():
                "<th><span title=\"Normal credit exhaustion stall (S)\">duration (S)</span></th>" \
                "<th><span title=\"Credit not evaluated\">?</span></th>"
 
-
     def show_table_element(self, name, value, color):
         return ("<td>%s</td>" % text.nbsp()) if value == 0 else \
             ("<td>%s</td>" % ("<span style=\"background-color:%s\">%s</span> " % (color, str(value))))
@@ -166,7 +167,6 @@ class Counts():
         res += self.show_table_duration(self.no_credit_duration)
         res += self.show_table_element("?", self.credit_not_evaluated, common.color_of("no_credit"))
         return res
-
 
 
 class ConnectionDetail():
@@ -395,7 +395,6 @@ class LinkDetail():
 
         self.unsettled_list = []
 
-
         # paired handles
         self.output_handle = -1
         self.input_handle = -1
@@ -569,7 +568,7 @@ class AllDetails():
                     conn_details.unaccounted_frame_list.append(plf)
                     continue
                 # session required
-                channel = plf.data.channel # Assume in/out channels are the same for the time being
+                channel = plf.data.channel  # Assume in/out channels are the same for the time being
                 sess_details = conn_details.FindSession(channel)
                 if sess_details == None:
                     new_id = len(conn_details.session_list)
@@ -583,7 +582,7 @@ class AllDetails():
                     sess_details.counts.errors += 1
 
                 if pname in ['begin', 'end', 'disposition']:
-                    sess_details.session_frame_list.append(plf) # Accumulate to current session
+                    sess_details.session_frame_list.append(plf)  # Accumulate to current session
                     if pname == 'end':
                         # end is closing this session
                         if sess_details.half_closed:
@@ -591,7 +590,7 @@ class AllDetails():
                         else:
                             sess_details.half_closed = True
                     else:
-                        pass # begin handled above; disposition needs no action
+                        pass  # begin handled above; disposition needs no action
 
                 elif pname in ['attach']:
                     handle = plf.data.handle  # proton local handle
@@ -778,8 +777,8 @@ class AllDetails():
                     look_for_sender_delivery_id = True
                     dir_of_xfer = ''
                     dir_of_flow = ''
-                    current_delivery = 0 # next transfer expected id
-                    delivery_limit = 0 # first unreachable delivery id from flow
+                    current_delivery = 0  # next transfer expected id
+                    delivery_limit = 0  # first unreachable delivery id from flow
                     n_attaches = 0
                     tod_of_second_attach = None
                     multiframe_in_progress = False
@@ -799,7 +798,7 @@ class AllDetails():
                     #  sndr  ->   ->        <-            A
                     #
                     if (((is_rcvr) and (o_dir == text.direction_in())) or
-                        ((not is_rcvr) and (o_dir == text.direction_out()))):
+                            ((not is_rcvr) and (o_dir == text.direction_out()))):
                         # case A
                         dir_of_xfer = text.direction_out()
                         dir_of_flow = text.direction_in()
@@ -836,7 +835,7 @@ class AllDetails():
                                     link.counts.initial_no_credit_duration = dur
                                     sess.counts.initial_no_credit_duration += dur
                                     conn_detail.counts.initial_no_credit_duration += dur
-                                if credit_stall and delivery_limit > current_delivery: # TODO: wrap
+                                if credit_stall and delivery_limit > current_delivery:  # TODO: wrap
                                     credit_stall = False
                                     plf.data.web_show_str += " <span style=\"background-color:%s\">credit restored</span>" % common.color_of("no_credit")
                                     dur = plf.datetime - tod_of_no_credit
@@ -852,7 +851,7 @@ class AllDetails():
                             if plf.data.direction == dir_of_xfer:
                                 if not plf.data.transfer_more:
                                     # consider the transfer to have arrived when last transfer seen
-                                    current_delivery += 1 # TODO: wrap at 32-bits
+                                    current_delivery += 1  # TODO: wrap at 32-bits
                                     if current_delivery == delivery_limit:
                                         link.counts.no_credit += 1
                                         sess.counts.no_credit += 1
@@ -862,7 +861,7 @@ class AllDetails():
                                         plf.data.web_show_str += " <span style=\"background-color:%s\">no more credit</span>" % common.color_of("no_credit")
                                         tod_of_no_credit = plf.datetime
                                     else:
-                                        pass # still have credit
+                                        pass  # still have credit
                                     multiframe_in_progress = False
                                 else:
                                     # transfers with 'more' set don't consume credit
@@ -898,7 +897,7 @@ class AllDetails():
                             link.counts.initial_no_credit_duration = dur
                             sess.counts.initial_no_credit_duration += dur
                             conn_detail.counts.initial_no_credit_duration += dur
-                        if credit_stall: # TODO: wrap
+                        if credit_stall:  # TODO: wrap
                             dur = tod_of_shutdown - tod_of_no_credit
                             link.counts.no_credit_duration += dur
                             sess.counts.no_credit_duration += dur
@@ -923,7 +922,7 @@ class AllDetails():
             peer = self.rtr.conn_peer_display.get(id, "")  # peer container id
             peerconnid = self.comn.conn_peers_connid.get(id, "")
             # show the connection title
-            print("%s %s %s %s (nFrames=%d) %s<br>" % \
+            print("%s %s %s %s (nFrames=%d) %s<br>" %
                   (id, dir, peerconnid, peer, len(conn_frames), conn_detail.counts.show_html()))
             # data div
             print("<div id=\"%s_data\" style=\"display:none; margin-bottom: 2px; margin-left: 10px\">" % id)
@@ -944,8 +943,8 @@ class AllDetails():
                 # show the session 'toggle goto' and title
                 print("<a href=\"javascript:toggle_node('%s_sess_%s')\">%s%s</a>" %
                       (id, sess.conn_epoch, text.lozenge(), text.nbsp()))
-                print("Session %s: channel: %s, peer channel: %s; Time: start %s, Counts: frames: %d %s<br>" % \
-                      (sess.conn_epoch, sess.channel, sess.peer_chan, sess.time_start, \
+                print("Session %s: channel: %s, peer channel: %s; Time: start %s, Counts: frames: %d %s<br>" %
+                      (sess.conn_epoch, sess.channel, sess.peer_chan, sess.time_start,
                        sess.FrameCount(), sess.counts.show_html()))
                 print("<div id=\"%s_sess_%s\" style=\"display:none; margin-bottom: 2px; margin-left: 10px\">" %
                       (id, sess.conn_epoch))
@@ -970,10 +969,10 @@ class AllDetails():
                     showthis = ("<a href=\"javascript:toggle_node('%s_sess_%s_link_%s')\">%s</a>" %
                                 (id, sess.conn_epoch, link.session_seq, text.lozenge()))
                     visitthis = ("<a href=\"#%s_sess_%s_link_%s_data\">%s</a>" %
-                                (id, sess.conn_epoch, link.session_seq, link.display_name))
+                                 (id, sess.conn_epoch, link.session_seq, link.display_name))
                     role = "receiver" if link.is_receiver else "sender"
                     print("<tr><td>%s %s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
-                          "<td>%s</td><td>%d</td><td>%s</td> </tr>" % \
+                          "<td>%s</td><td>%d</td><td>%s</td> </tr>" %
                           (showthis, visitthis, link.direction, role, link.first_address,
                            (link.sender_class + '-' + link.receiver_class), link.snd_settle_mode,
                            link.rcv_settle_mode, link.time_start, link.FrameCount(),
@@ -985,7 +984,7 @@ class AllDetails():
                         "<div id=\"%s_sess_%s_link_%s\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">" %
                         (id, sess.conn_epoch, link.session_seq))
                     print("<a name=\"%s_sess_%s_link_%s_data\"></a>" %
-                                (id, sess.conn_epoch, link.session_seq))
+                          (id, sess.conn_epoch, link.session_seq))
                     print("<h4>Connection %s Session %s Link %s</h4>" %
                           (id, sess.conn_epoch, link.display_name))
                     for plf in link.frame_list:

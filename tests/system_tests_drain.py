@@ -31,6 +31,7 @@ from proton import Message
 from proton.reactor import Container
 from time import sleep
 
+
 class DrainSupportTest(TestCase):
 
     @classmethod
@@ -77,7 +78,7 @@ class DrainSupportTest(TestCase):
         cls.router = cls.tester.qdrouterd(name, config, wait=False)
         cls.address = cls.router.addresses[0]
 
-        sleep(4) # starting router with wait=True hangs. sleep for now
+        sleep(4)  # starting router with wait=True hangs. sleep for now
 
     def test_drain_support_1_all_messages(self):
         drain_support = DrainMessagesHandler(self.address)

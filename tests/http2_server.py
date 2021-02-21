@@ -16,13 +16,15 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+import system_test
 import os
 from quart import Quart, request
 from quart.static import send_file
 from quart.exceptions import HTTPStatusException
 import json
 app = Quart(__name__)
-import system_test
+
+
 class MyInfo(object):
     def __init__(self, fname, lname, id=None):
         self.fname = fname
@@ -31,17 +33,21 @@ class MyInfo(object):
         #self.hobby = None
         #self.style = None
 
+
 my_info = MyInfo(fname="John", lname="Doe")
+
 
 def image_file(name):
     return os.path.join(system_test.DIR, 'images', name)
+
 
 @app.route("/myinfo/delete/<id>", methods=["DELETE"])
 async def delete_myinfo(id):  # noqa
     my_info.id = id
     jsonStr = json.dumps(my_info.__dict__)
     return jsonStr
-    
+
+
 @app.route('/myinfo', methods=['GET', 'POST', 'PUT'])
 async def create_myinfo():
     form = await request.form
@@ -49,6 +55,7 @@ async def create_myinfo():
     lname = form['lname']
     message = "Success! Your first name is %s, last name is %s" % (fname, lname)
     return message
+
 
 def large_string(length):
     i = 0
@@ -58,13 +65,16 @@ def large_string(length):
         i += 1
     return ret_string
 
+
 @app.route('/')
 async def index():
     return large_string(1000)
 
+
 @app.route('/largeget', methods=['GET'])
 async def largeget():
     return large_string(50000)
+
 
 @app.route('/patch', methods=['PATCH'])
 async def patch():
@@ -72,14 +82,18 @@ async def patch():
     return data
 
 # Return a 500 error, "Service Unavailable"
+
+
 @app.route('/test/500')
 async def service_unavailable():
     raise HTTPStatusException()
+
 
 @app.route('/images/balanced-routing.png', methods=['GET'])
 async def get_png_images():
     img_file = image_file("balanced-routing.png")
     return await send_file(img_file, mimetype='image/png')
+
 
 @app.route('/images/apache.jpg', methods=['GET'])
 async def get_jpg_images():

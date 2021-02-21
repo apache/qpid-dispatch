@@ -30,6 +30,7 @@ from pkgutil import get_data
 from . import schema
 from qpid_dispatch_internal.compat import JSON_LOAD_KWARGS
 
+
 class QdSchema(schema.Schema):
     """
     Qpid Dispatch Router management schema.
@@ -53,7 +54,7 @@ class QdSchema(schema.Schema):
         Check that listeners and connectors can only have role=inter-router if the router has
         mode=interior.
         """
-        entities = list(entities) # Iterate twice
+        entities = list(entities)  # Iterate twice
         super(QdSchema, self).validate_add(attributes, entities)
         entities.append(attributes)
         router_mode = listener_connector_role = listener_role = None

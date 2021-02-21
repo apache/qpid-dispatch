@@ -157,7 +157,6 @@ class ThreeRouterTest(TestCase):
         """
         self._rx_failover()
 
-
     def test_02_rx_failover_dirty(self):
         """
         Runs the receiver failover test.  In this test the receiver abruptly

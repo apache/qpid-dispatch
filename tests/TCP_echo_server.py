@@ -48,6 +48,7 @@ class ClientRecord(object):
     the inbound and outbound data list buffers for this
     socket's payload.
     """
+
     def __init__(self, address):
         self.addr = address
         self.inb = b''
