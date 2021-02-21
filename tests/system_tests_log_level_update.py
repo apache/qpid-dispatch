@@ -72,7 +72,7 @@ class ManyLogFilesTest(TestCase):
         TEST_ADDRESS = "test_multiple_log_file"
 
         blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS)
-        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS,  options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS, options=apply_options)
 
         TEST_MSG = "LOGTEST"
         msg = Message(body=TEST_MSG)
@@ -147,7 +147,7 @@ class LogModuleProtocolTest(TestCase):
         if not blocking_connection:
             blocking_connection = BlockingConnection(self.address)
         blocking_receiver = blocking_connection.create_receiver(address=test_address)
-        blocking_sender = blocking_connection.create_sender(address=test_address,  options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address=test_address, options=apply_options)
         msg = Message(body=test_msg)
         blocking_sender.send(msg)
         received_message = blocking_receiver.receive()
@@ -434,7 +434,7 @@ class LogLevelUpdateTest(TestCase):
         if not blocking_connection:
             blocking_connection = BlockingConnection(self.address)
         blocking_receiver = blocking_connection.create_receiver(address=test_address)
-        blocking_sender = blocking_connection.create_sender(address=test_address,  options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address=test_address, options=apply_options)
         msg = Message(body=test_msg)
         blocking_sender.send(msg)
         received_message = blocking_receiver.receive()
@@ -601,7 +601,7 @@ class RouterCoreModuleLogTest(TestCase):
         TEST_ADDRESS = "test_multiple_log_file"
 
         blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS)
-        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS,  options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS, options=apply_options)
 
         TEST_MSG_BODY = "LOGTEST"
         msg = Message(body=TEST_MSG_BODY)

@@ -157,4 +157,4 @@ def uncamelcase(str, separator='_'):
     """Convert camelCase string str to string with separator, e.g. camel_case"""
     if len(str) == 0:
         return str
-    return str[0] + CAPS_RE.sub(lambda m: separator+m.group(0).lower(), str[1:])
+    return str[0] + CAPS_RE.sub(lambda m: separator + m.group(0).lower(), str[1:])

@@ -292,7 +292,7 @@ class QdSSLUseridProxy(QdSSLUseridTest):
         request = proton.Message()
         request.user_id = BINARY("bad-user-id")
 
-        for i in range(0, credit_limit+1):
+        for i in range(0, credit_limit + 1):
             result = Delivery.ACCEPTED
             try:
                 delivery = blocking_sender.send(request, timeout=10)

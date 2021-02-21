@@ -53,7 +53,7 @@ class QdstatTest(system_test.TestCase):
                           '--timeout', str(system_test.TIMEOUT)]
 
         p = self.popen(popen_args,
-                       name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+                       name='qdstat-' + self.id(), stdout=PIPE, expect=None,
                        universal_newlines=True)
 
         out = p.communicate()[0]
@@ -267,7 +267,7 @@ class QdstatTest(system_test.TestCase):
         self.assertIn("Total Denials", out)
 
     def test_log(self):
-        self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(debug\).*GET-LOG')
+        self.run_qdstat(['--log', '--limit=5'], r'AGENT \(debug\).*GET-LOG')
 
     def test_yy_query_many_links(self):
         # This test will fail without the fix for DISPATCH-974
@@ -406,7 +406,7 @@ class QdstatTest(system_test.TestCase):
         for out in out_list:
             if "endpoint" in out and "examples" in out:
                 links += 1
-        self.assertEqual(links, COUNT*2)
+        self.assertEqual(links, COUNT * 2)
 
         # DISPATCH-1485. Try to run qdstat with a limit=0. Without the fix for DISPATCH-1485
         # this following command will hang and the test will fail.
@@ -418,7 +418,7 @@ class QdstatTest(system_test.TestCase):
         for out in out_list:
             if "endpoint" in out and "examples" in out:
                 links += 1
-        self.assertEqual(links, COUNT*2)
+        self.assertEqual(links, COUNT * 2)
 
         # This test would fail without the fix for DISPATCH-974
         outs = self.run_qdstat(['--address'])
@@ -498,7 +498,7 @@ class QdstatTestVhostPolicy(system_test.TestCase):
                           '--timeout', str(system_test.TIMEOUT)]
 
         p = self.popen(popen_args,
-                       name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+                       name='qdstat-' + self.id(), stdout=PIPE, expect=None,
                        universal_newlines=True)
 
         out = p.communicate()[0]
@@ -573,7 +573,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
     def run_qdstat(self, args):
         p = self.popen(
             ['qdstat', '--bus', str(self.address()), '--timeout', str(system_test.TIMEOUT)] + args,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]
@@ -740,7 +740,7 @@ try:
             p = self.popen(
                 ['qdstat', '--bus', str(address or self.router.addresses[0]), '--ssl-disable-peer-name-verify',
                  '--timeout', str(system_test.TIMEOUT)] + args,
-                name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+                name='qdstat-' + self.id(), stdout=PIPE, expect=None,
                 universal_newlines=True)
 
             out = p.communicate()[0]
@@ -922,7 +922,7 @@ try:
         def run_qdstat(self, args, regexp=None, address=None):
             p = self.popen(
                 ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT)] + args,
-                name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+                name='qdstat-' + self.id(), stdout=PIPE, expect=None,
                 universal_newlines=True)
             out = p.communicate()[0]
             assert p.returncode == 0, \

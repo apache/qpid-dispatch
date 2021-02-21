@@ -76,7 +76,7 @@ class RouterTestDeprecatedLAutoLink(TestCase):
             ('autoLink', {'externalAddr': 'node.100', 'addr': 'node.10',
                           'containerId': 'container.1',
                           'direction': 'out'}),
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'dir': 'in',  'direction': 'in'}),
+            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'dir': 'in', 'direction': 'in'}),
             ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
 
             ('listener', {'port': cls.tester.get_port()}),

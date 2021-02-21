@@ -126,7 +126,7 @@ def run_path(file_path, run_name=None):
     if hasattr(runpy, 'run_path'):
         runpy.run_path(file_path, run_name=run_name)
     else:                       # Python < 2.7
-        os.execvp(sys.executable, [sys.executable]+sys.argv)
+        os.execvp(sys.executable, [sys.executable] + sys.argv)
 
 
 if __name__ == "__main__":

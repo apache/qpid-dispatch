@@ -204,8 +204,8 @@ def which_router_tod(router_list, at_time):
         return (router_list[0], 0)
     for i in range(1, len(router_list)):
         if at_time < router_list[i].restart_rec.datetime:
-            return (router_list[i-1], i-1)
-    return (router_list[-1], len(router_list)-1)
+            return (router_list[i - 1], i - 1)
+    return (router_list[-1], len(router_list) - 1)
 
 
 def which_router_id_tod(routers, id, at_time):

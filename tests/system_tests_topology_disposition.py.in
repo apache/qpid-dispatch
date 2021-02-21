@@ -591,7 +591,7 @@ class DeleteSpuriousConnector (MessagingHandler):
         self.connections.append(self.sender_connection)
         self.connections.append(self.receiver_connection)
 
-        self.sender   = event.container.create_sender(self.sender_connection,   self.dest, name='sender')
+        self.sender   = event.container.create_sender(self.sender_connection, self.dest, name='sender')
         self.receiver = event.container.create_receiver(self.receiver_connection, self.dest, name='receiver')
 
         # In this test, we send a single management command to the D router

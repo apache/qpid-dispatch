@@ -179,7 +179,7 @@ class LinkRouteTest(TestCase):
             cmd = cmd + args
         p = self.popen(
             cmd,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]
@@ -262,7 +262,7 @@ class LinkRouteTest(TestCase):
 
         """
         out = self.run_qdstat_linkRoute(self.routers[1].addresses[0])
-        for route in ['a.*.toA.#', 'a.*.toD.#', 'org.apache',  'pulp.task']:
+        for route in ['a.*.toA.#', 'a.*.toD.#', 'org.apache', 'pulp.task']:
             self.assertIn(route, out)
 
         out_list = out.split()

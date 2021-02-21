@@ -1102,7 +1102,7 @@ class OneRouterLinkCountersTest(TestCase):
         Verify the presettled dropped count link counter by exhausting credit
         before sending is complete
         """
-        limit = self.CREDIT//2  # 1/2 the capacity given the sender
+        limit = self.CREDIT // 2  # 1/2 the capacity given the sender
         test = self.LinkCountersTest(self.router.addresses[0],
                                      presettled=True,
                                      count=self.COUNT,

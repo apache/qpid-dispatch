@@ -124,7 +124,7 @@ class LinkRouteTest(TestCase):
             cmd = cmd + args
         p = self.popen(
             cmd,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]

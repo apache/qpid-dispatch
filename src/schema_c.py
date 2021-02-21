@@ -61,11 +61,11 @@ class Generator(object):
         self.generate_enums()
 
     def header(self, name, text):
-        with open(name+'.h', 'w') as f:
+        with open(name + '.h', 'w') as f:
             f.write("#ifndef __%s_h__\n#define __%s_h__\n" % (name, name) + copyright + text + "\n#endif\n")
 
     def source(self, name, text):
-        with open(name+'.c', 'w') as f:
+        with open(name + '.c', 'w') as f:
             f.write(copyright + text)
 
     def identifier(self, name): return re.sub(r'\W', '_', name)

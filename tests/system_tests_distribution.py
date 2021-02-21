@@ -422,7 +422,7 @@ class DistributionTests (TestCase):
                     {'name': 'connectorToA',
                      'role': 'inter-router',
                      'port': A_inter_router_port_1,
-                     'cost':  cls.A_B_cost
+                     'cost': cls.A_B_cost
                      }
                     )
                ]
@@ -2385,7 +2385,7 @@ class ClosestTest (MessagingHandler):
                 if (self.count_2_a + self.count_2_b + self.count_3_a + self.count_3_b) > 0 :
                     self.bail("error: routers 2 or 3 got messages before router 1 receivers were closed.")
                 # Make sure both receivers got some messages.
-                if (self.count_1_a < self.one_third/2 or self.count_1_b < self.one_third/2) or (self.count_1_b != self.count_1_a):
+                if (self.count_1_a < self.one_third / 2 or self.count_1_b < self.one_third / 2) or (self.count_1_b != self.count_1_a):
                     self.bail("error: recv_1_a and  recv_1_b did not get equal number of messages")
 
             elif self.n_received == 2 * self.one_third:
@@ -2399,7 +2399,7 @@ class ClosestTest (MessagingHandler):
                 if (self.count_3_a + self.count_3_b) > 0 :
                     self.bail("error: router 3 got messages before 2 was closed.")
                 # Make sure both receivers got some messages.
-                if (self.count_2_a < self.one_third/2 or self.count_2_b < self.one_third/2) or (self.count_2_b != self.count_2_a):
+                if (self.count_2_a < self.one_third / 2 or self.count_2_b < self.one_third / 2) or (self.count_2_b != self.count_2_a):
                     self.bail("error: recv_2_a and  recv_2_b did not get equal number of messages")
 
             # By the time we reach the expected number of messages
@@ -2408,7 +2408,7 @@ class ClosestTest (MessagingHandler):
             if self.n_received >= self.n_expected :
                 if self.print_debug:
                     print("Third one third received")
-                if (self.count_3_a < self.one_third/2 or self.count_3_b < self.one_third/2) or (self.count_3_b != self.count_3_a):
+                if (self.count_3_a < self.one_third / 2 or self.count_3_b < self.one_third / 2) or (self.count_3_b != self.count_3_a):
                     self.bail("error: recv_3_a and  recv_3_b did not get equal number of messages")
                 else:
                     self.bail(None)

@@ -59,7 +59,7 @@ SCHEMA_1 = {
             "attributes": {
                 "host": {"type": "string"},
                 "name": {"type": "string", "required": True, "unique": True},
-                "type": {"type": "string",  "required": True}
+                "type": {"type": "string", "required": True}
             }
         },
         "connector": {

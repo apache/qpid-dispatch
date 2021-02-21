@@ -944,7 +944,7 @@ def main_except(argv):
             rid = comn.router_display_names[rtr.log_index]
             peer = rtr.conn_peer_display.get(plf.data.conn_id, "")
             if peer.startswith("<"):
-                peer = peer[peer.find(">")+1:]
+                peer = peer[peer.find(">") + 1:]
                 peer = peer[:peer.find("<")]
             # TODO: differentiate between peer sender and peer receiver
             # This is not so easy as test code uses the same container id for all connections

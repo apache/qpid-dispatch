@@ -3474,7 +3474,7 @@ class OneRouterUnavailableCoordinatorTest(TestCase):
         name = "test-router"
         OneRouterTest.listen_port = cls.tester.get_port()
         config = Qdrouterd.Config([
-            ('router', {'mode': 'standalone', 'id': 'QDR',  'defaultDistribution': 'unavailable'}),
+            ('router', {'mode': 'standalone', 'id': 'QDR', 'defaultDistribution': 'unavailable'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),
             ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),

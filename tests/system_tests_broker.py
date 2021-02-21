@@ -56,7 +56,7 @@ class DistributedQueueTest(system_test.TestCase):  # pylint: disable=too-many-pu
 
         def setUp(self):
             super(DistributedQueueTest, self).setUp()
-            self.testq = 'testq.'+self.id().split('.')[-1]  # The distributed queue name
+            self.testq = 'testq.' + self.id().split('.')[-1]  # The distributed queue name
 
         def common_router_conf(self, name, mode='standalone'):
             """Common router configuration for the tests"""
@@ -73,7 +73,7 @@ class DistributedQueueTest(system_test.TestCase):  # pylint: disable=too-many-pu
                 msgr.subscribe(a)
             msgr.flush()
             n = 20                  # Messages per broker
-            r = ["x-%02d" % i for i in range(n*len(self.qpidds))]
+            r = ["x-%02d" % i for i in range(n * len(self.qpidds))]
             for b, a in zip(r, cycle(send_addresses)):
                 msgr.put(message(address=a, body=b))
             msgr.flush()
@@ -108,7 +108,7 @@ class DistributedQueueTest(system_test.TestCase):  # pylint: disable=too-many-pu
             routers = [router(i) for i in range(len(self.qpidds))]
             for r in routers:
                 r.wait_ready()
-            addrs = [r.addresses[0]+"/"+self.testq for r in routers]
+            addrs = [r.addresses[0] + "/" + self.testq for r in routers]
             self.verify_equal_spread(addrs, addrs)
 
 

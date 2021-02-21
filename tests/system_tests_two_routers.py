@@ -468,7 +468,7 @@ class DeleteConnectionWithReceiver(MessagingHandler):
                                 u'operation': u'UPDATE'
                             }
                             request.body = {
-                                u'adminStatus':  u'deleted'}
+                                u'adminStatus': u'deleted'}
                             request.reply_to = self.mgmt_receiver_1.remote_source.address
                             self.mgmt_sender.send(request)
         elif event.receiver == self.mgmt_receiver_1:
@@ -719,7 +719,7 @@ class DeliveriesInTransit(MessagingHandler):
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
 
     def on_sendable(self, event):
-        if self.n_sent <= self.num_msgs-1:
+        if self.n_sent <= self.num_msgs - 1:
             msg = Message(body="Hello World")
             self.sender.send(msg)
             self.n_sent += 1

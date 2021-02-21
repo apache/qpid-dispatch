@@ -272,7 +272,7 @@ class Display:
             if len(text) == 0:
                 return ""
             else:
-                text = text.replace(CSV_CONFIG.STRING_QUOTE, CSV_CONFIG.STRING_QUOTE*2)
+                text = text.replace(CSV_CONFIG.STRING_QUOTE, CSV_CONFIG.STRING_QUOTE * 2)
                 return CSV_CONFIG.STRING_QUOTE + text + CSV_CONFIG.STRING_QUOTE
 
         print("%s" % title)

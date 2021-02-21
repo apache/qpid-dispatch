@@ -416,7 +416,7 @@ function show_node(node)
         print("<a name=\"c_restarts\"></a>")
         print("<h3>Restarts</h3>")
         for i in range(1, (self.instance + 1)):
-            rr = self.restarts[i-1]
+            rr = self.restarts[i - 1]
             print("(%d) - %s<br>" % (i, rr), end='')
         print("<hr>")
 

@@ -318,7 +318,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
 
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[1]), '-c'],
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
         out = p.communicate()[0]
         assert p.returncode == 0, \
@@ -336,7 +336,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c', '--sasl-mechanisms=PLAIN',
              '--sasl-username=test@domain.com', '--sasl-password=password'],
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]
@@ -366,7 +366,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c', '--sasl-mechanisms=PLAIN',
              '--sasl-username=test@domain.com', '--sasl-password-file=' + password_file],
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]
@@ -472,7 +472,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
              '--ssl-certificate=' + self.ssl_file('client-certificate.pem'),
              '--ssl-key=' + self.ssl_file('client-private-key.pem'),
              '--ssl-password=client-password'],
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]

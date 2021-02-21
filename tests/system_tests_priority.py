@@ -312,8 +312,8 @@ class Priority (MessagingHandler):
 
     def on_start(self, event):
         self.reactor = event.reactor
-        self.send_conn  = self.make_connection(event,  self.A_addr)
-        self.recv_conn  = self.make_connection(event,  self.C_addr)
+        self.send_conn  = self.make_connection(event, self.A_addr)
+        self.recv_conn  = self.make_connection(event, self.C_addr)
 
         self.sender     = event.container.create_sender(self.send_conn, self.dest)
         self.receiver   = event.container.create_receiver(self.recv_conn, self.dest)

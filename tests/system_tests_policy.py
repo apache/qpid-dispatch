@@ -120,7 +120,7 @@ class LoadPolicyFromFolder(TestCase):
         replacements = {'{IPV6_LOOPBACK}': ', ::1'}
         for f in os.listdir(policy_config_path):
             if f.endswith(".json.in"):
-                with open(policy_config_path+"/"+f[:-3], 'w') as outfile:
+                with open(policy_config_path + "/" + f[:-3], 'w') as outfile:
                     with open(policy_config_path + "/" + f) as infile:
                         for line in infile:
                             for src, target in dict_iteritems(replacements):
@@ -567,7 +567,7 @@ class VhostPolicyNameField(TestCase):
         replacements = {'{IPV6_LOOPBACK}': ', ::1'}
         for f in os.listdir(policy_config_path):
             if f.endswith(".json.in"):
-                with open(policy_config_path+"/"+f[:-3], 'w') as outfile:
+                with open(policy_config_path + "/" + f[:-3], 'w') as outfile:
                     with open(policy_config_path + "/" + f) as infile:
                         for line in infile:
                             for src, target in dict_iteritems(replacements):

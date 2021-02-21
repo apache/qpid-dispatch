@@ -351,7 +351,7 @@ class AutoLinkRetryTest(TestCase):
         # re-attempt to establish the autoLink and once the  autoLink
         # is up, it should return to the 'active' state.
         delete_command = 'DELETE --type=address --name=unavailable-address'
-        self.run_qdmanage(delete_command,  address=self.routers[0].addresses[0])
+        self.run_qdmanage(delete_command, address=self.routers[0].addresses[0])
 
         self.schedule_auto_link_reconnect_test()
 
@@ -502,7 +502,7 @@ class AutolinkTest(TestCase):
             #
             # Set up the prefix 'node' as a prefix for waypoint addresses
             #
-            ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
+            ('address', {'prefix': 'node', 'waypoint': 'yes'}),
 
             #
             # Create a pair of default auto-links for 'node.1'
@@ -541,7 +541,7 @@ class AutolinkTest(TestCase):
         cmd = ['qdstat', '--bus', str(AutolinkTest.normal_address), '--timeout', str(TIMEOUT)] + ['-g']
         p = self.popen(
             cmd,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]

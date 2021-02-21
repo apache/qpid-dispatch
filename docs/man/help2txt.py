@@ -74,7 +74,7 @@ def help2txt(help_out):
     result = ""
 
     def heading(text, depth):
-        return "%s %s\n\n" % ("="*depth, text)
+        return "%s %s\n\n" % ("=" * depth, text)
 
     for item in re.finditer(r"%s|%s" % (OPT_HELP, SUBHEAD), help_out, re.IGNORECASE | re.MULTILINE):
         if item.group(3):

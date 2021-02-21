@@ -178,7 +178,7 @@ class TopologyTests (TestCase):
                     {'name': 'AB_connector',
                      'role': 'inter-router',
                      'port': A_inter_router_port,
-                     'cost':  cls.A_B_cost,
+                     'cost': cls.A_B_cost,
                      'stripAnnotations': 'no'
                      }
                     )

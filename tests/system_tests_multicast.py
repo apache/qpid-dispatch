@@ -758,7 +758,7 @@ class MulticastUnsettled3Ack(MulticastBase):
     """
 
     def __init__(self, config, count, body, outcomes=None):
-        pfetch = int((count + 1)/2)
+        pfetch = int((count + 1) / 2)
         super(MulticastUnsettled3Ack, self).__init__(config,
                                                      count,
                                                      body,

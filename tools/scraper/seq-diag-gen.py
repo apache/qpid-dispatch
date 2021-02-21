@@ -141,8 +141,8 @@ def match_logline_pairs(log_recs):
     :param log_lines:
     :return:
     '''
-    for idx in range(len(log_recs)-2):
-        for idx2 in range(idx+1, len(log_recs)-1):
+    for idx in range(len(log_recs) - 2):
+        for idx2 in range(idx + 1, len(log_recs) - 1):
             if log_recs[idx].absorb_peer_rec(log_recs[idx2]):
                 break
 

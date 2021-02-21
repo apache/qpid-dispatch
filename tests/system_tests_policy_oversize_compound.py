@@ -1168,11 +1168,11 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
                                'port': interrouter_port}),
                 ('listener', {'role': 'edge',
                               'port': cls.INTB_edge_port}),
-                ('connector',  {'name': 'FakeBroker',
-                                'role': 'route-container',
-                                'host': '127.0.0.1',
-                                'port': cls.fb_port,
-                                'saslMechanisms': 'ANONYMOUS'}),
+                ('connector', {'name': 'FakeBroker',
+                               'role': 'route-container',
+                               'host': '127.0.0.1',
+                               'port': cls.fb_port,
+                               'saslMechanisms': 'ANONYMOUS'}),
                 ])
         cls.INT_B = cls.routers[1]
         cls.INT_B.listener = cls.INT_B.addresses[0]

@@ -131,7 +131,7 @@ def retry_delay(deadline, delay, max_delay):
     if remaining <= 0:
         return None
     time.sleep(min(delay, remaining))
-    return min(delay*2, max_delay)
+    return min(delay * 2, max_delay)
 
 
 # Valgrind significantly slows down the response time of the router, so use a
@@ -352,7 +352,7 @@ class Config(object):
 
     def write(self, name, suffix=".conf"):
         """Write the config object to file name.suffix. Returns name.suffix."""
-        name = name+suffix
+        name = name + suffix
         with open(name, 'w') as f:
             f.write(str(self))
         return name
@@ -769,7 +769,7 @@ class Tester(object):
     top_dir = os.getcwd()
 
     # The root directory for Tester directories, under top_dir
-    root_dir = os.path.abspath(__name__+'.dir')
+    root_dir = os.path.abspath(__name__ + '.dir')
 
     def __init__(self, id):
         """
@@ -870,9 +870,9 @@ class TestCase(unittest.TestCase, Tester):  # pylint: disable=too-many-public-me
         Tester.teardown(self)
 
     def assert_fair(self, seq):
-        avg = sum(seq)/len(seq)
+        avg = sum(seq) / len(seq)
         for i in seq:
-            assert i > avg/2, "Work not fairly distributed: %s" % seq
+            assert i > avg / 2, "Work not fairly distributed: %s" % seq
 
     if not hasattr(unittest.TestCase, 'assertRegex'):
         def assertRegex(self, text, regexp, msg=None):

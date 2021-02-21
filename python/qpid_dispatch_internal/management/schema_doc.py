@@ -44,14 +44,14 @@ class SchemaWriter(object):
 
     def write(self, text): self.output.write(text)
 
-    def writeln(self, text=""): self.output.write(text+"\n")
+    def writeln(self, text=""): self.output.write(text + "\n")
 
-    def para(self, text): self.write(text+"\n\n")
+    def para(self, text): self.write(text + "\n\n")
 
     def heading(self, text=None, sub=0):
         self._heading += sub
         if text:
-            self.para("\n=%s %s" % ("="*self._heading, text))
+            self.para("\n=%s %s" % ("=" * self._heading, text))
 
     class Section(namedtuple("Section", ["writer", "heading"])):
         def __enter__(self): self.writer.heading(self.heading, sub=+1)

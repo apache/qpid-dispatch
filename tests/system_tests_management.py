@@ -344,7 +344,7 @@ class ManagementTest(system_test.TestCase):
         dummy2 = self.node.read(type=DUMMY, name='MyDummy')
         self.assertEqual(dummy.attributes, dummy2.attributes)
 
-        integers = [0, 1, 42, (2**63)-1, -1, -42, -(2**63)]
+        integers = [0, 1, 42, (2**63) - 1, -1, -42, -(2**63)]
         test_data = [BINARY("bytes"), u"string"] + integers
         for data in test_data:
             try:
