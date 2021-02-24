@@ -692,8 +692,6 @@ class TcpAdaptor(TestCase):
                     unblock_ct += 1
         self.assertTrue(block_ct > 0)
         self.assertEqual(block_ct, unblock_ct)
-
-
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
