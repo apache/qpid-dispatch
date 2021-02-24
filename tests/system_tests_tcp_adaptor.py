@@ -680,20 +680,6 @@ class TcpAdaptor(TestCase):
             sys.stdout.flush()
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
 
-        # search the router log file to verify Q2 was hit
-        time.sleep(0.005)  # wait for log file to be written
-        block_ct = 0
-        unblock_ct = 0
-        with io.open(self.INTA.logfile_path) as f:
-            for line in f:
-                if 'client link blocked on Q2 limit' in line:
-                    block_ct += 1
-                if 'client link unblocked from Q2 limit' in line:
-                    unblock_ct += 1
-        self.assertTrue(block_ct > 0)
-        self.assertEqual(block_ct, unblock_ct)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_20_tcp_connect_disconnect(self):
         name = "test_20_tcp_connect_disconnect"
