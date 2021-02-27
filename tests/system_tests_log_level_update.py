@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from system_test import TestCase, Qdrouterd, TIMEOUT
+from system_test import TestCase, Qdrouterd
 from system_test import QdManager
 from proton.utils import BlockingConnection
 from proton import Message

@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout, unittest
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout, PollTimeout, unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 

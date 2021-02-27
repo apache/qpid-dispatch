@@ -24,10 +24,10 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from datetime import *
 import re
 import sys
 import traceback
+from datetime import datetime
 
 import test_data as td
 import common

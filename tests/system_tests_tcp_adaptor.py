@@ -22,23 +22,17 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import io
 import os
 import sys
 import time
 import traceback
-from threading import Event
-from threading import Timer
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from system_test import Timestamp
-from system_test import QdManager
 from system_test import unittest
-from system_test import DIR
 from system_test import SkipIfNeeded
 from system_test import Process
-from qpid_dispatch.management.client import Node
-from subprocess import PIPE, STDOUT
+from subprocess import PIPE
 
 # Tests in this file are organized by classes that inherit TestCase.
 # The first instance is TcpAdaptor(TestCase).
@@ -61,7 +55,7 @@ except ImportError:
 DISABLE_SELECTOR_TESTS = False
 DISABLE_SELECTOR_REASON = ''
 try:
-    import selectors
+    import selectors  # noqa F401: 'selectors' imported but unused
 except ImportError:
     DISABLE_SELECTOR_TESTS = True
     DISABLE_SELECTOR_REASON = "Python selectors module is not available on this platform."

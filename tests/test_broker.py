@@ -30,11 +30,9 @@ import collections
 from threading import Thread
 import uuid
 
-from proton import Message
 from proton import Endpoint
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
-from proton.reactor import AtMostOnce
 
 from system_test import TIMEOUT
 

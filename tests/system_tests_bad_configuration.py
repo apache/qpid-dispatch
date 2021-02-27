@@ -29,9 +29,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
-from threading import Timer
 import os
-import re
+from threading import Timer
 from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, TIMEOUT, Process
 

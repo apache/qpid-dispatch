@@ -91,7 +91,7 @@ except ImportError:
 
 from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
-    BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
+    BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch.management.entity import camelcase
 from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema

@@ -24,7 +24,7 @@ from __future__ import print_function
 
 
 from proton import Message, symbol
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout
 from system_test import unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container

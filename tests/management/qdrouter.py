@@ -25,7 +25,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest
-import sys
 from qpid_dispatch_internal.management.config import Config
 
 # Dash-separated configuration file

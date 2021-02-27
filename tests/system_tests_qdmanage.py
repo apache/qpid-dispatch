@@ -32,7 +32,6 @@ from system_test import unittest
 from subprocess import PIPE, STDOUT
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from proton.handlers import MessagingHandler
 from proton.utils import BlockingConnection
 from system_test import QdManager
 

@@ -17,10 +17,9 @@
 # under the License.
 #
 import json
-import re
 from threading import Timer
 
-from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
+from system_test import TestCase, Process, Qdrouterd, TIMEOUT
 from subprocess import PIPE, STDOUT
 
 

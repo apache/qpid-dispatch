@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from proton import Message, Timeout, symbol, int32
+from proton import Message, symbol, int32
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from system_test import unittest, TestTimeout
 from proton.handlers import MessagingHandler

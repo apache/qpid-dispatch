@@ -19,7 +19,7 @@
 
 from time import sleep
 
-from proton import Condition, Message, Delivery
+from proton import Message, Delivery
 from system_test import TestCase, Qdrouterd, TIMEOUT, get_link_info, \
     get_inter_router_links, has_mobile_dest_in_address_table, PollTimeout, TestTimeout
 from proton.handlers import MessagingHandler

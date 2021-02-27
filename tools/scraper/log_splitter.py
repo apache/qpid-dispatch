@@ -29,11 +29,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from datetime import *
 import os
 import sys
 import traceback
 from collections import defaultdict
+from datetime import datetime
 
 import common
 import text

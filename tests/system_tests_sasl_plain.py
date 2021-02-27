@@ -24,9 +24,8 @@ from __future__ import print_function
 
 from time import sleep
 import os
-import json
-from subprocess import PIPE, STDOUT, Popen
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, SkipIfNeeded, Process
+from subprocess import PIPE, Popen
+from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, SkipIfNeeded
 from system_test import unittest, QdManager
 from qpid_dispatch.management.client import Node
 from proton import SASL

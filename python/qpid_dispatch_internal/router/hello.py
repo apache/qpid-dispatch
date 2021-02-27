@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from .data import MessageHELLO
-from ..dispatch import LOG_INFO, LOG_TRACE, LOG_CRITICAL
+from ..dispatch import LOG_TRACE, LOG_CRITICAL
 from ..compat import dict_keys
 from ..compat import dict_items
 

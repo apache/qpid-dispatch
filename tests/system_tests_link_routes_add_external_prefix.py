@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from time import sleep, time
+from time import sleep
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout

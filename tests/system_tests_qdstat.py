@@ -26,7 +26,6 @@ import os
 import re
 import system_test
 import unittest
-import sys
 from subprocess import PIPE
 from proton import Url, SSLDomain, SSLUnavailable, SASL
 from system_test import main_module, SkipIfNeeded

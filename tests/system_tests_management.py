@@ -35,7 +35,7 @@ from qpid_dispatch.management.client import Node, ManagementError, Url, BadReque
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.compat import BINARY
-from system_test import Qdrouterd, message, Process
+from system_test import Qdrouterd, Process
 from system_test import unittest
 from itertools import chain
 

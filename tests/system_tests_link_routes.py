@@ -22,7 +22,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import os
 from time import sleep, time
 from threading import Event
 from subprocess import PIPE, STDOUT
@@ -33,7 +32,7 @@ from test_broker import FakeBroker
 from test_broker import FakeService
 
 from proton import Delivery, symbol
-from proton import Message, Data, Condition
+from proton import Message, Condition
 from proton.handlers import MessagingHandler
 from proton.reactor import AtMostOnce, Container, DynamicNodeProperties, LinkOption, AtLeastOnce
 from proton.reactor import ApplicationEvent

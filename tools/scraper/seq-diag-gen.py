@@ -19,11 +19,7 @@
 # under the License.
 #
 
-from typing import List
 import optparse
-import fileinput
-import json
-import re
 import sys
 
 """

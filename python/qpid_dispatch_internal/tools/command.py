@@ -26,16 +26,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import sys
-import json
 import argparse
 import os
-try:
-    from collections.abc import Mapping, Sequence
-except ImportError:
-    from collections import Mapping, Sequence
+
 from qpid_dispatch_site import VERSION
 from proton import SSLDomain, Url
-from proton.utils import SyncRequestResponse, BlockingConnection
 
 
 class UsageError(Exception):

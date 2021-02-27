@@ -26,8 +26,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import json
-import pdb
-import sys
 from .policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr, is_ipv6_enabled
 from ..compat import PY_STRING_TYPE
 from ..compat import PY_TEXT_TYPE

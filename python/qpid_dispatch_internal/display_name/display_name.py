@@ -29,14 +29,10 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-
-import traceback
-from traceback import format_exc
-
-from ..router.message import Message
-
-from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_ERROR, LOG_TRACE, LOG_STACK_LIMIT
 import json
+import traceback
+
+from qpid_dispatch_internal import dispatch
 
 
 class SSLProfile(object):
@@ -61,7 +57,7 @@ class DisplayNameService(object):
         # profile_dict will be a mapping from ssl_profile_name to the SSLProfile object
         self.profile_dict = {}
         self.io_adapter = None
-        self.log_adapter = LogAdapter("DISPLAYNAME")
+        self.log_adapter = dispatch.LogAdapter("DISPLAYNAME")
 
     def log(self, level, text):
         info = traceback.extract_stack(limit=2)[0]  # Caller frame info
@@ -70,7 +66,7 @@ class DisplayNameService(object):
     def add(self, profile_name, profile_file_location):
         ssl_profile = SSLProfile(profile_name, profile_file_location)
         self.profile_dict[profile_name] = ssl_profile
-        self.log(LOG_INFO, "Added profile name %s, profile file location %s to DisplayNameService" % (profile_name, profile_file_location))
+        self.log(dispatch.LOG_INFO, "Added profile name %s, profile file location %s to DisplayNameService" % (profile_name, profile_file_location))
 
     def remove(self, profile_name):
         try:
@@ -89,7 +85,7 @@ class DisplayNameService(object):
             self.reload_all()
 
     def query(self, profile_name, user_id):
-        self.log(LOG_TRACE, "Received query for profile name %s, user id %s to DisplayNameService" %
+        self.log(dispatch.LOG_TRACE, "Received query for profile name %s, user id %s to DisplayNameService" %
                  (profile_name, user_id))
         ssl_profile = self.profile_dict.get(profile_name)
         if ssl_profile:

@@ -24,15 +24,14 @@ from __future__ import print_function
 
 import os
 import sys
-import mock                     # Mock definitions for tests.
 
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
 
 from system_test import unittest
 from system_test import main_module
 from qpid_dispatch.management.entity import EntityBase
-from qpid_dispatch_internal.router.data import LinkState, MessageHELLO, ProtocolVersion
-from qpid_dispatch_internal.router.engine import HelloProtocol, PathEngine, NodeTracker
+from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
+from qpid_dispatch_internal.router.engine import HelloProtocol, PathEngine
 
 
 class Adapter(object):

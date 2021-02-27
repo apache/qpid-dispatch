@@ -30,7 +30,7 @@ from proton.utils import BlockingConnection, SyncRequestResponse
 from proton import VERSION as PROTON_VERSION
 from proton import Terminus
 from proton import Data, symbol
-from qpid_dispatch.management.client import Node, BadRequestStatus
+from qpid_dispatch.management.client import Node
 import os
 import json
 from subprocess import PIPE, STDOUT

@@ -24,7 +24,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, Process, unittest
+from system_test import TestCase, Qdrouterd, main_module, unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
