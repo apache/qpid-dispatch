@@ -27,7 +27,7 @@ find_package(benchmark REQUIRED)
 get_source_file_property(COMPILE_FLAGS benchmarks_main.cpp current_compile_flags)
 set_source_files_properties(benchmarks_main.cpp PROPERTIES COMPILE_FLAGS "${current_compile_flags} -Wno-pedantic")
 
-add_executable(c-benchmarks benchmarks_main.cpp bm_add_links.cpp)
+add_executable(c-benchmarks benchmarks_main.cpp bm_add_links.cpp echo_server.cpp PracticalSocket.cpp PracticalSocket.h echo_server.h)
 target_link_libraries(c-benchmarks benchmark pthread qpid-dispatch)
 
 add_test(NAME c-benchmarks COMMAND ${TEST_WRAP} $<TARGET_FILE:c-benchmarks>)
