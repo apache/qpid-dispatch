@@ -25,6 +25,8 @@ from __future__ import print_function
 import os
 import sys
 
+import mock  # noqa F401: imported for side-effects (installs mock definitions for tests)
+
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
 
 from system_test import unittest
