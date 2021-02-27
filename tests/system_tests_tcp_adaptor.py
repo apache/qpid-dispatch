@@ -517,7 +517,7 @@ class TcpAdaptor(TestCase):
 
             # Each router has a listener for the echo server attached to every router
             self.listener_port = TcpAdaptor.tcp_client_listener_ports[self.client][self.server] \
-                                 if port_override is None else port_override
+                if port_override is None else port_override
 
             self.name = "%s_%s_%s_%s" % (self.test_name, self.client_n, self.size, self.count)
             self.client_prefix = "ECHO_CLIENT %s" % self.name
@@ -673,7 +673,6 @@ class TcpAdaptor(TestCase):
 
         return result
 
-
     def do_tcp_echo_singleton(self, test_name, client, server, size, count, echo_port):
         """
         Launch a single echo client to the echo_port
@@ -773,9 +772,8 @@ class TcpAdaptor(TestCase):
 
         return result
 
-
     #
-    # A series of 1-byte messsages, one at a time, to prove general connectivity
+    # Tests run by ctest
     #
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_01_tcp_basic_connectivity(self):
