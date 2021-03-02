@@ -106,7 +106,7 @@ static int _client_rx_response_cb(h1_codec_request_state_t *lib_rs,
                                   uint32_t version_minor);
 static int _client_rx_header_cb(h1_codec_request_state_t *lib_rs, const char *key, const char *value);
 static int _client_rx_headers_done_cb(h1_codec_request_state_t *lib_rs, bool has_body);
-static int _client_rx_body_cb(h1_codec_request_state_t *lib_rs, qd_buffer_list_t *body, uintmax_t len, bool more);
+static int _client_rx_body_cb(h1_codec_request_state_t *lib_rs, qd_buffer_list_t *body, size_t len, bool more);
 static void _client_rx_done_cb(h1_codec_request_state_t *lib_rs);
 static void _client_request_complete_cb(h1_codec_request_state_t *lib_rs, bool cancelled);
 static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, void *context);
