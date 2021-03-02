@@ -204,6 +204,9 @@ class TcpAdaptor(TestCase):
     # Each router has an echo server to which it connects
     echo_servers = {}
 
+    # Special echo servers
+    echo_server_NS_CONN_STALL = None
+
     @classmethod
     def setUpClass(cls):
         """Start a router"""
