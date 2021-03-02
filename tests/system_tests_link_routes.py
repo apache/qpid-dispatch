@@ -1761,7 +1761,7 @@ class LinkRouteDrainTest(TestCase):
         fake_broker = self._fake_broker(FakeBrokerDrain)
         drain_receiver = DrainReceiver(self.router.addresses[0], fake_broker)
         drain_receiver.run()
-        self.assertEquals(drain_receiver.error, None)
+        self.assertEqual(drain_receiver.error, None)
 
 
 class ConnectionLinkRouteTest(TestCase):

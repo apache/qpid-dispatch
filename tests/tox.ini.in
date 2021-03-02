@@ -68,8 +68,6 @@ ignore =
     H101,
     # H202: assertRaises Exception too broad
     H202,
-    # H234: assertEquals is deprecated, use assertEqual
-    H234,
     # H401: docstring should not start with a space
     H401,
     # H403: multi line docstrings should end on a new line
