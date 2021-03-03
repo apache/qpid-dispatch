@@ -23,18 +23,15 @@ from __future__ import print_function
 
 import os
 import threading
-import sys
 import ssl
 
 try:
     from urllib2 import urlopen, build_opener, HTTPSHandler
     from urllib2 import HTTPError, URLError
-    import urllib2 as urllib
 except ImportError:
     # python3
     from urllib.request import urlopen, build_opener, HTTPSHandler
     from urllib.error import HTTPError, URLError
-    import urllib
 
 from system_test import TIMEOUT, Process, QdManager, retry
 from subprocess import PIPE, STDOUT

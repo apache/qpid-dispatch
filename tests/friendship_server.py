@@ -18,7 +18,6 @@
 #
 
 from concurrent import futures
-from typing import List
 
 import grpc
 

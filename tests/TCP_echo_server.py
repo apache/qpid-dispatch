@@ -25,15 +25,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import argparse
-import os
 import selectors
 import signal
 import socket
 import sys
-from threading import Thread
 import time
 import traceback
-import types
+from threading import Thread
 
 from system_test import Logger
 from system_test import TIMEOUT

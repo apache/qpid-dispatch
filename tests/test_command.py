@@ -24,7 +24,6 @@ from itertools import combinations
 from qpid_dispatch_internal.tools.command import (main,
                                                   UsageError,
                                                   parse_args_qdstat,
-                                                  parse_args_qdmanage,
                                                   _qdmanage_parser,
                                                   _qdstat_parser)
 

@@ -28,10 +28,8 @@ from __future__ import print_function
 
 import json
 import re
-import sys
 import os
 import traceback
-from copy import copy
 from qpid_dispatch.management.entity import camelcase
 
 from ..dispatch import QdDll

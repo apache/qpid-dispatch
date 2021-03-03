@@ -26,10 +26,9 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import qpid_dispatch_site
 import proton
 from proton import Url
-from .error import *        # import all error symbols for convenience to users.
+from .error import *  # noqa F403: import all error symbols for convenience to users.
 from .entity import EntityBase, clean_dict
 from proton.utils import SyncRequestResponse, BlockingConnection
 

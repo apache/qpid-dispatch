@@ -59,16 +59,13 @@ import uuid
 
 import unittest
 
-import proton
 from proton import Message
 from proton import Delivery
 from proton.handlers import MessagingHandler
-from proton.utils import BlockingConnection
 from proton.reactor import AtLeastOnce, Container
 from proton.reactor import AtMostOnce
 from qpid_dispatch.management.client import Node
-from qpid_dispatch_internal.compat import dict_iteritems, PY_STRING_TYPE
-from qpid_dispatch_internal.compat import PY_TEXT_TYPE
+from qpid_dispatch_internal.compat import dict_iteritems
 
 
 # Optional modules

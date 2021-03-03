@@ -38,7 +38,6 @@ from __future__ import print_function
 import sys
 import ctypes
 from ctypes import c_char_p, c_long, py_object
-import qpid_dispatch_site
 from .compat import IS_PY2
 
 

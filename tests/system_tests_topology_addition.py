@@ -23,18 +23,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest
-import os
-import json
-from subprocess import PIPE, STDOUT
-from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
-from proton.handlers import MessagingHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
-from proton.utils import BlockingConnection
-from qpid_dispatch.management.client import Node
 
-import time
-import datetime
+from proton import Message, Timeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
+
 
 # ====================================================
 # Helper classes for all tests.

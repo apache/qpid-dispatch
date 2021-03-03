@@ -25,9 +25,7 @@ from __future__ import print_function
 from proton import Message
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from qpid_dispatch_internal.compat import UNICODE
-from qpid_dispatch.management.client import Node
+from proton.reactor import Container
 
 
 class RouterTest(TestCase):

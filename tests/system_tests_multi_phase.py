@@ -22,12 +22,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from time import sleep
-from threading import Event
-from threading import Timer
-
 from proton import Message, symbol
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, unittest, TestTimeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 

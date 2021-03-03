@@ -94,10 +94,6 @@ ignore =
     H301,
     # H306: imports not in alphabetical order
     H306,
-    # imported but unused
-    F401,
-    # 'from proton import *' used; unable to detect undefined names
-    F403,
     # F811 redefinition of unused 'Timeout' from line 29
     F811,
     # E712 comparison to True should be 'if cond is not True:' or 'if not cond:'

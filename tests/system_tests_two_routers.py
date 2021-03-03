@@ -28,7 +28,7 @@ import os
 import logging
 from threading import Timer
 from subprocess import PIPE, STDOUT
-from proton import Message, Timeout, Delivery, symbol, Condition
+from proton import Message, Delivery, symbol, Condition
 from system_test import Logger, TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR, TestTimeout
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender

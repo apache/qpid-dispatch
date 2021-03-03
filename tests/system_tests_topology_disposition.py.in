@@ -24,20 +24,14 @@ from __future__ import print_function
 
 import unittest
 import os
-import json
 from subprocess import PIPE, STDOUT
-from proton import Message, SSLDomain, SSLUnavailable, Timeout
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+from proton import Message, Timeout
+from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
-from proton.utils import BlockingConnection
-from qpid_dispatch.management.client import Node
+from proton.reactor import Container
 from qpid_dispatch_internal.compat import UNICODE
 
 import time
-import datetime
-import pdb
-import inspect
 import sys
 
 
@@ -422,12 +416,6 @@ class TopologyDispositionTests (TestCase):
         error = str(None)
         if self.skip[name] :
             self.skipTest("Test skipped during development.")
-
-        try:
-            import ast
-        except ImportError:
-            # scraper requires ast which is not installed by default on all platforms
-            self.skipTest("Python ast module is not available on this platform.")
 
         scraper_path = os.path.join(os.environ.get('BUILD_DIR'), 'tests', 'scraper', 'scraper.py')
 

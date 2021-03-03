@@ -24,25 +24,15 @@ from __future__ import print_function
 
 import os
 import errno
-import re
 import time
 import unittest
-from subprocess import PIPE
 import subprocess
+from subprocess import PIPE
 from system_test import main_module, SkipIfNeeded, TestCase
 from system_test import Qdrouterd, TIMEOUT, AsyncTestSender, AsyncTestReceiver
-try:
-    import queue as Queue   # 3.x
-except ImportError:
-    import Queue as Queue   # 2.7
-
-from threading import Thread
-from threading import Event
-import uuid
 
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactor import Container
 
 
 class ConsolePreReq(object):

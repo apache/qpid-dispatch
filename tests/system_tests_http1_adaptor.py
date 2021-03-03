@@ -31,10 +31,9 @@ import errno
 import io
 import select
 import socket
-import sys
+import uuid
 from threading import Thread
 from time import sleep, time
-import uuid
 try:
     from http.server import HTTPServer, BaseHTTPRequestHandler
     from http.client import HTTPConnection
@@ -44,8 +43,6 @@ except ImportError:
     from httplib import HTTPConnection, HTTPException
 
 from proton import Message
-from proton.handlers import MessagingHandler
-from proton.reactor import Container
 from system_test import TestCase, unittest, main_module, Qdrouterd, QdManager
 from system_test import TIMEOUT, Logger, AsyncTestSender, AsyncTestReceiver
 
