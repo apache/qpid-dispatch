@@ -90,6 +90,11 @@ class Http2TestBase(TestCase):
                        universal_newlines=True)
 
         out = p.communicate()[0]
+
+        if p.returncode != 0:
+            print(p.returncode)
+            print (out)
+
         assert (p.returncode == 0)
         return out
 
