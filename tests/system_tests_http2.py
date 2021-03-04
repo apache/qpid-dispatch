@@ -93,7 +93,7 @@ class Http2TestBase(TestCase):
 
         if p.returncode != 0:
             print(p.returncode)
-            print (out)
+            print(out)
 
         assert (p.returncode == 0)
         return out
