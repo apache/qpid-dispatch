@@ -248,6 +248,14 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery);
 qd_message_t * qd_get_message_context(pn_delivery_t *delivery);
 
 /**
+ * Returns true if there is at least one non-empty buffer at the head of the content->buffers list
+ * or if the content->pending buffer is non-empty.
+ *
+ * @param msg A pointer to a message.
+ */
+bool qd_message_has_data_in_content_or_pending_buffers(qd_message_t   *msg);
+
+/**
  * Send the message outbound on an outgoing link.
  *
  * @param msg A pointer to a message to be sent.
