@@ -1255,8 +1255,6 @@ void qd_message_add_fanout(qd_message_t *in_msg,
     // DISPATCH-1590: content->buffers may not be set up yet if
     // content->pending is the first buffer and it is not yet full.
     if (!buf) {
-        // assumption: proton will never signal a readable delivery if there is
-        // no data at all.
         assert(content->pending && qd_buffer_size(content->pending) > 0);
         DEQ_INSERT_TAIL(content->buffers, content->pending);
         content->pending = 0;
@@ -1420,6 +1418,24 @@ qd_message_t * qd_get_message_context(pn_delivery_t *delivery)
         return (qd_message_t *) pn_record_get(record, PN_DELIVERY_CTX);
 
     return 0;
+}
+
+bool qd_message_has_data_in_content_or_pending_buffers(qd_message_t   *msg)
+{
+    if (!msg)
+        return false;
+
+    if (MSG_CONTENT(msg)) {
+        if (DEQ_SIZE(MSG_CONTENT(msg)->buffers) > 0) {
+            qd_buffer_t *buf = DEQ_HEAD(MSG_CONTENT(msg)->buffers);
+            if (buf && qd_buffer_size(buf) > 0)
+                return true;
+        }
+        if (MSG_CONTENT(msg)->pending && qd_buffer_size(MSG_CONTENT(msg)->pending) > 0)
+            return true;
+    }
+
+    return false;
 }
 
 
