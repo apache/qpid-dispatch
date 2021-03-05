@@ -31,7 +31,7 @@ jobs:
         os: [ubuntu-20.04]
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan]
-        proactor: [epol, libuv]
+        proactor: [epoll, libuv]
     env:
       BuildType: ${{matrix.buildType}}
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
@@ -174,7 +174,7 @@ jobs:
         os: [ubuntu-20.04]
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan]
-        proactor: [epol, libuv]
+        proactor: [epoll, libuv]
         shard: [1, 2]
         shards: [2]
     env:
