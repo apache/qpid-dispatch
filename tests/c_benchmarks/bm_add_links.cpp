@@ -31,6 +31,9 @@
 #include "PracticalSocket.h"  // For Socket and SocketException
 #include <iostream>           // For cerr and cout
 #include <cstdlib>            // For atoi()
+#include <unistd.h>
+#include <csignal>
+#include <sys/wait.h>
 
 using namespace std;
 
@@ -140,7 +143,106 @@ static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
     t.join();
 }
 
-BENCHMARK(BM_TCPEchoServerLatency1QDR)->Unit(benchmark::kMillisecond);
+//BENCHMARK(BM_TCPEchoServerLatency1QDR)->Unit(benchmark::kMillisecond);
+
+static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
+//    std::condition_variable cv;
+//    std::unique_lock<std::mutex> lk(cv);
+    std::mutex my;
+    my.lock();
+    std::mutex nx;
+    nx.lock();
+
+    QDR qdr2{};
+    int pid = fork();
+    if (pid == 0) {
+//        auto t = std::thread([&mx, &qdr1]() {
+//        std::mutex mx;
+//        mx.lock();
+        QDR qdr1{};
+            qdr1.start("./l1.conf");
+            qdr1.wait();
+
+//            mx.unlock();
+            qdr1.run();  // this never returns, until signal is sent, and then process dies
+            exit(0);
+//
+//            qdr1.stop();
+//        });
+    }
+//    mx.lock();  // both dispatches try to init Python; let them run one after another
+    // if this does not work, I can always fork...
+
+    auto t2 = std::thread([&my, &qdr2]() {
+        qdr2.start("./l2.conf");
+        qdr2.wait();
+
+        my.unlock();
+        qdr2.run();
+
+        qdr2.stop();
+    });
+    my.lock();
+
+//    run_echo_server();
+    auto u = std::thread([]() { run_echo_server(); });
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+
+    const int RCVBUFSIZE = 32;    // Size of receive buffer
+
+    string servAddress = "127.0.0.1"; // First arg: server address
+    char *echoString = "baf";   // Second arg: string to echo
+    int echoStringLen = strlen(echoString);   // Determine input length
+    unsigned short echoServPort = 5673;
+
+
+    {
+        TCPSocket sock(servAddress, echoServPort);
+
+        for(auto _: state) {
+//        cout << "sending" << endl;
+            // Send the string to the echo server
+            sock.send(echoString, echoStringLen);
+
+            char echoBuffer[RCVBUFSIZE + 1];    // Buffer for echo string + \0
+            int bytesReceived = 0;              // Bytes read on each recv()
+            int totalBytesReceived = 0;         // Total bytes read
+            // Receive the same string back from the server
+            cout << "Received: ";               // Setup to print the echoed string
+            while (totalBytesReceived < echoStringLen) {
+                // Receive up to the buffer size bytes from the sender
+                if ((bytesReceived = (sock.recv(echoBuffer, RCVBUFSIZE))) <= 0) {
+                    cerr << "Unable to read";
+                    state.SkipWithError("unable to read");
+                }
+                totalBytesReceived += bytesReceived;     // Keep tally of total bytes
+                echoBuffer[bytesReceived] = '\0';        // Terminate the string!
+                cout << echoBuffer;                      // Print the echo buffer
+            }
+        }
+    }
+
+    // if I kill dispatch first, this then may/will hang on socket recv (and dispatch leaks significantly more)
+    stop_echo_server();
+    u.join();
+
+    int ret = kill(pid, SIGTERM);
+    if (ret != 0) {
+        perror("Killing router 1");
+    }
+    int status;
+    ret = waitpid(pid, &status, 0);
+    if (ret != pid) {
+        perror("Waiting for child");
+    }
+//    qdr1.stop_run();
+//    t.join();
+    qdr2.stop_run();
+    t2.join();
+}
+
+BENCHMARK(BM_TCPEchoServerLatency2QDR)->Unit(benchmark::kMillisecond)->Iterations(1000);
 
 static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state) {
 //    std::condition_variable cv;
@@ -208,4 +310,4 @@ static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state) {
     u.join();
 }
 
-BENCHMARK(BM_TCPEchoServerLatencyWithoutQDR)->Unit(benchmark::kMillisecond);
+//BENCHMARK(BM_TCPEchoServerLatencyWithoutQDR)->Unit(benchmark::kMillisecond);
