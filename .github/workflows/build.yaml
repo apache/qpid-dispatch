@@ -177,6 +177,10 @@ jobs:
         proactor: [epoll, libuv]
         shard: [1, 2]
         shards: [2]
+        include:
+          # exclude tests that require raw_connection functionality; not available in libuv proactor
+          - proactor: libuv
+            ctest_extra: "-E 'system_tests_tcp_adaptor|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'"
     env:
       BuildType: ${{matrix.buildType}}
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
@@ -218,7 +222,7 @@ jobs:
         working-directory: ${{env.DispatchBuildDir}}
         run: |
           ulimit -c unlimited
-          ctest -C ${BuildType} -V -T Test --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2
+          ctest -C ${BuildType} -V -T Test --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} ${{matrix.ctest_extra}} -j2
 
       - name: Upload test results
         uses: actions/upload-artifact@v2
