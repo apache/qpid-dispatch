@@ -23,7 +23,7 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   compile:
-    name: "Compile (${{matrix.os}}, ${{matrix.runtimeCheck}})"
+    name: "Compile (${{matrix.os}}, ${{matrix.proactor}}, ${{matrix.runtimeCheck}})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,6 +31,7 @@ jobs:
         os: [ubuntu-20.04]
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan]
+        proactor: [epol, libuv]
     env:
       BuildType: ${{matrix.buildType}}
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
@@ -45,6 +46,7 @@ jobs:
         -DBUILD_TESTING=OFF
         -DENABLE_FUZZ_TESTING=OFF
         -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
+        -DPROACTOR=${{matrix.proactor}}
       DispatchCMakeExtraArgs: >
         -DCMAKE_C_COMPILER_LAUNCHER=ccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -106,7 +108,7 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz
+          sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libuv1-dev libnghttp2-dev ccache ninja-build pixz
 
       - name: Zero ccache stats
         run: ccache -z
@@ -159,11 +161,11 @@ jobs:
       - name: Upload archive
         uses: actions/upload-artifact@v2
         with:
-          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}
+          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.proactor}}_${{matrix.runtimeCheck}}
           path: /tmp/archive.tar.xz
 
   test:
-    name: 'Test (${{matrix.os}}, ${{matrix.runtimeCheck}}, shard ${{matrix.shard}} of ${{matrix.shards}})'
+    name: 'Test (${{matrix.os}}, ${{matrix.proactor}}, ${{matrix.runtimeCheck}}, shard ${{matrix.shard}} of ${{matrix.shards}})'
     runs-on: ${{ matrix.os }}
     needs: [compile]
     strategy:
@@ -172,6 +174,7 @@ jobs:
         os: [ubuntu-20.04]
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan]
+        proactor: [epol, libuv]
         shard: [1, 2]
         shards: [2]
     env:
@@ -189,7 +192,7 @@ jobs:
       - name: Download Build
         uses: actions/download-artifact@v2
         with:
-          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}
+          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.proactor}}_${{matrix.runtimeCheck}}
 
       - name: Setup python
         uses: actions/setup-python@v2
@@ -203,7 +206,7 @@ jobs:
       - name: Install Linux runtime/test dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 pixz bubblewrap curl
+          sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 libuv1 pixz bubblewrap curl
 
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
