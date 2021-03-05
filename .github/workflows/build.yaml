@@ -89,9 +89,9 @@ jobs:
           cache-name: cache-ccache
         with:
           path: .ccache
-          key: ${{ matrix.os }}-${{ matrix.runtimeCheck }}-${{ env.cache-name }}-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+          key: ${{ matrix.os }}-${{ matrix.proactor }}-${{ matrix.runtimeCheck }}-${{ env.cache-name }}-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
           restore-keys: |
-            ${{ matrix.os }}-${{ matrix.runtimeCheck }}-${{ env.cache-name }}
+            ${{ matrix.os }}-${{ matrix.proactor }}-${{ matrix.runtimeCheck }}-${{ env.cache-name }}
 
       - name: Create Build and Install directories
         run: mkdir -p "${ProtonBuildDir}" "${DispatchBuildDir}" "{InstallPrefix}"
