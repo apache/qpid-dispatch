@@ -121,16 +121,15 @@ static std::string get_env(std::string const & key)
 class QDR {
    public:
     qd_dispatch_t *qd;
-    void start() {
+    void start(std::string config_path = "./threads4.conf") {
         // prepare the smallest amount of things that qd_dispatch_free needs to be present
         qd = qd_dispatch(nullptr, false);
         REQUIRE(qd != nullptr);
 
-        const bool load_config = true;
-        if (load_config) {
+        if (!config_path.empty()) {
             // call qd_dispatch_load_config to get management agent; so far, I never needed it for anything
             const std::string &source_dir = get_env("CMAKE_CURRENT_SOURCE_DIR");
-            std::string config_path = "./threads4.conf";
+//            std::string config_path = "./threads4.conf";
             qd_dispatch_validate_config(config_path.c_str());
             qd_dispatch_load_config(qd, config_path.c_str());
         } else {
