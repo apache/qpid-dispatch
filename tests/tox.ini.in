@@ -93,6 +93,8 @@ ignore =
     # H301: one import per line
     H301,
     # H306: imports not in alphabetical order
+    # imported but unused
+    F401,
     H306,
     # F811 redefinition of unused 'Timeout' from line 29
     F811,
