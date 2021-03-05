@@ -165,6 +165,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
 
 //            mx.unlock();
             qdr1.run();  // this never returns, until signal is sent, and then process dies
+            printf("Subprocess router died\n");
             exit(0);
 //
 //            qdr1.stop();
@@ -172,6 +173,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     }
 //    mx.lock();  // both dispatches try to init Python; let them run one after another
     // if this does not work, I can always fork...
+    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     auto t2 = std::thread([&my, &qdr2]() {
         qdr2.start("./l2.conf");
@@ -180,6 +182,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
         my.unlock();
         qdr2.run();
 
+        printf("calling stop on l2\n");
         qdr2.stop();
     });
     my.lock();
@@ -188,6 +191,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     auto u = std::thread([]() { run_echo_server(); });
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
+    // even more time to setup router network
 
     const int RCVBUFSIZE = 32;    // Size of receive buffer
 
@@ -197,6 +201,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     unsigned short echoServPort = 5673;
 
 
+    printf("going for the loop\n");
     {
         TCPSocket sock(servAddress, echoServPort);
 
@@ -209,7 +214,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
             int bytesReceived = 0;              // Bytes read on each recv()
             int totalBytesReceived = 0;         // Total bytes read
             // Receive the same string back from the server
-            cout << "Received: ";               // Setup to print the echoed string
+//            cout << "Received: ";               // Setup to print the echoed string
             while (totalBytesReceived < echoStringLen) {
                 // Receive up to the buffer size bytes from the sender
                 if ((bytesReceived = (sock.recv(echoBuffer, RCVBUFSIZE))) <= 0) {
@@ -218,10 +223,12 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
                 }
                 totalBytesReceived += bytesReceived;     // Keep tally of total bytes
                 echoBuffer[bytesReceived] = '\0';        // Terminate the string!
-                cout << echoBuffer;                      // Print the echo buffer
+//                cout << echoBuffer;                      // Print the echo buffer
             }
         }
     }
+
+    printf("running teardown\n");
 
     // if I kill dispatch first, this then may/will hang on socket recv (and dispatch leaks significantly more)
     stop_echo_server();
@@ -238,11 +245,13 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     }
 //    qdr1.stop_run();
 //    t.join();
-    qdr2.stop_run();
+    std::thread([&qdr2]() { qdr2.stop_run(); }).join();
+//    qdr2.stop_run();
     t2.join();
 }
 
-BENCHMARK(BM_TCPEchoServerLatency2QDR)->Unit(benchmark::kMillisecond)->Iterations(1000);
+BENCHMARK(BM_TCPEchoServerLatency2QDR)->Unit(benchmark::kMillisecond)->MinTime(2);
+//->Iterations(2000);
 
 static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state) {
 //    std::condition_variable cv;
