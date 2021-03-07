@@ -232,6 +232,56 @@ jobs:
           path: |
             **/core
 
+  docs:
+    name: Dispatch Docs
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ ubuntu-20.04 ]
+        buildType: [ RelWithDebInfo ]
+        runtimeCheck: [ asan ]
+    env:
+      ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
+      DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
+      InstallPrefix: ${{github.workspace}}/install
+    steps:
+
+      - name: Download Build
+        uses: actions/download-artifact@v2
+        with:
+          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}
+
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+          architecture: x64
+
+      - name: Install Linux docs build dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt install -y ninja-build asciidoc asciidoctor dblatex
+
+      - name: Unpack archive
+        run: tar -I pixz -xf archive.tar.xz
+
+      - name: CMake reconfigure/build/install for docs
+        run: cmake --cmake-force-configure --build "${DispatchBuildDir}" --config ${BuildType} -t install
+
+      - name: Publish the docs in GitHub Actions artifacts store
+        uses: actions/upload-artifact@v2
+        if: ${{ ! cancelled() }}
+        with:
+          name: Build
+          path: ${{env.DispatchBuildDir}}
+
+      - name: Publish the docs in GitHub Actions artifacts store 2
+        uses: actions/upload-artifact@v2
+        if: ${{ ! cancelled() }}
+        with:
+          name: install
+          path: ${{env.InstallPrefix}}
+
   console-test:
     name: Console Tests
     runs-on: ubuntu-latest
