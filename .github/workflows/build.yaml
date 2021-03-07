@@ -275,13 +275,9 @@ jobs:
           cmake "${{github.workspace}}/qpid-dispatch" \
             "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}"
 
-      - name: CMake clean
-        working-directory: ${{github.workspace}}/qpid-dispatch
-        run: cmake --build "${DispatchBuildDir}" --config ${BuildType} -t clean
-
       - name: CMake build for docs
         working-directory: ${{github.workspace}}/qpid-dispatch
-        run: cmake --build "${DispatchBuildDir}" --config ${BuildType} -t docs
+        run: cmake --build "${DispatchBuildDir}" -t docs
 
       - name: Publish the docs in GitHub Actions artifacts store
         uses: actions/upload-artifact@v2
