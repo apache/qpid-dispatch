@@ -233,8 +233,8 @@ jobs:
             **/core
 
   docs:
-    name: Dispatch Docs
-    runs-on: ubuntu-latest
+    name: docs
+    runs-on: ${{ matrix.os }}
     needs: [compile]
     strategy:
       matrix:
@@ -261,7 +261,7 @@ jobs:
       - name: Install Linux docs build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y ninja-build asciidoc asciidoctor dblatex
+          sudo apt install -y ninja-build pixz asciidoc asciidoctor dblatex
 
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
