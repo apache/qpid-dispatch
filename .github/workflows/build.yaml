@@ -246,9 +246,6 @@ jobs:
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
     steps:
-      - uses: actions/checkout@v2
-        with:
-          path: 'qpid-dispatch'
 
       - name: Download Build
         uses: actions/download-artifact@v2
@@ -282,7 +279,7 @@ jobs:
 
       - name: CMake build/install for docs
         working-directory: ${{github.workspace}}/qpid-dispatch
-        run: cmake --build "${DispatchBuildDir}" --config ${BuildType} -t install
+        run: cmake --build "${DispatchBuildDir}" --config ${BuildType} -t docs
 
       - name: Publish the docs in GitHub Actions artifacts store
         uses: actions/upload-artifact@v2
