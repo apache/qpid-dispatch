@@ -246,6 +246,9 @@ jobs:
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
     steps:
+      - uses: actions/checkout@v2
+        with:
+          path: 'qpid-dispatch'
 
       - name: Download Build
         uses: actions/download-artifact@v2
