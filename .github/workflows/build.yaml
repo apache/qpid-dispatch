@@ -270,6 +270,7 @@ jobs:
         run: tar -I pixz -xf archive.tar.xz
 
       - name: CMake reconfigure/build/install for docs
+        working-directory: ${{github.workspace}}/qpid-dispatch
         run: cmake --cmake-force-configure --build "${DispatchBuildDir}" --config ${BuildType} -t install
 
       - name: Publish the docs in GitHub Actions artifacts store
