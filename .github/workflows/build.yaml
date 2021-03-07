@@ -274,8 +274,7 @@ jobs:
         run: >
           cmake "${{github.workspace}}/qpid-dispatch" \
             "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
-            "-DCMAKE_BUILD_TYPE=${BuildType}" \
-            "-GNinja"
+            "-DCMAKE_BUILD_TYPE=${BuildType}"
 
       - name: CMake build/install for docs
         working-directory: ${{github.workspace}}/qpid-dispatch
