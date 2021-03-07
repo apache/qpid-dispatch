@@ -145,6 +145,13 @@ static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
 
 //BENCHMARK(BM_TCPEchoServerLatency1QDR)->Unit(benchmark::kMillisecond);
 
+/*
+ * options:
+ *  python, run as subprocesses, the test will also be a subprocess
+ *  c++, need some fancy lib to manage subprocesses
+ *  try figure out threads, asan?
+ */
+
 static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
 //    std::condition_variable cv;
 //    std::unique_lock<std::mutex> lk(cv);
@@ -175,23 +182,28 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     // if this does not work, I can always fork...
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    auto t2 = std::thread([&my, &qdr2]() {
+    int pid2 = fork();
+    if (pid2 == 0) {
+//    auto t2 = std::thread([&my, &qdr2]() {
         qdr2.start("./l2.conf");
         qdr2.wait();
 
-        my.unlock();
+//        my.unlock();
         qdr2.run();
+        printf("calling exit(0) on l2\n");
+        exit(0);
 
-        printf("calling stop on l2\n");
         qdr2.stop();
-    });
-    my.lock();
+//    });
+//    my.lock();
+    }
 
 //    run_echo_server();
     auto u = std::thread([]() { run_echo_server(); });
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // even more time to setup router network
+    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     const int RCVBUFSIZE = 32;    // Size of receive buffer
 
@@ -243,11 +255,19 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     if (ret != pid) {
         perror("Waiting for child");
     }
+    ret = kill(pid2, SIGTERM);
+    if (ret != 0) {
+        perror("Killing router 2");
+    }
+    ret = waitpid(pid2, &status, 0);
+    if (ret != pid2) {
+        perror("Waiting for child2");
+    }
 //    qdr1.stop_run();
 //    t.join();
-    std::thread([&qdr2]() { qdr2.stop_run(); }).join();
+//    std::thread([&qdr2]() { qdr2.stop_run(); }).join();
 //    qdr2.stop_run();
-    t2.join();
+//    t2.join();
 }
 
 BENCHMARK(BM_TCPEchoServerLatency2QDR)->Unit(benchmark::kMillisecond)->MinTime(2);
