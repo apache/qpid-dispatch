@@ -235,6 +235,7 @@ jobs:
   docs:
     name: Dispatch Docs
     runs-on: ubuntu-latest
+    needs: [compile]
     strategy:
       matrix:
         os: [ ubuntu-20.04 ]
