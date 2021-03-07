@@ -269,9 +269,20 @@ jobs:
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
 
-      - name: CMake reconfigure/build/install for docs
+      - name: CMake delete cache
+        run: rm -f "${DispatchBuildDir}/CMakeCache.txt"
+
+      - name: qpid-dispatch cmake configure
+        working-directory: ${{env.DispatchBuildDir}}
+        run: >
+          cmake "${{github.workspace}}/qpid-dispatch" \
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
+            "-DCMAKE_BUILD_TYPE=${BuildType}" \
+            "-GNinja"
+
+      - name: CMake build/install for docs
         working-directory: ${{github.workspace}}/qpid-dispatch
-        run: cmake --cmake-force-configure --build "${DispatchBuildDir}" --config ${BuildType} -t install
+        run: cmake --build "${DispatchBuildDir}" --config ${BuildType} -t install
 
       - name: Publish the docs in GitHub Actions artifacts store
         uses: actions/upload-artifact@v2
