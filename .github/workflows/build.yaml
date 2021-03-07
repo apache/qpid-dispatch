@@ -273,8 +273,7 @@ jobs:
         working-directory: ${{env.DispatchBuildDir}}
         run: >
           cmake "${{github.workspace}}/qpid-dispatch" \
-            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
-            "-DCMAKE_BUILD_TYPE=${BuildType}"
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}"
 
       - name: CMake build/install for docs
         working-directory: ${{github.workspace}}/qpid-dispatch
