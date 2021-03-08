@@ -235,49 +235,42 @@ jobs:
   docs:
     name: Docs
     runs-on: ${{ matrix.os }}
-    needs: [compile]
     strategy:
       matrix:
         os: [ ubuntu-20.04 ]
         buildType: [ RelWithDebInfo ]
     env:
-      ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
-      DispatchBuildDir: ${{github.workspace}}/qpid-dispatch-docs/build
+      DispatchBuildDir: ${{github.workspace}}/build
       InstallPrefix: ${{github.workspace}}/install
+      DispatchCMakeExtraArgs: >
+        -DCONSOLE_INSTALL=OFF
     steps:
 
-      - name: Download Proton Build
-        uses: actions/download-artifact@v2
-        with:
-          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_asan
+      - uses: actions/checkout@v2
 
-      - name: Setup python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
-          architecture: x64
-
-      - name: Install Linux docs build dependencies
+      - name: Add Qpid PPA repository
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y ninja-build pixz asciidoc asciidoctor dblatex
+          sudo add-apt-repository ppa:qpid/released && sudo apt-get update
 
-      - name: Unpack archive
-        run: tar -I pixz -xf archive.tar.xz
+      - name: Install Linux build dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt install -y libqpid-proton-proactor1-dev libpython3-dev libwebsockets-dev libnghttp2-dev
 
-      - uses: actions/checkout@v2
-        with:
-          path: 'qpid-dispatch-docs'
+      - name: Install Linux docs dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt install -y asciidoc asciidoctor dblatex
 
       - name: qpid-dispatch cmake configure
         working-directory: ${{env.DispatchBuildDir}}
         run: >
-          cmake "${{github.workspace}}/qpid-dispatch-docs" \
+          cmake "${{github.workspace}}" \
             "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
-            -DCONSOLE_INSTALL=OFF
+            {{env.DispatchCMakeExtraArgs}}
 
       - name: CMake build for docs
-        working-directory: ${{github.workspace}}/qpid-dispatch-docs
         run: cmake --build "${DispatchBuildDir}" -t docs
 
       - name: Publish the docs in GitHub Actions artifacts store
@@ -286,13 +279,6 @@ jobs:
         with:
           name: Build
           path: ${{env.DispatchBuildDir}}
-
-      - name: Publish the docs in GitHub Actions artifacts store 2
-        uses: actions/upload-artifact@v2
-        if: ${{ ! cancelled() }}
-        with:
-          name: install
-          path: ${{env.InstallPrefix}}
 
   console-test:
     name: Console Tests
