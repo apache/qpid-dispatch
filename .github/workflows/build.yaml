@@ -260,7 +260,7 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y libqpid-proton-proactor1-dev libpython3-dev libwebsockets-dev libnghttp2-dev
+          sudo apt install -y libqpid-proton-proactor1-dev python3-qpid-proton libpython3-dev libwebsockets-dev libnghttp2-dev
 
       - name: "Workaround for: make[3]: *** No rule to make target '/usr/lib/x86_64-linux-gnu/libqpid-proton-core.so', needed by 'src/libqpid-dispatch.so'.  Stop."
         if: ${{ runner.os == 'Linux' }}
