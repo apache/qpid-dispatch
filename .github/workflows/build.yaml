@@ -233,24 +233,27 @@ jobs:
             **/core
 
   docs:
-    name: docs
+    name: Docs
     runs-on: ${{ matrix.os }}
     needs: [compile]
     strategy:
       matrix:
         os: [ ubuntu-20.04 ]
         buildType: [ RelWithDebInfo ]
-        runtimeCheck: [ asan ]
     env:
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
-      DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
+      DispatchBuildDir: ${{github.workspace}}/qpid-dispatch-docs/build
       InstallPrefix: ${{github.workspace}}/install
     steps:
 
-      - name: Download Build
+      - uses: actions/checkout@v2
+        with:
+          path: 'qpid-dispatch-docs'
+
+      - name: Download Proton Build
         uses: actions/download-artifact@v2
         with:
-          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}
+          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_asan
 
       - name: Setup python
         uses: actions/setup-python@v2
@@ -266,17 +269,14 @@ jobs:
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
 
-      - name: CMake delete cache
-        run: rm -f "${DispatchBuildDir}/CMakeCache.txt"
-
       - name: qpid-dispatch cmake configure
         working-directory: ${{env.DispatchBuildDir}}
         run: >
-          cmake "${{github.workspace}}/qpid-dispatch" \
+          cmake "${{github.workspace}}/qpid-dispatch-docs" \
             "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}"
 
       - name: CMake build for docs
-        working-directory: ${{github.workspace}}/qpid-dispatch
+        working-directory: ${{github.workspace}}/qpid-dispatch-docs
         run: cmake --build "${DispatchBuildDir}" -t docs
 
       - name: Publish the docs in GitHub Actions artifacts store
