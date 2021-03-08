@@ -271,7 +271,7 @@ jobs:
         run: >
           cmake "${{github.workspace}}" \
             "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
-            {{env.DispatchCMakeExtraArgs}}
+            ${DispatchCMakeExtraArgs}
 
       - name: CMake build for docs
         run: cmake --build "${DispatchBuildDir}" -t docs
