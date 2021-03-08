@@ -248,6 +248,9 @@ jobs:
 
       - uses: actions/checkout@v2
 
+      - name: Create Build and Install directories
+        run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
+
       - name: Add Qpid PPA repository
         if: ${{ runner.os == 'Linux' }}
         run: |
