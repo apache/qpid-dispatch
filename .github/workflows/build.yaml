@@ -253,8 +253,9 @@ jobs:
 
       - name: Add Qpid PPA repository
         if: ${{ runner.os == 'Linux' }}
+        # the `released` ppa does not yet have Proton 0.33.0, have to use `testing`
         run: |
-          sudo add-apt-repository ppa:qpid/released && sudo apt-get update
+          sudo add-apt-repository ppa:qpid/testing && sudo apt-get update
 
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
