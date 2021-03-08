@@ -25,9 +25,8 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 
-from subprocess import Popen, PIPE, CalledProcessError
-
 import re
+import subprocess
 import sys
 
 IS_PY2 = sys.version_info[0] == 2
@@ -37,29 +36,11 @@ else:
     PY_STRING_TYPE = str
 
 
-def check_output(args, stdin=None, stderr=None, shell=False, universal_newlines=False, **kwargs):
-    """
-    Run command args and return its output as a byte string.
-    kwargs are passed through to L{subprocess.Popen}
-    @return: stdout of command (mixed with stderr if stderr=STDOUT)
-    @raise L{CalledProcessError}: If command returns non-0 exit status.
-    """
-    if "stdout" in kwargs:
-        raise ValueError("Must not specify stdout in check_output")
-    p = Popen(args, stdout=PIPE, stdin=stdin, stderr=stderr, shell=shell, universal_newlines=universal_newlines, **kwargs)
-    out, err = p.communicate()
-    if p.returncode:
-        e = CalledProcessError(p.returncode, args)
-        e.output = err or out
-        raise e
-    return out
-
-
 def help2txt(help_out):
     VALUE = r"(?:[\w-]+|<[^>]+>)"
     DEFAULT = r"(?: +\([^)]+\))?"
     OPTION = r"-[\w-]+(?:[ =]%s)?%s" % (VALUE, DEFAULT)  # -opt[(=| )value][(default)]
-    OPTIONS = r"%s(?:, *%s)*" % (OPTION, OPTION)        # opt[,opt...]
+    OPTIONS = r"%s(?:, *%s)*" % (OPTION, OPTION)  # opt[,opt...]
     HELP = r"(?:[ \t]+\w.*$)|(?:(?:\n[ \t]+[^-\s].*$)+)"  # same line or following lines indented.
     OPT_HELP = r"^\s+(%s)(%s)" % (OPTIONS, HELP)
     SUBHEAD = r"^((?: +\w+)*):$"
@@ -69,7 +50,7 @@ def help2txt(help_out):
         help_out = help_out.decode()
 
     options = re.search("^Options:$", help_out, re.IGNORECASE | re.MULTILINE)
-    if (options):
+    if options:
         help_out = help_out[options.end():]
     result = ""
 
@@ -89,7 +70,7 @@ def main(argv):
         raise ValueError("Wrong number of arguments\nUsage %s"
                          " <program> [args,...]" % argv[0])
     program = argv[1:]
-    print(help2txt(check_output(program)))
+    print(help2txt(subprocess.check_output(program)))
 
 
 if __name__ == "__main__":
