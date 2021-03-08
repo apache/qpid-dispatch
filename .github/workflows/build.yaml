@@ -246,10 +246,6 @@ jobs:
       InstallPrefix: ${{github.workspace}}/install
     steps:
 
-      - uses: actions/checkout@v2
-        with:
-          path: 'qpid-dispatch-docs'
-
       - name: Download Proton Build
         uses: actions/download-artifact@v2
         with:
@@ -269,11 +265,16 @@ jobs:
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
 
+      - uses: actions/checkout@v2
+        with:
+          path: 'qpid-dispatch-docs'
+
       - name: qpid-dispatch cmake configure
         working-directory: ${{env.DispatchBuildDir}}
         run: >
           cmake "${{github.workspace}}/qpid-dispatch-docs" \
-            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}"
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
+            -DCONSOLE_INSTALL=OFF
 
       - name: CMake build for docs
         working-directory: ${{github.workspace}}/qpid-dispatch-docs
