@@ -233,7 +233,7 @@ jobs:
             **/core
 
   docs:
-    name: Docs
+    name: 'Docs (${{ matrix.os }})'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -281,12 +281,17 @@ jobs:
       - name: CMake build for docs
         run: cmake --build "${DispatchBuildDir}" -t docs
 
-      - name: Publish the docs in GitHub Actions artifacts store
+      - name: Store the rendered user-guide
         uses: actions/upload-artifact@v2
-        if: ${{ ! cancelled() }}
         with:
-          name: Build
-          path: ${{env.DispatchBuildDir}}
+          name: UserGuide
+          path: ${{env.DispatchBuildDir}}/docs/books/user-guide
+
+      - name: Store the rendered html man pages
+        uses: actions/upload-artifact@v2
+        with:
+          name: Manpages
+          path: ${{env.DispatchBuildDir}}/docs/man/*.html
 
   console-test:
     name: Console Tests
