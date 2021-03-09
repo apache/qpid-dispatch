@@ -234,6 +234,21 @@ void qdr_core_free(qdr_core_t *core)
         free(link->insert_prefix);
         free(link->strip_prefix);
         link->name = 0;
+
+        //
+        // If there are still any work items remaining in the link->work_list
+        // remove them and free the associated link_work->error
+        //
+        sys_mutex_lock(link->conn->work_lock);
+        qdr_link_work_t *link_work = DEQ_HEAD(link->work_list);
+        while (link_work) {
+            DEQ_REMOVE_HEAD(link->work_list);
+            qdr_error_free(link_work->error);
+            free_qdr_link_work_t(link_work);
+            link_work = DEQ_HEAD(link->work_list);
+        }
+        sys_mutex_unlock(link->conn->work_lock);
+
         free_qdr_link_t(link);
         link = DEQ_HEAD(core->open_links);
     }
