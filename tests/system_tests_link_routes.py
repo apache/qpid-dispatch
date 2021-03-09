@@ -1817,7 +1817,7 @@ class EmptyTransferTest(TestCase):
             s.connect(("0.0.0.0", EmptyTransferTest.ROUTER_LISTEN_PORT))
             s.sendall(AMQP_OPEN_BEGIN_ATTACH)
 
-            # Give half a second for the attach to propagate to the broker and
+            # Give a second for the attach to propagate to the broker and
             # for the broker to send a response attach
             sleep(1)
             data = s.recv(2048)
@@ -1873,7 +1873,8 @@ class EmptyTransferTest(TestCase):
             # The delivery has been accepted.
             self.assertIn("x00S$E", repr(data))
 
-            # Now, send two emptry transfer frames, first transfer has
+            # Test case 2
+            # Now, send two empty transfer frames, first transfer has
             # more=true and the next transfer has more=false.
             # This will again be rejected by the router.
             # The following are the two transfer frames that will be
