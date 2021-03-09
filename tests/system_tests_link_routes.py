@@ -1772,27 +1772,24 @@ class EmptyTransferTest(TestCase):
 
         config = [
             ('router', {'mode': 'standalone', 'id': 'QDR.A'}),
-             # the client will connect to this listener
-             ('listener', {'role': 'normal',
-                           'host': '0.0.0.0',
-                           'port': cls.ROUTER_LISTEN_PORT,
+            # the client will connect to this listener
+            ('listener', {'role': 'normal',
+                          'host': '0.0.0.0',
+                          'port': cls.ROUTER_LISTEN_PORT,
+                          'saslMechanisms': 'ANONYMOUS'}),
+            # to connect to the fake broker
+            ('connector', {'name': 'broker',
+                           'role': 'route-container',
+                           'host': '127.0.0.1',
+                           'port': cls.tester.get_port(),
                            'saslMechanisms': 'ANONYMOUS'}),
-
-             # to connect to the fake broker
-             ('connector', {'name': 'broker',
-                            'role': 'route-container',
-                            'host': '127.0.0.1',
-                            'port': cls.tester.get_port(),
-                            'saslMechanisms': 'ANONYMOUS'}),
-
-             ('linkRoute',
-              {'prefix': 'examples', 'containerId': 'FakeBroker',
-               'direction': 'in'}),
-             ('linkRoute',
-              {'prefix': 'examples', 'containerId': 'FakeBroker',
-               'direction': 'out'})
+            ('linkRoute',
+             {'prefix': 'examples', 'containerId': 'FakeBroker',
+              'direction': 'in'}),
+            ('linkRoute',
+             {'prefix': 'examples', 'containerId': 'FakeBroker',
+              'direction': 'out'})
         ]
-
         config = Qdrouterd.Config(config)
         cls.router = cls.tester.qdrouterd('A', config, wait=False)
 
@@ -1808,7 +1805,17 @@ class EmptyTransferTest(TestCase):
     def test_DISPATCH_1988(self):
         fake_broker = self._fake_broker(FakeBroker)
         AMQP_OPEN_BEGIN_ATTACH = bytearray(
-            b'\x41\x4d\x51\x50\x00\x01\x00\x00\x00\x00\x00\x21\x02\x00\x00\x00\x00\x53\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x04\xa1\x06\x2e\x2f\x73\x65\x6e\x64\x40\x40\x60\x7f\xff\x00\x00\x00\x21\x02\x00\x00\x00\x00\x53\x11\xd0\x00\x00\x00\x11\x00\x00\x00\x04\x40\x52\x00\x70\x7f\xff\xff\xff\x70\x7f\xff\xff\xff\x00\x00\x00\x5b\x02\x00\x00\x00\x00\x53\x12\xd0\x00\x00\x00\x4b\x00\x00\x00\x0b\xa1\x09\x6d\x79\x5f\x73\x65\x6e\x64\x65\x72\x52\x00\x42\x50\x02\x50\x00\x00\x53\x28\xd0\x00\x00\x00\x0b\x00\x00\x00\x05\x40\x52\x00\x40\x52\x00\x42\x00\x53\x29\xd0\x00\x00\x00\x14\x00\x00\x00\x05\xa1\x08\x65\x78\x61\x6d\x70\x6c\x65\x73\x52\x00\x40\x52\x00\x42\x40\x40\x52\x00\x53\x00')
+            b'\x41\x4d\x51\x50\x00\x01\x00\x00\x00\x00\x00\x21\x02\x00\x00'
+            b'\x00\x00\x53\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x04\xa1\x06'
+            b'\x2e\x2f\x73\x65\x6e\x64\x40\x40\x60\x7f\xff\x00\x00\x00\x21'
+            b'\x02\x00\x00\x00\x00\x53\x11\xd0\x00\x00\x00\x11\x00\x00\x00'
+            b'\x04\x40\x52\x00\x70\x7f\xff\xff\xff\x70\x7f\xff\xff\xff\x00'
+            b'\x00\x00\x5b\x02\x00\x00\x00\x00\x53\x12\xd0\x00\x00\x00\x4b'
+            b'\x00\x00\x00\x0b\xa1\x09\x6d\x79\x5f\x73\x65\x6e\x64\x65\x72'
+            b'\x52\x00\x42\x50\x02\x50\x00\x00\x53\x28\xd0\x00\x00\x00\x0b'
+            b'\x00\x00\x00\x05\x40\x52\x00\x40\x52\x00\x42\x00\x53\x29\xd0'
+            b'\x00\x00\x00\x14\x00\x00\x00\x05\xa1\x08\x65\x78\x61\x6d\x70'
+            b'\x6c\x65\x73\x52\x00\x40\x52\x00\x42\x40\x40\x52\x00\x53\x00')
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             # Connect to the router listening port and send an amqp, open,
@@ -1849,9 +1856,9 @@ class EmptyTransferTest(TestCase):
             # This is the empty transfer frame that is sent to the router.
             # [0x614000030050]: AMQP:FRAME:0 <- @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"\x01", message-format=0, settled=false, batchable=false]
             EMPTY_TRANSFER = bytearray(b'\x00\x00\x00\x1c\x02\x00\x00\x00'
-                                         + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x02'
-                                         + b'\xa0\x01\x02\x43\x42'
-                                         + b'\x42\x40\x40\x40\x40\x42')
+                                       + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52'
+                                       + b'\x02\xa0\x01\x02\x43\x42'
+                                       + b'\x42\x40\x40\x40\x40\x42')
             s.sendall(EMPTY_TRANSFER)
             sleep(1)
             data = s.recv(1024)
