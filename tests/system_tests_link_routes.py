@@ -1817,93 +1817,95 @@ class EmptyTransferTest(TestCase):
             b'\x00\x00\x00\x14\x00\x00\x00\x05\xa1\x08\x65\x78\x61\x6d\x70'
             b'\x6c\x65\x73\x52\x00\x40\x52\x00\x42\x40\x40\x52\x00\x53\x00')
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            # Connect to the router listening port and send an amqp, open,
-            # begin, attach. The attach is sent on the link
-            # routed address, "examples"
-            s.connect(("0.0.0.0", EmptyTransferTest.ROUTER_LISTEN_PORT))
-            s.sendall(AMQP_OPEN_BEGIN_ATTACH)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Connect to the router listening port and send an amqp, open,
+        # begin, attach. The attach is sent on the link
+        # routed address, "examples"
+        s.connect(("0.0.0.0", EmptyTransferTest.ROUTER_LISTEN_PORT))
+        s.sendall(AMQP_OPEN_BEGIN_ATTACH)
 
-            # Give a second for the attach to propagate to the broker and
-            # for the broker to send a response attach
-            sleep(1)
-            data = s.recv(2048)
-            self.assertIn("examples", repr(data))
+        # Give a second for the attach to propagate to the broker and
+        # for the broker to send a response attach
+        sleep(1)
+        data = s.recv(2048)
+        self.assertIn("examples", repr(data))
 
-            # First send a message on link routed address "examples" with
-            # message body of "message 0"
-            # Verify the the sent message has been accepted.
-            TRANSFER_1 = bytearray(b'\x00\x00\x00\x31\x02\x00\x00\x00'
-                                   + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x01'
-                                   + b'\xa0\x01\x01\x43\x42'
-                                   + b'\x40\x40\x40\x40\x40\x42\x00\x53'
-                                   + b'\x73\xc0\x02\x01\x44\x00\x53\x77'
-                                   + b'\xa1\x09\x6d\x65\x73\x73\x61\x67'
-                                   + b'\x65\x20\x30')
-            s.sendall(TRANSFER_1)
-            sleep(0.5)
-            data = s.recv(1024)
-            # The delivery has been accepted.
-            self.assertIn("x00S$E", repr(data))
+        # First send a message on link routed address "examples" with
+        # message body of "message 0"
+        # Verify the the sent message has been accepted.
+        TRANSFER_1 = bytearray(b'\x00\x00\x00\x31\x02\x00\x00\x00'
+                               + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x01'
+                               + b'\xa0\x01\x01\x43\x42'
+                               + b'\x40\x40\x40\x40\x40\x42\x00\x53'
+                               + b'\x73\xc0\x02\x01\x44\x00\x53\x77'
+                               + b'\xa1\x09\x6d\x65\x73\x73\x61\x67'
+                               + b'\x65\x20\x30')
+        s.sendall(TRANSFER_1)
+        sleep(0.5)
+        data = s.recv(1024)
+        # The delivery has been accepted.
+        self.assertIn("x00S$E", repr(data))
 
-            # Test case 1
-            # Send an empty transfer frame to the router and you should
-            # receive a rejected disposition from the router.
-            # Without the fix for DISPATCH_1988,
-            # upon sending this EMPTY_TRANSFER
-            # the router crashes with the following assert
-            # qpid-dispatch/src/message.c:1260: qd_message_add_fanout: Assertion `content->pending && qd_buffer_size(content->pending) > 0' failed.
-            # This is the empty transfer frame that is sent to the router.
-            # [0x614000030050]: AMQP:FRAME:0 <- @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"\x01", message-format=0, settled=false, batchable=false]
-            EMPTY_TRANSFER = bytearray(b'\x00\x00\x00\x1c\x02\x00\x00\x00'
-                                       + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52'
-                                       + b'\x02\xa0\x01\x02\x43\x42'
-                                       + b'\x42\x40\x40\x40\x40\x42')
-            s.sendall(EMPTY_TRANSFER)
-            sleep(1)
-            data = s.recv(1024)
-            # The delivery has been rejected.
-            self.assertIn("x00S%E", repr(data))
+        # Test case 1
+        # Send an empty transfer frame to the router and you should
+        # receive a rejected disposition from the router.
+        # Without the fix for DISPATCH_1988,
+        # upon sending this EMPTY_TRANSFER
+        # the router crashes with the following assert
+        # qpid-dispatch/src/message.c:1260: qd_message_add_fanout: Assertion `content->pending && qd_buffer_size(content->pending) > 0' failed.
+        # This is the empty transfer frame that is sent to the router.
+        # [0x614000030050]: AMQP:FRAME:0 <- @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"\x01", message-format=0, settled=false, batchable=false]
+        EMPTY_TRANSFER = bytearray(b'\x00\x00\x00\x1c\x02\x00\x00\x00'
+                                   + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52'
+                                   + b'\x02\xa0\x01\x02\x43\x42'
+                                   + b'\x42\x40\x40\x40\x40\x42')
+        s.sendall(EMPTY_TRANSFER)
+        sleep(1)
+        data = s.recv(1024)
+        # The delivery has been rejected.
+        self.assertIn("x00S%E", repr(data))
 
-            # Let's send another transfer to make sure that the
-            # router has not crashed.
-            TRANSFER_1 = bytearray(b'\x00\x00\x00\x31\x02\x00\x00\x00'
-                                   + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x03'
-                                   + b'\xa0\x01\x03\x43\x42'
-                                   + b'\x40\x40\x40\x40\x40\x42\x00\x53'
-                                   + b'\x73\xc0\x02\x01\x44\x00\x53\x77'
-                                   + b'\xa1\x09\x6d\x65\x73\x73\x61\x67'
-                                   + b'\x65\x20\x30')
-            s.sendall(TRANSFER_1)
-            sleep(0.5)
-            data = s.recv(1024)
-            # The delivery has been accepted.
-            self.assertIn("x00S$E", repr(data))
+        # Let's send another transfer to make sure that the
+        # router has not crashed.
+        TRANSFER_1 = bytearray(b'\x00\x00\x00\x31\x02\x00\x00\x00'
+                               + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x03'
+                               + b'\xa0\x01\x03\x43\x42'
+                               + b'\x40\x40\x40\x40\x40\x42\x00\x53'
+                               + b'\x73\xc0\x02\x01\x44\x00\x53\x77'
+                               + b'\xa1\x09\x6d\x65\x73\x73\x61\x67'
+                               + b'\x65\x20\x30')
+        s.sendall(TRANSFER_1)
+        sleep(0.5)
+        data = s.recv(1024)
+        # The delivery has been accepted.
+        self.assertIn("x00S$E", repr(data))
 
-            # Test case 2
-            # Now, send two empty transfer frames, first transfer has
-            # more=true and the next transfer has more=false.
-            # This will again be rejected by the router.
-            # The following are the two transfer frames that will be
-            # sent to the router.
-            #[0x614000020050]: AMQP:FRAME: 0 <- @ transfer(20)[handle = 0, delivery - id = 4, delivery - tag = b"\x04", message - format = 0, settled = false, more = true, batchable = false]
-            #[0x614000020050]: AMQP:FRAME: 0 <- @ transfer(20)[handle = 0, delivery - id = 4, delivery - tag = b"\x04", message - format = 0, settled = false, more = false, batchable = false]
-            EMPTY_TRANSFER_MORE_TRUE = bytearray(
-                b'\x00\x00\x00\x1c\x02\x00\x00\x00'
-                + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x04'
-                + b'\xa0\x01\x04\x43\x42'
-                + b'\x41\x40\x40\x40\x40\x42')
-            EMPTY_TRANSFER_MORE_FALSE = bytearray(
-                b'\x00\x00\x00\x1c\x02\x00\x00\x00'
-                + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x04'
-                + b'\xa0\x01\x04\x43\x42'
-                + b'\x42\x40\x40\x40\x40\x42')
-            s.sendall(EMPTY_TRANSFER_MORE_TRUE)
-            s.sendall(EMPTY_TRANSFER_MORE_FALSE)
-            sleep(0.5)
-            data = s.recv(1024)
-            # The delivery has been rejected.
-            self.assertIn("x00S%E", repr(data))
+        # Test case 2
+        # Now, send two empty transfer frames, first transfer has
+        # more=true and the next transfer has more=false.
+        # This will again be rejected by the router.
+        # The following are the two transfer frames that will be
+        # sent to the router.
+        #[0x614000020050]: AMQP:FRAME: 0 <- @ transfer(20)[handle = 0, delivery - id = 4, delivery - tag = b"\x04", message - format = 0, settled = false, more = true, batchable = false]
+        #[0x614000020050]: AMQP:FRAME: 0 <- @ transfer(20)[handle = 0, delivery - id = 4, delivery - tag = b"\x04", message - format = 0, settled = false, more = false, batchable = false]
+        EMPTY_TRANSFER_MORE_TRUE = bytearray(
+            b'\x00\x00\x00\x1c\x02\x00\x00\x00'
+            + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x04'
+            + b'\xa0\x01\x04\x43\x42'
+            + b'\x41\x40\x40\x40\x40\x42')
+        EMPTY_TRANSFER_MORE_FALSE = bytearray(
+            b'\x00\x00\x00\x1c\x02\x00\x00\x00'
+            + b'\x00\x53\x14\xc0\x0f\x0b\x43\x52\x04'
+            + b'\xa0\x01\x04\x43\x42'
+            + b'\x42\x40\x40\x40\x40\x42')
+        s.sendall(EMPTY_TRANSFER_MORE_TRUE)
+        s.sendall(EMPTY_TRANSFER_MORE_FALSE)
+        sleep(0.5)
+        data = s.recv(1024)
+        # The delivery has been rejected.
+        self.assertIn("x00S%E", repr(data))
+
+        s.close()
 
 
 class ConnectionLinkRouteTest(TestCase):
