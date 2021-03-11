@@ -2049,6 +2049,14 @@ static void restart_streams(qdr_http2_connection_t *http_conn)
 
 static void qdr_del_http2_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+    //
+    // DISPATCH-1996: discard is true in the case where this action is called from qdr_core_free()
+    // This means that the qdr_adaptors_finalize has already been called and the connection in question has already been freed.
+    // No need to do anything now, if discard, just return.
+    //
+    if (discard)
+        return;
+
     qdr_http2_connection_t *conn = (qdr_http2_connection_t*) action->args.general.context_1;
     free_qdr_http2_connection(conn, false);
 }
