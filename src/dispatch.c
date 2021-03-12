@@ -70,7 +70,7 @@ qd_dispatch_t *qd_dispatch_get_dispatch()
     return qd;
 }
 
-qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks)
+qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks, bool buf4k)
 {
     //
     // Seed the random number generator
@@ -83,6 +83,9 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks)
     ZERO(qd);
 
     qd_entity_cache_initialize();   /* Must be first */
+    if (buf4k) {
+        qd_buffer_set_size(4096);
+    }
     qd_alloc_initialize();
     qd_log_initialize();
     qd_error_initialize();

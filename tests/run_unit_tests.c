@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     int result = 0;
 
     // Call qd_dispatch() first initialize allocator used by other tests.
-    qd_dispatch_t *qd = qd_dispatch(0, false);
+    qd_dispatch_t *qd = qd_dispatch(0, false, false);
 
     qd_dispatch_validate_config(argv[1]);
     if (qd_error_code()) {

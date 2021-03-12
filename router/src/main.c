@@ -85,9 +85,9 @@ static void check(int fd) {
         check(fd);                                      \
     } while(false)
 
-static void main_process(const char *config_path, const char *python_pkgdir, bool test_hooks, int fd)
+static void main_process(const char *config_path, const char *python_pkgdir, bool test_hooks, bool buf4k, int fd)
 {
-    dispatch = qd_dispatch(python_pkgdir, test_hooks);
+    dispatch = qd_dispatch(python_pkgdir, test_hooks, buf4k);
     check(fd);
     log_source = qd_log_source("MAIN"); /* Logging is initialized by qd_dispatch. */
     qd_dispatch_validate_config(config_path);
@@ -124,7 +124,7 @@ static void main_process(const char *config_path, const char *python_pkgdir, boo
 }
 
 
-static void daemon_process(const char *config_path, const char *python_pkgdir, bool test_hooks,
+static void daemon_process(const char *config_path, const char *python_pkgdir, bool test_hooks, bool buf4k,
                            const char *pidfile, const char *user)
 {
     int pipefd[2];
@@ -243,7 +243,7 @@ static void daemon_process(const char *config_path, const char *python_pkgdir, b
                 //if (setgid(pwd->pw_gid) < 0) fail(pipefd[1], "Can't set group ID for user %s, errno=%d", user, errno);
             }
 
-            main_process((config_path_full ? config_path_full : config_path), python_pkgdir, test_hooks, pipefd[1]);
+            main_process((config_path_full ? config_path_full : config_path), python_pkgdir, test_hooks, buf4k, pipefd[1]);
 
             free(config_path_full);
         } else
@@ -283,6 +283,7 @@ void usage(char **argv) {
     fprintf(stdout, "  -d, --daemon               Run process as a SysV-style daemon\n");
     fprintf(stdout, "  -P, --pidfile              If daemon, the file for the stored daemon pid\n");
     fprintf(stdout, "  -U, --user                 If daemon, the username to run as\n");
+    fprintf(stdout, "      --4k-buffer            Use 4k-byte internal buffers instead of 512-byte buffers\n");
     fprintf(stdout, "  -T, --test-hooks           Enable internal system testing features\n");
     fprintf(stdout, "  -v, --version              Print the version of Qpid Dispatch Router\n");
     fprintf(stdout, "  -h, --help                 Print this help\n");
@@ -297,6 +298,7 @@ int main(int argc, char **argv)
     const char *user    = 0;
     bool        daemon_mode = false;
     bool        test_hooks  = false;
+    bool        buf4k       = false;
 
     static struct option long_options[] = {
     {"config",  required_argument, 0, 'c'},
@@ -307,6 +309,7 @@ int main(int argc, char **argv)
     {"help",    no_argument,       0, 'h'},
     {"version", no_argument,       0, 'v'},
     {"test-hooks", no_argument,    0, 'T'},
+    {"4k-buffer", no_argument,     0, '4'},
     {0,         0,                 0,  0}
     };
 
@@ -348,6 +351,10 @@ int main(int argc, char **argv)
             test_hooks = true;
             break;
 
+        case '4' :
+            buf4k = true;
+            break;
+
         case '?' :
             usage(argv);
             exit(1);
@@ -362,9 +369,9 @@ int main(int argc, char **argv)
     }
 
     if (daemon_mode)
-        daemon_process(config_path, python_pkgdir, test_hooks, pidfile, user);
+        daemon_process(config_path, python_pkgdir, test_hooks, buf4k, pidfile, user);
     else
-        main_process(config_path, python_pkgdir, test_hooks, 2);
+        main_process(config_path, python_pkgdir, test_hooks, buf4k, 2);
 
     return 0;
 }

@@ -38,7 +38,7 @@ typedef struct qd_dispatch_t qd_dispatch_t;
  * @param test_hooks Iff true, enable internal system testing features
  * @return A handle to be used in API calls for this instance.
  */
-qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks);
+qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks, bool buf4k);
 
 
 /**
