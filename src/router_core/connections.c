@@ -1443,6 +1443,7 @@ qdr_link_t *qdr_connection_new_streaming_link_CT(qdr_core_t *core, qdr_connectio
 
     if (out_link) {
         out_link->streaming = true;
+        out_link->priority = 4;
         if (!conn->has_streaming_links) {
             qdr_add_connection_ref(&core->streaming_connections, conn);
             conn->has_streaming_links = true;
