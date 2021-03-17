@@ -197,7 +197,7 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, bucket_t *bucket, u
 
         //
         // There is ever only one hash_handle that points to an item.
-        // We will store than hash_handle in the item itself because
+        // We will store that hash_handle in the item itself because
         // when the item is freed, the item pointer on its associated hash_handle will
         // be set to zero so that nobody can try to access the item via the handle after
         // the item is freed.
