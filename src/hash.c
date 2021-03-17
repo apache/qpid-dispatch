@@ -32,6 +32,7 @@ typedef struct qd_hash_item_t {
         void       *val;
         const void *val_const;
     } v;
+    qd_hash_handle_t *handle;
 } qd_hash_item_t;
 
 ALLOC_DECLARE(qd_hash_item_t);
@@ -105,11 +106,24 @@ qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const)
 //remove the given item from the given bucket of the given hash
 //return the key if non-null key pointer given, otherwise, free the memory
 static void qd_hash_internal_remove_item(qd_hash_t *h, bucket_t *bucket, qd_hash_item_t *item, unsigned char **key) {
-    if (key)
+    if (key) {
         *key = item->key;
-    else
+    }
+    else {
         free(item->key);
+        item->key = 0;
+    }
     DEQ_REMOVE(bucket->items, item);
+
+    //
+    // We are going to free this item, so we will set the
+    // item pointer on the hash_handle to zero so nobody with
+    // access to the hash_handle can ever try to get to this freed item.
+    // The item and the hash_handle can be freed independent of one another.
+    //
+    if (item->handle) {
+        item->handle->item   = 0;
+    }
     free_qd_hash_item_t(item);
     h->size--;
 }
@@ -151,14 +165,20 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, bucket_t *bucket, u
 
     if (item) {
         *exists = 1;
-        if (handle)
+        if (handle) {
+            //
+            // If the item already exists, we return the item and also return a zero hash handle.
+            // This means that there is ever only one hash handle for an item.
+            //
             *handle = 0;
+        }
         return item;
     }
 
     item = new_qd_hash_item_t();
     if (!item)
         return 0;
+    item->handle = 0;
 
     DEQ_ITEM_INIT(item);
     item->key = key;
@@ -174,6 +194,15 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, bucket_t *bucket, u
         *handle = new_qd_hash_handle_t();
         (*handle)->bucket = bucket;
         (*handle)->item   = item;
+
+        //
+        // There is ever only one hash_handle that points to an item.
+        // We will store that hash_handle in the item itself because
+        // when the item is freed, the item pointer on its associated hash_handle will
+        // be set to zero so that nobody can try to access the item via the handle after
+        // the item is freed.
+        //
+        item->handle = *handle;
     }
 
     return item;
@@ -292,7 +321,7 @@ void qd_hash_retrieve_prefix(qd_hash_t *h, qd_iterator_t *iter, void **val)
 
 	uint32_t hash = 0;
 
-	qd_hash_item_t *item;
+	qd_hash_item_t *item = 0;
 	while (qd_iterator_next_segment(iter, &hash)) {
 		item = qd_hash_internal_retrieve_with_hash(h, hash, iter);
 		if (item)
@@ -315,8 +344,7 @@ void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_iterator_t *iter, const void
 
     uint32_t hash = 0;
 
-    qd_hash_item_t *item;
-
+    qd_hash_item_t *item = 0;
     while (qd_iterator_next_segment(iter, &hash)) {
         item = qd_hash_internal_retrieve_with_hash(h, hash, iter);
         if (item)
@@ -425,7 +453,7 @@ void qd_hash_handle_free(qd_hash_handle_t *handle)
 
 const unsigned char *qd_hash_key_by_handle(const qd_hash_handle_t *handle)
 {
-    if (handle)
+    if (handle && handle->item)
         return handle->item->key;
     return 0;
 }
@@ -447,7 +475,11 @@ qd_error_t qd_hash_remove_by_handle(qd_hash_t *h, qd_hash_handle_t *handle)
 
 qd_error_t qd_hash_remove_by_handle2(qd_hash_t *h, qd_hash_handle_t *handle, unsigned char **key)
 {
-    if (!handle)
+    //
+    // If the handle is not supplied or if the supplied handle has no item, we don't want to proceed
+    // removing the item by handle.
+    //
+    if (!handle || !handle->item)
         return QD_ERROR_NOT_FOUND;
     qd_hash_internal_remove_item(h, handle->bucket, handle->item, key);
     return QD_ERROR_NONE;
