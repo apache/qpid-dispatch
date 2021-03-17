@@ -2172,14 +2172,13 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
 {
     sys_mutex_lock(qd_server_get_activation_lock(http2_adaptor->core->qd->server));
 
-    clean_session_data(conn);
-
     if (conn->pn_raw_conn) {
         qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Setting conn->pn_raw_conn=0", conn->conn_id);
         conn->pn_raw_conn = 0;
     }
 
     if (conn->ingress) {
+        clean_session_data(conn);
         close_connections(conn);
     }
     else {
@@ -2195,11 +2194,16 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
             }
             conn->stream_dispatcher_stream_data = 0;
 
-            if (conn->delete_egress_connections) {
-                // The config has already been freed by the qd_http_connector_decref() function, set it to zero here
-                conn->config = 0;
-                close_connections(conn);
-            }
+        }
+        if (conn->delete_egress_connections) {
+            // The config has already been freed by the qd_http_connector_decref() function, set it to zero here
+            conn->config = 0;
+            // It is important that clean_session_data be called *after* the conn->config has been set to zero
+            clean_session_data(conn);
+            close_connections(conn);
+        }
+        else {
+            clean_session_data(conn);
         }
     }
     sys_mutex_unlock(qd_server_get_activation_lock(http2_adaptor->core->qd->server));
