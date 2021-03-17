@@ -1963,14 +1963,15 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
 
     }
 
-    qd_http2_buffer_list_t buffers;
-    DEQ_INIT(buffers);
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
     size_t n;
     int count = 0;
+    int rv = 0;
 
     if (!conn->pn_raw_conn)
         return 0;
+
+    bool close_conn = false;
 
     while ( (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
         for (size_t i = 0; i < n && raw_buffers[i].bytes; ++i) {
@@ -1979,60 +1980,51 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
             uint32_t raw_buff_size = raw_buffers[i].size;
             qd_http2_buffer_insert(buf, raw_buff_size);
             count += raw_buff_size;
-            DEQ_INSERT_TAIL(buffers, buf);
-        }
-    }
 
-    //
-    // Read each buffer in the buffer chain and call nghttp2_session_mem_recv with buffer content
-    //
-    qd_http2_buffer_t *buf = DEQ_HEAD(buffers);
-    qd_http2_buffer_t *curr_buf = 0;
+            if (raw_buff_size > 0 && !close_conn) {
+                qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] handle_incoming_http - Calling nghttp2_session_mem_recv qd_http2_buffer of size %"PRIu32" ", conn->conn_id, raw_buff_size);
+                rv = nghttp2_session_mem_recv(conn->session_data->session, qd_http2_buffer_base(buf), qd_http2_buffer_size(buf));
+                if (rv < 0) {
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] Error in nghttp2_session_mem_recv rv=%i", conn->conn_id, rv);
+                    if (rv == NGHTTP2_ERR_FLOODED) {
+                        // Flooding was detected in this HTTP/2 session, and it must be closed. This is most likely caused by misbehavior of peer.
+                        // If the client magic is bad, we need to close the connection.
+                        qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP NGHTTP2_ERR_FLOODED", conn->conn_id);
+                        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Protocol Error", 14);
+                    }
+                    else if (rv == NGHTTP2_ERR_CALLBACK_FAILURE) {
+                        qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP NGHTTP2_ERR_CALLBACK_FAILURE", conn->conn_id);
+                        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Internal Error", 14);
+                    }
+                    else if (rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
+                        qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP2 Protocol error, NGHTTP2_ERR_BAD_CLIENT_MAGIC, closing connection", conn->conn_id);
+                        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Bad Client Magic", 16);
+                    }
+                    else {
+                        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Protocol Error", 14);
+                    }
+                    nghttp2_session_send(conn->session_data->session);
 
-    int rv = 0;
-    while (buf) {
-        size_t http2_buffer_size = qd_http2_buffer_size(buf);
-        if (http2_buffer_size > 0) {
-            qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] handle_incoming_http - Calling nghttp2_session_mem_recv qd_http2_buffer of size %"PRIu32" ", conn->conn_id, http2_buffer_size);
-            rv = nghttp2_session_mem_recv(conn->session_data->session, qd_http2_buffer_base(buf), qd_http2_buffer_size(buf));
-            if (rv < 0) {
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] Error in nghttp2_session_mem_recv rv=%i", conn->conn_id, rv);
-                if (rv == NGHTTP2_ERR_FLOODED) {
-                    // Flooding was detected in this HTTP/2 session, and it must be closed. This is most likely caused by misbehavior of peer.
-                    // If the client magic is bad, we need to close the connection.
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP NGHTTP2_ERR_FLOODED", conn->conn_id);
-                    nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Protocol Error", 14);
+                    //
+                    // An error was received from nghttp2, the connection needs to be closed.
+                    //
+                    close_conn = true;
                 }
-                else if (rv == NGHTTP2_ERR_CALLBACK_FAILURE) {
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP NGHTTP2_ERR_CALLBACK_FAILURE", conn->conn_id);
-                    nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Internal Error", 14);
-                }
-                else if (rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP2 Protocol error, NGHTTP2_ERR_BAD_CLIENT_MAGIC, closing connection", conn->conn_id);
-                    nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Bad Client Magic", 16);
-                }
-                else {
-                    nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Protocol Error", 14);
-                }
-                nghttp2_session_send(conn->session_data->session);
-                pn_raw_connection_close(conn->pn_raw_conn);
-                break;
             }
+            free_qd_http2_buffer_t(buf);
         }
-        curr_buf = buf;
-        DEQ_REMOVE_HEAD(buffers);
-        buf = DEQ_HEAD(buffers);
-        free_qd_http2_buffer_t(curr_buf);
     }
 
-    if (rv > 0)
+    if (close_conn) {
+        pn_raw_connection_close(conn->pn_raw_conn);
+    }
+    else {
         grant_read_buffers(conn);
-
+    }
     nghttp2_session_send(conn-> session_data->session);
 
     return count;
 }
-
 
 qdr_http2_connection_t *qdr_http_connection_ingress_accept(qdr_http2_connection_t* ingress_http_conn)
 {
