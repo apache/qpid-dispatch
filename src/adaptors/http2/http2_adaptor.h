@@ -138,6 +138,7 @@ struct qdr_http2_connection_t {
     nghttp2_data_provider     data_prd;
     qd_http2_buffer_list_t    granted_read_buffs; //buffers for reading
     time_t                    prev_ping; // Time the previous PING frame was sent on egress connection.
+    time_t                    last_pn_raw_conn_read;  // The last time a PN_RAW_CONNECTION_READ event was invoked with more than zero bytes on an egress connection.
 
     bool                      connection_established;
     bool                      grant_initial_buffers;
