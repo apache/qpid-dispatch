@@ -2394,7 +2394,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Ingress PN_RAW_CONNECTION_DISCONNECTED", conn->conn_id);
         }
         else {
-            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Egress PN_RAW_CONNECTION_DISCONNECTED", conn->conn_id);
+            qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Egress PN_RAW_CONNECTION_DISCONNECTED", conn->conn_id);
             conn->client_magic_sent = false;
             if (!conn->delete_egress_connections) {
                 qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Scheduling 2 second timer to reconnect to egress connection", conn->conn_id);
