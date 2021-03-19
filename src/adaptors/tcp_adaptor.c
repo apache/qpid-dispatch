@@ -169,7 +169,7 @@ void qdr_tcp_q2_unblocked_handler(const qd_alloc_safe_ptr_t context)
     // prevent the tc from being deleted while running:
     sys_mutex_lock(tc->activation_lock);
 
-    if (tc && tc->pn_raw_conn) {
+    if (tc->pn_raw_conn) {
         sys_atomic_set(&tc->q2_restart, 1);
         pn_raw_connection_wake(tc->pn_raw_conn);
     }
@@ -629,13 +629,17 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_READ", conn->conn_id);
         conn->q2_blocked = false;
         handle_incoming_impl(conn, true);
+        sys_mutex_lock(conn->activation_lock);
         conn->raw_closed_read = true;
+        sys_mutex_unlock(conn->activation_lock);
         pn_raw_connection_close(conn->pn_raw_conn);
         break;
     }
     case PN_RAW_CONNECTION_CLOSED_WRITE: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_WRITE", conn->conn_id);
+        sys_mutex_lock(conn->activation_lock);
         conn->raw_closed_write = true;
+        sys_mutex_unlock(conn->activation_lock);
         pn_raw_connection_close(conn->pn_raw_conn);
         break;
     }
@@ -661,11 +665,16 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     }
     case PN_RAW_CONNECTION_WAKE: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_WAKE", conn->conn_id);
+        sys_mutex_lock(conn->activation_lock);
         if (sys_atomic_set(&conn->q2_restart, 0)) {
+            sys_mutex_unlock(conn->activation_lock);
             // note: unit tests grep for this log!
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] client link unblocked from Q2 limit", conn->conn_id);
             conn->q2_blocked = false;
             handle_incoming(conn);
+        }
+        else {
+            sys_mutex_unlock(conn->activation_lock);
         }
         while (qdr_connection_process(conn->qdr_conn)) {}
         break;

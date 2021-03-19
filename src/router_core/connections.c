@@ -610,6 +610,14 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
 
+    //
+    // Adjust the delivery's identity
+    //
+    if (initial_delivery) {
+        initial_delivery->conn_id = link->conn->identity;
+        initial_delivery->link_id = link->identity;
+    }
+
     if      (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_CONTROL))
         link->link_type = QD_LINK_CONTROL;
     else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_DATA))
@@ -1645,12 +1653,6 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
         }
         sys_mutex_unlock(old_link->conn->work_lock);
     }
-
-    //
-    // Adjust the delivery's identity
-    //
-    dlv->conn_id = link->conn->identity;
-    dlv->link_id = link->identity;
 
     //
     // Enqueue the delivery onto the new link's undelivered list
