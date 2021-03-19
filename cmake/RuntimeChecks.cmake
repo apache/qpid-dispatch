@@ -106,9 +106,27 @@ elseif(RUNTIME_CHECK STREQUAL "asan")
     message(FATAL_ERROR "libubsan not installed - address sanitizer not available")
   endif(UBSAN_LIBRARY-NOTFOUND)
   message(STATUS "Runtime memory checker: gcc/clang address sanitizers")
+  option(SANITIZE_3RD_PARTY "Detect leaks in 3rd party libraries used by Dispatch while running tests" OFF)
+  if (SANITIZE_3RD_PARTY)
+    add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/tests/lsan.supp
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/tests/lsan.supp ${CMAKE_BINARY_DIR}/tests/lsan.supp
+        DEPENDS ${CMAKE_SOURCE_DIR}/tests/lsan.supp
+        VERBATIM)
+  else (SANITIZE_3RD_PARTY)
+    # Append wholesale library suppressions
+    #  this is necessary if target system does not have debug symbols for these libraries installed
+    #  and therefore the more specific suppressions do not match
+    add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/tests/lsan.supp
+        COMMAND bash -c 'cat ${CMAKE_SOURCE_DIR}/tests/lsan.supp ${CMAKE_SOURCE_DIR}/tests/lsan_3rdparty.supp > ${CMAKE_BINARY_DIR}/tests/lsan.supp'
+        DEPENDS ${CMAKE_SOURCE_DIR}/tests/lsan.supp ${CMAKE_SOURCE_DIR}/tests/lsan_3rdparty.supp)
+  endif ()
+  add_custom_target(generate_lsan.supp ALL
+        DEPENDS ${CMAKE_BINARY_DIR}/tests/lsan.supp)
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=address,undefined")
   set(RUNTIME_ASAN_ENV_OPTIONS "detect_leaks=true suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
-  set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp")
+  set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_BINARY_DIR}/tests/lsan.supp")
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()

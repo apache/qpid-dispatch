@@ -53,6 +53,7 @@ jobs:
         -DCONSOLE_INSTALL=OFF
         -DUSE_BWRAP=ON
         -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
+        -DSANITIZE_3RD_PARTY=ON
 
       CCACHE_BASEDIR: ${{github.workspace}}
       CCACHE_DIR: ${{github.workspace}}/.ccache

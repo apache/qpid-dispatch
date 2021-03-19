@@ -1,0 +1,4 @@
+# 3rd party lsan suppressions
+
+leak:/libpython2.*.so
+leak:/libpython3.*.so
