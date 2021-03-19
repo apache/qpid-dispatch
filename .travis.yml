@@ -103,7 +103,7 @@ jobs:
   - os: osx
     osx_image: xcode11
     env:
-    - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=0.32.0
+    - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=e4f3c34396c798529b35fadf93ba57b771aadebf
     before_install:
     - bash ./macports.sh
     - export COLUMNS=80
