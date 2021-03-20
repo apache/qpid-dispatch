@@ -92,8 +92,4 @@ leak:^pn_object_new$
 leak:^pn_list$
 leak:^pni_record_create$
 
-### libwebsockets
-
-leak:/libwebsockets.so
-
 ### CMake will append .so 3rd party suppressions here, unless disabled:

@@ -746,9 +746,9 @@ static int callback_healthz(struct lws *wsi, enum lws_callback_reasons reason,
         ZERO(stats->context);
         stats->context->wsi = wsi;
         stats->context->server = hs;
-        //make dummy request for stats (pass in null ptr); this still excercises the
+        //make dummy request for stats (pass in null ptr); this still exercises the
         //path through core thread and back through callback on io thread which is
-        //a resonable initial liveness check
+        //a reasonable initial liveness check
         qdr_request_global_stats(hs->core, 0, handle_stats_results, (void*) stats->context);
         return 0;
     }
