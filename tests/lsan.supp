@@ -10,9 +10,6 @@ leak:qd_policy_c_counts_alloc
 leak:qd_policy_open_fetch_settings
 leak:qdr_error_description
 
-# to be triaged; unit_tests
-leak:http-libwebsockets.c
-
 # to be triaged; pretty much all tests
 leak:^IoAdapter_init$
 
