@@ -113,7 +113,7 @@ static char *test_buffer_list_append(void *context)
     }
     if (list_len != 26) {
         static char error[100];
-        sprintf(error, "Incorrect accumulated buffer size: %ld", list_len);
+        sprintf(error, "Incorrect accumulated buffer size: %zu", list_len);
         return error;
     }
 
