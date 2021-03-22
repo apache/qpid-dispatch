@@ -117,6 +117,8 @@ static char *test_buffer_list_append(void *context)
         return error;
     }
 
+    qd_buffer_list_free_buffers(&list);
+
     return 0;
 }
 
