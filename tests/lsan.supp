@@ -2,9 +2,6 @@
 # found by AddressSanitizer (ASAN)
 #
 
-# to be triaged; unit_tests
-leak:http-libwebsockets.c
-
 # to be triaged; pretty much all tests
 leak:^IoAdapter_init$
 
@@ -99,9 +96,5 @@ leak:^pn_string_grow$
 leak:^pn_object_new$
 leak:^pn_list$
 leak:^pni_record_create$
-
-### libwebsockets
-
-leak:/libwebsockets.so
 
 ### CMake will append .so 3rd party suppressions here, unless disabled:
