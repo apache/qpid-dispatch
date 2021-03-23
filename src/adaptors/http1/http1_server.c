@@ -409,7 +409,12 @@ static void _do_reconnect(void *context)
     // while timers do not run concurrently it is possible to reschedule them
     // via another thread while the timer handler is running, resulting in this
     // handler running twice
-    if (hconn->raw_conn) return;  // already ran
+    sys_mutex_lock(qdr_http1_adaptor->lock);
+    if (hconn->raw_conn)  {
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
+        return;  // already ran
+    }
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
 
     if (hconn->qdr_conn) {
 

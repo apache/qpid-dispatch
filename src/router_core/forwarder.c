@@ -795,7 +795,9 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
     while (link_ref && eligible_link_value != 0) {
         qdr_link_t *link     = link_ref->link;
+        sys_mutex_lock(link->conn->work_lock);
         uint32_t    value    = DEQ_SIZE(link->undelivered) + DEQ_SIZE(link->unsettled);
+        sys_mutex_unlock(link->conn->work_lock);
         bool        eligible = link->capacity > value;
 
         //
