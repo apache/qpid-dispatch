@@ -90,8 +90,9 @@ class FriendShipService(FriendshipServicer):
         return None
 
 
-def serve(port):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
+def serve(port, options=None):
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1),
+                         options=options)
     add_FriendshipServicer_to_server(FriendShipService(), server)
     server.add_insecure_port('[::]:%s' % port)
     server.start()
