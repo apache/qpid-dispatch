@@ -134,7 +134,13 @@ elseif(RUNTIME_CHECK STREQUAL "asan" OR RUNTIME_CHECK STREQUAL "hwasan")
   add_custom_target(generate_lsan.supp ALL
         DEPENDS ${CMAKE_BINARY_DIR}/tests/lsan.supp)
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=${ASAN_VARIANTS}")
-  set(RUNTIME_ASAN_ENV_OPTIONS "detect_leaks=true suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
+  # Clang shipping with XCode does not include leak sanitizer feature
+  if (APPLE)
+    set(DETECT_LEAKS false)
+  else (APPLE)
+    set(DETECT_LEAKS true)
+  endif()
+  set(RUNTIME_ASAN_ENV_OPTIONS "detect_leaks=${DETECT_LEAKS} suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
   set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_BINARY_DIR}/tests/lsan.supp")
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
