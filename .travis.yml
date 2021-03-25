@@ -143,7 +143,7 @@ jobs:
     # PROTON-2351: install libuv @1.40 because proton is broken with 1.41
     #  https://trac.macports.org/wiki/howto/InstallingOlderPort
     - git clone --single-branch https://github.com/macports/macports-ports.git
-    - cd macports-ports; git checkout 425dd6e31f6c31886fabd1f911b5f2aa96c4f27d; cd devel/libuv; yes | sudo port install
+    - pushd macports-ports/devel/libuv; git checkout 425dd6e31f6c31886fabd1f911b5f2aa96c4f27d; yes | sudo port install; popd
     # set aliases for CMake's PythonInterp and PythonLibs to find MacPort's `python` on the path first
     - sudo port select --set python python37
     - sudo port select --set python3 python37
