@@ -24,6 +24,7 @@
 #
 # -DRUNTIME_CHECK=tsan      # turns on thread sanitizer
 # -DRUNTIME_CHECK=asan      # address and undefined behavior sanitizer
+# -DRUNTIME_CHECK=hwasan    # hardware-supported asan for aarch64
 # -DRUNTIME_CHECK=memcheck  # valgrind memcheck (in progress)
 # -DRUNTIME_CHECK=helgrind  # valgrind helgrind (in progress)
 #
@@ -63,7 +64,7 @@ endmacro()
 
 # Valid options for RUNTIME_CHECK
 #
-set(runtime_checks OFF tsan asan memcheck helgrind)
+set(runtime_checks OFF tsan asan hwasan memcheck helgrind)
 
 # Set RUNTIME_CHECK value and deal with the older cmake flags for
 # valgrind and TSAN
@@ -95,7 +96,7 @@ elseif(RUNTIME_CHECK STREQUAL "helgrind")
   message(STATUS "Runtime race checker: valgrind helgrind")
   set(QDROUTERD_RUNNER "${VALGRIND_EXECUTABLE} --tool=helgrind ${VALGRIND_COMMON_ARGS}")
 
-elseif(RUNTIME_CHECK STREQUAL "asan")
+elseif(RUNTIME_CHECK STREQUAL "asan" OR RUNTIME_CHECK STREQUAL "hwasan")
   assert_has_sanitizers()
   find_library(ASAN_LIBRARY NAME asan libasan)
   if(ASAN_LIBRARY-NOTFOUND)
@@ -105,7 +106,15 @@ elseif(RUNTIME_CHECK STREQUAL "asan")
   if(UBSAN_LIBRARY-NOTFOUND)
     message(FATAL_ERROR "libubsan not installed - address sanitizer not available")
   endif(UBSAN_LIBRARY-NOTFOUND)
-  message(STATUS "Runtime memory checker: gcc/clang address sanitizers")
+  if(RUNTIME_CHECK STREQUAL "asan")
+    set(ASAN_VARIANTS "address,undefined")
+  elseif(RUNTIME_CHECK STREQUAL "hwasan")
+    set(ASAN_VARIANTS "hwaddress,undefined")
+    # hwasan currently needs lld, otherwise binaries crash on invalid instruction
+    #  https://github.com/google/sanitizers/issues/1241
+    add_link_options("-fuse-ld=lld")
+  endif()
+  message(STATUS "Runtime memory checker: gcc/clang address sanitizers: ${ASAN_VARIANTS}")
   option(SANITIZE_3RD_PARTY "Detect leaks in 3rd party libraries used by Dispatch while running tests" OFF)
   if (SANITIZE_3RD_PARTY)
     add_custom_command(
@@ -124,7 +133,7 @@ elseif(RUNTIME_CHECK STREQUAL "asan")
   endif ()
   add_custom_target(generate_lsan.supp ALL
         DEPENDS ${CMAKE_BINARY_DIR}/tests/lsan.supp)
-  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=address,undefined")
+  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=${ASAN_VARIANTS}")
   set(RUNTIME_ASAN_ENV_OPTIONS "detect_leaks=true suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
   set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_BINARY_DIR}/tests/lsan.supp")
 
