@@ -21,6 +21,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import errno
 import os
 import threading
 import ssl
@@ -105,10 +106,9 @@ class RouterTestHttp(TestCase):
             else:
                 self.get(url, use_ca=use_ca)
             return False
-        except Exception as e:
-            if "[Errno 111] Connection refused" in str(e):
-                return True
-            if "[Errno 104] Connection reset by peer" in str(e):
+        except (IOError, OSError) as e:  # TODO(DISPATCH-1539): in Python 3.3+ it is sufficient to catch only OSError
+            expected = (errno.ECONNREFUSED, errno.ECONNRESET)
+            if e.errno in expected or e.reason.errno in expected:
                 return True
             raise e
 
