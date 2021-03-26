@@ -539,7 +539,9 @@ static int snd_data_callback(nghttp2_session *session,
     qdr_http2_stream_data_t *stream_data = (qdr_http2_stream_data_t *)source->ptr;
 
     int bytes_sent = 0; // This should not include the header length of 9.
+    bool write_buffs = false;
     if (length) {
+        write_buffs = true;
         qd_http2_buffer_t *http2_buff = qd_http2_buffer();
         DEQ_INSERT_TAIL(session_data->buffs, http2_buff);
         // Insert the framehd of length 9 bytes into the buffer
@@ -569,6 +571,15 @@ static int snd_data_callback(nghttp2_session *session,
             idx += 1;
         }
     }
+    else if (length == 0 && stream_data->out_msg_data_flag_eof) {
+        write_buffs = true;
+        qd_http2_buffer_t *http2_buff = qd_http2_buffer();
+        DEQ_INSERT_TAIL(session_data->buffs, http2_buff);
+        // Insert the framehd of length 9 bytes into the buffer
+        memcpy(qd_http2_buffer_cursor(http2_buff), framehd, HTTP2_DATA_FRAME_HEADER_LENGTH);
+        qd_http2_buffer_insert(http2_buff, HTTP2_DATA_FRAME_HEADER_LENGTH);
+    }
+
     if (stream_data->full_payload_handled) {
         if (!stream_data->out_msg_has_footer && stream_data->curr_stream_data) {
             qd_message_stream_data_release(stream_data->curr_stream_data);
@@ -585,8 +596,10 @@ static int snd_data_callback(nghttp2_session *session,
 
     if (length) {
         assert(bytes_sent == length);
-        write_buffers(conn);
     }
+
+    if (write_buffs)
+        write_buffers(conn);
 
     return 0;
 
@@ -1112,6 +1125,7 @@ ssize_t read_data_callback(nghttp2_session *session,
                     }
 
                     *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+                    stream_data->out_msg_data_flag_eof = true;
                     stream_data->out_msg_body_sent = true;
                     stream_data->full_payload_handled = true;
                     if (stream_data->next_stream_data) {
@@ -1155,6 +1169,7 @@ ssize_t read_data_callback(nghttp2_session *session,
                     stream_data->next_stream_data_result = qd_message_next_stream_data(message, &stream_data->next_stream_data);
                     if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_NO_MORE) {
                         *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+                        stream_data->out_msg_data_flag_eof = true;
                         stream_data->out_msg_body_sent = true;
                         if (stream_data->next_stream_data) {
                             qd_message_stream_data_release(stream_data->next_stream_data);
@@ -1222,6 +1237,7 @@ ssize_t read_data_callback(nghttp2_session *session,
             else {
                 stream_data->qd_buffers_to_send = 0;
                 *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+                stream_data->out_msg_data_flag_eof = true;
                 if (stream_data->out_msg_has_footer) {
                     //
                     // We have to send the trailer fields.
@@ -1232,6 +1248,7 @@ ssize_t read_data_callback(nghttp2_session *session,
                     // END_STREAM in DATA frame.
                     //
                     *data_flags |= NGHTTP2_DATA_FLAG_NO_END_STREAM;
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback stream_data->out_msg_has_footer, setting NGHTTP2_DATA_FLAG_NO_END_STREAM", conn->conn_id, stream_data->stream_id);
                 }
                 stream_data->full_payload_handled = true;
                 stream_data->out_msg_body_sent = true;
@@ -1247,6 +1264,7 @@ ssize_t read_data_callback(nghttp2_session *session,
             // The body-data is corrupt in some way.  Stop handling the delivery and reject it.
             //
             *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+            stream_data->out_msg_data_flag_eof = true;
             if (stream_data->curr_stream_data)
                 qd_message_stream_data_release(stream_data->curr_stream_data);
             stream_data->curr_stream_data = 0;
