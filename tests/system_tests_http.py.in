@@ -107,7 +107,8 @@ class RouterTestHttp(TestCase):
                 self.get(url, use_ca=use_ca)
             return False
         except (IOError, OSError) as e:  # TODO(DISPATCH-1539): in Python 3.3+ it is sufficient to catch only OSError
-            if e.errno in (errno.ECONNREFUSED, errno.ECONNRESET):
+            expected = (errno.ECONNREFUSED, errno.ECONNRESET)
+            if e.errno in expected or e.reason.errno in expected:
                 return True
             raise e
 
