@@ -258,33 +258,129 @@ class TcpAdaptor(TestCase):
 
         cls.routers = []
 
-        # Allocate a sea of ports
+        # define logging levels
+        cls.print_logs_server = False
+        cls.print_logs_client = True
+        cls.logger = Logger(title="TcpAdaptor-testClass",
+                            print_to_console=True,
+                            save_for_dump=False,
+                            ofilename='../setUpClass/TcpAdaptor.log')
+        # Write a dummy log line for scraper.
+        cls.logger.log("SERVER (info) Container Name: TCP_TEST")
+
+        # Allocate echo server ports first
+        for rtr in cls.router_order:
+            cls.tcp_server_listener_ports[rtr] = cls.tester.get_port()
+
+        # start echo servers immediately after the echo server
+        # ports are assigned.
+        for rtr in cls.router_order:
+            test_name = "TcpAdaptor"
+            server_prefix = "ECHO_SERVER %s ES_%s" % (test_name, rtr)
+            server_logger = Logger(title=test_name,
+                                   print_to_console=cls.print_logs_server,
+                                   save_for_dump=False,
+                                   ofilename="../setUpClass/TcpAdaptor_echo_server_%s.log" % rtr)
+            cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
+            server = TcpEchoServer(prefix=server_prefix,
+                                   port=cls.tcp_server_listener_ports[rtr],
+                                   logger=server_logger)
+            assert server.is_running
+            cls.echo_servers[rtr] = server
+
+        cls.EC2_conn_stall_connector_port = cls.tester.get_port()
+        # start special naughty servers that misbehave on purpose
+        server_prefix = "ECHO_SERVER TcpAdaptor NS_EC2_CONN_STALL"
+        server_logger = Logger(title="TcpAdaptor",
+                               print_to_console=cls.print_logs_server,
+                               save_for_dump=False,
+                               ofilename="../setUpClass/TcpAdaptor_echo_server_NS_CONN_STALL.log")
+        cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
+        server = TcpEchoServer(prefix=server_prefix,
+                               port=cls.EC2_conn_stall_connector_port,
+                               logger=server_logger,
+                               conn_stall=Q2_DELAY_SECONDS)
+        assert server.is_running
+        cls.echo_server_NS_CONN_STALL = server
+
+        # Allocate a sea of router ports
         for rtr in cls.router_order:
             cls.amqp_listener_ports[rtr] = cls.tester.get_port()
-            cls.tcp_server_listener_ports[rtr] = cls.tester.get_port()
             tl_ports = {}
             for tcp_listener in cls.router_order:
                 tl_ports[tcp_listener] = cls.tester.get_port()
             cls.tcp_client_listener_ports[rtr] = tl_ports
             cls.nodest_listener_ports[rtr] = cls.tester.get_port()
-            # cls.http_listener_ports[rtr] = cls.tester.get_port()
 
-        inter_router_port_AB  = cls.tester.get_port()
-        inter_router_port_BC  = cls.tester.get_port()
+        inter_router_port_AB = cls.tester.get_port()
         cls.INTA_edge_port = cls.tester.get_port()
-        cls.INTB_edge_port = cls.tester.get_port()
-        cls.INTC_edge_port = cls.tester.get_port()
-        cls.EC2_conn_stall_connector_port = cls.tester.get_port()
         cls.INTA_conn_stall_listener_port = cls.tester.get_port()
+
+        # Launch the routers using the sea of router ports
+        router('INTA', 'interior',
+               [('listener', {'role': 'inter-router', 'port': inter_router_port_AB}),
+                ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port}),
+                ('tcpListener', {'host': "0.0.0.0", 'port': cls.INTA_conn_stall_listener_port,
+                                 'address': 'NS_EC2_CONN_STALL', 'siteId': cls.site})])
+        inter_router_port_BC = cls.tester.get_port()
+        cls.INTB_edge_port = cls.tester.get_port()
+        router('INTB', 'interior',
+               [('connector', {'role': 'inter-router', 'port': inter_router_port_AB}),
+                ('listener', {'role': 'inter-router', 'port': inter_router_port_BC}),
+                ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
+
+        cls.INTC_edge_port = cls.tester.get_port()
+        router('INTC', 'interior',
+               [('connector', {'role': 'inter-router', 'port': inter_router_port_BC}),
+                ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
+
+        router('EA1', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
+        router('EA2', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
+        router('EB1', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
+        router('EB2', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
+        router('EC1', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
         cls.EC2_conn_stall_listener_port = cls.tester.get_port()
+        router('EC2', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port}),
+                ('tcpConnector', {'host': "127.0.0.1", 'port': cls.EC2_conn_stall_connector_port,
+                                  'address': 'NS_EC2_CONN_STALL', 'siteId': cls.site}),
+                ('tcpListener', {'host': "0.0.0.0", 'port': cls.EC2_conn_stall_listener_port,
+                                 'address': 'NS_EC2_CONN_STALL', 'siteId': cls.site})])
 
-        cls.logger = Logger(title="TcpAdaptor-testClass",
-                            print_to_console=True,
-                            save_for_dump=False,
-                            ofilename='../setUpClass/TcpAdaptor.log')
+        cls.INTA = cls.routers[0]
+        cls.INTB = cls.routers[1]
+        cls.INTC = cls.routers[2]
+        cls.EA1 = cls.routers[3]
+        cls.EA2 = cls.routers[4]
+        cls.EB1 = cls.routers[5]
+        cls.EB2 = cls.routers[6]
+        cls.EC1 = cls.routers[7]
+        cls.EC2 = cls.routers[8]
 
-        # Write a dummy log line for scraper.
-        cls.logger.log("SERVER (info) Container Name: TCP_TEST")
+        cls.router_dict = {}
+        cls.router_dict['INTA'] = cls.INTA
+        cls.router_dict['INTB'] = cls.INTB
+        cls.router_dict['INTC'] = cls.INTC
+        cls.router_dict['EA1'] = cls.EA1
+        cls.router_dict['EA2'] = cls.EA2
+        cls.router_dict['EB1'] = cls.EB1
+        cls.router_dict['EB2'] = cls.EB2
+        cls.router_dict['EC1'] = cls.EC1
+        cls.router_dict['EC2'] = cls.EC2
+
+        cls.logger.log("TCP_TEST INTA waiting for connection to INTB")
+        cls.INTA.wait_router_connected('INTB')
+        cls.logger.log("TCP_TEST INTB waiting for connection to INTA")
+        cls.INTB.wait_router_connected('INTA')
+        cls.logger.log("TCP_TEST INTB waiting for connection to INTC")
+        cls.INTB.wait_router_connected('INTC')
+        cls.logger.log("TCP_TEST INTC waiting for connection to INTB")
+        cls.INTC.wait_router_connected('INTB')
 
         # Create a scoreboard for the ports
         p_out = []
@@ -342,102 +438,6 @@ class TcpAdaptor(TestCase):
             o_file.write("echo View the results by opening the html file\n")
             o_file.write("echo     firefox %s" % (os.path.join(logs_dir, html_output)))
 
-        # Launch the routers
-        router('INTA', 'interior',
-               [('listener', {'role': 'inter-router', 'port': inter_router_port_AB}),
-                ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port}),
-                ('tcpListener', {'host': "0.0.0.0", 'port': cls.INTA_conn_stall_listener_port,
-                                 'address': 'NS_EC2_CONN_STALL', 'siteId': cls.site})])
-
-        router('INTB', 'interior',
-               [('connector', {'role': 'inter-router', 'port': inter_router_port_AB}),
-                ('listener', {'role': 'inter-router', 'port': inter_router_port_BC}),
-                ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
-
-        router('INTC', 'interior',
-               [('connector', {'role': 'inter-router', 'port': inter_router_port_BC}),
-                ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
-
-        router('EA1', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
-        router('EA2', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
-        router('EB1', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
-        router('EB2', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
-        router('EC1', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
-        router('EC2', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port}),
-                ('tcpConnector', {'host': "127.0.0.1", 'port': cls.EC2_conn_stall_connector_port,
-                                  'address': 'NS_EC2_CONN_STALL', 'siteId': cls.site}),
-                ('tcpListener', {'host': "0.0.0.0", 'port': cls.EC2_conn_stall_listener_port,
-                                 'address': 'NS_EC2_CONN_STALL', 'siteId': cls.site})])
-
-        cls.INTA = cls.routers[0]
-        cls.INTB = cls.routers[1]
-        cls.INTC = cls.routers[2]
-        cls.EA1 = cls.routers[3]
-        cls.EA2 = cls.routers[4]
-        cls.EB1 = cls.routers[5]
-        cls.EB2 = cls.routers[6]
-        cls.EC1 = cls.routers[7]
-        cls.EC2 = cls.routers[8]
-
-        cls.router_dict = {}
-        cls.router_dict['INTA'] = cls.INTA
-        cls.router_dict['INTB'] = cls.INTB
-        cls.router_dict['INTC'] = cls.INTC
-        cls.router_dict['EA1'] = cls.EA1
-        cls.router_dict['EA2'] = cls.EA2
-        cls.router_dict['EB1'] = cls.EB1
-        cls.router_dict['EB2'] = cls.EB2
-        cls.router_dict['EC1'] = cls.EC1
-        cls.router_dict['EC2'] = cls.EC2
-
-        cls.logger.log("TCP_TEST INTA waiting for connection to INTB")
-        cls.INTA.wait_router_connected('INTB')
-        cls.logger.log("TCP_TEST INTB waiting for connection to INTA")
-        cls.INTB.wait_router_connected('INTA')
-        cls.logger.log("TCP_TEST INTB waiting for connection to INTC")
-        cls.INTB.wait_router_connected('INTC')
-        cls.logger.log("TCP_TEST INTC waiting for connection to INTB")
-        cls.INTC.wait_router_connected('INTB')
-
-        # define logging levels
-        cls.print_logs_server = False
-        cls.print_logs_client = True
-
-        # start echo servers
-        for rtr in cls.router_order:
-            test_name = "TcpAdaptor"
-            server_prefix = "ECHO_SERVER %s ES_%s" % (test_name, rtr)
-            server_logger = Logger(title=test_name,
-                                   print_to_console=cls.print_logs_server,
-                                   save_for_dump=False,
-                                   ofilename="../setUpClass/TcpAdaptor_echo_server_%s.log" % rtr)
-            cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
-            server = TcpEchoServer(prefix=server_prefix,
-                                   port=cls.tcp_server_listener_ports[rtr],
-                                   logger=server_logger)
-            assert server.is_running
-            cls.echo_servers[rtr] = server
-
-        # start special naughty servers that misbehave on purpose
-        server_prefix = "ECHO_SERVER TcpAdaptor NS_EC2_CONN_STALL"
-        server_logger = Logger(title="TcpAdaptor",
-                               print_to_console=cls.print_logs_server,
-                               save_for_dump=False,
-                               ofilename="../setUpClass/TcpAdaptor_echo_server_NS_CONN_STALL.log")
-        cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
-        server = TcpEchoServer(prefix=server_prefix,
-                               port=cls.EC2_conn_stall_connector_port,
-                               logger=server_logger,
-                               conn_stall=Q2_DELAY_SECONDS)
-        assert server.is_running
-        cls.echo_server_NS_CONN_STALL = server
-
         # wait for server addresses (mobile ES_<rtr>) to propagate to all interior routers
         interior_rtrs = [rtr for rtr in cls.router_order if rtr.startswith('I')]
         found_all = False
@@ -471,7 +471,7 @@ class TcpAdaptor(TestCase):
         for rtr in cls.router_order:
             server = cls.echo_servers.get(rtr)
             if server is not None:
-                cls.logger.log("TCP_TEST Stopping echo server %s" % rtr)
+                cls.logger.log("TCP_TEST Stopping echo server ES_%s" % rtr)
                 server.wait()
         if cls.echo_server_NS_CONN_STALL is not None:
             cls.logger.log("TCP_TEST Stopping echo server NS_EC2_CONN_STALL")
