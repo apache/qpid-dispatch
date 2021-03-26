@@ -471,7 +471,7 @@ class TcpAdaptor(TestCase):
         for rtr in cls.router_order:
             server = cls.echo_servers.get(rtr)
             if server is not None:
-                cls.logger.log("TCP_TEST Stopping echo server %s" % rtr)
+                cls.logger.log("TCP_TEST Stopping echo server ES_%s" % rtr)
                 server.wait()
         if cls.echo_server_NS_CONN_STALL is not None:
             cls.logger.log("TCP_TEST Stopping echo server NS_EC2_CONN_STALL")
