@@ -170,6 +170,7 @@ static char* test_core_timer(void *context)
     //
     for (long i = 0; i < 5; i++)
         qdr_core_timer_free_CT(core, timers[i]);
+    free(core);
 
     return 0;
 }

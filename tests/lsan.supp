@@ -33,9 +33,6 @@ leak:^pgetaddrinfo$
 # to be triaged; system_tests_link_routes
 leak:^pni_init_default_logger$
 
-# Ignore test code
-leak:run_unit_tests.c
-
 # DISPATCH-1844 - shutdown leak
 leak:sys_mutex
 
