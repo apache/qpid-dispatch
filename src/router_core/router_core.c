@@ -579,7 +579,7 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
     DEQ_REMOVE(core->addrs, addr);
     if (addr->hash_handle) {
         const char *a_str = (const char *)qd_hash_key_by_handle(addr->hash_handle);
-        if (QDR_IS_LINK_ROUTE(a_str[0])) {
+        if (a_str && QDR_IS_LINK_ROUTE(a_str[0])) {
             qd_iterator_t *iter = qd_iterator_string(a_str, ITER_VIEW_ALL);
             qdr_link_route_unmap_pattern_CT(core, iter);
             qd_iterator_free(iter);
