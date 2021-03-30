@@ -215,6 +215,7 @@ class TcpEchoClient:
 
         except Exception:
             self.error = "ERROR: exception : '%s'" % traceback.format_exc()
+            self.sock.close()
 
         self.is_running = False
 
