@@ -949,6 +949,7 @@ class TcpAdaptorManagementTest(TestCase):
         # The router and the echo server are running at this point.
         assert cls.echo_server.is_running
 
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_01_mgmt(self):
         """
         Create and delete TCP connectors and listeners
