@@ -1038,7 +1038,7 @@ class TcpAdaptorManagementTest(TestCase):
         # Start the echo client runner
         runner = EchoClientRunner(self.test_name, 1, self.logger,
                                   None, None, 100, 1,
-                                  # Try for 3 seconds before timing out
+                                  # Try for 2 seconds before timing out
                                   timeout=client_runner_timeout,
                                   port_override=self.tcp_listener_port)
         time.sleep(client_runner_timeout + 1)
@@ -1061,7 +1061,7 @@ class TcpAdaptorManagementTest(TestCase):
 
         runner = EchoClientRunner(self.test_name, 1, self.logger,
                                   None, None, 100, 1,
-                                  # Try for 3 seconds before timing out
+                                  # Try for 2 seconds before timing out
                                   timeout=client_runner_timeout,
                                   port_override=self.tcp_listener_port)
         time.sleep(client_runner_timeout + 1)
