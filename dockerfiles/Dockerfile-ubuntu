@@ -24,7 +24,7 @@ FROM ubuntu:latest
 
 MAINTAINER "dev@qpid.apache.org"
 ARG DEBIAN_FRONTEND=noninteractive
-# Install all the required packages. Some in this list were picked off from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/master/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/master/README)
+# Install all the required packages. Some in this list were picked off from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/main/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/main/README)
 RUN apt-get update && \
     apt-get install -y curl gcc g++ automake libwebsockets-dev libtool zlib1g-dev cmake libsasl2-dev libssl-dev libnghttp2-dev python3-dev libuv1-dev sasl2-bin swig maven git && \
     apt-get -y clean

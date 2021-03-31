@@ -961,7 +961,7 @@ static void qdr_link_abort_undelivered_CT(qdr_core_t *core, qdr_link_t *link)
 static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link, const char *log_text)
 {
     //
-    // Remove the link from the master list of links and possibly the streaming
+    // Remove the link from the overall list of links and possibly the streaming
     // link pool
     //
     DEQ_REMOVE(core->open_links, link);

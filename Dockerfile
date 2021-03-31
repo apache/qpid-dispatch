@@ -41,7 +41,7 @@ FROM centos:7
 
 MAINTAINER "dev@qpid.apache.org"
 
-# Install all the required packages. Some in this list were picked off from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/master/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/master/README)
+# Install all the required packages. Some in this list were picked off from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/main/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/main/README)
 
 # For centos, some packages are found in the epel repo, so first install access to it
 RUN yum -y install epel-release
