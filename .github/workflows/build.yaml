@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: 'apache/qpid-proton'
-          ref: 'master'
+          ref: 'main'
           path: 'qpid-proton'
 
       - uses: actions/checkout@v2

@@ -48,7 +48,7 @@ jobs:
   - name: "qdrouterd:Debug (gcc on xenial)"
     os: linux
     env:
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=Debug
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=Debug
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
   - name: "qdrouterd:Coverage"
     os: linux
@@ -78,7 +78,7 @@ jobs:
     env:
     - CC=clang-11
     - CXX=clang++-11
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=RelWithDebInfo
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     arch: arm64
@@ -105,7 +105,7 @@ jobs:
     env:
       - CC=clang-11
       - CXX=clang++-11
-      - PROTON_VERSION=master BUILD_TYPE=RelWithDebInfo
+      - PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
       - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
   - name: "qdrouterd:Default Build"
     os: linux
@@ -132,7 +132,7 @@ jobs:
     os: osx
     osx_image: xcode11
     env:
-    - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=master
+    - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=main
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
     # exclude tests that require raw_connection functionality; not available in libuv proactor
     - DISPATCH_CTEST_EXTRA='-E system_tests_tcp_adaptor|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
