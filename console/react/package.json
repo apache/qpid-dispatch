@@ -60,7 +60,7 @@
   "devDependencies": {
     "@react-mock/localstorage": "^0.1.2",
     "@testing-library/jest-dom": "^5.11.10",
-    "@testing-library/react": "^11.2.5",
+    "@testing-library/react": "^11.2.6",
     "@types/jest": "^26.0.22",
     "body-parser": "^1.19.0",
     "browserslist": "^4.16.3",
