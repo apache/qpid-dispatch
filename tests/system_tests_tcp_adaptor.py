@@ -922,6 +922,9 @@ class TcpAdaptorManagementTest(TestCase):
     def setUpClass(cls):
         super(TcpAdaptorManagementTest, cls).setUpClass()
 
+        if DISABLE_SELECTOR_TESTS:
+            return
+
         cls.tcp_server_port = cls.tester.get_port()
         cls.tcp_listener_port = cls.tester.get_port()
         cls.test_name = 'TCPMgmtTest'
