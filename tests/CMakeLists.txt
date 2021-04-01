@@ -162,6 +162,7 @@ foreach(py_test_module
     system_tests_open_properties
     ${SYSTEM_TESTS_HTTP2}
     system_tests_http1_adaptor
+    system_tests_http1_over_tcp
     system_tests_tcp_adaptor
     )
 

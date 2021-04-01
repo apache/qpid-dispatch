@@ -137,7 +137,7 @@ jobs:
     - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=main
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
     # exclude tests that require raw_connection functionality; not available in libuv proactor
-    - DISPATCH_CTEST_EXTRA='-E system_tests_tcp_adaptor|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
+    - DISPATCH_CTEST_EXTRA='-E system_tests_tcp_adaptor|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc|system_tests_http1_over_tcp'
     before_install:
     - bash ./macports.sh
     - export COLUMNS=80
