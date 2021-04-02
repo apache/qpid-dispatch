@@ -32,7 +32,7 @@ if (DEFINED CMAKE_C_COMPILE_FEATURES)
 else()
     set(C_STANDARD_GNU "-std=gnu11")
     set(C_STANDARD_Clang "-std=gnu11")
-    set(C_STANDARD_SunPro "-xc11")
+    set(C_STANDARD_SunPro "-std=c11")
 
     set(C_STANDARD_FLAGS ${C_STANDARD_${CMAKE_C_COMPILER_ID}})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_STANDARD_FLAGS}")
