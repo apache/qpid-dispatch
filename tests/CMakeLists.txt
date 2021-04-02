@@ -256,6 +256,4 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/config-2
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests)
 
-if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8.5"))
-  add_subdirectory(c_unittests)
-endif()
+add_subdirectory(c_unittests)
