@@ -23,7 +23,7 @@ import { service, login, TEST_PORT } from "../serviceTest";
 import { LocalStorageMock } from "@react-mock/localstorage";
 import ChordViewer from "./chordViewer";
 
-it("renders the ChordViewer component", () => {
+it("renders the ChordViewer component", (done) => {
   const props = {
     service,
   };
@@ -63,5 +63,7 @@ it("renders the ChordViewer component", () => {
 
     // after 1 update period, the B chord should be in the svg
     await waitFor(() => expect(getByLabelText("B")).toBeInTheDocument());
-  });
+
+    done();
+  })
 });
