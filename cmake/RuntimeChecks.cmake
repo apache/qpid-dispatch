@@ -143,7 +143,7 @@ elseif(RUNTIME_CHECK STREQUAL "asan" OR RUNTIME_CHECK STREQUAL "hwasan")
   # https://github.com/openSUSE/systemd/blob/1270e56526cd5a3f485ae2aba975345c38860d37/docs/TESTING_WITH_SANITIZERS.md
   set(RUNTIME_ASAN_ENV_OPTIONS "strict_string_checks=1 detect_stack_use_after_return=1 check_initialization_order=1 strict_init_order=1 detect_leaks=${DETECT_LEAKS} suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
   set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_BINARY_DIR}/tests/lsan.supp")
-  set(RUNTIME_UBSAN_ENV_OPTIONS "print_stacktrace=1 print_summary=1 halt_on_error=1 abort_on_error=1")
+  set(RUNTIME_UBSAN_ENV_OPTIONS "print_stacktrace=1 print_summary=1")
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()

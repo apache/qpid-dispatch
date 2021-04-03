@@ -28,26 +28,27 @@ Features:
 - Sundry other tools.
 """
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import errno
-import os
-import time
-import socket
-import random
-import subprocess
-import shutil
-import unittest
-import __main__
-import re
 import sys
+import time
+
+import __main__
 import functools
+import os
+import random
+import re
+import shutil
+import socket
+import subprocess
+from copy import copy
 from datetime import datetime
 from subprocess import PIPE, STDOUT
-from copy import copy
+
 try:
     import queue as Queue  # 3.x
 except ImportError:
@@ -537,28 +538,32 @@ class Qdrouterd(Process):
             # re-raise _after_ dumping all the state we can
             teardown_exc = exc
 
-        # check router's debug dump file for anything interesting (should be
-        # empty) and dump it to stderr for perusal by organic lifeforms
-        try:
-            if os.stat(self.dumpfile).st_size > 0:
-                with open(self.dumpfile) as f:
-                    sys.stderr.write("\nRouter %s debug dump file:\n>>>>\n" %
-                                     self.config.router_id)
-                    sys.stderr.write(f.read())
-                    sys.stderr.write("\n<<<<\n")
-                    sys.stderr.flush()
-        except OSError:
-            # failed to open file.  This can happen when an individual test
-            # spawns a temporary router (i.e. not created as part of the
-            # TestCase setUpClass method) that gets cleaned up by the test.
-            pass
+        def check_output_file(filename, description):
+            """check router's debug dump file for anything interesting (should be
+            empty) and dump it to stderr for perusal by organic lifeforms"""
+            try:
+                if os.stat(filename).st_size > 0:
+                    with open(filename) as f:
+                        sys.stderr.write("\nRouter %s %s:\n>>>>\n" %
+                                         (self.config.router_id, description))
+                        sys.stderr.write(f.read())
+                        sys.stderr.write("\n<<<<\n")
+                        sys.stderr.flush()
+            except OSError:
+                # failed to open file.  This can happen when an individual test
+                # spawns a temporary router (i.e. not created as part of the
+                # TestCase setUpClass method) that gets cleaned up by the test.
+                pass
+
+        check_output_file(filename=self.outfile + '.out', description="output file")
+        check_output_file(filename=self.dumpfile, description="debug dump file")
 
         if teardown_exc:
             # teardown failed - possible router crash?
             # dump extra stuff (command line, output, log)
 
             def tail_file(fname, line_count=50):
-                "Tail a file to a list"
+                """Tail a file to a list"""
                 out = []
                 with open(fname) as f:
                     line = f.readline()
