@@ -101,9 +101,9 @@ jobs:
       - python3 -m pip install --user selectors
       # Install grpcio and protobuf to run the grpc tests.
       #  Installation on AArch64 currently broken https://github.com/grpc/grpc/pull/25363
-      #  Binary wheel is not available for Aarch64 and source install requires fetching git submodules first
-      - git clone https://github.com/grpc/grpc.git
-      - pushd grpc; git submodule update --init; GRPC_PYTHON_CFLAGS= python3 -m pip install --user .; popd
+      #  Binary wheel is not available in PyPI for Aarch64 and source install requires fetching git submodules first
+      - python3 -m pip install --user protobuf
+      - sudo apt install python3-grpcio
     env:
       - CC=clang-11
       - CXX=clang++-11
