@@ -55,7 +55,7 @@ class RouterTestDeprecatedLinkRoute(TestCase):
             pass
 
     def test_deprecated_link_route(self):
-        with open('../setUpClass/test-router-2.out', 'r') as router_log:
+        with open(self.router.outfile + '.out', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             search_lines = [s for s in log_lines if "org.apache.qpid.dispatch.router.config.linkRoute: Both 'dir' and 'direction' cannot be specified for entity 'linkRoute'" in s]
             self.assertTrue(len(search_lines) > 0)
@@ -90,7 +90,7 @@ class RouterTestDeprecatedLAutoLink(TestCase):
             pass
 
     def test_deprecated_auto_link(self):
-        with open('../setUpClass/test-autolink-1.out', 'r') as router_log:
+        with open(self.router.outfile + '.out', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             search_lines = [s for s in log_lines if
                             "org.apache.qpid.dispatch.router.config.autoLink: Both 'dir' and 'direction' cannot be specified for entity 'autoLink'" in s]
