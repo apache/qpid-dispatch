@@ -84,10 +84,17 @@ add_test(unit_tests_size_1     ${TEST_WRAP} unit_tests_size 1)
 add_test(unit_tests            ${TEST_WRAP} unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 
 # Unit test python modules
-add_test(router_engine_test    ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v router_engine_test)
-add_test(management_test       ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v management)
-add_test(router_policy_test    ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v router_policy_test)
-add_test(test_command    ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v test_command)
+foreach(py_test_module
+    router_engine_test
+    management_test
+    router_policy_test
+    test_command
+    )
+
+  string(CONFIGURE "${PYTHON_TEST_COMMAND}" CONFIGURED_PYTHON_TEST_COMMAND)
+
+  add_test(${py_test_module} ${TEST_WRAP} ${CONFIGURED_PYTHON_TEST_COMMAND})
+endforeach()
 
 if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http)
@@ -166,10 +173,14 @@ foreach(py_test_module
     system_tests_tcp_adaptor
     )
 
-  add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})
+  string(CONFIGURE "${PYTHON_TEST_COMMAND}" CONFIGURED_PYTHON_TEST_COMMAND)
+
+  add_test(${py_test_module} ${TEST_WRAP} ${CONFIGURED_PYTHON_TEST_COMMAND})
   list(APPEND SYSTEM_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_test_module}.py)
 endforeach()
 
+# Location of tox.ini determines the testroot directory for Pytest
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in ${CMAKE_CURRENT_BINARY_DIR}/tox.ini)
 # Use tox to run the flake8 python linter tool on all the python
 # sources. Highly recommended if you're hacking the python code.
 # Unfortunately this can only be done for versions of tox >= 1.9.0
@@ -190,7 +201,6 @@ if (TOX_EXE)
     if (TOX_VERSION STRLESS TOX_MIN_VERSION)
       message( STATUS "tox version ${TOX_VERSION} < required version ${TOX_MIN_VERSION} - skipping python-checker")
     else (TOX_VERSION STRLESS TOX_MIN_VERSION)
-      configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in ${CMAKE_CURRENT_BINARY_DIR}/tox.ini)
       add_test (NAME python-checker
                 COMMAND ${TOX_EXE}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

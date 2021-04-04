@@ -155,7 +155,8 @@ endif (NOT DEFINED DISPATCH_TEST_TIMEOUT)
 SET(DART_TESTING_TIMEOUT ${DISPATCH_TEST_TIMEOUT} CACHE STRING "Default CTest timeout in seconds")
 include (CTest)
 
-set(PYTHON_TEST_COMMAND "-m" "unittest")
+set(PYTHON_TEST_COMMAND "-m" "unittest" "-v" "\${py_test_module}"
+    CACHE STRING "Command used to run tests implemented in Python unittest; \${py_test_module} will be replaced with test module name.")
 
 set (SO_VERSION_MAJOR 2)
 set (SO_VERSION_MINOR 0)
