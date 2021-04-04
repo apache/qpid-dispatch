@@ -119,5 +119,6 @@ exclude =
     friendship_pb2_grpc.py,
 
 [pytest]
+# https://github.com/pytest-dev/pytest/blob/main/src/_pytest/junitxml.py
 # do not filter test file names
 python_files = *.py

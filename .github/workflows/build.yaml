@@ -133,6 +133,7 @@ jobs:
           cmake "${{github.workspace}}/qpid-dispatch" \
             "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
             "-DCMAKE_BUILD_TYPE=${BuildType}" \
+            "-DPYTHON_TEST_COMMAND='-m;pytest;-vs;--junit-prefix=pytest.\${py_test_module};--junit-xml=junitxmls/\${py_test_module}.xml;--pyargs;\${py_test_module}'" \
             "-GNinja" \
             ${DispatchCMakeExtraArgs}
 
@@ -199,7 +200,7 @@ jobs:
           architecture: x64
 
       - name: Install Python runtime/test dependencies
-        run: python -m pip install tox quart selectors grpcio protobuf
+        run: python -m pip install tox quart selectors grpcio protobuf pytest
 
       - name: Install Linux runtime/test dependencies
         if: ${{ runner.os == 'Linux' }}
