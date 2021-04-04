@@ -23,8 +23,6 @@ packages installed:
 - asciidoc (for building docs)
 - asciidoctor (for building docs)
 
-The unit tests are implemented using Python's unittest library.
-
 Dispatch will not build on Windows.
 
 To build formatted documentation (man pages, HTML, PDF) see the requirements in doc/README
@@ -81,6 +79,11 @@ you must also install the following dependency:
 And run the following command to generate grpc code:
   - python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. ./friendship.proto
 
+The system tests are implemented using Python's unittest library.  This library is
+used to run the tests by default.  The tests can be also run using `xmlrunner` or `pytest`.
+Pytest can generate a JUnit-compatible XML report containing an entry for each Python test method.
+After running the tests, all XML reports will be found under tests/junitxmls in your build directory:
+  - cmake .. -DPYTHON_TEST_COMMAND='-m;pytest;-vs;--junit-xml=junitxmls/${py_test_module}.xml;--pyargs;${py_test_module}'
 
 Test Suite Code Coverage (GNU tools only)
 =========================================
