@@ -295,7 +295,7 @@ jobs:
           path: ${{env.DispatchBuildDir}}/docs/man/*.html
 
       - name: Build the PDF version of the Dispatch book
-        run: asciidoctor-pdf ${{github.workspace}}/docs/books/user-guide/book.adoc
+        run: asciidoctor-pdf --failure-level INFO ${{github.workspace}}/docs/books/user-guide/book.adoc
 
       - name: Store the rendered Dispatch book PDF
         uses: actions/upload-artifact@v2
