@@ -16,9 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <qpid/dispatch/delivery_state.h>
-#include <qpid/dispatch/router_core.h>
-#include <qpid/dispatch/alloc_pool.h>
+#include "qpid/dispatch/delivery_state.h"
+#include "qpid/dispatch/router_core.h"
+#include "qpid/dispatch/alloc_pool.h"
 
 
 ALLOC_DECLARE(qd_delivery_state_t);

@@ -17,11 +17,11 @@
  * under the License.
  */
 
-#include <qpid/dispatch/atomic.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/protocol_adaptor.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/timer.h>
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/timer.h"
 
 #include <proton/connection_driver.h>
 

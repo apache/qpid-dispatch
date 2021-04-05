@@ -41,8 +41,8 @@
 #define pnx_sasl_set_failed(X)  pnx_sasl_fail_authentication(X)
 #define remote_sasl_process_outcome(X, Y) remote_sasl_process_outcome(X)
 #endif
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/ctools.h>
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/ctools.h"
 
 static qd_log_source_t* auth_service_log;
 

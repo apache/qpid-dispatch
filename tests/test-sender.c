@@ -40,8 +40,8 @@
 #include "proton/event.h"
 #include "proton/handlers.h"
 
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/message.h>
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/message.h"
 
 #define BOOL2STR(b) ((b)?"true":"false")
 

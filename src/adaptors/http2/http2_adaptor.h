@@ -21,15 +21,15 @@
  */
 #include <time.h>
 
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/atomic.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/server.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/log.h"
 #include <nghttp2/nghttp2.h>
-#include <qpid/dispatch/protocol_adaptor.h>
+#include "qpid/dispatch/protocol_adaptor.h"
 
 #include "server_private.h"
 #include "adaptors/http_common.h"

@@ -17,9 +17,9 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
+#include "qpid/dispatch/python_embedded.h"
 #include <qpid/dispatch.h>
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/log.h"
 #include "dispatch_private.h"
 #include "router_private.h"
 #include "entity.h"

@@ -20,7 +20,7 @@
 #include "router_core_private.h"
 #include "exchange_bindings.h"
 #include "delivery.h"
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/amqp.h"
 #include <stdio.h>
 #include <inttypes.h>
 

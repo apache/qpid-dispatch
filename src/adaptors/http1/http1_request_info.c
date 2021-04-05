@@ -18,7 +18,7 @@
  */
 
 #include "http1_private.h"
-#include <qpid/dispatch/server.h>
+#include "qpid/dispatch/server.h"
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/protocol_adaptor.h"
 #include "dispatch_private.h"

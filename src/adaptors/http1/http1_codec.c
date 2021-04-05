@@ -18,12 +18,12 @@
  *
  */
 
-#include <qpid/dispatch/http1_codec.h>
+#include "qpid/dispatch/http1_codec.h"
 
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/alloc_pool.h>
-#include <qpid/dispatch/discriminator.h>
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/alloc_pool.h"
+#include "qpid/dispatch/discriminator.h"
 
 #include <ctype.h>
 #include <stdio.h>

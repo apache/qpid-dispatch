@@ -20,9 +20,9 @@
 #include "dispatch_private.h"
 #include "timer_private.h"
 #include "server_private.h"
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/alloc.h>
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/alloc.h"
 #include <assert.h>
 #include <stdio.h>
 #include <time.h>

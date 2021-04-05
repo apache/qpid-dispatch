@@ -1,6 +1,6 @@
 #ifndef __failoverlist_h__
 #define __failoverlist_h__ 1
-#include <qpid/dispatch/ctools.h>
+#include "qpid/dispatch/ctools.h"
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file

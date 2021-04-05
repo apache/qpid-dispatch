@@ -23,8 +23,8 @@
 //
 #undef NDEBUG
 
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/ctools.h>
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/ctools.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <pthread.h>

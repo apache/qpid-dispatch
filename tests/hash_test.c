@@ -20,8 +20,8 @@
 #include "test_case.h"
 #include <stdio.h>
 #include <string.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/hash.h>
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/hash.h"
 
 
 

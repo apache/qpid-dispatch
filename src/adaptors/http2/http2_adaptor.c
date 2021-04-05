@@ -29,9 +29,9 @@
 #include <proton/raw_connection.h>
 #include <nghttp2/nghttp2.h>
 
-#include <qpid/dispatch/buffer.h>
+#include "qpid/dispatch/buffer.h"
 
-#include <qpid/dispatch/protocol_adaptor.h>
+#include "qpid/dispatch/protocol_adaptor.h"
 #include "adaptors/http_common.h"
 
 

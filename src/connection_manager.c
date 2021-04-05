@@ -17,11 +17,11 @@
  * under the License.
  */
 
-#include <qpid/dispatch/connection_manager.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/atomic.h>
-#include <qpid/dispatch/failoverlist.h>
+#include "qpid/dispatch/connection_manager.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/failoverlist.h"
 #include <proton/listener.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"

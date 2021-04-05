@@ -20,7 +20,7 @@
  */
 #include <Python.h>
 #include <stdint.h>
-#include <qpid/dispatch/message.h>
+#include "qpid/dispatch/message.h"
 
 #if PY_MAJOR_VERSION <= 2
 // deal with the two integer types in Python2

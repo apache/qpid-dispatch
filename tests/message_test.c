@@ -21,8 +21,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "message_private.h"
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/amqp.h"
 #include <proton/message.h>
 #include <proton/raw_connection.h>
 

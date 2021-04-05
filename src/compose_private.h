@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/compose.h>
+#include "qpid/dispatch/compose.h"
 #include "message_private.h"
 
 qd_buffer_list_t *qd_compose_buffers(qd_composed_field_t *field);

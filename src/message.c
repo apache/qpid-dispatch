@@ -17,13 +17,13 @@
  * under the License.
  */
 
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/error.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/buffer.h>
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/error.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/buffer.h"
 #include <proton/object.h>
 #include "message_private.h"
 #include "compose_private.h"

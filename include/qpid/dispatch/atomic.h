@@ -147,7 +147,7 @@ static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
 /******************************************************************************
  * Mutex fallback atomics                                                     *
  ******************************************************************************/
-#include <qpid/dispatch/threading.h>
+#include "qpid/dispatch/threading.h"
 
 struct sys_atomic_t {
     sys_mutex_t *lock;

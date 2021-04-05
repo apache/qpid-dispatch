@@ -17,10 +17,10 @@
  * under the License.
  */
 
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/parse.h"
+#include "qpid/dispatch/amqp.h"
 
 #include <stdio.h>
 #include <limits.h>

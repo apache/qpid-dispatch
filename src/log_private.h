@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/log.h"
 #include <time.h>
 
 void qd_log_initialize(void);

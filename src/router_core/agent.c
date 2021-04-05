@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/amqp.h"
 #include "agent_config_address.h"
 #include "agent_config_link_route.h"
 #include "agent_config_auto_link.h"

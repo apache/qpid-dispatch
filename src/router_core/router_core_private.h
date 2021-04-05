@@ -21,10 +21,10 @@
 
 #include "dispatch_private.h"
 #include "message_private.h"
-#include <qpid/dispatch/protocol_adaptor.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/atomic.h>
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/log.h"
 #include <memory.h>
 
 typedef struct qdr_address_t         qdr_address_t;

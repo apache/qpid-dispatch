@@ -19,8 +19,8 @@
 
 #include "python_private.h"  // must be first!
 
-#include <qpid/dispatch/error.h>
-#include <qpid/dispatch/python_embedded.h>
+#include "qpid/dispatch/error.h"
+#include "qpid/dispatch/python_embedded.h"
 #include "dispatch_private.h"
 #include "entity.h"
 

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/ctools.h>
+#include "qpid/dispatch/ctools.h"
 #include "agent_config_link_route.h"
 #include "agent_config_address.h"
 #include "route_control.h"

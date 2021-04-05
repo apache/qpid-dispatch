@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include <qpid/dispatch/address_lookup_server.h>
-#include <qpid/dispatch/ctools.h>
+#include "qpid/dispatch/address_lookup_server.h"
+#include "qpid/dispatch/ctools.h"
 #include "module.h"
 #include "core_link_endpoint.h"
 

@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <qpid/dispatch/buffer.h>
+#include "qpid/dispatch/buffer.h"
 
 
 /**@file

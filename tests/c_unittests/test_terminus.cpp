@@ -23,7 +23,7 @@ extern "C" {
 #include <../src/router_core/router_core_private.h>
 #include <../src/terminus_private.h>
 #include <inttypes.h>
-#include <qpid/dispatch/router_core.h>
+#include "qpid/dispatch/router_core.h"
 #include <stdint.h>
 #include <stdio.h>
 }

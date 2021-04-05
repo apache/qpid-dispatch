@@ -25,8 +25,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#include <qpid/dispatch/platform.h>
-#include <qpid/dispatch/ctools.h>
+#include "qpid/dispatch/platform.h"
+#include "qpid/dispatch/ctools.h"
 
 
 uintmax_t qd_platform_memory_size(void)

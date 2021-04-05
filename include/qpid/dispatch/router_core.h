@@ -19,12 +19,12 @@
  * under the License.
  */
 
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/bitmask.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/router.h>
-#include <qpid/dispatch/policy_spec.h>
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/bitmask.h"
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/parse.h"
+#include "qpid/dispatch/router.h"
+#include "qpid/dispatch/policy_spec.h"
 
 
 /**

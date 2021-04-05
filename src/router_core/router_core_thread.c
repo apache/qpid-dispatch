@@ -19,7 +19,7 @@
 
 #include "router_core_private.h"
 #include "module.h"
-#include <qpid/dispatch/protocol_adaptor.h>
+#include "qpid/dispatch/protocol_adaptor.h"
 #include "dispatch_private.h"
 
 /**

@@ -24,14 +24,14 @@
  *@internal
  */
 
-#include <qpid/dispatch/enum.h>
-#include <qpid/dispatch/router.h>
-#include <qpid/dispatch/router_core.h>
-#include <qpid/dispatch/message.h>
-#include <qpid/dispatch/bitmask.h>
-#include <qpid/dispatch/trace_mask.h>
-#include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/enum.h"
+#include "qpid/dispatch/router.h"
+#include "qpid/dispatch/router_core.h"
+#include "qpid/dispatch/message.h"
+#include "qpid/dispatch/bitmask.h"
+#include "qpid/dispatch/trace_mask.h"
+#include "qpid/dispatch/hash.h"
+#include "qpid/dispatch/log.h"
 #include "parse_tree.h"
 #include "dispatch_private.h"
 #include "entity.h"

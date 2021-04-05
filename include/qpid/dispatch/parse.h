@@ -19,8 +19,8 @@
  * under the License.
  */
 
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/iterator.h>
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/iterator.h"
 
 /**@file
  * Parse raw data fields into AMQP data trees.

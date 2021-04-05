@@ -18,7 +18,7 @@
  */
 
 #include <stdio.h>
-#include <qpid/dispatch/ctools.h>
+#include "qpid/dispatch/ctools.h"
 #include "router_core_private.h"
 
 ALLOC_DEFINE(qdr_core_timer_t);

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/proton_utils.h>
+#include "qpid/dispatch/proton_utils.h"
 #include <string.h>
 #include <inttypes.h>
 #include <time.h>

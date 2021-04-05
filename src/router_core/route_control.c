@@ -21,7 +21,7 @@
 #include "router_core_private.h"
 #include <inttypes.h>
 #include <stdio.h>
-#include <qpid/dispatch/iterator.h>
+#include "qpid/dispatch/iterator.h"
 
 ALLOC_DEFINE(qdr_link_route_t);
 ALLOC_DEFINE(qdr_auto_link_t);

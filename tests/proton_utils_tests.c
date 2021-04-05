@@ -24,7 +24,7 @@
 #include <inttypes.h>
 #include "test_case.h"
 #include <qpid/dispatch.h>
-#include <qpid/dispatch/proton_utils.h>
+#include "qpid/dispatch/proton_utils.h"
 
 
 typedef struct {

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
+#include "qpid/dispatch/python_embedded.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>

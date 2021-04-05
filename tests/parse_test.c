@@ -24,7 +24,7 @@
 #include <inttypes.h>
 #include "test_case.h"
 #include <qpid/dispatch.h>
-#include <qpid/dispatch/trace_mask.h>
+#include "qpid/dispatch/trace_mask.h"
 
 struct fs_vector_t {
     const char *data;

@@ -21,11 +21,11 @@
 #include "router_core_private.h"
 #include "core_events.h"
 #include "route_control.h"
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/message.h>
-#include <qpid/dispatch/router.h>
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/message.h"
+#include "qpid/dispatch/router.h"
 #include <stdio.h>
 #include <inttypes.h>
 

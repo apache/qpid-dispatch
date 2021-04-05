@@ -21,8 +21,8 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/ctools.h>
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/ctools.h"
 
 /**
  * @file

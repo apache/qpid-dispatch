@@ -20,7 +20,7 @@
  */
 
 #include <stdbool.h>
-#include <qpid/dispatch/error.h>
+#include "qpid/dispatch/error.h"
 
 /**@file
  * Configure and prepare a dispatch instance.

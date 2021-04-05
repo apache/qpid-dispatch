@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/log.h"
 #include "http.h"
 
 struct qd_dispatch_t;

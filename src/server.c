@@ -19,17 +19,17 @@
 
 #include "python_private.h"             // must be first!
 #include "dispatch_private.h"
-#include <qpid/dispatch/python_embedded.h>
+#include "qpid/dispatch/python_embedded.h"
 
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/failoverlist.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/platform.h>
-#include <qpid/dispatch/proton_utils.h>
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/server.h"
+#include "qpid/dispatch/failoverlist.h"
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/platform.h"
+#include "qpid/dispatch/proton_utils.h"
 
 #include <proton/event.h>
 #include <proton/listener.h>

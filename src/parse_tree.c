@@ -19,9 +19,9 @@
 
 
 #include "parse_tree.h"
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/hash.h>
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/hash.h"
 
 #include <stdio.h>
 #include <inttypes.h>

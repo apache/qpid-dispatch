@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
+#include "qpid/dispatch/python_embedded.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -28,8 +28,8 @@
 #include "router_private.h"
 #include "delivery.h"
 #include "policy.h"
-#include <qpid/dispatch/protocol_adaptor.h>
-#include <qpid/dispatch/proton_utils.h>
+#include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/proton_utils.h"
 #include <proton/sasl.h>
 #include <inttypes.h>
 

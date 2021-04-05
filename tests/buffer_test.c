@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "test_case.h"
-#include <qpid/dispatch/buffer.h>
+#include "qpid/dispatch/buffer.h"
 
 
 static void fill_buffer(qd_buffer_list_t *list,

@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include "test_case.h"
-#include <qpid/dispatch/threading.h>
+#include "qpid/dispatch/threading.h"
 
 
 

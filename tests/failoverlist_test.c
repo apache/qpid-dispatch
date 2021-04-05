@@ -24,7 +24,7 @@
 #include <inttypes.h>
 #include "test_case.h"
 #include <qpid/dispatch.h>
-#include <qpid/dispatch/failoverlist.h>
+#include "qpid/dispatch/failoverlist.h"
 
 
 static char *test_failover_list_empty(void *unused)

@@ -22,19 +22,19 @@
 #include <inttypes.h>
 #include "dispatch_private.h"
 #include "policy.h"
-#include <qpid/dispatch/container.h>
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/message.h>
+#include "qpid/dispatch/container.h"
+#include "qpid/dispatch/server.h"
+#include "qpid/dispatch/message.h"
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/connection.h>
 #include <proton/event.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/hash.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/log.h"
 
 /** Instance of a node type in a container */
 struct qd_node_t {

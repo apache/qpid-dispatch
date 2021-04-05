@@ -25,11 +25,11 @@
 
 #include <Python.h>
 #include <proton/codec.h>
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/error.h>
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/parse.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/error.h"
 
 /**
  * Initialize the embedded-python subsystem.  This must be called before

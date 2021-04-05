@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/amqp.h"
 #include <errno.h>
 #include <netdb.h>
 #include <stdlib.h>

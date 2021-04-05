@@ -19,8 +19,8 @@
  * under the License.
  *
  */
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/message.h>
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/message.h"
 
 #include <inttypes.h>
 #include <stdbool.h>

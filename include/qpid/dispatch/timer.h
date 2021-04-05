@@ -19,8 +19,8 @@
  * under the License.
  */
 
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/server.h>
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/server.h"
 #include <stdint.h>
 
 /**@file

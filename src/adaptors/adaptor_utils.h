@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/buffer.h>
+#include "qpid/dispatch/buffer.h"
 #include <proton/raw_connection.h>
 
 // Get the raw connections remote address

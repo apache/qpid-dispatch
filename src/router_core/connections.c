@@ -17,11 +17,11 @@
  * under the License.
  */
 
-#include <qpid/dispatch/router_core.h>
-#include <qpid/dispatch/discriminator.h>
-#include <qpid/dispatch/static_assert.h>
+#include "qpid/dispatch/router_core.h"
+#include "qpid/dispatch/discriminator.h"
+#include "qpid/dispatch/static_assert.h"
 #include "route_control.h"
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/amqp.h"
 #include <stdio.h>
 #include <strings.h>
 #include <inttypes.h>

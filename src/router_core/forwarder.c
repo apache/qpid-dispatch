@@ -18,7 +18,7 @@
  */
 
 #include "router_core_private.h"
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/amqp.h"
 #include <stdio.h>
 #include <strings.h>
 #include "forwarder.h"
