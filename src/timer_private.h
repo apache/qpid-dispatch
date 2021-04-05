@@ -20,8 +20,8 @@
  */
 
 #include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/timer.h"
 #include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/timer.h"
 
 struct qd_timer_t {
     DEQ_LINKS(qd_timer_t);

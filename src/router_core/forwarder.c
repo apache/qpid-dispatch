@@ -17,14 +17,16 @@
  * under the License.
  */
 
+#include "forwarder.h"
+
+#include "delivery.h"
 #include "router_core_private.h"
+
 #include "qpid/dispatch/amqp.h"
+
+#include <inttypes.h>
 #include <stdio.h>
 #include <strings.h>
-#include "forwarder.h"
-#include "delivery.h"
-#include <inttypes.h>
-
 
 typedef struct qdr_forward_deliver_info_t {
     DEQ_LINKS(struct qdr_forward_deliver_info_t);

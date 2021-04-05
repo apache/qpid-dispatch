@@ -17,13 +17,14 @@
  * under the License.
  */
 
-#include "test_case.h"
-#include <stdio.h>
-#include <string.h>
-#include "qpid/dispatch/iterator.h"
 #include "qpid/dispatch/hash.h"
 
+#include "test_case.h"
 
+#include "qpid/dispatch/iterator.h"
+
+#include <stdio.h>
+#include <string.h>
 
 static const unsigned char *keys[] = {
     (const unsigned char *) "/global/foo",

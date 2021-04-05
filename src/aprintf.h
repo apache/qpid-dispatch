@@ -19,10 +19,10 @@
  * under the License.
  */
 
+#include <assert.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <errno.h>
-#include <assert.h>
 
 /**
    Variadic appending printf - see aprintf()

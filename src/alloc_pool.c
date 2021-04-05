@@ -18,19 +18,23 @@
  */
 
 #include <Python.h>
+
+#include "config.h"
+#include "entity.h"
+#include "entity_cache.h"
+
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/log.h"
-#include <memory.h>
+
 #include <inttypes.h>
+#include <memory.h>
 #include <stdio.h>
-#include "entity.h"
-#include "entity_cache.h"
-#include "config.h"
 
 #ifdef QD_MEMORY_DEBUG
-#include <execinfo.h>
 #include "log_private.h"
+
+#include <execinfo.h>
 #endif
 
 const char *QD_ALLOCATOR_TYPE = "allocator";

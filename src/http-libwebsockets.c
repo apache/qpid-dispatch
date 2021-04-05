@@ -17,24 +17,23 @@
  * under the License.
  */
 
-#include "qpid/dispatch/atomic.h"
+#include "config.h"
+#include "http.h"
+#include "server_private.h"
+
 #include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/atomic.h"
 #include "qpid/dispatch/protocol_adaptor.h"
 #include "qpid/dispatch/threading.h"
 #include "qpid/dispatch/timer.h"
 
 #include <proton/connection_driver.h>
 
-#include <libwebsockets.h>
-
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
-
-#include "http.h"
-#include "server_private.h"
-#include "config.h"
+#include <libwebsockets.h>
 
 static const char *CIPHER_LIST = "ALL:aNULL:!eNULL:@STRENGTH"; /* Default */
 static const char *IGNORED = "ignore-this-log-message";

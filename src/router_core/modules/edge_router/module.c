@@ -18,8 +18,9 @@
  */
 
 #include "module.h"
-#include "connection_manager.h"
+
 #include "addr_proxy.h"
+#include "connection_manager.h"
 #include "edge_mgmt.h"
 #include "link_route_proxy.h"
 

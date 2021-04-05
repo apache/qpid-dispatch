@@ -19,20 +19,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <time.h>
+#include "adaptors/http_common.h"
+#include "server_private.h"
 
-#include "qpid/dispatch/server.h"
-#include "qpid/dispatch/threading.h"
-#include "qpid/dispatch/compose.h"
-#include "qpid/dispatch/atomic.h"
 #include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/compose.h"
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/log.h"
-#include <nghttp2/nghttp2.h>
 #include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/server.h"
+#include "qpid/dispatch/threading.h"
 
-#include "server_private.h"
-#include "adaptors/http_common.h"
+#include <nghttp2/nghttp2.h>
+#include <time.h>
 
 size_t QD_HTTP2_BUFFER_SIZE = 16384;
 size_t NUM_QD_BUFFERS_IN_ONE_HTTP2_BUFFER = 32;

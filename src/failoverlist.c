@@ -18,8 +18,10 @@
  */
 
 #include "qpid/dispatch/failoverlist.h"
+
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/error.h"
+
 #include <ctype.h>
 #include <string.h>
 

@@ -17,20 +17,22 @@
  * under the License.
  */
 
-#include <stdio.h>
-#include <qpid/dispatch.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <pwd.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <getopt.h>
-#include <errno.h>
-#include <limits.h>
 #include "config.h"
+
+#include "qpid/dispatch.h"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <limits.h>
+#include <pwd.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 static int            exit_with_sigint = 0;
 static qd_dispatch_t *dispatch = 0;

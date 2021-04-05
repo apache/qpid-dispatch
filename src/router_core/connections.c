@@ -17,18 +17,19 @@
  * under the License.
  */
 
-#include "qpid/dispatch/router_core.h"
-#include "qpid/dispatch/discriminator.h"
-#include "qpid/dispatch/static_assert.h"
-#include "route_control.h"
-#include "qpid/dispatch/amqp.h"
-#include <stdio.h>
-#include <strings.h>
-#include <inttypes.h>
-#include "router_core_private.h"
 #include "core_link_endpoint.h"
 #include "delivery.h"
+#include "route_control.h"
+#include "router_core_private.h"
 
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/discriminator.h"
+#include "qpid/dispatch/router_core.h"
+#include "qpid/dispatch/static_assert.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <strings.h>
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard);

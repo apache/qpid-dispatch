@@ -18,11 +18,12 @@
  */
 
 #include "edge_mgmt.h"
+
 #include "core_client_api.h"
 #include "link_route_proxy.h"
 
-#include <inttypes.h>
 #include <errno.h>
+#include <inttypes.h>
 
 /*
  * an API that lets the core issue management requests

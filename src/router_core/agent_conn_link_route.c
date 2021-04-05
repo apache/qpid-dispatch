@@ -18,12 +18,13 @@
  */
 
 #include "agent_conn_link_route.h"
+
 #include "agent_config_address.h"
 #include "agent_config_link_route.h"
 #include "route_control.h"
 
-#include <stdio.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 const char *qdr_conn_link_route_columns[QDR_CONN_LINK_ROUTE_COLUMN_COUNT + 1] =
     {"name",

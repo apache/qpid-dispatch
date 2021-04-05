@@ -23,9 +23,8 @@
 #include "qpid/dispatch/bitmask.h"
 #include "qpid/dispatch/compose.h"
 #include "qpid/dispatch/parse.h"
-#include "qpid/dispatch/router.h"
 #include "qpid/dispatch/policy_spec.h"
-
+#include "qpid/dispatch/router.h"
 
 /**
  * All callbacks in this module shall be invoked on a connection thread from the server thread pool.

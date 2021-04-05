@@ -17,10 +17,11 @@
  * under the License.
  */
 
+#include "router_core/router_core_private.h"
 #include "test_case.h"
+
 #include <stdio.h>
 #include <string.h>
-#include "router_core/router_core_private.h"
 
 void qdr_process_tick_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 

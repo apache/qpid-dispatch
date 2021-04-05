@@ -20,6 +20,7 @@
  */
 
 #include "qpid/dispatch/enum.h"
+
 #include <stdarg.h>
 
 /** @file

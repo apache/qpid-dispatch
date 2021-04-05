@@ -19,8 +19,9 @@
 
 #include "router_core_private.h"
 #include "terminus_private.h"
-#include <strings.h>
+
 #include <inttypes.h>
+#include <strings.h>
 
 ALLOC_DEFINE(qdr_terminus_t);
 

@@ -18,10 +18,13 @@
  */
 
 #include "core_link_endpoint.h"
-#include "qpid/dispatch/alloc.h"
+
 #include "delivery.h"
-#include <stdio.h>
+
+#include "qpid/dispatch/alloc.h"
+
 #include <inttypes.h>
+#include <stdio.h>
 
 struct qdrc_endpoint_t {
     qdrc_endpoint_desc_t *desc;

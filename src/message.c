@@ -17,26 +17,29 @@
  * under the License.
  */
 
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/error.h"
-#include "qpid/dispatch/amqp.h"
-#include "qpid/dispatch/threading.h"
-#include "qpid/dispatch/iterator.h"
-#include "qpid/dispatch/log.h"
-#include "qpid/dispatch/buffer.h"
-#include <proton/object.h>
-#include "message_private.h"
+#include "aprintf.h"
 #include "compose_private.h"
 #include "connection_manager_private.h"
-#include "aprintf.h"
+#include "message_private.h"
 #include "policy.h"
-#include <string.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <limits.h>
-#include <time.h>
-#include <inttypes.h>
+
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/error.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/threading.h"
+
+#include <proton/object.h>
+
 #include <assert.h>
+#include <ctype.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 #define LOCK   sys_mutex_lock
 #define UNLOCK sys_mutex_unlock

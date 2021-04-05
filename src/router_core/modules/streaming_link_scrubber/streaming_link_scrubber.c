@@ -17,8 +17,10 @@
  * under the License.
  */
 
-#include "qpid/dispatch/ctools.h"
 #include "module.h"
+
+#include "qpid/dispatch/ctools.h"
+
 #include <inttypes.h>
 
 

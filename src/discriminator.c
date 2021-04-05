@@ -18,6 +18,7 @@
  */
 
 #include "qpid/dispatch/discriminator.h"
+
 #include <stdlib.h>
 
 void qd_generate_discriminator(char *string)

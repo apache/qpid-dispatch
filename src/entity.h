@@ -19,8 +19,9 @@
  * under the License.
  */
 
-#include <stdbool.h>
 #include "qpid/dispatch/error.h"
+
+#include <stdbool.h>
 
 /**
  * @defgroup entity-attributes Set/get cached attributes of a managed entity.

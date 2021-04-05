@@ -17,15 +17,17 @@
  * under the License.
  */
 
-#include <stdio.h>
-#include <limits.h>
 #include "qpid/dispatch/timer.h"
+
 #include "dispatch_private.h"
-#include "qpid/dispatch/alloc.h"
-#include "timer_private.h"
 #include "test_case.h"
+#include "timer_private.h"
+
+#include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/threading.h"
 
+#include <limits.h>
+#include <stdio.h>
 
 static unsigned long    fire_mask;
 static unsigned long    fired;

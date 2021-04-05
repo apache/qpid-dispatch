@@ -19,20 +19,21 @@
  * under the License.
  */
 
+#include "dispatch_private.h"
+#include "http.h"
+#include "timer_private.h"
+
+#include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/enum.h"
+#include "qpid/dispatch/log.h"
 #include "qpid/dispatch/server.h"
 #include "qpid/dispatch/threading.h"
-#include "qpid/dispatch/alloc.h"
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/log.h"
+
 #include <proton/engine.h>
 #include <proton/event.h>
 #include <proton/ssl.h>
-
-#include "dispatch_private.h"
-#include "timer_private.h"
-#include "http.h"
 
 #include <netdb.h>              /* For NI_MAXHOST/NI_MAXSERV */
 

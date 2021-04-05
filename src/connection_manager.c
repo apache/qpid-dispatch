@@ -18,21 +18,25 @@
  */
 
 #include "qpid/dispatch/connection_manager.h"
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/threading.h"
-#include "qpid/dispatch/atomic.h"
-#include "qpid/dispatch/failoverlist.h"
-#include <proton/listener.h>
-#include "dispatch_private.h"
+
 #include "connection_manager_private.h"
-#include "server_private.h"
+#include "dispatch_private.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include "schema_enum.h"
-#include <string.h>
-#include <stdio.h>
-#include <inttypes.h>
+#include "server_private.h"
+
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/failoverlist.h"
+#include "qpid/dispatch/threading.h"
+
+#include <proton/listener.h>
+
 #include <errno.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
 
 struct qd_config_ssl_profile_t {
     DEQ_LINKS(qd_config_ssl_profile_t);

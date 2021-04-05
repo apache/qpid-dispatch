@@ -23,11 +23,11 @@
  * Double-ended queues and other useful macros.
  */
 
-#include <stdlib.h>
 #include <assert.h>
 #include <memory.h>
-#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define CT_ASSERT(exp) { assert(exp); }
 

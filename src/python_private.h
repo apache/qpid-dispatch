@@ -19,8 +19,10 @@
  * under the License.
  */
 #include <Python.h>
-#include <stdint.h>
+
 #include "qpid/dispatch/message.h"
+
+#include <stdint.h>
 
 #if PY_MAJOR_VERSION <= 2
 // deal with the two integer types in Python2

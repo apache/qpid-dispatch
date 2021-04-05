@@ -28,8 +28,9 @@
  * @{
  */
 #include "qpid/dispatch/dispatch.h"
-#include "qpid/dispatch/message.h"
 #include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/message.h"
+
 #include <stdbool.h>
 
 typedef struct qdr_core_t   qdr_core_t;

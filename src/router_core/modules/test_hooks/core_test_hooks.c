@@ -19,14 +19,16 @@
 
 #undef NDEBUG  // test code - uses asserts
 
+#include "core_client_api.h"
+#include "core_link_endpoint.h"
+#include "module.h"
+
+#include "qpid/dispatch/compose.h"
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/message.h"
-#include "qpid/dispatch/compose.h"
-#include "core_link_endpoint.h"
-#include "core_client_api.h"
-#include "module.h"
-#include <stdio.h>
+
 #include <inttypes.h>
+#include <stdio.h>
 
 typedef enum {
     TEST_NODE_ECHO,

@@ -17,8 +17,10 @@
  * under the License.
  */
 
-#include "test_case.h"
 #include "qpid/dispatch/alloc.h"
+
+#include "test_case.h"
+
 #include <stdio.h>
 #include <string.h>
 

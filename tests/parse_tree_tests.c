@@ -17,11 +17,11 @@
  * under the License.
  */
 
+#include "parse_tree.h"
 #include "test_case.h"
+
 #include <stdio.h>
 #include <string.h>
-#include "parse_tree.h"
-
 
 static char *test_add_remove(void *context)
 {

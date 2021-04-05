@@ -20,6 +20,7 @@
  */
 
 #include "qpid/dispatch/buffer.h"
+
 #include <proton/raw_connection.h>
 
 // Get the raw connections remote address

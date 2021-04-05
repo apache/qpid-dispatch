@@ -20,6 +20,7 @@
  */
 
 #include "qpid/dispatch/log.h"
+
 #include <time.h>
 
 void qd_log_initialize(void);

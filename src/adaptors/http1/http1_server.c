@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include "http1_private.h"
 #include "adaptors/adaptor_utils.h"
+#include "http1_private.h"
 
 #include <proton/proactor.h>
 

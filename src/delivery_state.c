@@ -17,9 +17,9 @@
  * under the License.
  */
 #include "qpid/dispatch/delivery_state.h"
-#include "qpid/dispatch/router_core.h"
-#include "qpid/dispatch/alloc_pool.h"
 
+#include "qpid/dispatch/alloc_pool.h"
+#include "qpid/dispatch/router_core.h"
 
 ALLOC_DECLARE(qd_delivery_state_t);
 ALLOC_DEFINE(qd_delivery_state_t);

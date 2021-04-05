@@ -18,26 +18,29 @@
  */
 
 #include "python_private.h"
-#include "qpid/dispatch/python_embedded.h"
-#include <qpid/dispatch.h>
-#include "qpid/dispatch/server.h"
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/static_assert.h"
-#include "qpid/dispatch/alloc.h"
-#include "qpid/dispatch/discriminator.h"
-#include <stdlib.h>
-#include <inttypes.h>
+
+#include "qpid/dispatch.h"
 
 #include "config.h"
 #include "dispatch_private.h"
-#include "http.h"
-#include "log_private.h"
-#include "router_private.h"
-#include "message_private.h"
-#include "policy.h"
 #include "entity.h"
 #include "entity_cache.h"
+#include "http.h"
+#include "log_private.h"
+#include "message_private.h"
+#include "policy.h"
+#include "router_private.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/discriminator.h"
+#include "qpid/dispatch/python_embedded.h"
+#include "qpid/dispatch/server.h"
+#include "qpid/dispatch/static_assert.h"
+
 #include <dlfcn.h>
+#include <inttypes.h>
+#include <stdlib.h>
 
 /**
  * Private Function Prototypes

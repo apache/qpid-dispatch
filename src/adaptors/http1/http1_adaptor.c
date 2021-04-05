@@ -19,9 +19,8 @@
 
 #include "http1_private.h"
 
-#include <stdio.h>
 #include <inttypes.h>
-
+#include <stdio.h>
 
 //
 // This file contains code for the HTTP/1.x protocol adaptor.  This file
