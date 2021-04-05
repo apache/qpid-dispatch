@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "qpid/dispatch/python_embedded.h"
+
 #include "dispatch_private.h"
 #include "entity.h"
 #include "entity_cache.h"
@@ -25,7 +27,6 @@
 
 #include "qpid/dispatch.h"
 #include "qpid/dispatch/log.h"
-#include "qpid/dispatch/python_embedded.h"
 
 static void qdi_router_configure_body(qdr_core_t              *core,
                                       qd_composed_field_t     *body,

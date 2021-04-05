@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "qpid/dispatch/python_embedded.h"
+
 #include "delivery.h"
 #include "dispatch_private.h"
 #include "entity_cache.h"
@@ -26,7 +28,6 @@
 #include "qpid/dispatch.h"
 #include "qpid/dispatch/protocol_adaptor.h"
 #include "qpid/dispatch/proton_utils.h"
-#include "qpid/dispatch/python_embedded.h"
 
 #include <proton/sasl.h>
 

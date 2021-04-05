@@ -18,7 +18,6 @@
  */
 
 #include "python_private.h"
-
 #include "qpid/dispatch/python_embedded.h"
 
 #include "entity_cache.h"

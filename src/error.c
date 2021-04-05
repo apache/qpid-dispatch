@@ -18,6 +18,7 @@
  */
 
 #include "python_private.h"
+#include "qpid/dispatch/python_embedded.h"  // must be first!
 
 #include "qpid/dispatch/error.h"
 
@@ -26,7 +27,6 @@
 
 #include "qpid/dispatch/enum.h"
 #include "qpid/dispatch/log.h"
-#include "qpid/dispatch/python_embedded.h"  // must be first!
 
 #include <errno.h>
 #include <stdarg.h>

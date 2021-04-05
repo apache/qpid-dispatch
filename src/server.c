@@ -18,6 +18,7 @@
  */
 
 #include "python_private.h"  // must be first!
+#include "qpid/dispatch/python_embedded.h"
 
 #include "qpid/dispatch/server.h"
 
@@ -37,7 +38,6 @@
 #include "qpid/dispatch/log.h"
 #include "qpid/dispatch/platform.h"
 #include "qpid/dispatch/proton_utils.h"
-#include "qpid/dispatch/python_embedded.h"
 #include "qpid/dispatch/threading.h"
 
 #include <proton/event.h>

@@ -18,6 +18,7 @@
  */
 
 #include "python_private.h"
+#include "qpid/dispatch/python_embedded.h"
 
 #include "policy.h"
 
@@ -26,7 +27,6 @@
 #include "policy_internal.h"
 
 #include "qpid/dispatch/container.h"
-#include "qpid/dispatch/python_embedded.h"
 #include "qpid/dispatch/server.h"
 
 #include <proton/condition.h>

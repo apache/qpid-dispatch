@@ -28,7 +28,7 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 
 IncludeCategories:
   # Python.h must go first
-  - Regex: '^<Python.h>|"python_private.h"$'
+  - Regex: '^<Python.h>|"qpid/dispatch/python_embedded.h"|"python_private.h"$'
     Priority: -1
   - Regex: '^"qpid/dispatch/?.*\.h"'
     Priority: 2

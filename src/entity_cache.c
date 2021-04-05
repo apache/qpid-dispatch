@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "qpid/dispatch/python_embedded.h"
+
 #include "entity_cache.h"
 
 #include "dispatch_private.h"
@@ -24,7 +26,6 @@
 #include "router_private.h"
 
 #include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/python_embedded.h"
 #include "qpid/dispatch/threading.h"
 
 #include <pthread.h>
