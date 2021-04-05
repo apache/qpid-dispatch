@@ -27,7 +27,7 @@ AlignConsecutiveAssignments: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 
 IncludeCategories:
-  # Python.h must go first
+  # python-related headers must go first
   - Regex: '^<Python.h>|"qpid/dispatch/python_embedded.h"|"python_private.h"$'
     Priority: -1
   - Regex: '^"qpid/dispatch/?.*\.h"'
