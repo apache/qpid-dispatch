@@ -2594,6 +2594,7 @@ class MobileAddressMulticastTest(MessagingHandler):
                 local_node.close()
 
     def on_start(self, event):
+        self.reactor = event.reactor
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         # Create two receivers
         self.receiver1_conn = event.container.connect(self.receiver1_host)
@@ -2613,7 +2614,6 @@ class MobileAddressMulticastTest(MessagingHandler):
                 event.receiver == self.receiver3:
             self.r_attaches += 1
             if self.r_attaches == 3:
-                self.reactor = event.reactor
                 self.addr_timer = self.reactor.schedule(1.0, AddrTimer(self))
 
     def on_sendable(self, event):
@@ -2794,6 +2794,7 @@ class MobileAddressEventTest(MessagingHandler):
         self.max_attempts = 5
         self.num_attempts = 0
         self.check_remote = check_remote
+        self.reactor = None
 
     def timeout(self):
         if self.dup_msg:
@@ -2842,6 +2843,7 @@ class MobileAddressEventTest(MessagingHandler):
                 self.timeout()
 
     def on_start(self, event):
+        self.reactor = event.reactor
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         # Create two receivers
