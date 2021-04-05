@@ -19,10 +19,11 @@
  * under the License.
  */
 
-#include <stdlib.h>
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/threading.h"
+
 #include <stdint.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/ctools.h>
+#include <stdlib.h>
 
 /**
  * @file

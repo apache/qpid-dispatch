@@ -18,6 +18,7 @@
  */
 
 #include "delivery.h"
+
 #include <inttypes.h>
 
 ALLOC_DEFINE(qdr_delivery_t);

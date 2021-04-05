@@ -19,8 +19,9 @@
  * under the License.
  */
 
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/failoverlist.h>
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/failoverlist.h"
+
 #include <proton/engine.h>
 #include <proton/event.h>
 #include <proton/ssl.h>

@@ -19,7 +19,8 @@
  * under the License.
  */
 
-#include <qpid/dispatch/enum.h>
+#include "qpid/dispatch/enum.h"
+
 #include <stdarg.h>
 
 /** @file

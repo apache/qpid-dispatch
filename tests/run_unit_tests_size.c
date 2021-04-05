@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/alloc.h>
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/buffer.h"
 
 void qd_log_initialize(void);
 void qd_log_finalize(void);

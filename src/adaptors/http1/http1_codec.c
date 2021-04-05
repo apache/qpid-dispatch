@@ -18,18 +18,17 @@
  *
  */
 
-#include <qpid/dispatch/http1_codec.h>
+#include "qpid/dispatch/http1_codec.h"
 
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/alloc_pool.h>
-#include <qpid/dispatch/discriminator.h>
+#include "qpid/dispatch/alloc_pool.h"
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/discriminator.h"
+#include "qpid/dispatch/iterator.h"
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
-
 
 //
 // This file contains code for encoding/decoding an HTTP/1.x data stream.  See

@@ -17,14 +17,16 @@
  * under the License.
  */
 
-#include "module.h"
 #include "core_attach_address_lookup.h"
-#include "router_core_private.h"
-#include "core_events.h"
 #include "core_client_api.h"
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/discriminator.h>
-#include <qpid/dispatch/address_lookup_server.h>
+#include "core_events.h"
+#include "module.h"
+#include "router_core_private.h"
+
+#include "qpid/dispatch/address_lookup_server.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/discriminator.h"
+
 #include <stdio.h>
 
 static uint64_t on_reply(qdr_core_t    *core,

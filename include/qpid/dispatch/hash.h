@@ -23,9 +23,10 @@
  * Hash table.
  */
 
+#include "qpid/dispatch/error.h"
+#include "qpid/dispatch/iterator.h"
+
 #include <stdlib.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/error.h>
 
 #define HASH_INIT ((uint32_t) 5381)
 #define HASH_COMPUTE(HASH, OCTET) ((((HASH)<<5) + (HASH)) + (uint32_t)(OCTET))  // hash * 33 + octet

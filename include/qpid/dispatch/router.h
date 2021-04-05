@@ -27,9 +27,10 @@
  * Register addresses, send messages.
  * @{
  */
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/message.h>
-#include <qpid/dispatch/iterator.h>
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/message.h"
+
 #include <stdbool.h>
 
 typedef struct qdr_core_t   qdr_core_t;
@@ -46,7 +47,7 @@ typedef enum {
     QD_TREATMENT_UNAVAILABLE      = 5
 } qd_address_treatment_t;
 
-#include <qpid/dispatch/router_core.h>
+#include "qpid/dispatch/router_core.h"
 
 /** Message forwarding descriptor
  *

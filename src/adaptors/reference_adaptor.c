@@ -17,13 +17,15 @@
  * under the License.
  */
 
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/protocol_adaptor.h"
 #include "delivery.h"
-#include "qpid/dispatch/timer.h"
+
+#include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/message.h"
-#include <stdio.h>
+#include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/timer.h"
+
 #include <inttypes.h>
+#include <stdio.h>
 
 static char *address1 = "examples";
 static char *address2 = "stream";

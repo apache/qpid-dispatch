@@ -18,6 +18,7 @@
  */
 
 #include "link_route_proxy.h"
+
 #include "agent_conn_link_route.h"
 #include "edge_mgmt.h"
 

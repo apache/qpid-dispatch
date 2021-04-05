@@ -17,13 +17,14 @@
  * under the License.
  */
 
-#include "router_core_private.h"
-#include "exchange_bindings.h"
 #include "delivery.h"
-#include <qpid/dispatch/amqp.h>
-#include <stdio.h>
-#include <inttypes.h>
+#include "exchange_bindings.h"
+#include "router_core_private.h"
 
+#include "qpid/dispatch/amqp.h"
+
+#include <inttypes.h>
+#include <stdio.h>
 
 //==================================================================================
 // Internal Functions

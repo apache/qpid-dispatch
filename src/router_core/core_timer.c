@@ -17,9 +17,11 @@
  * under the License.
  */
 
-#include <stdio.h>
-#include <qpid/dispatch/ctools.h>
 #include "router_core_private.h"
+
+#include "qpid/dispatch/ctools.h"
+
+#include <stdio.h>
 
 ALLOC_DEFINE(qdr_core_timer_t);
 

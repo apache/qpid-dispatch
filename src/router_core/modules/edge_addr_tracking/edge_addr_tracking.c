@@ -17,10 +17,12 @@
  * under the License.
  */
 
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/amqp.h>
-#include "module.h"
 #include "core_link_endpoint.h"
+#include "module.h"
+
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/ctools.h"
+
 #include <stdio.h>
 
 typedef struct qdr_addr_tracking_module_context_t     qdr_addr_tracking_module_context_t;

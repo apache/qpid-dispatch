@@ -17,8 +17,10 @@
  * under the License.
  */
 
-#include <qpid/dispatch/ctools.h>
 #include "agent_connection.h"
+
+#include "qpid/dispatch/ctools.h"
+
 #include <inttypes.h>
 #include <stdio.h>
 

@@ -17,11 +17,12 @@
  * under the License.
  */
 
-#include "router_core_private.h"
-#include "route_control.h"
-#include "exchange_bindings.h"
 #include "core_events.h"
 #include "delivery.h"
+#include "exchange_bindings.h"
+#include "route_control.h"
+#include "router_core_private.h"
+
 #include <stdio.h>
 #include <strings.h>
 

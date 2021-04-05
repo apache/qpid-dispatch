@@ -18,22 +18,21 @@
  */
 #include "http2_adaptor.h"
 
-#include <stdio.h>
-#include <inttypes.h>
-#include <pthread.h>
+#include "adaptors/http_common.h"
+
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/protocol_adaptor.h"
 
 #include <proton/condition.h>
 #include <proton/listener.h>
-#include <proton/proactor.h>
 #include <proton/netaddr.h>
+#include <proton/proactor.h>
 #include <proton/raw_connection.h>
+
+#include <inttypes.h>
 #include <nghttp2/nghttp2.h>
-
-#include <qpid/dispatch/buffer.h>
-
-#include <qpid/dispatch/protocol_adaptor.h>
-#include "adaptors/http_common.h"
-
+#include <pthread.h>
+#include <stdio.h>
 
 const char *PATH = ":path";
 const char *METHOD = ":method";

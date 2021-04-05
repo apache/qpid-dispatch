@@ -17,13 +17,14 @@
  * under the License.
  */
 
-#include <qpid/dispatch/address_lookup_server.h>
-#include <qpid/dispatch/ctools.h>
-#include "module.h"
+#include "qpid/dispatch/address_lookup_server.h"
+
 #include "core_link_endpoint.h"
+#include "module.h"
 
-#include "inttypes.h"
+#include "qpid/dispatch/ctools.h"
 
+#include <inttypes.h>
 
 #define CREDIT_WINDOW 32
 

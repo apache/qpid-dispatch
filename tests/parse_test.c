@@ -18,13 +18,15 @@
  */
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <inttypes.h>
 #include "test_case.h"
-#include <qpid/dispatch.h>
-#include <qpid/dispatch/trace_mask.h>
+
+#include "qpid/dispatch.h"
+#include "qpid/dispatch/trace_mask.h"
+
+#include <assert.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
 
 struct fs_vector_t {
     const char *data;

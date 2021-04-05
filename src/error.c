@@ -17,17 +17,20 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>  // must be first!
-
-#include <qpid/dispatch/error.h>
-#include <qpid/dispatch/enum.h>
-#include <qpid/dispatch/log.h>
-#include <stdarg.h>
-#include <errno.h>
-#include <string.h>
-#include "log_private.h"
-#include "aprintf.h"
 #include "python_private.h"
+#include "qpid/dispatch/python_embedded.h"  // must be first!
+
+#include "qpid/dispatch/error.h"
+
+#include "aprintf.h"
+#include "log_private.h"
+
+#include "qpid/dispatch/enum.h"
+#include "qpid/dispatch/log.h"
+
+#include <errno.h>
+#include <stdarg.h>
+#include <string.h>
 
 // force the use of the non-gnu version of strerror_r
 #undef _POSIX_C_SOURCE

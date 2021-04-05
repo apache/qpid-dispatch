@@ -17,13 +17,13 @@
  * under the License.
  */
 
+#include "qpid/dispatch/hash.h"
 
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/ctools.h"
 
 #include <stdio.h>
 #include <string.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/ctools.h>
 
 typedef struct qd_hash_item_t {
     DEQ_LINKS(struct qd_hash_item_t);

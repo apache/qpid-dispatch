@@ -17,15 +17,16 @@
  * under the License.
  */
 
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/parse.h"
 
-#include <stdio.h>
-#include <limits.h>
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/ctools.h"
+
 #include <assert.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <stdio.h>
 
 DEQ_DECLARE(qd_parsed_field_t, qd_parsed_field_list_t);
 

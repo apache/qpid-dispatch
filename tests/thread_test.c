@@ -18,15 +18,15 @@
  */
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <string.h>
+#include "test_case.h"
+
+#include "qpid/dispatch/threading.h"
+
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
-#include "test_case.h"
-#include <qpid/dispatch/threading.h>
-
-
 
 #define thread_count 10
 static sys_thread_t *threads[thread_count] = {0};

@@ -18,14 +18,15 @@
  */
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <inttypes.h>
 #include "test_case.h"
-#include <qpid/dispatch.h>
-#include <qpid/dispatch/proton_utils.h>
 
+#include "qpid/dispatch.h"
+#include "qpid/dispatch/proton_utils.h"
+
+#include <assert.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
 
 typedef struct {
     const char     *encoded;

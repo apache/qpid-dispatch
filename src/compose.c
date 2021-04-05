@@ -17,11 +17,15 @@
  * under the License.
  */
 
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/compose.h"
+
 #include "compose_private.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/ctools.h"
+
 #include <memory.h>
 #include <string.h>
 

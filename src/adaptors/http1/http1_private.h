@@ -29,10 +29,11 @@
 //  "out": for information flowing from the router out to the endpoint
 //         (from core to proactor)
 //
-#include <qpid/dispatch/http1_codec.h>
-#include <qpid/dispatch/protocol_adaptor.h>
-#include <qpid/dispatch/message.h>
 #include "adaptors/http_common.h"
+
+#include "qpid/dispatch/http1_codec.h"
+#include "qpid/dispatch/message.h"
+#include "qpid/dispatch/protocol_adaptor.h"
 
 // for debug: will dump I/O buffer content to stdout if true
 #define HTTP1_DUMP_BUFFERS false

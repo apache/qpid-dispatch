@@ -19,6 +19,9 @@
  * under the License.
  */
 
+#include "router_core_private.h"
+
+#include "qpid/dispatch/router.h"
 
 #define QDR_CONFIG_EXCHANGE_COLUMN_COUNT 12
 #define QDR_CONFIG_BINDING_COLUMN_COUNT  7

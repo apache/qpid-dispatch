@@ -18,8 +18,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <stdbool.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 /**@file
  * Sending debug/administrative log messages.

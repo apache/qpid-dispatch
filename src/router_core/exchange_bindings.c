@@ -16,14 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <qpid/dispatch/ctools.h>
+#include "exchange_bindings.h"
+
+#include "delivery.h"
+#include "forwarder.h"
+#include "router_core_private.h"
+
+#include "qpid/dispatch/ctools.h"
+
 #include <inttypes.h>
 #include <stdio.h>
-#include "router_core_private.h"
-#include "forwarder.h"
-#include "exchange_bindings.h"
-#include "delivery.h"
-
 
 // next_hop_t
 // Describes the destination of a forwarded message

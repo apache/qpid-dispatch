@@ -17,21 +17,25 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <qpid/dispatch.h>
+#include "qpid/dispatch/python_embedded.h"
+
+#include "delivery.h"
 #include "dispatch_private.h"
 #include "entity_cache.h"
-#include "router_private.h"
-#include "delivery.h"
 #include "policy.h"
-#include <qpid/dispatch/protocol_adaptor.h>
-#include <qpid/dispatch/proton_utils.h>
+#include "router_private.h"
+
+#include "qpid/dispatch.h"
+#include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/proton_utils.h"
+
 #include <proton/sasl.h>
+
 #include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";

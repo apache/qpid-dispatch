@@ -20,13 +20,13 @@
  */
 
 #include "config.h"
-#include <string.h>
 
+#include <string.h>
 
 #if !defined(NDEBUG)
 #define QD_MEMORY_DEBUG 1
 // when debugging fill allocated/deallocated memory
-// to catch uinitialized access or use after free
+// to catch uninitialized access or use after free
 #define QD_MEMORY_FREE 0x99
 #define QD_MEMORY_INIT 0x11
 #define QD_MEMORY_FILL(P,C,S) do { if (P) { memset((P),(C),(S)); } } while (0)

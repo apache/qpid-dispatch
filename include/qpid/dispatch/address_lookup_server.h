@@ -19,9 +19,9 @@
  * under the License.
  */
 
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/container.h>
-#include <qpid/dispatch/compose.h>
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/container.h"
+#include "qpid/dispatch/iterator.h"
 //
 // API for building address lookup request messages.  The message properties
 // and body fields are handled separately so they can be passed directly to the

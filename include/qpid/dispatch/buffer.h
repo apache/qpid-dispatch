@@ -26,8 +26,8 @@
  * @{
  */
 
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/atomic.h>
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/ctools.h"
 
 typedef struct qd_buffer_t qd_buffer_t;
 

@@ -19,10 +19,9 @@
  * under the License.
  */
 
-#include <qpid/dispatch/router_core.h>
-#include <qpid/dispatch/policy_spec.h>
-#include <qpid/dispatch/delivery_state.h>
-
+#include "qpid/dispatch/delivery_state.h"
+#include "qpid/dispatch/policy_spec.h"
+#include "qpid/dispatch/router_core.h"
 
 typedef struct qdr_protocol_adaptor_t  qdr_protocol_adaptor_t;
 typedef struct qdr_connection_t        qdr_connection_t;

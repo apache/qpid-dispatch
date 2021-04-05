@@ -18,15 +18,18 @@
  */
 
 #include "addr_proxy.h"
+
 #include "core_events.h"
 #include "core_link_endpoint.h"
 #include "router_core_private.h"
+
 #include "qpid/dispatch/amqp.h"
-#include "qpid/dispatch/message.h"
 #include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/message.h"
 #include "qpid/dispatch/parse.h"
-#include <stdio.h>
+
 #include <inttypes.h>
+#include <stdio.h>
 
 //
 // This is the Address Proxy component of the Edge Router module.

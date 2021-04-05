@@ -17,14 +17,17 @@
  * under the License.
  */
 
-#include "test_case.h"
-#include <stdio.h>
-#include <string.h>
 #include "message_private.h"
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/amqp.h>
+#include "test_case.h"
+
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/iterator.h"
+
 #include <proton/message.h>
 #include <proton/raw_connection.h>
+
+#include <stdio.h>
+#include <string.h>
 
 #define FLAT_BUF_SIZE (100000)
 static unsigned char buffer[FLAT_BUF_SIZE];

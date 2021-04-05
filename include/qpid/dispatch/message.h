@@ -19,13 +19,14 @@
  * under the License.
  */
 
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/container.h>
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/container.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/parse.h"
+
 #include <proton/raw_connection.h>
 
 /**@file

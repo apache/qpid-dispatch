@@ -21,10 +21,12 @@
 
 #include "dispatch_private.h"
 #include "message_private.h"
-#include <qpid/dispatch/protocol_adaptor.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/atomic.h>
-#include <qpid/dispatch/log.h>
+
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/threading.h"
+
 #include <memory.h>
 
 typedef struct qdr_address_t         qdr_address_t;
@@ -54,10 +56,9 @@ ALLOC_DECLARE(qdr_connection_ref_t);
 ALLOC_DECLARE(qdr_connection_t);
 ALLOC_DECLARE(qdr_link_t);
 
-
-#include "core_link_endpoint.h"
-#include "core_events.h"
 #include "core_attach_address_lookup.h"
+#include "core_events.h"
+#include "core_link_endpoint.h"
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,

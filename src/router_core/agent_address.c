@@ -18,6 +18,7 @@
  */
 
 #include "agent_address.h"
+
 #include "router_core_private.h"
 
 #define QDR_ADDRESS_NAME                                0

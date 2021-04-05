@@ -17,8 +17,10 @@
  * under the License.
  */
 
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/bitmask.h>
+#include "qpid/dispatch/bitmask.h"
+
+#include "qpid/dispatch/alloc.h"
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>

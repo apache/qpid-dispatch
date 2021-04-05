@@ -18,17 +18,21 @@
  */
 
 #include "tcp_adaptor.h"
+
+#include "delivery.h"
+
+#include "qpid/dispatch/alloc_pool.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/protocol_adaptor.h"
+
 #include <proton/condition.h>
 #include <proton/listener.h>
 #include <proton/netaddr.h>
 #include <proton/proactor.h>
 #include <proton/raw_connection.h>
-#include "qpid/dispatch/alloc_pool.h"
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/protocol_adaptor.h"
-#include "delivery.h"
-#include <stdio.h>
+
 #include <inttypes.h>
+#include <stdio.h>
 
 ALLOC_DEFINE(qd_tcp_listener_t);
 ALLOC_DEFINE(qd_tcp_connector_t);

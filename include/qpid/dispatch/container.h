@@ -29,12 +29,13 @@
  * @{
  */
 
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/server.h"
+
 #include <proton/engine.h>
 #include <proton/version.h>
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/alloc.h>
 
 typedef uint8_t qd_dist_mode_t;
 #define QD_DIST_COPY 0x01

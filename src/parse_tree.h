@@ -19,10 +19,10 @@
  * under the License.
  */
 
-#include <stdbool.h>
-#include <qpid/dispatch/error.h>
-#include <qpid/dispatch/iterator.h>
+#include "qpid/dispatch/error.h"
+#include "qpid/dispatch/iterator.h"
 
+#include <stdbool.h>
 
 typedef struct qd_parse_tree qd_parse_tree_t;
 

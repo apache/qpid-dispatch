@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/static_assert.h>
+#include "qpid/dispatch/static_assert.h"
 
 /**@file
  *

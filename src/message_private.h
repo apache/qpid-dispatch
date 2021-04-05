@@ -19,10 +19,10 @@
  * under the License.
  */
 
-#include <qpid/dispatch/message.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/atomic.h>
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/message.h"
+#include "qpid/dispatch/threading.h"
 
 typedef struct qd_message_pvt_t qd_message_pvt_t;
 
