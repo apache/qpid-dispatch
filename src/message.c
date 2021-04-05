@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "qpid/dispatch/message.h"
+
 #include "aprintf.h"
 #include "compose_private.h"
 #include "connection_manager_private.h"

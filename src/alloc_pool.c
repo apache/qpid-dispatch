@@ -19,6 +19,8 @@
 
 #include <Python.h>
 
+#include "qpid/dispatch/alloc_pool.h"
+
 #include "config.h"
 #include "entity.h"
 #include "entity_cache.h"

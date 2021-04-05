@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "qpid/dispatch/compose.h"
+
 #include "compose_private.h"
 
 #include "qpid/dispatch/alloc.h"

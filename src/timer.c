@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "qpid/dispatch/timer.h"
+
 #include "dispatch_private.h"
 #include "server_private.h"
 #include "timer_private.h"

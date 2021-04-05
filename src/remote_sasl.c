@@ -23,8 +23,6 @@
 
 #include "server_private.h"
 
-#include <proton/version.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
