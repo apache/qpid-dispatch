@@ -28,11 +28,15 @@ import sys
 import time
 import traceback
 
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
-from system_test import Timestamp
-from system_test import unittest
-from system_test import SkipIfNeeded
+from system_test import Logger
+from system_test import main_module
 from system_test import Process
+from system_test import Qdrouterd
+from system_test import SkipIfNeeded
+from system_test import TestCase
+from system_test import TIMEOUT
+from system_test import unittest
+
 from subprocess import PIPE
 
 # Tests in this file are organized by classes that inherit TestCase.
@@ -83,49 +87,6 @@ Q2_DELAY_SECONDS = 1.0
 # Giving the stalled server 10Mbytes seems to run the TCP window out of capacity
 # so that it stops reading from the TcpConnector and Q2 finally kicks in.
 Q2_TEST_MESSAGE_SIZE = 10000000
-
-
-class Logger():
-    """
-    Record event logs as existing Logger. Also add:
-    * ofile  - optional file opened in 'append' mode to which each log line is written
-    TODO: Replace system_test Logger with this after merging dev-protocol-adaptors branch
-    """
-
-    def __init__(self,
-                 title="Logger",
-                 print_to_console=False,
-                 save_for_dump=True,
-                 ofilename=None):
-        self.title = title
-        self.print_to_console = print_to_console
-        self.save_for_dump = save_for_dump
-        self.logs = []
-        self.ofilename = ofilename
-
-    def log(self, msg):
-        ts = Timestamp()
-        if self.save_for_dump:
-            self.logs.append((ts, msg))
-        if self.print_to_console:
-            print("%s %s" % (ts, msg))
-            sys.stdout.flush()
-        if self.ofilename is not None:
-            with open(self.ofilename, 'a') as f_out:
-                f_out.write("%s %s\n" % (ts, msg))
-                f_out.flush()
-
-    def dump(self):
-        print(self)
-        sys.stdout.flush()
-
-    @property
-    def __str__(self):
-        lines = [self.title]
-        for ts, msg in self.logs:
-            lines.append("%s %s" % (ts, msg))
-        res = str('\n'.join(lines))
-        return res
 
 
 class TcpAdaptor(TestCase):

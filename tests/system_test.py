@@ -1387,13 +1387,19 @@ class Logger(object):
     """
     Record an event log for a self test.
     May print per-event or save events to be printed later.
+    Optional file opened in 'append' mode to which each log line is written.
     """
 
-    def __init__(self, title="Logger", print_to_console=False, save_for_dump=True):
+    def __init__(self,
+                 title="Logger",
+                 print_to_console=False,
+                 save_for_dump=True,
+                 ofilename=None):
         self.title = title
         self.print_to_console = print_to_console
         self.save_for_dump = save_for_dump
         self.logs = []
+        self.ofilename = ofilename
 
     def log(self, msg):
         ts = Timestamp()
@@ -1402,14 +1408,18 @@ class Logger(object):
         if self.print_to_console:
             print("%s %s" % (ts, msg))
             sys.stdout.flush()
+        if self.ofilename is not None:
+            with open(self.ofilename, 'a') as f_out:
+                f_out.write("%s %s\n" % (ts, msg))
+                f_out.flush()
 
     def dump(self):
         print(self)
         sys.stdout.flush()
 
+    @property
     def __str__(self):
-        lines = []
-        lines.append(self.title)
+        lines = [self.title]
         for ts, msg in self.logs:
             lines.append("%s %s" % (ts, msg))
         res = str('\n'.join(lines))
