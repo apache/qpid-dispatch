@@ -270,7 +270,7 @@ jobs:
       - name: Install Linux docs dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y asciidoc asciidoctor dblatex
+          sudo apt install -y asciidoc asciidoctor ruby-asciidoctor-pdf dblatex
 
       - name: qpid-dispatch cmake configure
         working-directory: ${{env.DispatchBuildDir}}
@@ -293,6 +293,15 @@ jobs:
         with:
           name: Manpages
           path: ${{env.DispatchBuildDir}}/docs/man/*.html
+
+      - name: Build the PDF version of the Dispatch book
+        run: asciidoctor-pdf --failure-level INFO ${{github.workspace}}/docs/books/user-guide/book.adoc
+
+      - name: Store the rendered Dispatch book PDF
+        uses: actions/upload-artifact@v2
+        with:
+          name: book.pdf
+          path: ${{github.workspace}}/docs/books/user-guide/book.pdf
 
   console-test:
     name: Console Tests
