@@ -67,9 +67,12 @@ from proton.reactor import AtMostOnce
 from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.compat import dict_iteritems
 
-
 # Optional modules
 MISSING_MODULES = []
+BUFFER_SIZE = 4096
+QD_QLIMIT_Q2_UPPER = 32
+QD_QLIMIT_Q2_LOWER = 16
+
 
 try:
     import qpidtoollibs

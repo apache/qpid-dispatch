@@ -74,6 +74,7 @@ endif()
 set(TEST_WRAP ${BWRAP_ARGS} ${Python_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
 add_test(unit_tests_size_10000 ${TEST_WRAP} unit_tests_size 10000)
+add_test(unit_tests_size_4096 ${TEST_WRAP} unit_tests_size 4096)
 add_test(unit_tests_size_512   ${TEST_WRAP} unit_tests_size 512)
 add_test(unit_tests_size_10    ${TEST_WRAP} unit_tests_size 10)
 add_test(unit_tests_size_7     ${TEST_WRAP} unit_tests_size 7)

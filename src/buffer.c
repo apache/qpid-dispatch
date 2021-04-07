@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <string.h>
 
+// IMPORTANT: When changing BUFFER_SIZE, please change the corresponding constant declared in tests/system_test.py
 size_t BUFFER_SIZE     = 4096;
 
 ALLOC_DECLARE(qd_buffer_t);

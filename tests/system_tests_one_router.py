@@ -24,6 +24,7 @@ from __future__ import print_function
 
 from proton import Condition, Message, Delivery, Url, symbol, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process, unittest, QdManager, TestTimeout
+from system_test import QD_QLIMIT_Q2_UPPER, BUFFER_SIZE
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SyncRequestResponse
@@ -3574,10 +3575,10 @@ class Q2HoldoffDropTest(MessagingHandler):
         self.n_tx = 0
         self.close_timer = 0
 
-        # currently the router buffer size is 512 bytes and the Q2 holdoff
-        # buffer chain high watermark is 256 buffers.  We need to send a
+        # currently the router buffer size is 4096 bytes and the Q2 holdoff
+        # buffer chain high watermark is 32 buffers.  We need to send a
         # message that will be big enough to trigger Q2 holdoff
-        self.big_msg = Message(body=["DISPATCH-1330" * (512 * 256 * 4)])
+        self.big_msg = Message(body=["DISPATCH-1330" * (BUFFER_SIZE * QD_QLIMIT_Q2_UPPER * 4)])
 
     def done(self):
         if self.timer:

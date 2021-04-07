@@ -31,7 +31,7 @@ int buffer_tests();
 
 int main(int argc, char** argv)
 {
-    size_t buffer_size = 512;
+    size_t buffer_size = 4096;
 
     if (argc > 1) {
         buffer_size = atoi(argv[1]);

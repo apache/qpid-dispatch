@@ -47,6 +47,7 @@
 // pn_link_recv calls will be done on the link. Q2 remains in effect until enough
 // bytes have been consumed by the outgoing link(s) to drop the number of
 // buffered bytes below the lower threshold.
+// IMPORTANT: When changing the following values, please change the corresponding constants declared in tests/system_test.py
 #define QD_QLIMIT_Q2_UPPER 32   // disable pn_link_recv (qd_buffer_t's)
 #define QD_QLIMIT_Q2_LOWER 16   // re-enable pn_link_recv
 //
