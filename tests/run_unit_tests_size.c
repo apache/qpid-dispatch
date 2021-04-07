@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     qd_buffer_set_size(buffer_size);
 
     int result = 0;
-    result += message_tests();
+    result += message_tests(buffer_size);
     result += field_tests();
     result += parse_tests();
     result += buffer_tests();

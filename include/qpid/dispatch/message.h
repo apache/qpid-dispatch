@@ -47,8 +47,8 @@
 // pn_link_recv calls will be done on the link. Q2 remains in effect until enough
 // bytes have been consumed by the outgoing link(s) to drop the number of
 // buffered bytes below the lower threshold.
-#define QD_QLIMIT_Q2_UPPER 256   // disable pn_link_recv (qd_buffer_t's)
-#define QD_QLIMIT_Q2_LOWER 128   // re-enable pn_link_recv
+#define QD_QLIMIT_Q2_UPPER 32   // disable pn_link_recv (qd_buffer_t's)
+#define QD_QLIMIT_Q2_LOWER 16   // re-enable pn_link_recv
 //
 // Q3 limits the number of bytes allowed to be buffered in a session's outgoing
 // buffer.  Once the Q3 upper limit is hit (read via pn_session_outgoing_bytes),

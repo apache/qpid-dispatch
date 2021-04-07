@@ -1212,7 +1212,7 @@ exit:
 
 // Verify that decoding a message that has only a footer (no body data)
 // messages works
-static char *test_check_stream_data_footer(void *context)
+static char *test_check_stream_data_footer(void *context, size_t buffer_size)
 {
     char *result = 0;
     qd_message_t *in_msg = 0;
@@ -1253,9 +1253,11 @@ static char *test_check_stream_data_footer(void *context)
     qd_message_extend(in_msg, field, &q2_blocked);
     qd_compose_free(field);
 
-    // this small message should not have triggered Q2
-    assert(DEQ_SIZE(MSG_CONTENT(in_msg)->buffers) < QD_QLIMIT_Q2_UPPER);
-    if (q2_blocked) {
+    // this small message should not have triggered Q2 for buffer sizes more than 3.
+    if (buffer_size > 3)
+        assert(DEQ_SIZE(MSG_CONTENT(in_msg)->buffers) < QD_QLIMIT_Q2_UPPER);
+
+    if (q2_blocked && buffer_size > 3) {
         result = "Unexpected Q2 block on message extend";
         goto exit;
     }
@@ -1332,7 +1334,7 @@ exit:
 }
 
 
-int message_tests(void)
+int message_tests(size_t buffer_size)
 {
     int result = 0;
     char *test_group = "message_tests";
@@ -1348,7 +1350,7 @@ int message_tests(void)
     TEST_CASE(test_check_stream_data, 0);
     TEST_CASE(test_check_stream_data_append, 0);
     TEST_CASE(test_check_stream_data_fanout, 0);
-    TEST_CASE(test_check_stream_data_footer, 0);
+    TEST_CASE_1(test_check_stream_data_footer, 0, buffer_size);
 
     return result;
 }

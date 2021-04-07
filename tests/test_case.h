@@ -32,5 +32,16 @@ typedef char* (*testcase_t)(void *context);
 } while(0);
 
 
+#define TEST_CASE_1(T,C,B) do {                        \
+    char *r = T(C,B);                                \
+    printf("Test Case %s.%s: ", test_group, #T); \
+    if (r) {                                       \
+        printf("FAIL: %s\n", r);                   \
+        result++;                                  \
+    } else                                         \
+        printf("PASS\n");                          \
+} while(0);
+
+
 #endif
 
