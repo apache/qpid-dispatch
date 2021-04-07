@@ -41,12 +41,12 @@ except ImportError:
 from proton import Message
 from system_test import TestCase, unittest, main_module, Qdrouterd, QdManager
 from system_test import TIMEOUT, AsyncTestSender, AsyncTestReceiver
-from system_tests_http1_base import http1_ping, TestServer, RequestHandler10
-from system_tests_http1_base import RequestMsg
-from system_tests_http1_base import ThreadedTestClient, Http1OneRouterTestBase
-from system_tests_http1_base import CommonHttp1AdaptorOneRouterTest
-from system_tests_http1_base import CommonHttp1AdaptorEdge2EdgeTest
-from system_tests_http1_base import Http1Edge2EdgeTestBase
+from http1_tests import http1_ping, TestServer, RequestHandler10
+from http1_tests import RequestMsg
+from http1_tests import ThreadedTestClient, Http1OneRouterTestBase
+from http1_tests import CommonHttp1OneRouterTest
+from http1_tests import CommonHttp1Edge2EdgeTest
+from http1_tests import Http1Edge2EdgeTestBase
 
 
 class Http1AdaptorManagementTest(TestCase):
@@ -162,7 +162,7 @@ class Http1AdaptorManagementTest(TestCase):
 
 
 class Http1AdaptorOneRouterTest(Http1OneRouterTestBase,
-                                CommonHttp1AdaptorOneRouterTest):
+                                CommonHttp1OneRouterTest):
     """
     Test HTTP servers and clients attached to a standalone router
     """
@@ -254,7 +254,7 @@ class Http1AdaptorOneRouterTest(Http1OneRouterTestBase,
             assert_approximately_equal(stats[1].get('bytesIn'), 8830)
 
 
-class Http1AdaptorEdge2EdgeTest(Http1Edge2EdgeTestBase, CommonHttp1AdaptorEdge2EdgeTest):
+class Http1AdaptorEdge2EdgeTest(Http1Edge2EdgeTestBase, CommonHttp1Edge2EdgeTest):
     """
     Test an HTTP servers and clients attached to edge routers separated by an
     interior router

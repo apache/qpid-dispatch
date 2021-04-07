@@ -17,14 +17,14 @@
 # under the License.
 #
 
-from system_tests_http1_base import CommonHttp1AdaptorOneRouterTest, Http1OneRouterTestBase
-from system_tests_http1_base import TestServer, RequestHandler10
-from system_tests_http1_base import Http1Edge2EdgeTestBase
-from system_tests_http1_base import CommonHttp1AdaptorEdge2EdgeTest
+from http1_tests import CommonHttp1OneRouterTest, Http1OneRouterTestBase
+from http1_tests import TestServer, RequestHandler10
+from http1_tests import Http1Edge2EdgeTestBase
+from http1_tests import CommonHttp1Edge2EdgeTest
 
 
 class Http1OverTcpOneRouterTest(Http1OneRouterTestBase,
-                                CommonHttp1AdaptorOneRouterTest):
+                                CommonHttp1OneRouterTest):
     """
     Test HTTP servers and clients attached to a standalone router
     """
@@ -75,7 +75,7 @@ class Http1OverTcpOneRouterTest(Http1OneRouterTestBase,
         cls.INT_A.wait_connectors()
 
 
-class Http1OverTcpEdge2EdgeTest(Http1Edge2EdgeTestBase, CommonHttp1AdaptorEdge2EdgeTest):
+class Http1OverTcpEdge2EdgeTest(Http1Edge2EdgeTestBase, CommonHttp1Edge2EdgeTest):
     """
     Test an HTTP servers and clients attached to edge routers separated by an
     interior router
