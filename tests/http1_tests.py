@@ -367,7 +367,7 @@ class ResponseValidator(object):
         return body
 
 
-class CommonHttp1Edge2EdgeTest(object): 
+class CommonHttp1Edge2EdgeTest(object):
     def test_01_concurrent_requests(self):
         """
         Test multiple concurrent clients sending streaming messages
