@@ -93,6 +93,7 @@ env_vars = {
     'TSAN_OPTIONS': "${RUNTIME_TSAN_ENV_OPTIONS}",
     'ASAN_OPTIONS': "${RUNTIME_ASAN_ENV_OPTIONS}",
     'LSAN_OPTIONS': "${RUNTIME_LSAN_ENV_OPTIONS}",
+    'UBSAN_OPTIONS': "${RUNTIME_UBSAN_ENV_OPTIONS}",
 }
 os.environ.update(env_vars)
 
