@@ -245,7 +245,7 @@ static int handle_incoming_impl(qdr_tcp_connection_t *conn, bool close_pending)
         }
         qdr_delivery_continue(tcp_adaptor->core, conn->instream, false);
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Continuing message with %i bytes", conn->conn_id, conn->incoming_id, count);
-    } else {
+    } else if (!close_pending && !conn->raw_closed_read) {
         qd_message_t *msg = qd_message();
 
         qd_message_set_stream_annotation(msg, true);
@@ -502,7 +502,13 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
         }
 
         if (qd_message_receive_complete(msg) || qd_message_send_complete(msg)) {
-            pn_raw_connection_close(conn->pn_raw_conn);
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+                   "[C%"PRIu64"] handle_outgoing calling pn_raw_connection_write_close(). rcv_complete:%s, send_complete:%s",
+                   conn->conn_id, qd_message_receive_complete(msg) ? "T" : "F", qd_message_send_complete(msg) ? "T" : "F");
+            sys_mutex_lock(conn->activation_lock);
+            conn->raw_closed_write = true;
+            sys_mutex_unlock(conn->activation_lock);
+            pn_raw_connection_write_close(conn->pn_raw_conn);
         }
     }
 }
@@ -551,7 +557,6 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
                                                       false, //bool             ssl,
                                                       "",                  // peer router version,
                                                       false);              // streaming links
-
 
     tc->conn_id = qd_server_allocate_connection_id(tc->server);
     qdr_connection_t *conn = qdr_connection_opened(tcp_adaptor->core,
@@ -636,7 +641,30 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         sys_mutex_lock(conn->activation_lock);
         conn->raw_closed_read = true;
         sys_mutex_unlock(conn->activation_lock);
-        pn_raw_connection_close(conn->pn_raw_conn);
+
+        if (conn->instream) {
+            // close streaming message to initiate connection close
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+                   "[C%"PRIu64"][L%"PRIu64"] close instream delivery",
+                   conn->conn_id, conn->incoming_id);
+            qd_message_set_receive_complete(qdr_delivery_message(conn->instream));
+            qdr_delivery_continue(tcp_adaptor->core, conn->instream, true);
+            qdr_delivery_decref(tcp_adaptor->core, conn->instream, "tcp-adaptor.pn_raw_connection_closed_read - instream");
+            conn->instream = 0;
+            if (conn->incoming) {
+                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+                       "[C%"PRIu64"][L%"PRIu64"] pn_raw_connection_closed_read - detach incoming link",
+                       conn->conn_id, conn->incoming_id);
+                qdr_link_detach(conn->incoming, QD_LOST, 0);
+                conn->incoming = 0;
+            }
+        } else {
+            // no streaming message: just close the raw connection
+            qd_log(log, QD_LOG_DEBUG,
+                   "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_READ no stream message; call pn_raw_connection_close()",
+                   conn->conn_id);
+            pn_raw_connection_close(conn->pn_raw_conn);
+        }
         break;
     }
     case PN_RAW_CONNECTION_CLOSED_WRITE: {
@@ -644,7 +672,13 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         sys_mutex_lock(conn->activation_lock);
         conn->raw_closed_write = true;
         sys_mutex_unlock(conn->activation_lock);
-        pn_raw_connection_close(conn->pn_raw_conn);
+        if (conn->ingress) {
+            // connection from client is no longer writable
+            qd_log(log, QD_LOG_DEBUG,
+                   "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_WRITE call pn_raw_connection_close()",
+                   conn->conn_id);
+            pn_raw_connection_close(conn->pn_raw_conn);
+        }
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
@@ -1304,7 +1338,7 @@ static void qdr_tcp_activate(void *notused, qdr_connection_t *c)
     if (context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) context;
         sys_mutex_lock(conn->activation_lock);
-        if (conn->pn_raw_conn && !(conn->raw_closed_read || conn->raw_closed_write)) {
+        if (conn->pn_raw_conn && !(conn->raw_closed_read && conn->raw_closed_write)) {
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_tcp_activate: waking raw connection", conn->conn_id);
             pn_raw_connection_wake(conn->pn_raw_conn);
             sys_mutex_unlock(conn->activation_lock);
