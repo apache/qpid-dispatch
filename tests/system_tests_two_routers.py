@@ -36,6 +36,8 @@ from system_test import get_inter_router_links
 from system_test import unittest
 from test_broker import FakeService
 
+from proton import Described, ulong
+
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtLeastOnce
 from proton.utils import BlockingConnection
@@ -2076,9 +2078,6 @@ class TwoRouterExtensionStateTest(TestCase):
                                  ('connector', {'name': 'toRouterA',
                                                 'role': 'inter-router',
                                                 'port': inter_router_port}),
-
-
-
                                  ('listener', {'role': 'route-container',
                                                'host': '0.0.0.0',
                                                'port': service_port,
@@ -2164,6 +2163,79 @@ class TwoRouterExtensionStateTest(TestCase):
             except IndexError:
                 pass
         self.assertEqual([1, 2, 3], ext_data)
+
+    def test_04_test_transactional_state(self):
+        """
+        Verifies that the data sent in the state field of the disposition
+        is forwarded all the way back to the client.
+        """
+        TRANS_STATE = 52
+        RESPONSE_LOCAL_DATA = ["MyTxnIDResp",
+                               Described(ulong(Delivery.ACCEPTED), [])]
+
+        class MyExtendedService(FakeService):
+            """
+            This service receives a transfer frame and sends back a
+            disposition frame with a state field.
+            For example, this service sends a disposition with the
+            following state field
+            state=@transactional-state(52) [txn-id="MyTxnIDResp", outcome=@accepted(36) []]
+            """
+            def __init__(self, url, container_id=None):
+                self.remote_state = None
+                self.remote_data = None
+                super(MyExtendedService, self).__init__(url, container_id,
+                                                        auto_accept=False,
+                                                        auto_settle=False)
+
+            def on_message(self, event):
+                self.remote_state = event.delivery.remote_state
+                self.remote_data = event.delivery.remote.data
+                if self.remote_state == TRANS_STATE and self.remote_data == ['MyTxnID']:
+                    # This will send a disposition with
+                    # state=@transactional-state(52) [txn-id="MyTxnIDResp", outcome=@accepted(36) []]
+                    # We will make sure that this state was received
+                    # by the sender.
+                    event.delivery.local.data = RESPONSE_LOCAL_DATA
+                    event.delivery.update(TRANS_STATE)
+                event.delivery.settle()
+
+        # Start the service that connects to the route-container listener
+        # on the router with container_id="FakeService"
+        fs = MyExtendedService(self.RouterB.addresses[1],
+                               container_id="FakeService")
+
+        self.RouterA.wait_address("RoutieMcRouteFace", remotes=1, count=2)
+
+        class MyTransactionStateSender(AsyncTestSender):
+            def on_sendable(self, event):
+                # Send just one delivery with a transactional state.
+                if self.sent < self.total:
+                    self.sent += 1
+                    dlv = event.sender.delivery(str(self.sent))
+                    dlv.local.data = ["MyTxnID"]
+                    # this will send a transfer frame to the router with
+                    # state=@transactional-state(52) [txn-id="MyTxnID"]
+                    dlv.update(TRANS_STATE)
+                    event.sender.stream(self._message.encode())
+                    event.sender.advance()
+
+            def on_settled(self, event):
+                self.remote_state = event.delivery.remote_state
+                self.remote_data = event.delivery.remote.data
+                if self.remote_state == TRANS_STATE and \
+                        self.remote_data == RESPONSE_LOCAL_DATA:
+                    # This means that the router is passing the state it
+                    # received from the service all the way back to the
+                    # client. This would not happen without the fix
+                    # for DISPATCH-2040
+                    self.accepted += 1
+                    self.test_passed = True
+
+        tx = MyTransactionStateSender(self.RouterA.addresses[0], "RoutieMcRouteFace")
+        tx.wait()
+        fs.join()
+        self.assertTrue(tx.test_passed)
 
 
 class MyExtendedSender(AsyncTestSender):
