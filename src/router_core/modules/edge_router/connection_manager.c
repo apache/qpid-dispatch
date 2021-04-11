@@ -23,7 +23,6 @@
 #include "router_core_private.h"
 
 #include <inttypes.h>
-#include <stdio.h>
 
 //
 // This is the Connection Manager component of the Edge Router module.

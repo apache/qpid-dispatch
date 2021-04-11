@@ -23,10 +23,8 @@
 
 #include "qpid/dispatch.h"
 
-#include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include <string.h>
 
 static char *vector0 =
     "\x00\x53\x77"                             // amqp-value

@@ -21,13 +21,10 @@
 #include "qpid/dispatch/python_embedded.h"
 
 #include "dispatch_private.h"
-#include "entity_cache.h"
 #include "router_private.h"
 
 #include "qpid/dispatch.h"
 
-#include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

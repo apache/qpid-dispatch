@@ -23,7 +23,6 @@
 #include "qpid/dispatch/ctools.h"
 
 #include <inttypes.h>
-#include <stdio.h>
 
 #define PROD_TIMER_INTERVAL 30
 #define PROD_STUCK_AGE      10

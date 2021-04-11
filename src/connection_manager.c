@@ -22,11 +22,8 @@
 #include "connection_manager_private.h"
 #include "dispatch_private.h"
 #include "entity.h"
-#include "entity_cache.h"
-#include "schema_enum.h"
 #include "server_private.h"
 
-#include "qpid/dispatch/atomic.h"
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/failoverlist.h"
 #include "qpid/dispatch/threading.h"

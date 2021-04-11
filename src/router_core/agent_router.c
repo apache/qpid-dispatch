@@ -22,7 +22,6 @@
 #include "config.h"
 
 #include <inttypes.h>
-#include <stdio.h>
 
 
 #define QDR_ROUTER_NAME                                0

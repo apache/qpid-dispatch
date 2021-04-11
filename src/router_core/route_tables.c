@@ -17,10 +17,7 @@
  * under the License.
  */
 
-#include "route_control.h"
 #include "router_core_private.h"
-
-#include <stdio.h>
 
 static void qdr_add_router_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_del_router_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);

@@ -22,10 +22,7 @@
 #include "delivery.h"
 #include "router_core_private.h"
 
-#include "qpid/dispatch/amqp.h"
-
 #include <inttypes.h>
-#include <stdio.h>
 #include <strings.h>
 
 typedef struct qdr_forward_deliver_info_t {

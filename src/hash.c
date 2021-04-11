@@ -22,7 +22,6 @@
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/ctools.h"
 
-#include <stdio.h>
 #include <string.h>
 
 typedef struct qd_hash_item_t {

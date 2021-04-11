@@ -23,8 +23,6 @@
 
 #include <assert.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <sys/types.h>
 
 #define QD_BITMASK_LONGS 2
 #define QD_BITMASK_BITS  (QD_BITMASK_LONGS * 64)

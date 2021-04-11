@@ -22,7 +22,6 @@
 #include "test_case.h"
 
 #include <stdio.h>
-#include <string.h>
 
 typedef struct {
     int A;

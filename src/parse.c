@@ -25,7 +25,6 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <limits.h>
 #include <stdio.h>
 
 DEQ_DECLARE(qd_parsed_field_t, qd_parsed_field_list_t);

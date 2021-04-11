@@ -32,8 +32,6 @@
 
 #include "qpid/dispatch/amqp.h"
 
-#include <stdio.h>
-
 static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool discard);

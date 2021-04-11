@@ -29,8 +29,6 @@
 
 #include <assert.h>
 #include <pthread.h>
-#include <stdint.h>
-#include <stdio.h>
 
 struct sys_mutex_t {
     pthread_mutex_t mutex;

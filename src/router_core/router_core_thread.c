@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include "dispatch_private.h"
 #include "module.h"
 #include "router_core_private.h"
 

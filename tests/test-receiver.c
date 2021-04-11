@@ -27,14 +27,11 @@
 #include "proton/reactor.h"
 #include "proton/session.h"
 
-#include <errno.h>
 #include <inttypes.h>
-#include <math.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
 
 bool stop = false;
