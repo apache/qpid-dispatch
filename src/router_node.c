@@ -2050,9 +2050,12 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         return;
 
     //
-    // If the disposition has changed and the proton delivery has not already been settled, update the proton delivery.
+    // DISPATCH-2040: For link routed links, it does not matter if the passed in disp matches the pn_delivery_remote_state(pnd), we will still
+    // call qd_delivery_write_local_state and send out the disposition if the delivery is not already settled.
     //
-    if (disp != pn_delivery_remote_state(pnd) && !pn_delivery_settled(pnd)) {
+    // For non link routed links, if the disposition has changed and the proton delivery has not already been settled, update the proton delivery.
+    //
+    if ((qdr_link_is_routed(qlink) || disp != pn_delivery_remote_state(pnd)) && !pn_delivery_settled(pnd)) {
         qd_message_t *msg = qdr_delivery_message(dlv);
 
         // handle propagation of delivery state from qdr_delivery_t to proton:
