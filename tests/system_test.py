@@ -1465,6 +1465,8 @@ def _signal_handler(signum, frame):
         import gc
         for obj in gc.get_objects():
             if isinstance(obj, Process):
+                if not isinstance(obj.pid, int):
+                    continue  # recently started?
                 processes.append(obj)
         return processes
 
