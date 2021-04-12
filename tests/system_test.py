@@ -1474,6 +1474,7 @@ def _signal_handler(signum, frame):
         ecode = process.poll()
         if ecode in (-signal.SIGSEGV, -signal.SIGABRT, 128 + signal.SIGSEGV, 128 + signal.SIGABRT):
             print("process failed")
+            process.teardown()  # need to get logs!!!
             tc.fail("Subprocess %s failed with ecode %s" % (process.pid, ecode))
 
     # for process in processes:
