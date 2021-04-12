@@ -34,20 +34,21 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import errno
-import sys
-import time
-
-import __main__
 import functools
 import os
 import random
 import re
 import shutil
+import signal
 import socket
 import subprocess
+import sys
+import time
 from copy import copy
 from datetime import datetime
 from subprocess import PIPE, STDOUT
+
+import __main__
 
 try:
     import queue as Queue  # 3.x
@@ -65,9 +66,9 @@ from proton import Delivery
 from proton.handlers import MessagingHandler
 from proton.reactor import AtLeastOnce, Container
 from proton.reactor import AtMostOnce
+
 from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.compat import dict_iteritems
-
 
 # Optional modules
 MISSING_MODULES = []
@@ -75,7 +76,7 @@ MISSING_MODULES = []
 try:
     import qpidtoollibs
 except ImportError as err:
-    qpidtoollibs = None         # pylint: disable=invalid-name
+    qpidtoollibs = None  # pylint: disable=invalid-name
     MISSING_MODULES.append(str(err))
 
 try:
@@ -84,15 +85,16 @@ except ImportError as err:
     qm = None  # pylint: disable=invalid-name
     MISSING_MODULES.append(str(err))
 
-
 is_python2 = sys.version_info[0] == 2
 
 
 def find_exe(program):
     """Find an executable in the system PATH"""
+
     def is_exe(fpath):
         """True if fpath is executable"""
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
     mydir = os.path.split(program)[0]
     if mydir:
         if is_exe(program):
@@ -202,6 +204,7 @@ def port_available(port, protocol_family='IPv4'):
 def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     """Wait up to timeout for port (on host) to be connectable.
     Takes same keyword arguments as retry to control the timeout"""
+
     def check(e):
         """Only retry on connection refused"""
         if not isinstance(e, socket.error) or not e.errno == errno.ECONNREFUSED:
@@ -235,7 +238,7 @@ def message(**properties):
     """Convenience to create a proton.Message with properties set"""
     m = Message()
     for name, value in dict_iteritems(properties):
-        getattr(m, name)        # Raise exception if not a valid message attribute.
+        getattr(m, name)  # Raise exception if not a valid message attribute.
         setattr(m, name, value)
     return m
 
@@ -246,9 +249,9 @@ class Process(subprocess.Popen):
     """
 
     # Expected states of a Process at teardown
-    RUNNING = -1                # Still running
-    EXIT_OK = 0                 # Exit status 0
-    EXIT_FAIL = 1               # Exit status 1
+    RUNNING = -1  # Still running
+    EXIT_OK = 0  # Exit status 0
+    EXIT_FAIL = 1  # Exit status 1
 
     unique_id = 0
 
@@ -301,11 +304,11 @@ class Process(subprocess.Popen):
                     self.outfile + '.cmd', f.read()))
 
         status = self.poll()
-        if status is None:      # Still running
+        if status is None:  # Still running
             self.terminate()
             if self.expect is not None and self.expect != Process.RUNNING:
                 error("still running")
-            self.expect = 0     # Expect clean exit after terminate
+            self.expect = 0  # Expect clean exit after terminate
             status = self.wait()
         if self.expect is not None and self.expect != status:
             error("exit code %s, expected %s" % (status, self.expect))
@@ -360,10 +363,10 @@ class HttpServer(Process):
     def __init__(self, args, name=None, expect=Process.RUNNING):
         super(HttpServer, self).__init__(args, name=name, expect=expect)
 
-# A HTTP2 Server that will respond to requests made via the router
-
 
 class Http2Server(HttpServer):
+    """A HTTP2 Server that will respond to requests made via the router."""
+
     def __init__(self, name=None, listen_port=None, wait=True,
                  py_string='python3', perform_teardown=True, cl_args=None,
                  server_file=None,
@@ -446,6 +449,7 @@ class Qdrouterd(Process):
 
         def __str__(self):
             """Generate config file content. Calls default() first."""
+
             def tabs(level):
                 if level:
                     return "    " * level
@@ -460,10 +464,10 @@ class Qdrouterd(Process):
                                        for k, v in item.items()])
                     result += "%s}" % tabs(level)
                     return result
-                return "%s" %  item
+                return "%s" % item
 
             def attributes(e, level):
-                assert(isinstance(e, dict))
+                assert isinstance(e, dict)
                 # k = attribute name
                 # v = string | scalar | dict
                 return "".join(["%s%s: %s\n" % (tabs(level),
@@ -676,6 +680,7 @@ class Qdrouterd(Process):
         @keyword count: Wait until >= count matching addresses are found
         @param retry_kwargs: keyword args for L{retry}
         """
+
         def check():
             # TODO aconway 2014-06-12: this should be a request by name, not a query.
             # Need to rationalize addresses in management attributes.
@@ -690,6 +695,7 @@ class Qdrouterd(Process):
                     and addrs[0]['subscriberCount'] >= subscribers
                     and addrs[0]['remoteCount'] >= remotes
                     and addrs[0]['containerCount'] >= containers)
+
         assert retry(check, **retry_kwargs)
 
     def wait_address_unsubscribed(self, address, **retry_kwargs):
@@ -709,6 +715,7 @@ class Qdrouterd(Process):
                 count += a['containerCount']
 
             return count == 0
+
         assert retry(check, **retry_kwargs)
 
     def get_host(self, protocol_family):
@@ -830,11 +837,13 @@ class Tester(object):
     @classmethod
     def get_port(cls, protocol_family='IPv4'):
         """Get an unused port"""
+
         def advance():
             """Advance with wrap-around"""
             cls.next_port += 1
             if cls.next_port >= cls.port_range[1]:
                 cls.next_port = cls.port_range[0]
+
         start = cls.next_port
         while not port_available(cls.next_port, protocol_family):
             advance()
@@ -851,6 +860,7 @@ class TestCase(unittest.TestCase, Tester):  # pylint: disable=too-many-public-me
     def __init__(self, test_method):
         unittest.TestCase.__init__(self, test_method)
         Tester.__init__(self, self.id())
+        signal.signal(signal.SIGCHLD, _signal_handler)
 
     @classmethod
     def setUpClass(cls):
@@ -904,7 +914,6 @@ class SkipIfNeeded(object):
         self.reason = reason
 
     def __call__(self, f):
-
         @functools.wraps(f)
         def wrap(*args, **kwargs):
             """
@@ -1029,6 +1038,7 @@ class AsyncTestSender(MessagingHandler):
     A simple sender that runs in the background and sends 'count' messages to a
     given target.
     """
+
     class TestSenderException(Exception):
         def __init__(self, error=None):
             super(AsyncTestSender.TestSenderException, self).__init__(error)
@@ -1192,7 +1202,7 @@ class QdManager(object):
         return json.loads(self(cmd))
 
     def delete(self, long_type, name=None, identity=None):
-        cmd = 'DELETE --type=%s' %  long_type
+        cmd = 'DELETE --type=%s' % long_type
         if identity is not None:
             cmd += " --identity=%s" % identity
         elif name is not None:
@@ -1215,13 +1225,15 @@ class MgmtMsgProxy(object):
     """
     Utility for creating and inspecting management messages
     """
+
     class _Response(object):
         def __init__(self, status_code, status_description, body):
-            self.status_code        = status_code
+            self.status_code = status_code
             self.status_description = status_description
-            if body.__class__ == dict and len(body.keys()) == 2 and 'attributeNames' in body.keys() and 'results' in body.keys():
+            if body.__class__ == dict and len(
+                    body.keys()) == 2 and 'attributeNames' in body.keys() and 'results' in body.keys():
                 results = []
-                names   = body['attributeNames']
+                names = body['attributeNames']
                 for result in body['results']:
                     result_map = {}
                     for i in range(len(names)):
@@ -1430,3 +1442,81 @@ class Logger(object):
             lines.append("%s %s" % (ts, msg))
         res = str('\n'.join(lines))
         return res
+
+
+def _signal_handler(signum, frame):
+    if signum != signal.SIGCHLD:
+        return
+
+    def find_test_case(frame):
+        while frame is not None:
+            for local in frame.f_locals.values():
+                if isinstance(local, unittest.TestCase):
+                    return local
+            frame = frame.f_back
+        return None
+
+    tc = find_test_case(frame)
+
+    # we cannot call os.wait() because that corrupts the return value of Popen#poll
+    #  https://bugs.python.org/issue2475
+    def find_processes():
+        processes = []
+        import gc
+        for obj in gc.get_objects():
+            if isinstance(obj, Process):
+                processes.append(obj)
+        return processes
+
+    processes = find_processes()
+
+    for process in processes:
+        ecode = process.poll()
+        if ecode in (-signal.SIGSEGV, -signal.SIGABRT, 128 + signal.SIGSEGV, 128 + signal.SIGABRT):
+            print("process failed")
+            tc.fail("Subprocess %s failed with ecode %s" % (process.pid, ecode))
+
+    # for process in processes:
+    #     pid = process.pid
+    #     try:
+    #         # os.kill(pid, 0)
+    #         pid, ecode = os.waitpid(pid, 0)
+    #     except OSError:
+    #         print("process died")
+    #         process.terminate()
+
+
+class SelfTests(unittest.TestCase):
+    def setUp(self):
+        import signal
+        signal.signal(signal.SIGCHLD, _signal_handler)
+
+    # def test_tester_popen_success(self):
+    #     tester = Tester("id")
+    #     try:
+    #         tester.setup()
+    #         p = tester.popen(["/home/jdanek/repos/qpid/qpid-dispatch/tests/a.out", "success"])
+    #     finally:
+    #         tester.teardown()
+    #
+    # def test_tester_popen_failure(self):
+    #     tester = Tester("id")
+    #     try:
+    #         tester.setup()
+    #         p = tester.popen(["/home/jdanek/repos/qpid/qpid-dispatch/tests/a.out", "failure"])
+    #     finally:
+    #         tester.teardown()
+    #
+    # def test_tester_popen_segfault(self):
+    #     tester = Tester("id")
+    #     try:
+    #         tester.setup()
+    #         p = tester.popen(["/home/jdanek/repos/qpid/qpid-dispatch/tests/a.out", "segfault"])
+    #     finally:
+    #         tester.teardown()
+
+    def test_tester_popen_abort(self):
+        tester = Tester("id")
+        p = tester.popen(["/home/jdanek/repos/qpid/qpid-dispatch/tests/a.out", "abort"])  # type: Process
+        time.sleep(1)
+        tester.teardown()
