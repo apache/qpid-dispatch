@@ -1480,7 +1480,7 @@ def _signal_handler(signum, frame):
             tc.fail("Subprocess %s failed with ecode %s" % (process.pid, ecode))
 
     # for process in processes:
-    #     pid = process.pid
+    #      pid = process.pid
     #     try:
     #         # os.kill(pid, 0)
     #         pid, ecode = os.waitpid(pid, 0)
