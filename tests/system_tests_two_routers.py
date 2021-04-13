@@ -1556,21 +1556,31 @@ class PropagatedDisposition(MessagingHandler):
         self.address2 = address2
         self.settled = []
         self.test = test
+        self.sender = None
+        self.receiver = None
         self.sender_conn = None
         self.receiver_conn = None
         self.passed = False
+        self.dispos = ['accept', 'modified', 'reject']
+        self.dispos_index = 0
+        self.trackers = {}
+        self.addr = "unsettled/2"
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.address1)
         self.receiver_conn = event.container.connect(self.address2)
-        addr = "unsettled/2"
-        self.sender = event.container.create_sender(self.sender_conn, addr)
-        self.receiver = event.container.create_receiver(self.receiver_conn, addr)
-        self.receiver.flow(3)
-        self.trackers = {}
-        for b in ['accept', 'modified', 'reject']:
-            self.trackers[self.sender.send(Message(body=b))] = b
+
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        self.addr)
+        self.sender = event.container.create_sender(self.sender_conn,
+                                                    self.addr)
+
+    def on_sendable(self, event):
+        # This function is called when the sender has credit to send
+        if self.dispos_index < 3:
+            self.trackers[self.sender.send(Message(body=self.dispos[self.dispos_index]))] = self.dispos[self.dispos_index]
+            self.dispos_index += 1
 
     def timeout(self):
         unique_list = sorted(list(dict.fromkeys(self.settled)))
