@@ -766,6 +766,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         if (d->presettled)
             core->dropped_presettled_deliveries++;
         d->where = QDR_DELIVERY_NOWHERE;
+        d->link_work = 0;
         d = DEQ_NEXT(d);
     }
 
@@ -774,6 +775,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     while (d) {
         assert(d->where == QDR_DELIVERY_IN_UNSETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
+        d->link_work = 0;
         d = DEQ_NEXT(d);
     }
 
@@ -782,6 +784,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     while (d) {
         assert(d->where == QDR_DELIVERY_IN_SETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
+        d->link_work = 0;
         d = DEQ_NEXT(d);
     }
     sys_mutex_unlock(conn->work_lock);
