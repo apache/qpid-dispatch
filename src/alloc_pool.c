@@ -83,6 +83,10 @@ DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 // Be a Good Citizen when adding unexpected leaks to this list and include the
 // corresponding JIRA in a comment!
 //
+// When nirvana is reached and we have fixed all of these then please remove
+// -DQD_MEMORY_DEBUG=1 from RuntimeChecks.cmake and .travis.yml when doing
+// RUNTIME=asan testing
+//
 #if QD_MEMORY_STATS
 static const char *leaking_types[] = {
     // DISPATCH-1679:

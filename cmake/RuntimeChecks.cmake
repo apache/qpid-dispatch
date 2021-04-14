@@ -133,7 +133,8 @@ elseif(RUNTIME_CHECK STREQUAL "asan" OR RUNTIME_CHECK STREQUAL "hwasan")
   endif ()
   add_custom_target(generate_lsan.supp ALL
         DEPENDS ${CMAKE_BINARY_DIR}/tests/lsan.supp)
-  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=${ASAN_VARIANTS}")
+  # force QD_MEMORY_DEBUG else lsan will catch alloc_pool suppressed leaks (ok to remove this once leaks are fixed)
+  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=${ASAN_VARIANTS} -DQD_MEMORY_DEBUG=1")
   # Clang shipping with XCode does not include leak sanitizer feature
   if (APPLE)
     set(DETECT_LEAKS false)
