@@ -445,8 +445,16 @@ qd_error_t qd_hash_remove_str(qd_hash_t *h, const unsigned char *key)
 
 void qd_hash_handle_free(qd_hash_handle_t *handle)
 {
-    if (handle)
+    if (handle) {
+        //
+        // The hash handle is being freed. if the handle points to an item, make sure to zero out the
+        // item's handle so it cannot be dereferenced later.
+        //
+        if (handle->item && handle->item->handle) {
+            handle->item->handle = 0;
+        }
         free_qd_hash_handle_t(handle);
+    }
 }
 
 
