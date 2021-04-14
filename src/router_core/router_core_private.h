@@ -987,6 +987,7 @@ qdr_edge_t *qdr_edge(qdr_core_t *);
 void qdr_edge_free(qdr_edge_t *);
 void qdr_edge_connection_opened(qdr_edge_t *edge, qdr_connection_t *conn);
 void qdr_edge_connection_closed(qdr_edge_t *edge);
+void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link);
 
 void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
                                     qdr_connection_t      *conn,
