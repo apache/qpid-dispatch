@@ -91,10 +91,7 @@ DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 static const char *leaking_types[] = {
     // DISPATCH-1679:
     "qd_timer_t", "qd_connector_t",
-
     "qd_hash_handle_t",       // DISPATCH-1696
-    "qdr_conn_identifier_t",  // DISPATCH-1697
-    "qdr_connection_ref_t",   // DISPATCH-1698
 
     // system_tests_edge_router (centos7)
     // DISPATCH-1699

@@ -263,6 +263,11 @@ void qdr_core_free(qdr_core_t *core)
             qdr_route_check_id_for_deletion_CT(core, conn->conn_id);
         }
 
+        if (conn->alt_conn_id) {
+            qdr_del_connection_ref(&conn->alt_conn_id->connection_refs, conn);
+            qdr_route_check_id_for_deletion_CT(core, conn->alt_conn_id);
+        }
+
         qdr_connection_work_t *work = DEQ_HEAD(conn->work_list);
         while (work) {
             DEQ_REMOVE_HEAD(conn->work_list);
