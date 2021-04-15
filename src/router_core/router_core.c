@@ -43,6 +43,8 @@ ALLOC_DEFINE(qdr_subscription_ref_t);
 const uint64_t QD_DELIVERY_MOVED_TO_NEW_LINK = 999999999;
 
 static void qdr_general_handler(void *context);
+static void qdr_general_handler_cleanup(void *context);
+
 
 static void qdr_core_setup_init(qdr_core_t *core)
 {
@@ -163,8 +165,8 @@ void qdr_core_free(qdr_core_t *core)
         action = DEQ_HEAD(action_list);
     }
 
-    // Drain the general work lists
-    qdr_general_handler(core);
+    // Drain the general work lists and its associated delivery_cleanup_list
+    qdr_general_handler_cleanup(core);
 
     //
     // Free the core resources
@@ -256,6 +258,22 @@ void qdr_core_free(qdr_core_t *core)
 
         free_qdr_link_t(link);
         link = DEQ_HEAD(core->open_links);
+    }
+
+    //
+    // Clean up any qdr_delivery_cleanup_t's that are still left in the core->delivery_cleanup_list
+    //
+    if (DEQ_SIZE(core->delivery_cleanup_list) > 0) {
+        qdr_delivery_cleanup_t *cleanup = DEQ_HEAD(core->delivery_cleanup_list);
+        while (cleanup) {
+            DEQ_REMOVE_HEAD(core->delivery_cleanup_list);
+            if (cleanup->msg)
+                qd_message_free(cleanup->msg);
+            if (cleanup->iter)
+                qd_iterator_free(cleanup->iter);
+            free_qdr_delivery_cleanup_t(cleanup);
+            cleanup = DEQ_HEAD(core->delivery_cleanup_list);
+        }
     }
 
     qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
@@ -893,6 +911,27 @@ void qdr_del_subscription_ref_CT(qdr_subscription_ref_list_t *list, qdr_subscrip
 {
     DEQ_REMOVE(*list, ref);
     free_qdr_subscription_ref_t(ref);
+}
+
+
+static void qdr_general_handler_cleanup(void *context)
+{
+    qdr_core_t              *core = (qdr_core_t*) context;
+    qdr_general_work_list_t  work_list;
+    qdr_general_work_t      *work;
+
+    sys_mutex_lock(core->work_lock);
+    DEQ_MOVE(core->work_list, work_list);
+    sys_mutex_unlock(core->work_lock);
+
+    work = DEQ_HEAD(work_list);
+    while (work) {
+        DEQ_REMOVE_HEAD(work_list);
+        work->handler(core, work);
+        qdr_do_message_to_addr_free(core, work);
+        free_qdr_general_work_t(work);
+        work = DEQ_HEAD(work_list);
+    }
 }
 
 

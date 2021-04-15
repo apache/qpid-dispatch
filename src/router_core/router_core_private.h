@@ -1072,4 +1072,9 @@ void qdr_reset_sheaf(qdr_core_t *core, uint8_t n);
  */
 void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link);
 
+/**
+ * Cleans up all qdr_delivery_cleanup_t objects in
+ */
+void qdr_do_message_to_addr_free(qdr_core_t *core, qdr_general_work_t *work);
+
 #endif

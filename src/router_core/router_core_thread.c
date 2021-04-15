@@ -93,7 +93,7 @@ static void qdr_activate_connections_CT(qdr_core_t *core)
 }
 
 
-static void qdr_do_message_to_addr_free(qdr_core_t *core, qdr_general_work_t *work)
+void qdr_do_message_to_addr_free(qdr_core_t *core, qdr_general_work_t *work)
 {
     qdr_delivery_cleanup_t *cleanup = DEQ_HEAD(work->delivery_cleanup_list);
 
