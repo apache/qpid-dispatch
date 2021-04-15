@@ -138,7 +138,13 @@ static qd_delivery_state_t *qd_delivery_read_remote_state(pn_delivery_t *pnd)
     uint64_t            outcome = pn_delivery_remote_state(pnd);
     if (pnd) {
         switch (outcome) {
-        case PN_RECEIVED:
+        case PN_RECEIVED: {
+            pn_disposition_t *disp = pn_delivery_remote(pnd);
+            dstate = qd_delivery_state();
+            dstate->section_number = pn_disposition_get_section_number(disp);
+            dstate->section_offset = pn_disposition_get_section_offset(disp);
+            break;
+        }
         case PN_ACCEPTED:
         case PN_RELEASED:
             // no associated state (that we care about)
@@ -197,7 +203,12 @@ static void qd_delivery_write_local_state(pn_delivery_t *pnd, uint64_t outcome, 
 {
     if (pnd && dstate) {
         switch (outcome) {
-        case PN_RECEIVED:
+        case PN_RECEIVED: {
+            pn_disposition_t *ldisp = pn_delivery_local(pnd);
+            pn_disposition_set_section_number(ldisp, dstate->section_number);
+            pn_disposition_set_section_offset(ldisp, dstate->section_offset);
+            break;
+        }
         case PN_ACCEPTED:
         case PN_RELEASED:
             // no associated state (that we care about)
