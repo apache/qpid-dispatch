@@ -19,6 +19,8 @@
  * under the License.
  */
 
+#include <proton/disposition.h>
+
 #include <stdbool.h>
 #include <inttypes.h>
 
@@ -60,6 +62,16 @@ qd_delivery_state_t *qd_delivery_state_from_error(struct qdr_error_t *err);
 
 // dispose
 void qd_delivery_state_free(qd_delivery_state_t *ds);
+
+
+// true if the state is final (an outcome). Once a terminal state
+// is reached no further changes are allowed.
+//
+static inline bool qd_delivery_state_is_terminal(uint64_t type)
+{
+    return ((PN_ACCEPTED <= type && type <= PN_MODIFIED) ||
+            type == 0x0033 /* See section 4.5.5 Declared */);
+}
 
 #endif
 

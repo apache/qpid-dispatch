@@ -34,6 +34,19 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+// maximum amount of bytes to read from TCP client before backpressure
+// activates.  Note that the actual number of read bytes may exceed this value
+// by READ_BUFFERS * BUFFER_SIZE since we fetch up to READ_BUFFERs worth of
+// buffers when calling pn_raw_connection_take_read_buffers()
+//
+// Assumptions: 1 Gbps, 1msec latency across a router, 3 hop router path
+//   Effective GigEthernet throughput is 116MB/sec, or ~121635 bytes/msec.
+//   For 3 hops routers with ~1msec latency gives a 6msec round trip
+//   time. Ideally the window would be 1/2 full at most before the ACK
+//   arrives:
+//
+const uint32_t TCP_MAX_CAPACITY = 121635 * 6 * 2;
+
 ALLOC_DEFINE(qd_tcp_listener_t);
 ALLOC_DEFINE(qd_tcp_connector_t);
 
@@ -71,8 +84,9 @@ struct qdr_tcp_connection_t {
     qd_server_t          *server;
     char                 *remote_address;
     char                 *global_id;
-    uint64_t              bytes_in;
-    uint64_t              bytes_out;
+    uint64_t              bytes_in;       // read from raw conn
+    uint64_t              bytes_out;      // written to raw conn
+    uint64_t              bytes_unacked;  // not yet acked by outgoing tcp adaptor
     uint64_t              opened_time;
     uint64_t              last_in_time;
     uint64_t              last_out_time;
@@ -211,10 +225,15 @@ void qdr_tcp_q2_unblocked_handler(const qd_alloc_safe_ptr_t context)
 static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t *buffers)
 {
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
+
     size_t n;
     int count = 0;
     int free_count = 0;
-    while ( (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
+    const bool was_open = conn->bytes_unacked < TCP_MAX_CAPACITY;
+
+    while ((count + conn->bytes_unacked < TCP_MAX_CAPACITY)
+           && (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
+
         for (size_t i = 0; i < n && raw_buffers[i].bytes; ++i) {
             qd_buffer_t *buf = (qd_buffer_t*) raw_buffers[i].context;
             qd_buffer_insert(buf, raw_buffers[i].size);
@@ -233,7 +252,15 @@ static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t
     if (count > 0) {
         // account for any incoming bytes just read
         conn->last_in_time = tcp_adaptor->core->uptime_ticks;
-        conn->bytes_in += count;
+        conn->bytes_in      += count;
+        conn->bytes_unacked += count;
+        if (conn->bytes_unacked >= TCP_MAX_CAPACITY) {
+            if (was_open) {
+                qd_log(tcp_adaptor->log_source, QD_LOG_TRACE,
+                       "[C%"PRIu64"] TCP RX window CLOSED: bytes in=%"PRIu64" unacked=%"PRIu64,
+                       conn->conn_id, conn->bytes_in, conn->bytes_unacked);
+            }
+        }
     }
 
     qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
@@ -837,6 +864,24 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         }
         conn->last_out_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_out += written;
+
+        if (written > 0) {
+            // Tell the upstream to open its receive window.  Note: this update
+            // is sent to the upstream (ingress) TCP adaptor. Since this update
+            // is internal to the router network (never sent to the client) we
+            // do not need to use the section_number (no section numbers in a
+            // TCP stream!) and use section_offset only.
+            //
+            qd_delivery_state_t *dstate = qd_delivery_state();
+            dstate->section_number = 0;
+            dstate->section_offset = conn->bytes_out;
+            qdr_delivery_remote_state_updated(tcp_adaptor->core, conn->outstream,
+                                              PN_RECEIVED,
+                                              false,  // settled
+                                              dstate,
+                                              false);
+        }
+
         qd_log(log, QD_LOG_DEBUG,
                "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN %s pn_raw_connection_take_written_buffers wrote %zu bytes. Total written %"PRIu64" bytes",
                conn->conn_id, qdr_tcp_connection_role_name(conn), written, conn->bytes_out);
@@ -1350,6 +1395,9 @@ static int qdr_tcp_push(void *context, qdr_link_t *link, int limit)
 
 static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled)
 {
+
+    // @TODO(kgiusti): determine why this is necessary to prevent window full stall:
+    qd_message_Q2_holdoff_disable(qdr_delivery_message(delivery));
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* tc = (qdr_tcp_connection_t*) link_context;
@@ -1442,6 +1490,42 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
                    DLV_FMT" qdr_tcp_delivery_update: call pn_raw_connection_close()",
                    DLV_ARGS(dlv));
             pn_raw_connection_close(tc->pn_raw_conn);
+        }
+
+        if (disp == PN_RECEIVED) {
+            //
+            // the consumer of this TCP flow has updated its tx_sequence:
+            //
+            bool window_opened = false;
+            uint64_t ignore;
+            qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
+
+            if (!dstate) {
+                qd_log(tcp_adaptor->log_source, QD_LOG_ERROR,
+                       "[C%"PRIu64"] BAD PN_RECEIVED - missing delivery-state!!", tc->conn_id);
+            } else {
+                // note: the PN_RECEIVED is generated by the remote TCP
+                // adaptor, for simplicity we ignore the section_number since
+                // all we really need is a byte offset:
+                //
+                const bool was_closed = tc->bytes_unacked >= TCP_MAX_CAPACITY;
+                tc->bytes_unacked = tc->bytes_in - dstate->section_offset;
+                window_opened = tc->bytes_unacked < TCP_MAX_CAPACITY;
+                if (was_closed && window_opened) {
+                    qd_log(tcp_adaptor->log_source, QD_LOG_TRACE,
+                           "[C%"PRIu64"] TCP RX window OPEN: bytes in=%"PRIu64
+                           " unacked=%"PRIu64" remote bytes out=%"PRIu64,
+                           tc->conn_id, tc->bytes_in, tc->bytes_unacked,
+                           dstate->section_offset);
+                }
+            }
+
+            qd_delivery_state_free(dstate);
+
+            if (window_opened) {
+                // now that the window has opened fetch any outstanding read data
+                handle_incoming(tc, "TCP RX window refresh");
+            }
         }
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_delivery_update: no link context");

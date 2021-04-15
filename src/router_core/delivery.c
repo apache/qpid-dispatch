@@ -29,7 +29,9 @@ static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 static void qdr_delivery_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
-                                           qdr_delivery_t *peer, uint64_t new_disp, bool settled);
+                                           qdr_delivery_t *peer, bool settled);
+static bool qdr_delivery_set_remote_delivery_state_CT(qdr_delivery_t *dlv, uint64_t dispo,
+                                                      qd_delivery_state_t *dstate);
 
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
@@ -189,11 +191,7 @@ void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *deliver
     action->args.delivery.delivery    = delivery;
     action->args.delivery.disposition = disposition;
     action->args.delivery.settled     = settled;
-
-    // handle delivery-state extensions e.g. declared, transactional-state
-    if (!qdr_delivery_set_remote_delivery_state(delivery, dstate)) {
-        qd_delivery_state_free(dstate);
-    }
+    action->args.delivery.dstate      = dstate;
 
     //
     // The delivery's ref_count must be incremented to protect its travels into the
@@ -485,6 +483,7 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     qd_bitmask_free(delivery->link_exclusion);
     qd_delivery_state_free(delivery->local_state);
     qd_delivery_state_free(delivery->remote_state);
+    sys_mutex_free(delivery->dispo_lock);
 
     free_qdr_delivery_t(delivery);
 }
@@ -651,16 +650,18 @@ void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv, const char *l
 //
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+    qdr_delivery_t      *dlv      = action->args.delivery.delivery;
+    qdr_delivery_t      *peer     = qdr_delivery_first_peer_CT(dlv);
+    uint64_t             new_disp = action->args.delivery.disposition;
+    bool                 settled  = action->args.delivery.settled;
+    qd_delivery_state_t *dstate   = action->args.delivery.dstate;
+
     if (discard) {
         qdr_delivery_decref_CT(core, action->args.delivery.delivery,
                                "qdr_update_delivery_CT - remove from action on discard");
+        qd_delivery_state_free(dstate);
         return;
     }
-
-    qdr_delivery_t *dlv      = action->args.delivery.delivery;
-    qdr_delivery_t *peer     = qdr_delivery_first_peer_CT(dlv);
-    uint64_t        new_disp = action->args.delivery.disposition;
-    bool            settled  = action->args.delivery.settled;
 
     if (dlv->multicast) {
         //
@@ -668,6 +669,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         // update downstream *outbound* peers
         //
         qdr_delivery_mcast_inbound_update_CT(core, dlv, new_disp, settled);
+        qd_delivery_state_free(dstate);  // kgiusti(TODO): handle propagation!
 
     } else if (peer && peer->multicast) {
         //
@@ -676,12 +678,14 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         //
         // coverity[swapped_arguments]
         qdr_delivery_mcast_outbound_update_CT(core, peer, dlv, new_disp, settled);
+        qd_delivery_state_free(dstate);  // kgiusti(TODO): handle propagation!
 
     } else {
         //
-        // Anycast forwarding - note: peer _may_ be freed by this call
+        // Anycast forwarding - note: peer _may_ be freed after this!
         //
-        qdr_delivery_anycast_update_CT(core, dlv, peer, new_disp, settled);
+        qdr_delivery_set_remote_delivery_state_CT(dlv, new_disp, dstate);
+        qdr_delivery_anycast_update_CT(core, dlv, peer, settled);
     }
 
     //
@@ -697,7 +701,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 // returns true if ownership of error parameter is taken (do not free it)
 //
 static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
-                                           qdr_delivery_t *peer, uint64_t new_disp, bool settled)
+                                           qdr_delivery_t *peer, bool settled)
 {
     bool push           = false;
     bool peer_moved     = false;
@@ -713,24 +717,15 @@ static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv
     //
     // Non-multicast Logic:
     //
-    // If disposition has changed and there is a peer link, set the disposition
-    // of the peer
+    // If the disposition or extended delivery-state has changed and there is a
+    // peer link, set the disposition/delivery-state of the peer
     // If remote settled, the delivery must be unlinked and freed.
     // If remote settled and there is a peer, the peer shall be settled and
     // unlinked.  It shall not be freed until the connection-side thread
     // settles the PN delivery.
     //
-    if (new_disp != dlv->remote_disposition || new_disp == PN_RECEIVED) {
-        //
-        // Remote disposition has changed, propagate the change to the peer
-        // delivery local disposition.
-        //
-        dlv->remote_disposition = new_disp;
-        if (peer) {
-            peer->disposition = new_disp;
-            push = true;
-            qdr_delivery_move_delivery_state_CT(dlv, peer);
-        }
+    if (peer) {
+        push = qdr_delivery_move_delivery_state_CT(dlv, peer);
     }
 
     if (settled) {
@@ -923,11 +918,6 @@ static bool qdr_delivery_mcast_outbound_settled_CT(qdr_core_t *core, qdr_deliver
 }
 
 
-// true if delivery state d is a terminal state as defined by AMQP 1.0
-//
-#define IS_TERMINAL(d) (PN_ACCEPTED <= (d) && (d) <= PN_MODIFIED)
-
-
 // an outbound mcast delivery has changed its remote state (disposition)
 // propagate the change back "upstream" to the inbound delivery
 //
@@ -967,7 +957,7 @@ static bool qdr_delivery_mcast_outbound_disposition_CT(qdr_core_t *core, qdr_del
 
     out_dlv->remote_disposition = new_disp;
 
-    if (IS_TERMINAL(new_disp)) {
+    if (qd_delivery_state_is_terminal(new_disp)) {
         // our mcast impl ignores non-terminal outcomes
 
         qd_log(core->log, QD_LOG_TRACE,
@@ -988,7 +978,7 @@ static bool qdr_delivery_mcast_outbound_disposition_CT(qdr_core_t *core, qdr_del
         //
         qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
         while (peer) {
-            if (!IS_TERMINAL(peer->remote_disposition)) {
+            if (!qd_delivery_state_is_terminal(peer->remote_disposition)) {
                 break;
             }
             peer = qdr_delivery_next_peer_CT(in_dlv);
@@ -1216,27 +1206,38 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 }
 
 
-// Set remote delivery state. Ownership of *remote_state is passed to the delivery.
-// Called on I/O thread that reads the delivery state from proton.
-bool qdr_delivery_set_remote_delivery_state(qdr_delivery_t *dlv, qd_delivery_state_t *remote_state)
+// Set remote delivery state when proton indicates that the remote has updated
+// delivery. Ownership of *remote_state is passed to the delivery.
+//
+static bool qdr_delivery_set_remote_delivery_state_CT(qdr_delivery_t *dlv, uint64_t remote_dispo, qd_delivery_state_t *remote_state)
 {
-    // once set the I/O thread cannot overwrite this until the core has forwarded it
-    if (!dlv->remote_state) {
-        dlv->remote_state = remote_state;
-        return true;
+    // old state, has not been transfered to peer?
+    if (dlv->remote_state) {
+        qd_delivery_state_free(dlv->remote_state);
     }
-    return false;
+    dlv->remote_state = remote_state;
+    dlv->remote_disposition = remote_dispo;
+    return true;
 }
 
 
-// Take local delivery state from the delivery.  Caller assumes ownership of state object.
-// Called on the I/O thread that writes the delivery state to proton
+// Called on the I/O thread: take local delivery state from the delivery for writing to proton.
+// Caller assumes ownership of state object.
 //
 qd_delivery_state_t *qdr_delivery_take_local_delivery_state(qdr_delivery_t *dlv, uint64_t *dispo)
 {
+    sys_mutex_lock(dlv->dispo_lock);
+
     qd_delivery_state_t *dstate = dlv->local_state;
     dlv->local_state = 0;
-    if (dispo) *dispo = dlv->disposition;
+    *dispo = dlv->disposition;
+    // if the disposition is not terminal, clear the state to allow another
+    // disposition update.  Terminal dispositions are final and never update.
+    if (!qd_delivery_state_is_terminal(dlv->disposition))
+        dlv->disposition = 0;
+
+    sys_mutex_unlock(dlv->dispo_lock);
+
     return dstate;
 }
 
@@ -1245,12 +1246,29 @@ qd_delivery_state_t *qdr_delivery_take_local_delivery_state(qdr_delivery_t *dlv,
 // of its peer delivery.  This causes the delivery state data to propagate
 // from one delivery to another.
 //
-void qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer)
+// returns true if the state has changed and peer needs to be written to
+// proton.
+//
+bool qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer)
 {
-    // if state is already present do not overwrite it as the outgoing
-    // I/O thread may be in the process of writing it to proton
-    if (!peer->local_state) {
-        peer->local_state = dlv->remote_state;
-        dlv->remote_state = 0;
+    qd_delivery_state_t *dstate = dlv->remote_state;
+    uint64_t dispo = dlv->remote_disposition;
+    dlv->remote_state = 0;
+
+    if (dispo) {
+        // must lock peer when modifying local state since I/O thread may be reading
+        // it at the same time
+        sys_mutex_lock(peer->dispo_lock);
+
+        peer->disposition = dispo;
+        if (peer->local_state) {
+            // old state not consumed by I/O thread?
+            qd_delivery_state_free(peer->local_state);
+        }
+        peer->local_state = dstate;
+
+        sys_mutex_unlock(peer->dispo_lock);
     }
+
+    return !!dispo;
 }
