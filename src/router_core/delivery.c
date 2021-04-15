@@ -1247,6 +1247,8 @@ qd_delivery_state_t *qdr_delivery_take_local_delivery_state(qdr_delivery_t *dlv,
 //
 void qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer)
 {
+    /// kag: crap, this may be an issue: possible drop of seq updates!
+
     // if state is already present do not overwrite it as the outgoing
     // I/O thread may be in the process of writing it to proton
     if (!peer->local_state) {

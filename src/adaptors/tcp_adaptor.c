@@ -35,6 +35,55 @@
 #include <stdio.h>
 
 const uint32_t TCP_MAX_CAPACITY = 131072;
+const uint64_t TCP_SEQ_ACK = 999;  // TBD
+
+//qd_delivery_state_t delivery_state;
+// delivery_state->extension
+//qdr_delivery_remote_state_updated(router->router_core, delivery,
+//                                      pn_delivery_remote_state(pnd),
+//                                      pn_delivery_settled(pnd),
+//                                      qd_delivery_read_remote_state(pnd),
+//                                      false);
+
+static qd_delivery_state_t *make_funny_delivery_state(uint32_t sequence_no)
+{
+    qd_delivery_state_t *dstate = qd_delivery_state();
+    if (dstate) {
+        dstate->extension = pn_data(0);
+        if (!dstate->extension) {
+            qd_delivery_state_free(dstate);
+            return 0;
+        }
+        pn_data_put_list(dstate->extension);
+        pn_data_enter(dstate->extension);
+        pn_data_put_uint(dstate->extension, sequence_no);
+        pn_data_exit(dstate->extension);
+    }
+
+    return dstate;
+}
+
+static bool reify_funny_delivery_state(qd_delivery_state_t *dstate, uint32_t *sequence_no)
+{
+    if (dstate) {
+        if (dstate->extension) {
+            pn_data_rewind(dstate->extension);
+            if (pn_data_next(dstate->extension)) {
+                size_t count = pn_data_get_list(dstate->extension);
+                if (count) {
+                    if (pn_data_next(dstate->extension)) {
+                        if (pn_data_type(dstate->extension) == PN_UINT) {
+                            *sequence_no = pn_data_get_uint(dstate->extension);
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;  // failed
+}
+
 
 ALLOC_DEFINE(qd_tcp_listener_t);
 ALLOC_DEFINE(qd_tcp_connector_t);
@@ -90,10 +139,11 @@ struct qdr_tcp_connection_t {
     DEQ_LINKS(qdr_tcp_connection_t);
 
     // TCP byte-level flow control
+    
 
-    uint32_t rx_sequence;
-    uint32_t unacked_octets;
-    uint32_t tx_sequence;
+    uint32_t rx_sequence;     // read from raw_conn
+    uint32_t unacked_octets;  // not yet acked by outgoing tcp adaptor
+    uint32_t tx_sequence;     // written to raw_conn
 };
 
 DEQ_DECLARE(qdr_tcp_connection_t, qdr_tcp_connection_list_t);
@@ -511,6 +561,7 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
         }
         qd_message_t *msg = qdr_delivery_message(conn->outstream);
         bool read_more_body = true;
+        uint32_t old_sequence = conn->tx_sequence;
 
         if (conn->outgoing_buff_count > 0) {
             // flush outgoing buffs that hold body data waiting to go out
@@ -528,6 +579,21 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
                 // The incoming stream has no new data to send
                 break;
             }
+        }
+
+        // kgiusti: do something smarter and less often than this:
+        if (conn->tx_sequence != old_sequence) {
+
+            qd_log(tcp_adaptor->log_source, QD_LOG_INFO,
+                   "[C%"PRIu64"] sending TCP_SEQ_ACK delivery state: seq= %"PRIu32,
+                   conn->conn_id, conn->tx_sequence);
+
+            qd_delivery_state_t *dstate = make_funny_delivery_state(conn->tx_sequence);
+            qdr_delivery_remote_state_updated(tcp_adaptor->core, conn->outstream,
+                                              TCP_SEQ_ACK,
+                                              false,  // settled
+                                              dstate,
+                                              false);
         }
 
         if (qd_message_receive_complete(msg) || qd_message_send_complete(msg)) {
@@ -1294,6 +1360,39 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
         //
         if (settled) {
             pn_raw_connection_close(tc->pn_raw_conn);
+        }
+
+        if (disp == TCP_SEQ_ACK) {
+            bool window_opened = false;
+            uint32_t remote_seq = 0;
+            uint64_t ignore;
+            qd_log(tcp_adaptor->log_source, QD_LOG_INFO,
+                   "[C%"PRIu64"] holy crap I got a TCP_SEQ_ACK!!", tc->conn_id);
+            qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
+            if (!dstate) {
+                qd_log(tcp_adaptor->log_source, QD_LOG_ERROR,
+                       "[C%"PRIu64"] BAD TCP_SEQ_ACK - missing delivery-state!!", tc->conn_id);
+                tc->unacked_octets = 0;  // possible recovery: just clear the entire window
+                window_opened = true;
+            } else if (!reify_funny_delivery_state(dstate, &remote_seq)) {
+                qd_log(tcp_adaptor->log_source, QD_LOG_ERROR,
+                       "[C%"PRIu64"] BAD TCP_SEQ_ACK - invalid delivery-state!!", tc->conn_id);
+                tc->unacked_octets = 0;  // possible recovery: just clear the entire window
+                window_opened = true;
+            } else {
+                uint32_t old_unacked = tc->unacked_octets;
+                tc->unacked_octets = tc->rx_sequence - remote_seq;
+                qd_log(tcp_adaptor->log_source, QD_LOG_ERROR,
+                       "[C%"PRIu64"] TCP_SEQ_ACK - window update: old unacked=%"PRIu32" unacked=%"PRIu32" remote-seq=%"PRIu32,
+                       tc->conn_id, old_unacked, tc->unacked_octets, remote_seq);
+            }
+
+            qd_delivery_state_free(dstate);
+
+            if (window_opened) {
+                // now that the window has opened fetch any outstanding read data
+                handle_incoming(tc);
+            }
         }
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_delivery_update: no link context");
