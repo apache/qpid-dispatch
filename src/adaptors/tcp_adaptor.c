@@ -34,6 +34,8 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+const uint32_t TCP_MAX_CAPACITY = 131072;
+
 ALLOC_DEFINE(qd_tcp_listener_t);
 ALLOC_DEFINE(qd_tcp_connector_t);
 
@@ -86,6 +88,12 @@ struct qdr_tcp_connection_t {
     bool                    q2_blocked;      // stop reading from raw conn
 
     DEQ_LINKS(qdr_tcp_connection_t);
+
+    // TCP byte-level flow control
+
+    uint32_t rx_sequence;
+    uint32_t unacked_octets;
+    uint32_t tx_sequence;
 };
 
 DEQ_DECLARE(qdr_tcp_connection_t, qdr_tcp_connection_list_t);
@@ -213,10 +221,13 @@ static int handle_incoming_impl(qdr_tcp_connection_t *conn, bool close_pending)
     qd_buffer_list_t buffers;
     DEQ_INIT(buffers);
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
+
     size_t n;
     int count = 0;
     int free_count = 0;
-    while ( (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
+    while ((conn->unacked_octets < TCP_MAX_CAPACITY)
+           && (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
+
         for (size_t i = 0; i < n && raw_buffers[i].bytes; ++i) {
             qd_buffer_t *buf = (qd_buffer_t*) raw_buffers[i].context;
             qd_buffer_insert(buf, raw_buffers[i].size);
@@ -229,6 +240,18 @@ static int handle_incoming_impl(qdr_tcp_connection_t *conn, bool close_pending)
             }
         }
     }
+
+    if (count) {
+        conn->unacked_octets += count;
+        conn->rx_sequence += count;
+
+        if (conn->unacked_octets >= TCP_MAX_CAPACITY) {
+            qd_log(tcp_adaptor->log_source, QD_LOG_WARNING,
+                   "[C%"PRIu64"] incoming blocked. Seq=%"PRIu32" unacked=%"PRIu32,
+                   conn->conn_id, conn->rx_sequence, conn->unacked_octets);
+        }
+    }
+    
     qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Took %zu read buffers", conn->conn_id, DEQ_SIZE(buffers));
     qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Freed %i read buffers", conn->conn_id, free_count);
 
@@ -467,6 +490,12 @@ static bool write_outgoing_buffs(qdr_tcp_connection_t *conn)
 
         conn->outgoing_buff_count -= used;
         conn->outgoing_buff_idx   += used;
+
+        if (bytes_written > 0) {
+            conn->tx_sequence += bytes_written;
+            qd_log(tcp_adaptor->log_source, QD_LOG_WARNING,
+                   "[C%"PRIu64"] outgoing byte sequence: %"PRIu32, conn->conn_id, conn->tx_sequence);
+        }
     }
     return result;
 }
