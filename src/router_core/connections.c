@@ -746,7 +746,7 @@ static void qdr_generate_link_name(const char *label, char *buffer, size_t lengt
 }
 
 
-static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     //
     // Clean up the lists of deliveries on this link

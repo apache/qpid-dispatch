@@ -224,8 +224,12 @@ void qdr_core_free(qdr_core_t *core)
             DEQ_REMOVE_N(STREAMING_POOL, link->conn->streaming_link_pool, link);
             link->in_streaming_pool = false;
         }
+
+        qdr_link_cleanup_deliveries_CT(core, link->conn, link);
+
         if (link->core_endpoint)
             qdrc_endpoint_do_cleanup_CT(core, link->core_endpoint);
+
         qdr_del_link_ref(&link->conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
         qdr_del_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
         free(link->name);
