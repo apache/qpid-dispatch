@@ -576,7 +576,7 @@ bool qd_listener_listen(qd_listener_t *l);
 /**
  * Initiate an outgoing connection. Returns true if successful.
  */
-bool qd_connector_connect(qd_connector_t *ct);
+bool qd_connector_connect(qd_connector_t *ct, qd_dispatch_t *qd);
 
 /**
  * Store address of display name service py object for C code use

@@ -129,7 +129,6 @@ struct qd_connector_t {
     long                      delay;
 
     /* Connector state and ctx can be modified in proactor or management threads. */
-    sys_mutex_t              *lock;
     cxtr_state_t              state;
     char                     *conn_msg;
     qd_connection_t          *ctx;
@@ -210,5 +209,8 @@ void transport_tracer(pn_transport_t *transport, const char *message);
  * This is similar to the transport_tracer but it writes the message to the log at the trace level even if trace level is not enabled.
  */
 void connection_transport_tracer(pn_transport_t *transport, const char *message);
+
+sys_mutex_t *qd_server_get_lock(qd_server_t *server);
+
 
 #endif

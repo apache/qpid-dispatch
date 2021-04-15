@@ -51,8 +51,8 @@ static void on_timer(void *context)
 static char* test_quiet(void *context)
 {
     fire_mask = fired = 0;
-    qd_timer_visit();
-    qd_timer_visit();
+    qd_timer_visit(false);
+    qd_timer_visit(false);
     if (fired != 0 && fire_mask != 0)
         return "Expected zero timers fired";
     return 0;
@@ -63,7 +63,7 @@ static char* test_immediate(void *context)
     fire_mask = fired = 0;
     qd_timer_schedule(timers[0], 0);
     if (fired != 0)  return "Premature firing";
-    qd_timer_visit();
+    qd_timer_visit(false);
     if (fired != 1)  return "Expected 1 firing";
     if (fire_mask != 1)  return "Incorrect fire mask";
 
@@ -76,7 +76,7 @@ static char* test_immediate_reschedule(void *context)
     fire_mask = fired = 0;
     qd_timer_schedule(timers[0], 0);
     qd_timer_schedule(timers[0], 0);
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fired > 1) return "pass 1 - Too many firings";
     if (fire_mask != 1) return "pass 1 - Incorrect fire mask";
@@ -84,7 +84,7 @@ static char* test_immediate_reschedule(void *context)
     fire_mask = fired = 0;
     qd_timer_schedule(timers[0], 0);
     qd_timer_schedule(timers[0], 0);
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fired > 1) return "pass 2 - Too many firings";
     if (fire_mask != 1)  return "pass 2 - Incorrect fire mask";
@@ -98,13 +98,13 @@ static char* test_immediate_plus_delayed(void *context)
     fire_mask = fired = 0;
     qd_timer_schedule(timers[0], 0);
     qd_timer_schedule(timers[1], 5);
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fired > 1) return "Too many firings";
     if (fire_mask != 1)  return "Incorrect fire mask 1";
 
     time_value += 8;
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fired < 1) return "Delayed Failed to fire";
     if (fire_mask != 3)  return "Incorrect fire mask 3";
@@ -119,20 +119,20 @@ static char* test_single(void *context)
 
     qd_timer_schedule(timers[0], 2);
     if (timeout != 2) return "Incorrect timeout";
-    qd_timer_visit();
+    qd_timer_visit(false);
     if (fired > 0) return "Premature firing";
     time_value++;
-    qd_timer_visit();
+    qd_timer_visit(false);
     if (fired > 0) return "Premature firing 2";
     time_value++;
-    qd_timer_visit();
+    qd_timer_visit(false);
     if (fire_mask != 1)  return "Incorrect fire mask";
 
     fire_mask = fired = 0;
     time_value++;
-    qd_timer_visit();
+    qd_timer_visit(false);
     time_value++;
-    qd_timer_visit();
+    qd_timer_visit(false);
     if (fired != 0) return "Spurious fires";
 
     return 0;
@@ -148,13 +148,13 @@ static char* test_two_inorder(void *context)
     qd_timer_schedule(timers[1], 4);
     if (timeout != 2) return "bad timeout still 2";
     time_value += 2;
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fire_mask & 2) return "Second fired prematurely";
     if (fire_mask != 1) return "Incorrect fire mask 1";
 
     time_value += 2;
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fire_mask != 3)  return "Incorrect fire mask 3";
 
@@ -169,14 +169,14 @@ static char* test_two_reverse(void *context)
     qd_timer_schedule(timers[0], 4);
     qd_timer_schedule(timers[1], 2);
     time_value += 2;
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fired < 1) return "First failed to fire";
     if (fired > 1) return "Second fired prematurely";
     if (fire_mask != 2) return "Incorrect fire mask 2";
 
     time_value += 2;
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fired < 1) return "Second failed to fire";
     if (fire_mask != 3)  return "Incorrect fire mask 3";
@@ -192,13 +192,13 @@ static char* test_two_duplicate(void *context)
     qd_timer_schedule(timers[0], 2);
     qd_timer_schedule(timers[1], 2);
     time_value += 2;
-    qd_timer_visit();
+    qd_timer_visit(false);
     if (fired != 2) return "Expected two firings";
     if (fire_mask != 3) return "Incorrect fire mask 3";
 
     fire_mask = fired = 0;
     time_value += 2;
-    qd_timer_visit();
+    qd_timer_visit(false);
     if (fired > 0) return "Spurious timer fires";
 
     return 0;
@@ -211,7 +211,7 @@ static char* test_separated(void *context)
     qd_timer_schedule(timers[0], 2);
     qd_timer_schedule(timers[1], 4);
     time_value +=  2;
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fired < 1) return "First failed to fire";
     if (fired > 1) return "Second fired prematurely";
@@ -221,7 +221,7 @@ static char* test_separated(void *context)
     qd_timer_schedule(timers[2], 2);
     qd_timer_schedule(timers[3], 4);
     time_value +=  2;
-    qd_timer_visit();
+    qd_timer_visit(false);
 
     if (fired < 1) return "Second failed to fire";
     if (fired < 2) return "Third failed to fire";
@@ -229,7 +229,7 @@ static char* test_separated(void *context)
 
     fired = 0;
     time_value +=  2;
-    qd_timer_visit();
+    qd_timer_visit(false);
     if (fired < 1) return "Fourth failed to fire";
     if (fire_mask != 15) return "Incorrect fire mask 15";
 
@@ -271,7 +271,7 @@ static char* test_big(void *context)
         qd_timer_schedule(timers[i], durations[i]);
     for (i = 0; i < 18; i++) {
         ++time_value;
-        qd_timer_visit();
+        qd_timer_visit(false);
         if (fire_mask != masks[i]) {
             static char error[100];
             sprintf(error, "Iteration %d: expected mask %04lx, got %04lx", i, masks[i], fire_mask);

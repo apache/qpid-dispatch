@@ -1005,7 +1005,7 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
             continue;
         }
 
-        qd_connector_connect(ct);
+        qd_connector_connect(ct, qd);
         ct = DEQ_NEXT(ct);
     }
 
@@ -1053,14 +1053,14 @@ void qd_connection_manager_delete_connector(qd_dispatch_t *qd, void *impl)
 {
     qd_connector_t *ct = (qd_connector_t*) impl;
     if (ct) {
-        sys_mutex_lock(ct->lock);
+        sys_mutex_lock(qd_server_get_lock(qd->server));
         if (ct->ctx) {
             ct->ctx->connector = 0;
             if(ct->ctx->pn_conn)
                 qd_connection_invoke_deferred(ct->ctx, deferred_close, ct->ctx->pn_conn);
 
         }
-        sys_mutex_unlock(ct->lock);
+        sys_mutex_unlock(qd_server_get_lock(qd->server));
         DEQ_REMOVE(qd->connection_manager->connectors, ct);
         qd_connector_decref(ct);
     }

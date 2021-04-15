@@ -194,12 +194,12 @@ void qd_timer_finalize(void)
 
 
 /* Execute all timers that are ready and set up next timeout. */
-void qd_timer_visit()
+void qd_timer_visit(bool shutdown)
 {
     sys_mutex_lock(lock);
     timer_adjust_now_LH();
     qd_timer_t *timer = DEQ_HEAD(scheduled_timers);
-    while (timer && timer->delta_time == 0) {
+    while (timer && (timer->delta_time == 0 || shutdown)) {
         timer_cancel_LH(timer); /* Removes timer from scheduled_timers */
         sys_mutex_unlock(lock);
         timer->handler(timer->context); /* Call the handler outside the lock, may re-schedule */

@@ -36,7 +36,7 @@ DEQ_DECLARE(qd_timer_t, qd_timer_list_t);
 
 void qd_timer_initialize(sys_mutex_t *server_lock);
 void qd_timer_finalize(void);
-void qd_timer_visit();
+void qd_timer_visit(bool shutdown);
 
 /// For tests only
 sys_mutex_t* qd_timer_lock();
