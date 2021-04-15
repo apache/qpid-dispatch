@@ -908,13 +908,6 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
  */
 void qdr_link_set_drained(qdr_core_t *core, qdr_link_t *link);
 
-
-/**
- * Set the remote delivery state for dlv. Ownership of dstate is transferred to
- * the dlv and true is returned. Caller must free dstate if false is returned.
- */
-bool qdr_delivery_set_remote_delivery_state(qdr_delivery_t *dlv, qd_delivery_state_t *dstate);
-
 /**
  * Extract the disposition and delivery state data that is to be sent to the
  * remote endpoint via the delivery. Caller takes ownership of the returned

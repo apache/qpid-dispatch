@@ -42,6 +42,7 @@ struct qdr_delivery_t {
     qd_message_t           *msg;
     qd_iterator_t          *to_addr;
     qd_iterator_t          *origin;
+    sys_mutex_t            *dispo_lock;          ///< lock disposition and local_state fields
     uint64_t                disposition;         ///< local disposition, will be pushed to remote endpoint
     uint64_t                remote_disposition;  ///< disposition as set by remote endpoint
     uint64_t                mcast_disposition;   ///< temporary terminal disposition while multicast fwding
@@ -108,8 +109,7 @@ qdr_link_t *qdr_delivery_link(const qdr_delivery_t *delivery);
 bool qdr_delivery_presettled(const qdr_delivery_t *delivery);
 
 void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label);
-
-void qdr_delivery_move_delivery_state_CT(qdr_delivery_t *from, qdr_delivery_t *to);
+bool qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer);
 
 //
 // I/O thread only functions

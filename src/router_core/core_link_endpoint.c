@@ -147,6 +147,7 @@ qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *end
     dlv->delivery_id = next_delivery_id();
     dlv->link_id     = endpoint->link->identity;
     dlv->conn_id     = endpoint->link->conn_id;
+    dlv->dispo_lock  = sys_mutex();
     qd_log(core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdrc_endpoint_delivery_CT", DLV_ARGS(dlv));
     return dlv;
 }

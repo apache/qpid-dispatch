@@ -144,13 +144,14 @@ struct qdr_action_t {
         // Arguments for delivery state updates
         //
         struct {
-            qdr_delivery_t *delivery;
-            uint64_t        disposition;
-            uint8_t         tag[32];
-            int             tag_length;
-            bool            settled;
-            bool            presettled;  // true if remote settles while msg is in flight
-            bool            more;  // true if there are more frames arriving, false otherwise
+            qdr_delivery_t      *delivery;
+            qd_delivery_state_t *dstate;
+            uint64_t             disposition;
+            uint8_t              tag[32];
+            int                  tag_length;
+            bool                 settled;
+            bool                 presettled;  // true if remote settles while msg is in flight
+            bool                 more;  // true if there are more frames arriving, false otherwise
         } delivery;
 
         //

@@ -838,6 +838,8 @@ class TcpAdaptor(TestCase):
     # Q2 holdoff
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_60_q2_holdoff(self):
+        # for now, Q2 is disabled to avoid stalling TCP backpressure
+        self.skipTest("Q2 is disabled on TCP adaptor")
         name = "test_60_q2_holdoff"
         self.logger.log("TCP_TEST Start %s" % name)
 

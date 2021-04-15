@@ -32,7 +32,6 @@ qd_delivery_state_t *qd_delivery_state()
 }
 
 
-
 qd_delivery_state_t *qd_delivery_state_from_error(qdr_error_t *err)
 {
     if (err) {
