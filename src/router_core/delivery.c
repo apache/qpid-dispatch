@@ -713,8 +713,8 @@ static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv
     //
     // Non-multicast Logic:
     //
-    // If disposition has changed and there is a peer link, set the disposition
-    // of the peer
+    // If the disposition or extended delivery-state has changed and there is a
+    // peer link, set the disposition/delivery-state of the peer
     // If remote settled, the delivery must be unlinked and freed.
     // If remote settled and there is a peer, the peer shall be settled and
     // unlinked.  It shall not be freed until the connection-side thread
