@@ -746,7 +746,7 @@ static void qdr_generate_link_name(const char *label, char *buffer, size_t lengt
 }
 
 
-void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link, bool on_shutdown)
 {
     //
     // Clean up the lists of deliveries on this link
@@ -766,6 +766,8 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         if (d->presettled)
             core->dropped_presettled_deliveries++;
         d->where = QDR_DELIVERY_NOWHERE;
+        if (on_shutdown)
+            d->tracking_addr = 0;
         d->link_work = 0;
         d = DEQ_NEXT(d);
     }
@@ -776,6 +778,8 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         assert(d->where == QDR_DELIVERY_IN_UNSETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
         d->link_work = 0;
+        if (on_shutdown)
+            d->tracking_addr = 0;
         d = DEQ_NEXT(d);
     }
 
@@ -785,6 +789,8 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         assert(d->where == QDR_DELIVERY_IN_SETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
         d->link_work = 0;
+        if (on_shutdown)
+            d->tracking_addr = 0;
         d = DEQ_NEXT(d);
     }
     sys_mutex_unlock(conn->work_lock);
@@ -1021,7 +1027,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     // Clean up any remaining deliveries
     //
-    qdr_link_cleanup_deliveries_CT(core, conn, link);
+    qdr_link_cleanup_deliveries_CT(core, conn, link, false);
 
     //
     // Remove all references to this link in the connection's and owning
@@ -2087,7 +2093,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         //
         // Handle the disposition of any deliveries that remain on the link
         //
-        qdr_link_cleanup_deliveries_CT(core, conn, link);
+        qdr_link_cleanup_deliveries_CT(core, conn, link, false);
 
         //
         // If the detach occurred via protocol, send a detach back.

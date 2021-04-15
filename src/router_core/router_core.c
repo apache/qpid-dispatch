@@ -225,7 +225,7 @@ void qdr_core_free(qdr_core_t *core)
             link->in_streaming_pool = false;
         }
 
-        qdr_link_cleanup_deliveries_CT(core, link->conn, link);
+        qdr_link_cleanup_deliveries_CT(core, link->conn, link, true);
 
         if (link->core_endpoint)
             qdrc_endpoint_do_cleanup_CT(core, link->core_endpoint);
