@@ -102,7 +102,7 @@ static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
     const int RCVBUFSIZE = 32;    // Size of receive buffer
 
     string servAddress = "127.0.0.1"; // First arg: server address
-    char *echoString = "baf";   // Second arg: string to echo
+    const char *echoString = "baf";   // Second arg: string to echo
     int echoStringLen = strlen(echoString);   // Determine input length
     unsigned short echoServPort = 5673;
 
@@ -208,7 +208,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     const int RCVBUFSIZE = 32;    // Size of receive buffer
 
     string servAddress = "127.0.0.1"; // First arg: server address
-    char *echoString = "baf";   // Second arg: string to echo
+    const char *echoString = "baf";   // Second arg: string to echo
     int echoStringLen = strlen(echoString);   // Determine input length
     unsigned short echoServPort = 5673;
 
@@ -299,7 +299,7 @@ static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state) {
     const int RCVBUFSIZE = 32;    // Size of receive buffer
 
     string servAddress = "127.0.0.1"; // First arg: server address
-    char *echoString = "baf";   // Second arg: string to echo
+    const char *echoString = "baf";   // Second arg: string to echo
     int echoStringLen = strlen(echoString);   // Determine input length
     unsigned short echoServPort = 5674;
 
