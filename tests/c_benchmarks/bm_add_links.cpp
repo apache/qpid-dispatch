@@ -58,7 +58,7 @@ static void BM_AddRemovePattern(benchmark::State &state) {
     qd_iterator_free(piter);
 }
 
-//BENCHMARK(BM_AddRemovePattern)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_AddRemovePattern)->Unit(benchmark::kMicrosecond);
 
 
 // https://github.com/apache/qpid-dispatch/pull/732/files
@@ -74,7 +74,7 @@ static void BM_AddAutolink(benchmark::State &state) {
     }
 }
 
-//BENCHMARK(BM_AddAutolink)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_AddAutolink)->Unit(benchmark::kMillisecond);
 
 static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
 //    std::condition_variable cv;
@@ -143,7 +143,7 @@ static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
     t.join();
 }
 
-//BENCHMARK(BM_TCPEchoServerLatency1QDR)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_TCPEchoServerLatency1QDR)->Unit(benchmark::kMillisecond);
 
 /*
  * options:
@@ -339,4 +339,4 @@ static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state) {
     u.join();
 }
 
-//BENCHMARK(BM_TCPEchoServerLatencyWithoutQDR)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_TCPEchoServerLatencyWithoutQDR)->Unit(benchmark::kMillisecond);
