@@ -1386,7 +1386,9 @@ void qd_server_free(qd_server_t *qd_server)
             qd_session_cleanup(ctx);
             pn_connection_set_context(ctx->pn_conn, 0);
         }
-        if (ctx->free_user_id) free((char*)ctx->user_id);
+        invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
+        if (ctx->free_user_id)
+            free((char*)ctx->user_id);
         sys_mutex_free(ctx->deferred_call_lock);
         free(ctx->name);
         free(ctx->role);
