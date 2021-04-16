@@ -47,6 +47,7 @@ TEST_CASE("policy" * doctest::skip()) {
         {
             auto qd = qdr.qd;
 
+            const char *test_module_name = static_cast<const char *>("test_module");
             PyObject *module = Py_CompileString(
                 // language: Python
                 R"EOT(
@@ -61,10 +62,10 @@ fake_policy = {
       "enableVhostPolicy": 4,
       "enableVhostNamePatterns": NotBool(),
 })EOT",
-                "test_module", Py_file_input);
+                test_module_name, Py_file_input);
             REQUIRE(module != nullptr);
 
-            PyObject *pModuleObj = PyImport_ExecCodeModule(static_cast<const char *>("test_module"), module);
+            PyObject *pModuleObj = PyImport_ExecCodeModule(test_module_name, module);
                 REQUIRE(pModuleObj != nullptr);
             // better to check with an if, use PyErr_Print() or such to read the error
 
