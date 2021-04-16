@@ -258,6 +258,20 @@ void qdr_core_free(qdr_core_t *core)
         link = DEQ_HEAD(core->open_links);
     }
 
+    //
+    // Clean up any qdr_delivery_cleanup_t's that are still left in the core->delivery_cleanup_list
+    //
+    qdr_delivery_cleanup_t *cleanup = DEQ_HEAD(core->delivery_cleanup_list);
+    while (cleanup) {
+        DEQ_REMOVE_HEAD(core->delivery_cleanup_list);
+        if (cleanup->msg)
+            qd_message_free(cleanup->msg);
+        if (cleanup->iter)
+            qd_iterator_free(cleanup->iter);
+        free_qdr_delivery_cleanup_t(cleanup);
+        cleanup = DEQ_HEAD(core->delivery_cleanup_list);
+    }
+
     qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
     while (conn) {
         DEQ_REMOVE_HEAD(core->open_connections);
