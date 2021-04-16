@@ -34,9 +34,12 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+// maximum amount of bytes to read from TCP client before backpressure
+// activates.  Note that the actual number of read bytes may exceed this value
+// by READ_BUFFERS * BUFFER_SIZE since we fetch up to READ_BUFFERs worth of
+// buffers when calling pn_raw_connection_take_read_buffers()
+//
 const uint32_t TCP_MAX_CAPACITY = 131072;
-const uint64_t TCP_SEQ_ACK = 999;  // TBD
-
 
 
 ALLOC_DEFINE(qd_tcp_listener_t);
@@ -93,11 +96,10 @@ struct qdr_tcp_connection_t {
     DEQ_LINKS(qdr_tcp_connection_t);
 
     // TCP byte-level flow control
-    
-
-    uint32_t rx_sequence;     // read from raw_conn
-    uint32_t unacked_octets;  // not yet acked by outgoing tcp adaptor
-    uint32_t tx_sequence;     // written to raw_conn
+    //
+    uint64_t rx_sequence;     // read from raw_conn
+    uint64_t unacked_octets;  // not yet acked by outgoing tcp adaptor
+    uint64_t tx_sequence;     // written to raw_conn
 };
 
 DEQ_DECLARE(qdr_tcp_connection_t, qdr_tcp_connection_list_t);
@@ -121,44 +123,6 @@ static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bo
 static void handle_disconnected(qdr_tcp_connection_t* conn);
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* conn);
 static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc);
-
-
-static qd_delivery_state_t *make_funny_delivery_state(uint32_t sequence_no)
-{
-    qd_delivery_state_t *dstate = qd_delivery_state();
-    if (dstate) {
-        dstate->extension = pn_data(0);
-        if (!dstate->extension) {
-            qd_delivery_state_free(dstate);
-            return 0;
-        }
-        pn_data_put_list(dstate->extension);
-        pn_data_enter(dstate->extension);
-        pn_data_put_uint(dstate->extension, sequence_no);
-        pn_data_exit(dstate->extension);
-    }
-
-    return dstate;
-}
-
-static bool reify_funny_delivery_state(qd_delivery_state_t *dstate, uint32_t *sequence_no)
-{
-    if (dstate && dstate->extension) {
-        pn_data_rewind(dstate->extension);
-        if (pn_data_next(dstate->extension)) {
-            size_t count = pn_data_get_list(dstate->extension);
-            if (count && pn_data_enter(dstate->extension)) {
-                if (pn_data_next(dstate->extension) && pn_data_type(dstate->extension) == PN_UINT) {
-                    *sequence_no = pn_data_get_uint(dstate->extension);
-                    return true;
-                }
-            }
-        }
-    }
-
-    return false;  // failed
-}
-
 
 static inline uint64_t qdr_tcp_conn_linkid(const qdr_tcp_connection_t *conn)
 {
@@ -288,7 +252,7 @@ static int handle_incoming_impl(qdr_tcp_connection_t *conn, bool close_pending)
         conn->unacked_octets += count;
         if (conn->unacked_octets >= TCP_MAX_CAPACITY) {
             qd_log(tcp_adaptor->log_source, QD_LOG_INFO,
-                   "[C%"PRIu64"] incoming blocked. Seq=%"PRIu32" unacked=%"PRIu32,
+                   "[C%"PRIu64"] incoming blocked. Seq=%"PRIu64" unacked=%"PRIu64,
                    conn->conn_id, conn->rx_sequence, conn->unacked_octets);
         }
     }
@@ -547,7 +511,7 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
         }
         qd_message_t *msg = qdr_delivery_message(conn->outstream);
         bool read_more_body = true;
-        uint32_t old_sequence = conn->tx_sequence;
+        uint64_t old_sequence = conn->tx_sequence;
 
         if (conn->outgoing_buff_count > 0) {
             // flush outgoing buffs that hold body data waiting to go out
@@ -571,12 +535,18 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
         if (conn->tx_sequence != old_sequence) {
 
             qd_log(tcp_adaptor->log_source, QD_LOG_INFO,
-                   "[C%"PRIu64"] sending TCP_SEQ_ACK delivery state: seq= %"PRIu32,
+                   "[C%"PRIu64"] sending PN_RECEIVED delivery state: seq= %"PRIu64,
                    conn->conn_id, conn->tx_sequence);
 
-            qd_delivery_state_t *dstate = make_funny_delivery_state(conn->tx_sequence);
+            // note: this update is sent to the remote TCP adaptor. Since this
+            // update is internal to the router network we do not need to use
+            // the section_number and use section_offset only
+            //
+            qd_delivery_state_t *dstate = qd_delivery_state();
+            dstate->section_number = 0;
+            dstate->section_offset = conn->tx_sequence;
             qdr_delivery_remote_state_updated(tcp_adaptor->core, conn->outstream,
-                                              TCP_SEQ_ACK,
+                                              PN_RECEIVED,
                                               false,  // settled
                                               dstate,
                                               false);
@@ -1348,27 +1318,28 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
             pn_raw_connection_close(tc->pn_raw_conn);
         }
 
-        if (disp == TCP_SEQ_ACK) {
+        if (disp == PN_RECEIVED) {
+            //
+            // the consumer of this TCP flow has updated its tx_sequence:
+            //
             bool window_opened = false;
-            uint32_t remote_seq = 0;
             uint64_t ignore;
             qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
 
             if (!dstate) {
                 qd_log(tcp_adaptor->log_source, QD_LOG_ERROR,
-                       "[C%"PRIu64"] BAD TCP_SEQ_ACK - missing delivery-state!!", tc->conn_id);
-                tc->unacked_octets = 0;  // possible recovery: just clear the entire window
-                window_opened = true;
-            } else if (!reify_funny_delivery_state(dstate, &remote_seq)) {
-                qd_log(tcp_adaptor->log_source, QD_LOG_ERROR,
-                       "[C%"PRIu64"] BAD TCP_SEQ_ACK - invalid delivery-state!!", tc->conn_id);
+                       "[C%"PRIu64"] BAD PN_RECEIVED - missing delivery-state!!", tc->conn_id);
                 tc->unacked_octets = 0;  // possible recovery: just clear the entire window
                 window_opened = true;
             } else {
-                tc->unacked_octets = tc->rx_sequence - remote_seq;
+                // note: the PN_RECEIVED is generated by the remote TCP
+                // adaptor, for simplicity we ignore the section_number since
+                // all we really need is a byte offset:
+                //
+                tc->unacked_octets = tc->rx_sequence - dstate->section_offset;
                 qd_log(tcp_adaptor->log_source, QD_LOG_INFO,
-                       "[C%"PRIu64"] TCP_SEQ_ACK - window update: unacked=%"PRIu32" local-seq=%"PRIu32" remote-seq=%"PRIu32,
-                       tc->conn_id, tc->unacked_octets, tc->rx_sequence, remote_seq);
+                       "[C%"PRIu64"] TCP backpressure window update: unacked=%"PRIu64" local rx-seq=%"PRIu64,
+                       tc->conn_id, tc->unacked_octets, tc->rx_sequence);
                 window_opened = true;
             }
 
