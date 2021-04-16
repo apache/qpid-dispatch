@@ -49,7 +49,7 @@ static void _conn_event_CT(void *context, qdrc_event_t event_type, qdr_connectio
         // create a messaging client to the interior router's $management
         //
         qd_log(core->log, QD_LOG_TRACE,
-               "starting edge mgmt client (id=%"PRIu64")", conn->identity);
+               "starting edge mgmt client (id=%" PRIu64 ")", conn->identity);
         qdr_terminus_t *target = qdr_terminus(0);
         qdr_terminus_set_address(target, "$management");
         _client = qdrc_client_CT(core,
@@ -69,7 +69,7 @@ static void _conn_event_CT(void *context, qdrc_event_t event_type, qdr_connectio
         // clean up messaging client
         //
         qd_log(core->log, QD_LOG_TRACE,
-               "stopping edge mgmt client (id=%"PRIu64")", conn->identity);
+               "stopping edge mgmt client (id=%" PRIu64 ")", conn->identity);
         qdrc_client_free_CT(_client);
         _client = NULL;
         break;

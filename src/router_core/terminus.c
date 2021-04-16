@@ -142,7 +142,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         *size  -= len;
 
         if (term->timeout > 0) {
-            len     = safe_snprintf(output, *size, " timeout:%"PRIu32, term->timeout);
+            len     = safe_snprintf(output, *size, " timeout:%" PRIu32 , term->timeout);
             output += len;
             *size  -= len;
         }

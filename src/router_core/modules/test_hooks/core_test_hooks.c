@@ -89,7 +89,7 @@ static void source_send(test_endpoint_t *ep, bool presettled)
     qd_message_t        *msg   = qd_message();
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
 
-    sprintf(stringbuf, "Sequence: %"PRIu32, sequence);
+    sprintf(stringbuf, "Sequence: %" PRIu32 , sequence);
 
     qd_compose_start_list(field);
     qd_compose_insert_bool(field, 0);     // durable
@@ -510,7 +510,7 @@ static void _client_on_ack_cb(qdr_core_t    *core,
 {
     test_client_t *tc = (test_client_t *)user_context;
     qd_log(core->log, QD_LOG_TRACE,
-           "client test request ack rc=%p d=%"PRIu64,
+           "client test request ack rc=%p d=%" PRIu64 ,
            request_context, disposition);
     assert((long) request_context < tc->counter);
 }

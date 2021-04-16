@@ -108,7 +108,7 @@ void transport_tracer(pn_transport_t *transport, const char *message)
     qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
     if (ctx) {
         // The PROTOCOL module is used exclusively for logging protocol related tracing. The protocol could be AMQP, HTTP, TCP etc.
-        qd_log(ctx->server->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"]:%s", ctx->connection_id, message);
+        qd_log(ctx->server->protocol_log_source, QD_LOG_TRACE, "[C%" PRIu64 "]:%s", ctx->connection_id, message);
     }
 }
 
@@ -117,7 +117,7 @@ void connection_transport_tracer(pn_transport_t *transport, const char *message)
     qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
     if (ctx) {
         // Unconditionally write the log at TRACE level to the log file.
-        qd_log_impl_v1(ctx->server->protocol_log_source, QD_LOG_TRACE,  __FILE__, __LINE__, "[C%"PRIu64"]:%s", ctx->connection_id, message);
+        qd_log_impl_v1(ctx->server->protocol_log_source, QD_LOG_TRACE,  __FILE__, __LINE__, "[C%" PRIu64 "]:%s", ctx->connection_id, message);
     }
 }
 
@@ -247,7 +247,7 @@ static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tpo
             }
             else {
                 // This is an unrecognized component. log a critical error
-                qd_log(conn->server->log_source, QD_LOG_CRITICAL, "[C%"PRIu64"] Unrecognized component '%c' in uidFormat ", conn->connection_id, components[x]);
+                qd_log(conn->server->log_source, QD_LOG_CRITICAL, "[C%" PRIu64 "] Unrecognized component '%c' in uidFormat ", conn->connection_id, components[x]);
                 return 0;
             }
         }
@@ -323,7 +323,7 @@ static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tpo
                     user_id = py_string_2_c(result);
                     Py_XDECREF(result);
                 } else {
-                    qd_log(conn->server->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Internal: failed to read displaynameservice query result", conn->connection_id);
+                    qd_log(conn->server->log_source, QD_LOG_DEBUG, "[C%" PRIu64 "] Internal: failed to read displaynameservice query result", conn->connection_id);
                 }
                 qd_python_unlock(lock_state);
             }
@@ -604,7 +604,7 @@ static void on_accept(pn_event_t *e, qd_listener_t *listener)
     }
     ctx->listener = listener;
     qd_log(listener->server->log_source, QD_LOG_TRACE,
-           "[C%"PRIu64"]: Accepting incoming connection to '%s'",
+           "[C%" PRIu64 "]: Accepting incoming connection to '%s'",
            ctx->connection_id, ctx->listener->config.host_port);
     /* Asynchronous accept, configure the transport on PN_CONNECTION_BOUND */
     pn_listener_accept(pn_listener, ctx->pn_conn);
@@ -690,7 +690,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
 
         // Set up SSL
         if (config->ssl_profile)  {
-            qd_log(ctx->server->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Configuring SSL on %s", ctx->connection_id, name);
+            qd_log(ctx->server->log_source, QD_LOG_TRACE, "[C%" PRIu64 "] Configuring SSL on %s", ctx->connection_id, name);
             if (listener_setup_ssl(ctx, config, tport) != QD_ERROR_NONE) {
                 connect_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "%s on %s", qd_error_message(), name);
                 return;
@@ -707,7 +707,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         if (config->sasl_mechanisms)
             pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
         if (config->sasl_plugin_config.auth_service) {
-            qd_log(server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Enabling remote authentication service %s", ctx->connection_id, config->sasl_plugin_config.auth_service);
+            qd_log(server->log_source, QD_LOG_INFO, "[C%" PRIu64 "] Enabling remote authentication service %s", ctx->connection_id, config->sasl_plugin_config.auth_service);
             pn_ssl_domain_t* plugin_ssl_domain = NULL;
             if (config->sasl_plugin_config.use_ssl) {
                 plugin_ssl_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
@@ -717,26 +717,26 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
                                                       config->sasl_plugin_config.ssl_certificate_file,
                                                       config->sasl_plugin_config.ssl_private_key_file,
                                                       config->sasl_plugin_config.ssl_password)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set SSL credentials for authentication service", ctx->connection_id);
+                        qd_log(server->log_source, QD_LOG_ERROR, "[C%" PRIu64 "] Cannot set SSL credentials for authentication service", ctx->connection_id);
                     }
                 }
                 if (config->sasl_plugin_config.ssl_trusted_certificate_db) {
                     if (pn_ssl_domain_set_trusted_ca_db(plugin_ssl_domain, config->sasl_plugin_config.ssl_trusted_certificate_db)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set trusted SSL certificate db for authentication service", ctx->connection_id);
+                        qd_log(server->log_source, QD_LOG_ERROR, "[C%" PRIu64 "] Cannot set trusted SSL certificate db for authentication service", ctx->connection_id);
                     } else {
                         if (pn_ssl_domain_set_peer_authentication(plugin_ssl_domain, PN_SSL_VERIFY_PEER, config->sasl_plugin_config.ssl_trusted_certificate_db)) {
-                            qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set SSL peer verification for authentication service", ctx->connection_id);
+                            qd_log(server->log_source, QD_LOG_ERROR, "[C%" PRIu64 "] Cannot set SSL peer verification for authentication service", ctx->connection_id);
                         }
                     }
                 }
                 if (config->sasl_plugin_config.ssl_ciphers) {
                     if (pn_ssl_domain_set_ciphers(plugin_ssl_domain, config->sasl_plugin_config.ssl_ciphers)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set ciphers for authentication service", ctx->connection_id);
+                        qd_log(server->log_source, QD_LOG_ERROR, "[C%" PRIu64 "] Cannot set ciphers for authentication service", ctx->connection_id);
                     }
                 }
                 if (config->sasl_plugin_config.ssl_protocols) {
                     if (pn_ssl_domain_set_protocols(plugin_ssl_domain, config->sasl_plugin_config.ssl_protocols)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set protocols for authentication service", ctx->connection_id);
+                        qd_log(server->log_source, QD_LOG_ERROR, "[C%" PRIu64 "] Cannot set protocols for authentication service", ctx->connection_id);
                     }
                 }
             }
@@ -747,12 +747,12 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
         sys_mutex_unlock(ctx->server->lock);
 
-        qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Accepted connection to %s from %s",
+        qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%" PRIu64 "] Accepted connection to %s from %s",
                ctx->connection_id, name, ctx->rhost_port);
     } else if (ctx->connector) { /* Establishing an outgoing connection */
         config = &ctx->connector->config;
         if (!setup_ssl_sasl_and_open(ctx)) {
-            qd_log(ctx->server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Connection aborted due to internal setup error",
+            qd_log(ctx->server->log_source, QD_LOG_ERROR, "[C%" PRIu64 "] Connection aborted due to internal setup error",
                ctx->connection_id);
             pn_transport_close_tail(tport);
             pn_transport_close_head(tport);
@@ -1057,19 +1057,19 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
                 ctx->connector->state = CXTR_STATE_FAILED;
                 char conn_msg[300];
                 if (condition  && pn_condition_is_set(condition)) {
-                    qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed: %s %s", ctx->connection_id, config->host_port,
+                    qd_format_string(conn_msg, 300, "[C%" PRIu64 "] Connection to %s failed: %s %s", ctx->connection_id, config->host_port,
                             pn_condition_get_name(condition), pn_condition_get_description(condition));
                     strcpy(ctx->connector->conn_msg, conn_msg);
 
                     qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
                 } else {
-                    qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed", ctx->connection_id, config->host_port);
+                    qd_format_string(conn_msg, 300, "[C%" PRIu64 "] Connection to %s failed", ctx->connection_id, config->host_port);
                     strcpy(ctx->connector->conn_msg, conn_msg);
                     qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
                 }
             } else if (ctx && ctx->listener) { /* Incoming connection */
                 if (condition && pn_condition_is_set(condition)) {
-                    qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection from %s (to %s) failed: %s %s",
+                    qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%" PRIu64 "] Connection from %s (to %s) failed: %s %s",
                            ctx->connection_id, ctx->rhost_port, ctx->listener->config.host_port, pn_condition_get_name(condition),
                            pn_condition_get_description(condition));
                 }
@@ -1198,7 +1198,7 @@ static void try_open_lh(qd_connector_t *connector)
         pn_connection_set_password(qd_conn->pn_conn, config->sasl_password);
 
     qd_log(connector->server->log_source, QD_LOG_TRACE,
-           "[C%"PRIu64"] Connecting to %s", qd_conn->connection_id, host_port);
+           "[C%" PRIu64 "] Connecting to %s", qd_conn->connection_id, host_port);
     /* Note: the transport is configured in the PN_CONNECTION_BOUND event */
     pn_proactor_connect(connector->server->proactor, qd_conn->pn_conn, host_port);
     // at this point the qd_conn may now be scheduled on another thread
@@ -1218,7 +1218,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
 
         if (!domain) {
-            qd_error(QD_ERROR_RUNTIME, "SSL domain allocation failed for connection [C%"PRIu64"] to %s:%s",
+            qd_error(QD_ERROR_RUNTIME, "SSL domain allocation failed for connection [C%" PRIu64 "] to %s:%s",
                      ctx->connection_id, config->host, config->port);
             return false;
         }
@@ -1229,7 +1229,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->ssl_trusted_certificate_db) {
             if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "SSL CA configuration failed for connection [C%"PRIu64"] to %s:%s",
+                       "SSL CA configuration failed for connection [C%" PRIu64 "] to %s:%s",
                        ctx->connection_id, config->host, config->port);
                 failed = true;
             }
@@ -1240,7 +1240,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
                                                   PN_SSL_VERIFY_PEER,
                                                   config->ssl_trusted_certificate_db)) {
             qd_log(ct->server->log_source, QD_LOG_ERROR,
-                    "SSL peer auth configuration failed for connection [C%"PRIu64"] to %s:%s",
+                    "SSL peer auth configuration failed for connection [C%" PRIu64 "] to %s:%s",
                     ctx->connection_id, config->host, config->port);
                 failed = true;
         }
@@ -1252,7 +1252,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
                                               config->ssl_private_key_file,
                                               config->ssl_password)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "SSL local certificate configuration failed for connection [C%"PRIu64"] to %s:%s",
+                       "SSL local certificate configuration failed for connection [C%" PRIu64 "] to %s:%s",
                        ctx->connection_id, config->host, config->port);
                 failed = true;
             }
@@ -1261,7 +1261,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->ssl_ciphers) {
             if (pn_ssl_domain_set_ciphers(domain, config->ssl_ciphers)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "SSL cipher configuration failed for connection [C%"PRIu64"] to %s:%s",
+                       "SSL cipher configuration failed for connection [C%" PRIu64 "] to %s:%s",
                        ctx->connection_id, config->host, config->port);
                 failed = true;
             }
@@ -1270,7 +1270,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->ssl_protocols) {
             if (pn_ssl_domain_set_protocols(domain, config->ssl_protocols)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "Permitted TLS protocols configuration failed for connection [C%"PRIu64"] to %s:%s",
+                       "Permitted TLS protocols configuration failed for connection [C%" PRIu64 "] to %s:%s",
                        ctx->connection_id, config->host, config->port);
                 failed = true;
             }
@@ -1280,7 +1280,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->verify_host_name) {
             if (pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, NULL)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                        "SSL peer host name verification configuration failed for connection [C%"PRIu64"] to %s:%s",
+                        "SSL peer host name verification configuration failed for connection [C%" PRIu64 "] to %s:%s",
                         ctx->connection_id, config->host, config->port);
                 failed = true;
             }
@@ -1290,7 +1290,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
             ctx->ssl = pn_ssl(tport);
             if (pn_ssl_init(ctx->ssl, domain, 0) != 0) {
                  qd_log(ct->server->log_source, QD_LOG_ERROR,
-                        "SSL domain internal initialization failed for connection [C%"PRIu64"] to %s:%s",
+                        "SSL domain internal initialization failed for connection [C%" PRIu64 "] to %s:%s",
                         ctx->connection_id, config->host, config->port);
                 failed = true;
             }
@@ -1386,7 +1386,7 @@ void qd_server_free(qd_server_t *qd_server)
     qd_connection_t *ctx = DEQ_HEAD(qd_server->conn_list);
     while (ctx) {
         qd_log(qd_server->log_source, QD_LOG_INFO,
-               "[C%"PRIu64"] Closing connection on shutdown",
+               "[C%" PRIu64 "] Closing connection on shutdown",
                ctx->connection_id);
         DEQ_REMOVE_HEAD(qd_server->conn_list);
         if (ctx->pn_conn) {

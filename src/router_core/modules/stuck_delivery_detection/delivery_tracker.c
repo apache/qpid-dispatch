@@ -52,7 +52,7 @@ static void check_delivery_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t
         core->deliveries_stuck++;
         if (link->deliveries_stuck == 1)
             qd_log(core->log, QD_LOG_INFO,
-                   "[C%"PRIu64"][L%"PRIu64"] "
+                   "[C%" PRIu64 "][L%" PRIu64 "] "
                    "Stuck delivery: At least one delivery on this link has been undelivered/unsettled for more than %d seconds",
                    link->conn ? link->conn->identity : 0, link->identity, stuck_age);
     }
@@ -78,7 +78,7 @@ static void process_link_CT(qdr_core_t *core, qdr_link_t *link)
         link->reported_as_blocked = true;
         core->links_blocked++;
         qd_log(core->log, QD_LOG_INFO,
-               "[C%"PRIu64"][L%"PRIu64"] "
+               "[C%" PRIu64 "][L%" PRIu64 "] "
                "Link blocked with zero credit for %d seconds",
                link->conn ? link->conn->identity : 0, link->identity,
                core->uptime_ticks - link->zero_credit_time);

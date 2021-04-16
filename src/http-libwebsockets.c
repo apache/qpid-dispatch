@@ -621,7 +621,7 @@ static bool write_allocator_stats(uint8_t **position, const uint8_t * const end,
     size_t length = 30 + strlen(name)*2 + strlen(field.name)*2 + 20;
     if (end - *position >= length) {
         *position += lws_snprintf((char*) *position, end - *position, "# TYPE %s:%s_bytes gauge\n", name, field.name);
-        *position += lws_snprintf((char*) *position, end - *position, "%s:%s_bytes %"PRIu64"\n", name, field.name, field.value);
+        *position += lws_snprintf((char*) *position, end - *position, "%s:%s_bytes %" PRIu64 "\n", name, field.name, field.value);
         return true;
     } else {
         return false;
@@ -816,7 +816,7 @@ static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
         }
         strncpy(c->qd_conn->rhost_port, c->qd_conn->rhost, sizeof(c->qd_conn->rhost_port));
         qd_log(hs->log, QD_LOG_DEBUG,
-               "[%"PRIu64"] upgraded HTTP connection from %s to AMQPWS",
+               "[%" PRIu64 "] upgraded HTTP connection from %s to AMQPWS",
                qd_connection_connection_id(c->qd_conn), qd_connection_name(c->qd_conn));
         return handle_events(c);
     }

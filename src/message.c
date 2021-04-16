@@ -200,7 +200,7 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
        case QD_AMQP_UINT0: {
            char str[11];
            uint32_t uint32_val = qd_parse_as_uint(parsed_field);
-           snprintf(str, 11, "%"PRIu32"", uint32_val);
+           snprintf(str, 11, "%" PRIu32 "", uint32_val);
            aprintf(begin, end, "%s", str);
            break;
        }
@@ -209,7 +209,7 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
        case QD_AMQP_ULONG0: {
            char str[21];
            uint64_t uint64_val = qd_parse_as_ulong(parsed_field);
-           snprintf(str, 20, "%"PRIu64"", uint64_val);
+           snprintf(str, 20, "%" PRIu64 "", uint64_val);
            aprintf(begin, end, "%s", str);
            break;
        }

@@ -77,7 +77,7 @@ extern sys_atomic_t global_delivery_id;
 static inline uint32_t next_delivery_id() { return sys_atomic_inc(&global_delivery_id); }
 
 // Common log line prefix
-#define DLV_FMT       "[C%"PRIu64"][L%"PRIu64"][D%"PRIu32"]"
+#define DLV_FMT       "[C%" PRIu64 "][L%" PRIu64 "][D%" PRIu32 "]"
 #define DLV_ARGS(dlv) dlv->conn_id, dlv->link_id, dlv->delivery_id
 #define DLV_ARGS_MAX  75
 

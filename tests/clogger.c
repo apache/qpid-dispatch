@@ -137,7 +137,7 @@ void start_message()
         abort();
     }
 
-    debug("start message #%"PRIu64"!\n", sent);
+    debug("start message #%" PRIu64 "!\n", sent);
 
     pn_dlv = pn_delivery(pn_link, pn_dtag((const char *)&tag, sizeof(tag)));
     ++tag;
@@ -180,12 +180,12 @@ bool send_message_data()
         }
         bytes_sent += rc;
 
-        debug("message body bytes written=%zi total=%"PRIu32" body_length=%"PRIu32"\n",
+        debug("message body bytes written=%zi total=%" PRIu32 " body_length=%" PRIu32 "\n",
               rc, bytes_sent, body_length);
     }
 
     if (bytes_sent == body_length) {
-        debug("message #%"PRIu64" sent!\n", sent);
+        debug("message #%" PRIu64 " sent!\n", sent);
         pn_link_advance(pn_link);
         sent += 1;
 
@@ -320,14 +320,14 @@ static void usage(const char *prog)
 {
     printf("Usage: %s <options>\n", prog);
     printf("-a      \tThe host address [%s]\n", host_address);
-    printf("-c      \t# of messages to send, 0 == nonstop [%"PRIu64"]\n", limit);
+    printf("-c      \t# of messages to send, 0 == nonstop [%" PRIu64 "]\n", limit);
     printf("-i      \tContainer name [%s]\n", container_name);
     printf("-n      \tUse an anonymous link [%s]\n", BOOL2STR(use_anonymous));
     printf("-s      \tBody size in bytes [%d]\n", body_length);
     printf("-t      \tTarget address [%s]\n", target_address);
     printf("-u      \tSend all messages presettled [%s]\n", BOOL2STR(presettle));
     printf("-D      \tPrint debug info [off]\n");
-    printf("-P      \tPause between sending frames [%"PRIu32"]\n", pause_msec);
+    printf("-P      \tPause between sending frames [%" PRIu32 "]\n", pause_msec);
     exit(1);
 }
 
@@ -421,9 +421,9 @@ int main(int argc, char** argv)
     pn_reactor_free(reactor);
 
     if (not_accepted) {
-        printf("Sent: %" PRIu64 "  Accepted: %" PRIu64 " Not Accepted: %" PRIu64 "\n", sent, accepted, not_accepted);
+        printf("Sent: %"  PRIu64  "  Accepted: %"  PRIu64  " Not Accepted: %"  PRIu64  "\n", sent, accepted, not_accepted);
         if (accepted + not_accepted != sent) {
-            printf("FAILURE! Sent: %" PRIu64 "  Acked: %" PRIu64 "\n", sent, accepted + not_accepted);
+            printf("FAILURE! Sent: %"  PRIu64  "  Acked: %"  PRIu64  "\n", sent, accepted + not_accepted);
             return 1;
         }
     }
