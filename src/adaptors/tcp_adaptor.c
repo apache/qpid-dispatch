@@ -134,10 +134,10 @@ static inline const char * qdr_tcp_connection_role_name(const qdr_tcp_connection
 
 static const char * qdr_tcp_quadrant_id(const qdr_tcp_connection_t *tc, const qdr_link_t *link)
 {
-    if (tc->instream)
-        return (tc->ingress) ? "(client incoming)" : "(client outgoing)";
+    if (tc->ingress)
+        return link->link_direction == QD_INCOMING ? "(client raw-to-rtr)" : "(client rtr-to-raw)";
     else
-        return (tc->ingress) ? "(server incoming)" : "(server outgoing)";
+        return link->link_direction == QD_INCOMING ? "(server raw-to-rtr)" : "(server rtr-to-raw)";
 }
 
 static void on_activate(void *context)
@@ -227,6 +227,7 @@ static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t
             qd_buffer_insert(buf, raw_buffers[i].size);
             count += raw_buffers[i].size;
 
+            assert(raw_buffers[i].size == qd_buffer_size(buf));
             if (raw_buffers[i].size > 0) {
                 DEQ_INSERT_TAIL(*buffers, buf);
             } else {
@@ -235,14 +236,16 @@ static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t
             }
         }
     }
-    // account for any incoming bytes just read
+
     if (count > 0) {
+        // account for any incoming bytes just read
         conn->last_in_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_in += count;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
-            "[C%"PRIu64"] pn_raw_connection_take_read_buffers() took %zu, freed %i",
-            conn->conn_id, DEQ_SIZE(*buffers), free_count);
     }
+
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+        "[C%"PRIu64"] pn_raw_connection_take_read_buffers() took %zu, freed %i",
+        conn->conn_id, DEQ_SIZE(*buffers), free_count);
 
     return count;
 }
@@ -256,16 +259,22 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
     qd_log_source_t *log = tcp_adaptor->log_source;
 
     qd_log(log, QD_LOG_TRACE,
-           "[C%"PRIu64"] handle_incoming %s for %s connection. read_closed:%s, flow_enabled:%s",
-           conn->conn_id, msg,
+           "[C%"PRIu64"][L%"PRIu64"] handle_incoming %s for %s connection. read_closed:%s, flow_enabled:%s",
+           conn->conn_id, conn->incoming_id, msg,
            qdr_tcp_connection_role_name(conn),
            conn->raw_closed_read ? "T" : "F",
            conn->flow_enabled    ? "T" : "F");
 
     if (conn->raw_read_shutdown) {
-        qd_log(log, QD_LOG_ERROR,
-                "[C%"PRIu64"][L%"PRIu64"] handle_incoming called but read side is shut down",
-                conn->conn_id, conn->outgoing_id);
+        // Drain all read buffers that may still be in the raw connection
+        qd_log(log, QD_LOG_TRACE,
+            "[C%"PRIu64"][L%"PRIu64"] handle_incoming %s for %s connection. drain read buffers",
+            conn->conn_id, conn->incoming_id, msg,
+            qdr_tcp_connection_role_name(conn));
+        qd_buffer_list_t buffers;
+        DEQ_INIT(buffers);
+        handle_incoming_raw_read(conn, &buffers);
+        qd_buffer_list_free_buffers(&buffers);
         return 0;
     }
 
@@ -274,13 +283,13 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
     if (conn->ingress && !conn->reply_to) {
         qd_log(log, QD_LOG_DEBUG,
                 "[C%"PRIu64"][L%"PRIu64"] Waiting for reply-to address before initiating ingress stream message",
-                conn->conn_id, conn->outgoing_id);
+                conn->conn_id, conn->incoming_id);
         return 0;
     }
     if (!conn->flow_enabled) {
         qd_log(log, QD_LOG_DEBUG,
                 "[C%"PRIu64"][L%"PRIu64"] Waiting for credit before initiating ingress stream message",
-                conn->conn_id, conn->outgoing_id);
+                conn->conn_id, conn->incoming_id);
         return 0;
     }
 
@@ -849,6 +858,9 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         break;
     }
     case PN_RAW_CONNECTION_READ: {
+        qd_log(log, QD_LOG_DEBUG,
+               "[C%"PRIu64"] PN_RAW_CONNECTION_READ Event ",
+               conn->conn_id);
         int read = 0;
         if (!conn->incoming_started) {
             // Read data is available before the message into which it should go
@@ -864,8 +876,9 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             read = handle_incoming(conn, "PNRC_READ");
         }
         qd_log(log, QD_LOG_DEBUG,
-               "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes. Total read %"PRIu64" bytes",
-               conn->conn_id, read, conn->bytes_in);
+               "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes. Total read %"PRIu64" bytes%s",
+               conn->conn_id, read, conn->bytes_in,
+               conn->incoming_started ? "" : " stored in cache");
         while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
@@ -909,7 +922,6 @@ static qdr_tcp_connection_t *qdr_tcp_connection_ingress(qd_tcp_listener_t* liste
     DEQ_INIT(tc->early_raw_read_bufs);
     tc->pn_raw_conn = pn_raw_connection();
     pn_raw_connection_set_context(tc->pn_raw_conn, tc);
-    grant_read_buffers(tc);
     //the following call will cause a PN_RAW_CONNECTION_CONNECTED
     //event on another thread, which is where the rest of the
     //initialisation will happen, through a call to
