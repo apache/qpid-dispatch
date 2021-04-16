@@ -64,7 +64,7 @@ fake_policy = {
                 "test_module", Py_file_input);
             REQUIRE(module != nullptr);
 
-            PyObject *pModuleObj = PyImport_ExecCodeModule("test_module", module);
+            PyObject *pModuleObj = PyImport_ExecCodeModule(static_cast<const char *>("test_module"), module);
                 REQUIRE(pModuleObj != nullptr);
             // better to check with an if, use PyErr_Print() or such to read the error
 
