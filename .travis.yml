@@ -71,11 +71,14 @@ jobs:
     dist: focal
     compiler: clang
     before_install:
-    - sudo apt-get install clang-11 llvm-11-dev
-    # https://github.com/pypa/virtualenv/issues/1740
-    # https://github.com/pypa/virtualenv/issues/1873
+    # https://travis-ci.community/t/clang-10-was-recently-broken-on-linux-unmet-dependencies-for-clang-10-clang-tidy-10-valgrind/11527
+    - sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2
+    - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key 2>/dev/null | sudo apt-key add -
+    - sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main' -y
+    - sudo apt-get update -q
+    - sudo apt-get install -y clang-12 llvm-12-dev -o Debug::pkgProblemResolver=yes
     - python -m pip install --user --upgrade pip
-    - python -m pip install --user --upgrade tox virtualenv==20.0.23
+    - python -m pip install --user --upgrade tox virtualenv
     # Install quart to run the http2 tests.
     - python -m pip install --user quart
     # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -84,8 +87,8 @@ jobs:
     - python -m pip install --user grpcio protobuf
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
-    - CC=clang-11
-    - CXX=clang++-11
+    - CC=clang-12
+    - CXX=clang++-12
     - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
     - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
@@ -93,15 +96,11 @@ jobs:
     arch: s390x
     os: linux
     dist: focal
-    python:
-      - "3.9"
     before_install:
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv==20.0.23
+      - python3 -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -127,10 +126,8 @@ jobs:
       - sudo apt-get install clang-11 llvm-11-dev
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv==20.0.23
+      - python3 -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -153,10 +150,8 @@ jobs:
     os: linux
     dist: focal
     before_install:
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
       - python -m pip install --user --upgrade pip
-      - python -m pip install --user --upgrade tox virtualenv==20.0.23
+      - python -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
       - python -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
