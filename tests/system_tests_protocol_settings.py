@@ -392,7 +392,17 @@ class ConnectorSettingsNondefaultTest(TestCase):
             self.assertIn(' channel-max=19,', open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
             # nondefaults
-            self.assertIn(" incoming-window=10,", begin_lines[0])
+            SEARCH_STRING = " incoming-window=10,"
+            # Sometimes, the begin frame we are looking for might not be
+            # the first in the list. We just need to make sure that
+            # it is somewhere in the list
+            line_found = False
+            for begin_line in begin_lines:
+                if SEARCH_STRING in begin_line:
+                    line_found = True
+                    break
+
+            self.assertTrue(line_found)
 
 
 if __name__ == '__main__':
