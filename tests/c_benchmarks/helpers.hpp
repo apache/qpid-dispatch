@@ -111,11 +111,11 @@ class BetterRouterStartupLatch {
 // This also prevents me from doing a startup time benchmark. I can't run multiple startups
 // in a loop to average them easily. There will be a way, but not with `for (auto _ : state)`.
 
-static std::string get_env(std::string const & key)
-{
-    char * val = std::getenv(key.c_str());
-    return val == NULL ? std::string("") : std::string(val);
-}
+//static std::string get_env(std::string const & key)
+//{
+//    char * val = std::getenv(key.c_str());
+//    return val == NULL ? std::string("") : std::string(val);
+//}
 
 /// Initializes and deinitializes the router
 class QDR {
@@ -128,7 +128,7 @@ class QDR {
 
         if (!config_path.empty()) {
             // call qd_dispatch_load_config to get management agent; so far, I never needed it for anything
-            const std::string &source_dir = get_env("CMAKE_CURRENT_SOURCE_DIR");
+//            const std::string &source_dir = get_env("CMAKE_CURRENT_SOURCE_DIR");
 //            std::string config_path = "./threads4.conf";
             qd_dispatch_validate_config(config_path.c_str());
             qd_dispatch_load_config(qd, config_path.c_str());
