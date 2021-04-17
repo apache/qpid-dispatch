@@ -1996,7 +1996,8 @@ class ConnectionLinkRouteTest(TestCase):
 
         cfg = Qdrouterd.Config(config)
         # we expect the router to fail
-        router = self.tester.qdrouterd("X", cfg, wait=False, expect=Process.EXIT_FAIL)
+        router = self.tester.qdrouterd("X", cfg, wait=False, expect=Process.EXIT_FAIL)  # type: Qdrouterd
+        self.assertEqual(router.wait(TIMEOUT), Process.EXIT_FAIL)
 
     def test_mgmt(self):
         # test create, delete, and query
