@@ -22,7 +22,6 @@
 #include "core_link_endpoint.h"
 #include "delivery.h"
 
-#include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <time.h>

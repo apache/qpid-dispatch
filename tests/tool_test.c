@@ -19,7 +19,6 @@
 
 #include "test_case.h"
 
-#include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/bitmask.h"
 #include "qpid/dispatch/ctools.h"
 

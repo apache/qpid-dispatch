@@ -31,9 +31,7 @@
 
 #include <proton/condition.h>
 #include <proton/connection.h>
-#include <proton/error.h>
 #include <proton/event.h>
-#include <proton/message.h>
 #include <proton/transport.h>
 
 #include <inttypes.h>

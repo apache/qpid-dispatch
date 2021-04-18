@@ -21,8 +21,6 @@
 
 #include "qpid/dispatch/ctools.h"
 
-#include <stdio.h>
-
 ALLOC_DEFINE(qdr_core_timer_t);
 
 void qdr_process_tick_CT(qdr_core_t *core, qdr_action_t *action, bool discard);

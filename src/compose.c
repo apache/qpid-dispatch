@@ -26,7 +26,6 @@
 #include "qpid/dispatch/buffer.h"
 #include "qpid/dispatch/ctools.h"
 
-#include <memory.h>
 #include <string.h>
 
 ALLOC_DEFINE(qd_composite_t);

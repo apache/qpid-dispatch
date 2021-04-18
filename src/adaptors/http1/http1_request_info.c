@@ -17,11 +17,9 @@
  * under the License.
  */
 
-#include "dispatch_private.h"
 #include "http1_private.h"
 
 #include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/protocol_adaptor.h"
 #include "qpid/dispatch/server.h"
 
 #include <inttypes.h>

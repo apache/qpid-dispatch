@@ -19,8 +19,6 @@
 
 #include "qpid/dispatch/iterator.h"
 
-#include "message_private.h"
-
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/amqp.h"
 #include "qpid/dispatch/ctools.h"

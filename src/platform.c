@@ -27,7 +27,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/resource.h>
-#include <sys/time.h>
 
 uintmax_t qd_platform_memory_size(void)
 {

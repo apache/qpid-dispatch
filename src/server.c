@@ -25,7 +25,6 @@
 #include "config.h"
 #include "dispatch_private.h"
 #include "entity.h"
-#include "entity_cache.h"
 #include "policy.h"
 #include "remote_sasl.h"
 #include "server_private.h"
@@ -47,7 +46,6 @@
 #include <proton/raw_connection.h>
 #include <proton/sasl.h>
 
-#include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>

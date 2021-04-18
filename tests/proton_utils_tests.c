@@ -23,8 +23,6 @@
 #include "qpid/dispatch.h"
 #include "qpid/dispatch/proton_utils.h"
 
-#include <assert.h>
-#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -79,7 +77,7 @@ static char *test_data_as_string(void *context)
                 return error;
             }
 
-            if (strcmp(result, vector->expected)) {
+            if (strcmp(result, vector->expected) != 0) {
                 snprintf(error, MAX_ERROR, "Expected '%s', got '%s'", vector->expected, result);
                 free(result);
                 return error;

@@ -21,15 +21,11 @@
 
 #include "entity_cache.h"
 
-#include "dispatch_private.h"
 #include "entity.h"
-#include "router_private.h"
 
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/threading.h"
 
-#include <pthread.h>
-#include <stdbool.h>
 #include <structmember.h>
 
 typedef enum { REMOVE=0, ADD=1 }  action_t;
