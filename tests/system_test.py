@@ -1474,19 +1474,18 @@ def _signal_handler(signum, frame):
 
     for process in processes:
         ecode = process.poll()
+        if ecode is None:
+            continue
         if ecode in (-signal.SIGSEGV, -signal.SIGABRT, 128 + signal.SIGSEGV, 128 + signal.SIGABRT):
-            print("process failed")
+            print("process crashed")
             process.teardown()  # need to get logs!!!
-            tc.fail("Subprocess %s failed with ecode %s" % (process.pid, ecode))
-
-    # for process in processes:
-    #      pid = process.pid
-    #     try:
-    #         # os.kill(pid, 0)
-    #         pid, ecode = os.waitpid(pid, 0)
-    #     except OSError:
-    #          print("process died")
-    #         process.terminate()
+            if tc is not None:
+                tc.fail("Subprocess %s failed with ecode %s" % (process.pid, ecode))
+        if process.expect == Process.RUNNING or process.expect != ecode:
+            print("process stopped or stopped with wrong ecode")
+            process.teardown()  # need to get logs!!!
+            if tc is not None:
+                tc.fail("Subprocess %s stopped with ecode %s" % (process.pid, ecode))
 
 
 class SelfTests(unittest.TestCase):
