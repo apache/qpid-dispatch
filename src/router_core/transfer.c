@@ -516,9 +516,6 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     if (!dlv_link)
         return;
 
-    if (dlv_link->link_type == QD_LINK_ENDPOINT && !dlv_link->fallback)
-        core->deliveries_ingress++;
-
     if (addr
         && addr == link->owning_addr
         && qdr_addr_path_count_CT(addr) == 0
@@ -743,6 +740,9 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
     link->total_deliveries++;
 
+    if (link->link_type == QD_LINK_ENDPOINT && !link->fallback)
+        core->deliveries_ingress++;
+
     //
     // Record the ingress time so we can track the age of this delivery.
     //
@@ -762,9 +762,6 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     }
 
     if (link->connected_link) {
-        if (link->link_direction == QD_INCOMING)
-            core->deliveries_ingress++;
-
         //
         // If this is an attach-routed link, put the delivery directly onto the peer link
         //
