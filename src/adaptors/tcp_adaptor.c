@@ -762,8 +762,6 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
     tc->opened_time = tcp_adaptor->core->uptime_ticks;
     qdr_link_set_context(tc->incoming, tc);
 
-    grant_read_buffers(tc);
-
     qdr_action_t *action = qdr_action(qdr_add_tcp_connection_CT, "add_tcp_connection");
     action->args.general.context_1 = tc;
     qdr_action_enqueue(tcp_adaptor->core, action);
@@ -844,6 +842,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                "[C%"PRIu64"] PN_RAW_CONNECTION_NEED_READ_BUFFERS",
                conn->conn_id);
         while (qdr_connection_process(conn->qdr_conn)) {}
+        grant_read_buffers(conn);
         handle_incoming(conn, "PNRC_NEED_READ_BUFFERS");
         break;
     }
@@ -1048,7 +1047,6 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_bridge_config_t *confi
                tc->conn_id, tc->config.host_port);
         tc->pn_raw_conn = pn_raw_connection();
         pn_raw_connection_set_context(tc->pn_raw_conn, tc);
-        grant_read_buffers(tc);
         pn_proactor_raw_connect(qd_server_proactor(tc->server), tc->pn_raw_conn, tc->config.host_port);
     }
 
@@ -1309,7 +1307,6 @@ static void qdr_tcp_second_attach(void *context, qdr_link_t *link,
                 // for ingress, can start reading from socket once we have
                 // a reply to address, as that is when we are able to send
                 // out a message
-                grant_read_buffers(tc);
                 handle_incoming(tc, "qdr_tcp_second_attach");
             }
             qdr_link_flow(tcp_adaptor->core, link, 10, false);
@@ -1318,9 +1315,6 @@ static void qdr_tcp_second_attach(void *context, qdr_link_t *link,
                    "[C%"PRIu64"][L%"PRIu64"] %s qdr_tcp_second_attach",
                    tc->conn_id, tc->incoming_id,
                qdr_tcp_quadrant_id(tc, link));
-            //for egress we can start reading from the socket once we
-            //have the link to send messages over
-            grant_read_buffers(tc);
         }
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_second_attach: no link context");
