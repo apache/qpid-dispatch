@@ -978,11 +978,9 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
     // to the adaptor-side outgoing connection and link.
     uint64_t i_conn_id = 0;
     uint64_t i_link_id = 0;
-    uint64_t i_dlv_id = 0;
     if (!!tc->initial_delivery) {
         i_conn_id = tc->initial_delivery->conn_id;
         i_link_id = tc->initial_delivery->link_id;
-        i_dlv_id = tc->initial_delivery->delivery_id;
     }
     tc->outgoing = qdr_link_first_attach(conn,
                                          QD_OUTGOING,
@@ -996,7 +994,7 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
     if (!!tc->initial_delivery) {
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                DLV_FMT" initial_delivery ownership passed to "DLV_FMT,
-               i_conn_id, i_link_id, i_dlv_id,
+               i_conn_id, i_link_id, tc->initial_delivery->delivery_id,
                tc->outgoing->conn_id, tc->outgoing->identity, tc->initial_delivery->delivery_id);
         qdr_delivery_decref(tcp_adaptor->core, tc->initial_delivery, "tcp-adaptor - passing initial_delivery into new link");
         tc->initial_delivery = 0;
