@@ -1333,10 +1333,6 @@ static void qdr_tcp_flow(void *context, qdr_link_t *link, int credit)
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                    "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_flow: Flow enabled, credit=%d",
                    conn->conn_id, conn->outgoing_id, credit);
-            // TODO: This call to handle_incoming may satisfy the prerequesites to
-            // opening the stream message. This gets a bytes to flow from the
-            // TCP in but it does not account for them as a PN_RAW_CONNECTION_READ
-            // event nor does it loop on qdr_connection_process().
             handle_incoming(conn, "qdr_tcp_flow");
         } else {
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
