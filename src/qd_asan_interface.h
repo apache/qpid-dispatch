@@ -25,7 +25,15 @@
  * See #include <sanitizer/asan_interface.h> in Clang for the source.
  */
 
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#if defined(__clang__)
+# define QD_HAS_ADDRESS_SANITIZER __has_feature(address_sanitizer)
+#elif defined (__GNUC__) && defined(__SANITIZE_ADDRESS__)
+# define QD_HAS_ADDRESS_SANITIZER __SANITIZE_ADDRESS__
+#else
+# define QD_HAS_ADDRESS_SANITIZER 0
+#endif
+
+#if QD_HAS_ADDRESS_SANITIZER
 
 void __asan_poison_memory_region(void const volatile *addr, size_t size);
 void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
@@ -50,21 +58,21 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) \
   __asan_unpoison_memory_region((addr), (size))
 
-#else  // __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#else  // QD_HAS_ADDRESS_SANITIZER
 
 #define ASAN_POISON_MEMORY_REGION(addr, size) \
   ((void)(addr), (void)(size))
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) \
   ((void)(addr), (void)(size))
 
-#endif  // __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#endif  // QD_HAS_ADDRESS_SANITIZER
 
 // https://github.com/google/sanitizers/wiki/AddressSanitizer#turning-off-instrumentation
 
-#if defined(__clang__) || defined (__GNUC__)
+#if QD_HAS_ADDRESS_SANITIZER
 # define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
 #else
 # define ATTRIBUTE_NO_SANITIZE_ADDRESS
-#endif
+#endif  // QD_HAS_ADDRESS_SANITIZER
 
 #endif  // __qd_asan_interface_h__
