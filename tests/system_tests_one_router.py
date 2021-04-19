@@ -1465,8 +1465,10 @@ class PreSettled (MessagingHandler) :
 class PresettledCustomTimeout(object):
     def __init__(self, parent):
         self.parent = parent
+        self.num_tries = 0
 
     def on_timer_task(self, event):
+        self.num_tries += 1
         local_node = Node.connect(self.parent.addr, timeout=TIMEOUT)
         res = local_node.query('org.apache.qpid.dispatch.router')
         deliveries_ingress = res.attribute_names.index(
@@ -1486,10 +1488,13 @@ class PresettledCustomTimeout(object):
         if deliveries_ingress_diff + deliveries_dropped_diff > self.parent.n_messages:
             self.parent.bail(None)
         else:
-            self.parent.bail("Messages sent to the router is %d, "
-                             "Messages processed by the router is %d" %
-                             (self.parent.n_messages,
-                              deliveries_ingress_diff + deliveries_dropped_diff))
+            if self.num_tries == self.parent.max_tries:
+                self.parent.bail("Messages sent to the router is %d, "
+                                 "Messages processed by the router is %d" %
+                                 (self.parent.n_messages,
+                                  deliveries_ingress_diff + deliveries_dropped_diff))
+            else:
+                self.parent.schedule_timer()
 
 
 class DroppedPresettledTest(MessagingHandler):
@@ -1512,8 +1517,14 @@ class DroppedPresettledTest(MessagingHandler):
         self.begin_ingress_count = begin_ingress_count
         self.str1 = "0123456789abcdef"
         self.msg_str = ""
+        self.max_tries = 10
+        self.reactor = None
         for i in range(8192):
             self.msg_str += self.str1
+        self.timer_instance = PresettledCustomTimeout(self)
+
+    def schedule_timer(self):
+        self.custom_timer = self.reactor.schedule(0.5, self.timer_instance)
 
     def run(self):
         Container(self).run()
@@ -1524,12 +1535,14 @@ class DroppedPresettledTest(MessagingHandler):
         if self.recv_conn:
             self.recv_conn.close()
         self.timer.cancel()
+        self.custom_timer.cancel()
 
     def timeout(self,):
         self.bail("Timeout Expired: %d messages received, %d expected." %
                   (self.n_received, self.n_messages))
 
     def on_start(self, event):
+        self.reactor = event.reactor
         self.sender_conn = event.container.connect(self.addr)
         self.recv_conn = event.container.connect(self.addr)
         self.receiver = event.container.create_receiver(self.recv_conn,
@@ -1562,7 +1575,7 @@ class DroppedPresettledTest(MessagingHandler):
             # that the initial credit of 250 that the router gives.
             # Lets do a qdstat to find out if all 200 messages is handled
             # by the router.
-            self.custom_timer = event.reactor.schedule(1, PresettledCustomTimeout(self))
+            self.schedule_timer()
 
 
 class MulticastUnsettled (MessagingHandler) :
