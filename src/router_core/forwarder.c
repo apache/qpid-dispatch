@@ -162,7 +162,6 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
         out_dlv->ingress_index = in_dlv->ingress_index;
         if (in_dlv->remote_disposition) {
             // propagate disposition state from remote to peer
-            out_dlv->disposition = in_dlv->remote_disposition;
             qdr_delivery_move_delivery_state_CT(in_dlv, out_dlv);
         }
     } else {

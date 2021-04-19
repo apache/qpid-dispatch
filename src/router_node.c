@@ -930,7 +930,12 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
     // multi-frame deliveries arrive, it's possible for the settlement to register before
     // the whole message arrives.  Such premature settlement indications must be ignored.
     //
-    if (!delivery || !qdr_delivery_receive_complete(delivery))
+    if (!delivery)
+        return;
+
+    uint64_t dstate = pn_delivery_remote_state(pnd);
+
+    if (!qdr_delivery_receive_complete(delivery) && dstate != PN_RECEIVED)
         return;
 
     //
@@ -1941,13 +1946,14 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         pdlv = pn_link_current(plink);
 
         // handle any delivery-state on the transfer e.g. transactional-state
-        qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &disposition);
-        if (dstate) {
-            qd_delivery_write_local_state(pdlv, disposition, dstate);
-            qd_delivery_state_free(dstate);
-        }
-        if (disposition)
+        if (disposition) {
+            qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &disposition);
+            if (dstate) {
+                qd_delivery_write_local_state(pdlv, disposition, dstate);
+                qd_delivery_state_free(dstate);
+            }
             pn_delivery_update(pdlv, disposition);
+        }
 
         //
         // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
@@ -2040,7 +2046,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         link = (qd_link_t*) qdr_link_get_context(qlink);
         if (link) {
             qd_conn = qd_link_connection(link);
-            if (qd_conn == 0)
+             if (qd_conn == 0)
                 return;
         }
         else
@@ -2049,14 +2055,21 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     else
         return;
 
+    qd_message_t *msg = qdr_delivery_message(dlv);
+
     //
     // DISPATCH-2040: For link routed links, it does not matter if the passed in disp matches the pn_delivery_remote_state(pnd), we will still
     // call qd_delivery_write_local_state and send out the disposition if the delivery is not already settled.
     //
-    // For non link routed links, if the disposition has changed and the proton delivery has not already been settled, update the proton delivery.
-    //
-    if ((qdr_link_is_routed(qlink) || disp != pn_delivery_remote_state(pnd)) && !pn_delivery_settled(pnd)) {
-        qd_message_t *msg = qdr_delivery_message(dlv);
+        //
+        // If the delivery is still arriving, don't push out the disposition change yet.
+        //
+    //if ((disp == PN_RECEIVED || disp != pn_delivery_remote_state(pnd)) && ) {
+    // should be: (disp is non-terminal || qd_message_receive_complete(msg)) - kag
+    if (!pn_delivery_settled(pnd) && (disp == PN_RECEIVED || qd_message_receive_complete(msg))) {
+
+        if (disp == PN_MODIFIED)
+            pn_disposition_set_failed(pn_delivery_local(pnd), true);
 
         // handle propagation of delivery state from qdr_delivery_t to proton:
         uint64_t ignore = 0;  // expect same value as 'disp'
@@ -2065,18 +2078,10 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         qd_delivery_write_local_state(pnd, disp, dstate);
         qd_delivery_state_free(dstate);
 
-        if (disp == PN_MODIFIED)
-            pn_disposition_set_failed(pn_delivery_local(pnd), true);
-
-        //
-        // If the delivery is still arriving, don't push out the disposition change yet.
-        //
-        assert(qdr_delivery_disposition(dlv) == disp) ;
-        if (qd_message_receive_complete(msg)) {
-            if (disp != pn_delivery_local_state(pnd)) {
-                pn_delivery_update(pnd, disp);
-            }
-        }
+        //assert(qdr_delivery_disposition(dlv) == disp) ;
+        //if ( || disp == PN_RECEIVED) {
+        //if (true || disp != pn_delivery_local_state(pnd)) {
+        pn_delivery_update(pnd, disp);
     }
 
     if (settled) {
