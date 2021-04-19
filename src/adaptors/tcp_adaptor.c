@@ -137,7 +137,7 @@ static const char * qdr_tcp_quadrant_id(const qdr_tcp_connection_t *tc, const qd
     if (tc->ingress)
         return link->link_direction == QD_INCOMING ? "(listener incoming)" : "(listener outgoing)";
     else
-        return link->link_direction == QD_INCOMING ? "(connector outgoing)" : "(connector outgoing)";
+        return link->link_direction == QD_INCOMING ? "(connector incoming)" : "(connector outgoing)";
 }
 
 static void on_activate(void *context)
