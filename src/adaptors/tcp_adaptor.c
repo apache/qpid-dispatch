@@ -129,15 +129,15 @@ static inline const char * qdr_link_direction_name(const qdr_link_t *link)
 static inline const char * qdr_tcp_connection_role_name(const qdr_tcp_connection_t *tc)
 {
     assert(tc);
-    return tc->ingress ? "client" : "server";
+    return tc->ingress ? "listener" : "connector";
 }
 
 static const char * qdr_tcp_quadrant_id(const qdr_tcp_connection_t *tc, const qdr_link_t *link)
 {
     if (tc->ingress)
-        return link->link_direction == QD_INCOMING ? "(client raw-to-rtr)" : "(client rtr-to-raw)";
+        return link->link_direction == QD_INCOMING ? "(listener incoming)" : "(listener outgoing)";
     else
-        return link->link_direction == QD_INCOMING ? "(server raw-to-rtr)" : "(server rtr-to-raw)";
+        return link->link_direction == QD_INCOMING ? "(connector outgoing)" : "(connector outgoing)";
 }
 
 static void on_activate(void *context)
