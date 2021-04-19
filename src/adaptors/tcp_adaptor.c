@@ -810,13 +810,6 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         sys_mutex_lock(conn->activation_lock);
         conn->raw_closed_write = true;
         sys_mutex_unlock(conn->activation_lock);
-        if (conn->ingress) {
-            // connection from client is no longer writable
-            qd_log(log, QD_LOG_DEBUG,
-                   "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_WRITE call pn_raw_connection_close(). client no longer writable",
-                   conn->conn_id);
-            pn_raw_connection_close(conn->pn_raw_conn);
-        }
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
