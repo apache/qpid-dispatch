@@ -329,16 +329,6 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
         //qd_compose_insert_null(props);                      // reply-to-group-id
         qd_compose_end_list(props);
 
-        unsigned int length = qd_buffer_list_length(&conn->early_raw_read_bufs);
-        if (length > 0) {
-            // TODO: This won't overun peer's Q2 will it?
-            // At some point the early raw read buffs should be chunked
-            // into several BODY_DATA segments.
-            props = qd_compose(QD_PERFORMATIVE_BODY_DATA, props);
-            qd_compose_insert_binary_buffers(props, &conn->early_raw_read_bufs);
-            DEQ_INIT(conn->early_raw_read_bufs);
-        }
-
         qd_message_compose_2(msg, props, false);
         qd_compose_free(props);
 
@@ -347,9 +337,26 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
         qd_message_set_q2_unblocked_handler(msg, qdr_tcp_q2_unblocked_handler, conn_sp);
 
         conn->instream = qdr_link_deliver(conn->incoming, msg, 0, false, 0, 0, 0, 0);
+
         qd_log(log, QD_LOG_DEBUG,
-               "[C%"PRIu64"][L%"PRIu64"][D%"PRIu64"] Initiating ingress stream message with %u bytes",
-               conn->conn_id, conn->incoming_id, conn->instream->delivery_id, length);
+               "[C%"PRIu64"][L%"PRIu64"][D%"PRIu64"] Initiating ingress stream message with 0 bytes",
+               conn->conn_id, conn->incoming_id, conn->instream->delivery_id);
+
+        unsigned int length = qd_buffer_list_length(&conn->early_raw_read_bufs);
+        if (length > 0) {
+            qd_log(log, QD_LOG_TRACE,
+                    "[C%"PRIu64"][L%"PRIu64"] client link sending %d cached bytes",
+                    conn->conn_id, conn->incoming_id, length);
+            qd_message_stream_data_append(qdr_delivery_message(conn->instream), &conn->early_raw_read_bufs, &conn->q2_blocked);
+            if (conn->q2_blocked) {
+                // note: unit tests grep for this log!
+                qd_log(log, QD_LOG_TRACE,
+                        "[C%"PRIu64"][L%"PRIu64"] client link blocked on Q2 limit",
+                        conn->conn_id, conn->incoming_id);
+            }
+            DEQ_INIT(conn->early_raw_read_bufs);
+        }
+
         conn->incoming_started = true;
 
         // Handle deferment of write side close.
