@@ -1475,7 +1475,9 @@ def _signal_handler(signum, frame):
     for process in processes:
         ecode = process.poll()
         if ecode is None:
-            continue
+            continue  # still running
+        if process.torndown:
+            continue  # already seen this one
         if ecode in (-signal.SIGSEGV, -signal.SIGABRT, 128 + signal.SIGSEGV, 128 + signal.SIGABRT):
             print("process crashed")
             process.teardown()  # need to get logs!!!
