@@ -1946,14 +1946,13 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         pdlv = pn_link_current(plink);
 
         // handle any delivery-state on the transfer e.g. transactional-state
+        qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &disposition);
         if (disposition) {
-            qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &disposition);
-            if (dstate) {
+            if (dstate)
                 qd_delivery_write_local_state(pdlv, disposition, dstate);
-                qd_delivery_state_free(dstate);
-            }
             pn_delivery_update(pdlv, disposition);
         }
+        qd_delivery_state_free(dstate);
 
         //
         // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
