@@ -107,7 +107,6 @@ static const char *leaking_types[] = {
     "qd_iterator_t",
     "qdr_action_t",
     "qdr_field_t",
-    "qdr_link_work_t",
     "qd_buffer_t",
     "qd_bitmask_t",
 

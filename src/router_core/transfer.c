@@ -207,6 +207,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 
                         assert(dlv == DEQ_HEAD(link->undelivered));
                         DEQ_REMOVE_HEAD(link->undelivered);
+                        qdr_link_work_release(dlv->link_work);
                         dlv->link_work = 0;
 
                         if (settled || qdr_delivery_oversize(dlv) || qdr_delivery_is_aborted(dlv)) {
@@ -229,6 +230,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                         //
                         if (dlv == DEQ_HEAD(link->undelivered)) {
                             DEQ_REMOVE_HEAD(link->undelivered);
+                            qdr_link_work_release(dlv->link_work);
                             dlv->link_work = 0;
                             dlv->where = QDR_DELIVERY_NOWHERE;
                             qd_nullify_safe_ptr(&dlv->link_sp);
@@ -301,8 +303,8 @@ void qdr_link_complete_sent_message(qdr_core_t *core, qdr_link_t *link)
 
             if (dlv->link_work->value == 0) {
                 DEQ_REMOVE_HEAD(link->work_list);
-                qdr_error_free(dlv->link_work->error);
-                free_qdr_link_work_t(dlv->link_work);
+                qdr_link_work_release(dlv->link_work);  // for work_list ref
+                qdr_link_work_release(dlv->link_work);  // for dlv ref
                 dlv->link_work = 0;
             }
         }
@@ -439,10 +441,8 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         if (clink->link_direction == QD_INCOMING)
             qdr_link_issue_credit_CT(core, link->connected_link, credit, drain);
         else {
-            work = new_qdr_link_work_t();
-            ZERO(work);
-            work->work_type = QDR_LINK_WORK_FLOW;
-            work->value     = credit;
+            work        = qdr_link_work(QDR_LINK_WORK_FLOW);
+            work->value = credit;
             if (drain)
                 work->drain_action = QDR_LINK_WORK_DRAIN_ACTION_DRAINED;
             qdr_link_enqueue_work_CT(core, clink, work);
@@ -460,9 +460,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         //
         if (link->link_direction == QD_OUTGOING && (credit > 0 || drain_was_set)) {
             if (drain_was_set) {
-                work = new_qdr_link_work_t();
-                ZERO(work);
-                work->work_type    = QDR_LINK_WORK_FLOW;
+                work               = qdr_link_work(QDR_LINK_WORK_FLOW);
                 work->drain_action = QDR_LINK_WORK_DRAIN_ACTION_DRAINED;
             }
 
@@ -944,10 +942,8 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
         sys_mutex_unlock(conn->work_lock);
 
         // need a new work flow item
-        work = new_qdr_link_work_t();
-        ZERO(work);
-        work->work_type = QDR_LINK_WORK_FLOW;
-        work->value     = credit;
+        work        = qdr_link_work(QDR_LINK_WORK_FLOW);
+        work->value = credit;
         if (drain_changed)
             work->drain_action = drain_action;
         qdr_link_enqueue_work_CT(core, link, work);

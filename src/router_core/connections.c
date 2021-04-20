@@ -384,6 +384,7 @@ int qdr_connection_process(qdr_connection_t *conn)
             sys_mutex_lock(conn->work_lock);
             link_work = DEQ_HEAD(link->work_list);
             if (link_work) {
+                // link_work ref transfered to local link_work
                 DEQ_REMOVE_HEAD(link->work_list);
                 link_work->processing = true;
             }
@@ -438,14 +439,15 @@ int qdr_connection_process(qdr_connection_t *conn)
 
                 sys_mutex_lock(conn->work_lock);
                 if (link_work->work_type == QDR_LINK_WORK_DELIVERY && link_work->value > 0 && !link->detach_received) {
+                    // link_work ref transfered from link_work to work_list
                     DEQ_INSERT_HEAD(link->work_list, link_work);
                     link_work->processing = false;
                     link_work = 0; // Halt work processing
                 } else {
-                    qdr_error_free(link_work->error);
-                    free_qdr_link_work_t(link_work);
+                    qdr_link_work_release(link_work);
                     link_work = DEQ_HEAD(link->work_list);
                     if (link_work) {
+                        // link_work ref transfered to local link_work
                         DEQ_REMOVE_HEAD(link->work_list);
                         link_work->processing = true;
                     }
@@ -727,6 +729,8 @@ void qdr_link_enqueue_work_CT(qdr_core_t      *core,
     qdr_connection_t *conn = link->conn;
 
     sys_mutex_lock(conn->work_lock);
+    // expect: caller transfers refcount:
+    assert(sys_atomic_get(&work->ref_count) > 0);
     DEQ_INSERT_TAIL(link->work_list, work);
     qdr_add_link_ref(&conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
     sys_mutex_unlock(conn->work_lock);
@@ -768,6 +772,7 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         d->where = QDR_DELIVERY_NOWHERE;
         if (on_shutdown)
             d->tracking_addr = 0;
+        qdr_link_work_release(d->link_work);
         d->link_work = 0;
         d = DEQ_NEXT(d);
     }
@@ -777,6 +782,7 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
     while (d) {
         assert(d->where == QDR_DELIVERY_IN_UNSETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
+        qdr_link_work_release(d->link_work);
         d->link_work = 0;
         if (on_shutdown)
             d->tracking_addr = 0;
@@ -788,6 +794,7 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
     while (d) {
         assert(d->where == QDR_DELIVERY_IN_SETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
+        qdr_link_work_release(d->link_work);
         d->link_work = 0;
         if (on_shutdown)
             d->tracking_addr = 0;
@@ -1019,8 +1026,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_link_work_t *link_work = DEQ_HEAD(work_list);
     while (link_work) {
         DEQ_REMOVE_HEAD(work_list);
-        qdr_error_free(link_work->error);
-        free_qdr_link_work_t(link_work);
+        qdr_link_work_release(link_work);
         link_work = DEQ_HEAD(work_list);
     }
 
@@ -1186,9 +1192,9 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
     //
     // tell the I/O thread to do the detach
     //
-    qdr_link_work_t *work = new_qdr_link_work_t();
-    ZERO(work);
-    work->work_type  = ++link->detach_count == 1 ? QDR_LINK_WORK_FIRST_DETACH : QDR_LINK_WORK_SECOND_DETACH;
+
+    link->detach_count += 1;
+    qdr_link_work_t *work = qdr_link_work(link->detach_count == 1 ? QDR_LINK_WORK_FIRST_DETACH : QDR_LINK_WORK_SECOND_DETACH);
     work->close_link = close;
 
     if (error)
@@ -1641,6 +1647,7 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
         case QDR_DELIVERY_IN_UNDELIVERED:
             DEQ_REMOVE(old_link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
+            qdr_link_work_release(dlv->link_work);
             dlv->link_work = 0;
             // expect: caller holds reference to dlv (in action)
             assert(sys_atomic_get(&dlv->ref_count) > 1);
