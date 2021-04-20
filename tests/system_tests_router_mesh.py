@@ -216,7 +216,9 @@ class ThreeRouterTest(TestCase):
         rx = self.spawn_receiver(self.RouterC,
                                  count=total,
                                  address="closest/test_06_address")
-        self.RouterA.wait_address("closest/test_06_address")
+
+        self.RouterC.wait_address("closest/test_06_address", subscribers=1)
+        self.RouterA.wait_address("closest/test_06_address", remotes=1)
 
         senders = [self.spawn_sender(self.RouterA,
                                      send_batch,
