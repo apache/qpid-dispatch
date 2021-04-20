@@ -65,7 +65,6 @@ struct qdr_tcp_connection_t {
     bool                  raw_closed_write;  // proton event seen or write_close called
     bool                  raw_read_shutdown; // stream closed
     bool                  read_eos_seen;
-    qd_buffer_list_t      early_raw_read_bufs; // read from raw conn before ingress stream ready
     qdr_delivery_t       *initial_delivery;
     qd_timer_t           *activate_timer;
     qd_bridge_config_t    config;
@@ -342,21 +341,6 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
                "[C%"PRIu64"][L%"PRIu64"][D%"PRIu64"] Initiating ingress stream message with 0 bytes",
                conn->conn_id, conn->incoming_id, conn->instream->delivery_id);
 
-        unsigned int length = qd_buffer_list_length(&conn->early_raw_read_bufs);
-        if (length > 0) {
-            qd_log(log, QD_LOG_TRACE,
-                    "[C%"PRIu64"][L%"PRIu64"] client link sending %d cached bytes",
-                    conn->conn_id, conn->incoming_id, length);
-            qd_message_stream_data_append(qdr_delivery_message(conn->instream), &conn->early_raw_read_bufs, &conn->q2_blocked);
-            if (conn->q2_blocked) {
-                // note: unit tests grep for this log!
-                qd_log(log, QD_LOG_TRACE,
-                        "[C%"PRIu64"][L%"PRIu64"] client link blocked on Q2 limit",
-                        conn->conn_id, conn->incoming_id);
-            }
-            DEQ_INIT(conn->early_raw_read_bufs);
-        }
-
         conn->incoming_started = true;
 
         // Handle deferment of write side close.
@@ -468,7 +452,6 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
     if (tc->activate_timer) {
         qd_timer_free(tc->activate_timer);
     }
-    qd_buffer_list_free_buffers(&tc->early_raw_read_bufs);
     flush_outgoing_buffs(tc);
     sys_mutex_free(tc->activation_lock);
     //proactor will free the socket
@@ -835,8 +818,10 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                "[C%"PRIu64"] PN_RAW_CONNECTION_NEED_READ_BUFFERS",
                conn->conn_id);
         while (qdr_connection_process(conn->qdr_conn)) {}
-        grant_read_buffers(conn);
-        handle_incoming(conn, "PNRC_NEED_READ_BUFFERS");
+        if (conn->incoming_started) {
+            grant_read_buffers(conn);
+            handle_incoming(conn, "PNRC_NEED_READ_BUFFERS");
+        }
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
@@ -861,23 +846,13 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                "[C%"PRIu64"] PN_RAW_CONNECTION_READ Event ",
                conn->conn_id);
         int read = 0;
-        if (!conn->incoming_started) {
-            // Read data is available before the message into which it should go
-            // has been created. Further, this may be the only READ event ever seen
-            // before the raw connection closes. Get the buffers from the raw connection
-            // and store them to be sent when the message is created.
-            qd_buffer_list_t buffers;
-            DEQ_INIT(buffers);
-            read = handle_incoming_raw_read(conn, &buffers);
-            DEQ_APPEND(conn->early_raw_read_bufs, buffers);
-        } else {
+        if (conn->incoming_started) {
             // Streaming message exists. Process read normally.
             read = handle_incoming(conn, "PNRC_READ");
         }
         qd_log(log, QD_LOG_DEBUG,
-               "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes. Total read %"PRIu64" bytes%s",
-               conn->conn_id, read, conn->bytes_in,
-               conn->incoming_started ? "" : " stored in cache");
+               "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes. Total read %"PRIu64" bytes",
+               conn->conn_id, read, conn->bytes_in);
         while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
@@ -918,7 +893,6 @@ static qdr_tcp_connection_t *qdr_tcp_connection_ingress(qd_tcp_listener_t* liste
     tc->config = listener->config;
     tc->server = listener->server;
     sys_atomic_init(&tc->q2_restart, 0);
-    DEQ_INIT(tc->early_raw_read_bufs);
     tc->pn_raw_conn = pn_raw_connection();
     pn_raw_connection_set_context(tc->pn_raw_conn, tc);
     //the following call will cause a PN_RAW_CONNECTION_CONNECTED
