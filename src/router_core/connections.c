@@ -442,8 +442,7 @@ int qdr_connection_process(qdr_connection_t *conn)
                     link_work->processing = false;
                     link_work = 0; // Halt work processing
                 } else {
-                    qdr_error_free(link_work->error);
-                    free_qdr_link_work_t(link_work);
+                    qdr_link_work_free(link_work);
                     link_work = DEQ_HEAD(link->work_list);
                     if (link_work) {
                         DEQ_REMOVE_HEAD(link->work_list);
@@ -1019,8 +1018,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_link_work_t *link_work = DEQ_HEAD(work_list);
     while (link_work) {
         DEQ_REMOVE_HEAD(work_list);
-        qdr_error_free(link_work->error);
-        free_qdr_link_work_t(link_work);
+        qdr_link_work_free(link_work);
         link_work = DEQ_HEAD(work_list);
     }
 
@@ -1186,9 +1184,9 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
     //
     // tell the I/O thread to do the detach
     //
-    qdr_link_work_t *work = new_qdr_link_work_t();
-    ZERO(work);
-    work->work_type  = ++link->detach_count == 1 ? QDR_LINK_WORK_FIRST_DETACH : QDR_LINK_WORK_SECOND_DETACH;
+
+    link->detach_count += 1;
+    qdr_link_work_t *work = qdr_link_work(link->detach_count == 1 ? QDR_LINK_WORK_FIRST_DETACH : QDR_LINK_WORK_SECOND_DETACH);
     work->close_link = close;
 
     if (error)
@@ -1641,6 +1639,7 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
         case QDR_DELIVERY_IN_UNDELIVERED:
             DEQ_REMOVE(old_link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
+            /// ???
             dlv->link_work = 0;
             // expect: caller holds reference to dlv (in action)
             assert(sys_atomic_get(&dlv->ref_count) > 1);

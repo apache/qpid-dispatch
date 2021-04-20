@@ -323,8 +323,10 @@ typedef struct qdr_link_work_t {
     bool                          processing;
 } qdr_link_work_t;
 
-ALLOC_DECLARE(qdr_link_work_t);
 DEQ_DECLARE(qdr_link_work_t, qdr_link_work_list_t);
+
+qdr_link_work_t *qdr_link_work(qdr_link_work_type_t type);
+void qdr_link_work_free(qdr_link_work_t *work);
 
 
 #define QDR_AGENT_MAX_COLUMNS 64
