@@ -746,6 +746,15 @@ static void qdr_generate_link_name(const char *label, char *buffer, size_t lengt
 }
 
 
+static void qdr_zero_out_peer_link_work_on_shutdown(qdr_delivery_t *dlv)
+{
+    qdr_delivery_t *peer = qdr_delivery_first_peer_CT(dlv);
+    while (peer) {
+        peer->link_work = 0;
+        peer = qdr_delivery_next_peer_CT(dlv);
+    }
+}
+
 void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link, bool on_shutdown)
 {
     //
@@ -766,8 +775,10 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         if (d->presettled)
             core->dropped_presettled_deliveries++;
         d->where = QDR_DELIVERY_NOWHERE;
-        if (on_shutdown)
+        if (on_shutdown) {
             d->tracking_addr = 0;
+            qdr_zero_out_peer_link_work_on_shutdown(d);
+        }
         d->link_work = 0;
         d = DEQ_NEXT(d);
     }
@@ -778,8 +789,10 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         assert(d->where == QDR_DELIVERY_IN_UNSETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
         d->link_work = 0;
-        if (on_shutdown)
+        if (on_shutdown) {
             d->tracking_addr = 0;
+            qdr_zero_out_peer_link_work_on_shutdown(d);
+        }
         d = DEQ_NEXT(d);
     }
 
@@ -789,8 +802,10 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         assert(d->where == QDR_DELIVERY_IN_SETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
         d->link_work = 0;
-        if (on_shutdown)
+        if (on_shutdown) {
             d->tracking_addr = 0;
+            qdr_zero_out_peer_link_work_on_shutdown(d);
+        }
         d = DEQ_NEXT(d);
     }
     sys_mutex_unlock(conn->work_lock);
