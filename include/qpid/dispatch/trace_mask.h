@@ -19,9 +19,9 @@
  * under the License.
  */
 
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/bitmask.h>
+#include "qpid/dispatch/bitmask.h"
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/parse.h"
 
 typedef struct qd_tracemask_t qd_tracemask_t;
 

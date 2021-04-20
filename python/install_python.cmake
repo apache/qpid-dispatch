@@ -20,11 +20,7 @@
 # Install script to install public python modules.
 # Install with setup.py, add installed files to install manifest.
 
-include(FindPythonInterp)
-
 set(PYTHON_MANIFEST ${CMAKE_BINARY_DIR}/python_manifest.txt)
-
-
 
 file(READ ${PYTHON_MANIFEST} PYTHON_MANIFEST_FILES)
 list(APPEND CMAKE_INSTALL_MANIFEST_FILES ${PYTHON_MANIFEST_FILES})

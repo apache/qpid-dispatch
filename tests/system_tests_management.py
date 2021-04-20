@@ -24,7 +24,10 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import system_test, re, os, json
+import system_test
+import re
+import os
+import json
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Message
@@ -32,7 +35,7 @@ from qpid_dispatch.management.client import Node, ManagementError, Url, BadReque
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.compat import BINARY
-from system_test import Qdrouterd, message, Process
+from system_test import Qdrouterd, Process
 from system_test import unittest
 from itertools import chain
 
@@ -49,6 +52,7 @@ ADDRESS = ROUTER + '.address'
 NODE = ROUTER + '.node'
 CONFIG_ADDRESS = ROUTER + '.config.address'
 
+
 def short_name(name):
     if name.startswith(PREFIX):
         return name[len(PREFIX):]
@@ -61,38 +65,38 @@ class ManagementTest(system_test.TestCase):
     def setUpClass(cls):
         super(ManagementTest, cls).setUpClass()
         # Stand-alone router
-        conf0=Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'id': 'solo', 'metadata': 'selftest;solo'}),
-            ('listener', {'name': 'l0', 'port':cls.get_port(), 'role':'normal'}),
+        conf0 = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'solo', 'metadata': 'selftest;solo'}),
+            ('listener', {'name': 'l0', 'port': cls.get_port(), 'role': 'normal'}),
             # Extra listeners to exercise managment query
-            ('listener', {'name': 'l1', 'port':cls.get_port(), 'role':'normal'}),
-            ('listener', {'name': 'l2', 'port':cls.get_port(), 'role':'normal'})
+            ('listener', {'name': 'l1', 'port': cls.get_port(), 'role': 'normal'}),
+            ('listener', {'name': 'l2', 'port': cls.get_port(), 'role': 'normal'})
         ])
         cls._router = cls.tester.qdrouterd(config=conf0, wait=False)
 
         # Trio of interior routers linked in a line so we can see some next-hop values.
         conf0 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'id': 'router0'}),
-            ('listener', {'port':cls.get_port(), 'role':'normal'}),
-            ('listener', {'port':cls.get_port(), 'role':'inter-router'})
+            ('router', {'mode': 'interior', 'id': 'router0'}),
+            ('listener', {'port': cls.get_port(), 'role': 'normal'}),
+            ('listener', {'port': cls.get_port(), 'role': 'inter-router'})
         ])
         conf1 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'id': 'router1'}),
-            ('listener', {'port':cls.get_port(), 'role':'normal'}),
-            ('connector', {'port':conf0.sections('listener')[1]['port'], 'role':'inter-router'}),
-            ('listener', {'port':cls.get_port(), 'role':'inter-router'})
+            ('router', {'mode': 'interior', 'id': 'router1'}),
+            ('listener', {'port': cls.get_port(), 'role': 'normal'}),
+            ('connector', {'port': conf0.sections('listener')[1]['port'], 'role':'inter-router'}),
+            ('listener', {'port': cls.get_port(), 'role': 'inter-router'})
         ])
         conf2 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'id': 'router2'}),
-            ('listener', {'port':cls.get_port(), 'role':'normal'}),
-            ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
+            ('router', {'mode': 'interior', 'id': 'router2'}),
+            ('listener', {'port': cls.get_port(), 'role': 'normal'}),
+            ('connector', {'port': conf1.sections('listener')[1]['port'], 'role':'inter-router'})
         ])
         cls._routers = [cls.tester.qdrouterd(config=c, wait=False) for c in [conf0, conf1, conf2]]
 
         # Standalone router for logging tests (avoid interfering with logging for other tests.)
-        conflog=Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'id': 'logrouter'}),
-            ('listener', {'port':cls.get_port(), 'role':'normal'}),
+        conflog = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'logrouter'}),
+            ('listener', {'port': cls.get_port(), 'role': 'normal'}),
         ])
         cls._logrouter = cls.tester.qdrouterd(config=conflog, wait=False)
 
@@ -116,7 +120,7 @@ class ManagementTest(system_test.TestCase):
 
     def setUp(self):
         super(ManagementTest, self).setUp()
-        self._routers = None # Wait on demand
+        self._routers = None  # Wait on demand
         self.maxDiff = None
         self.longMessage = True
         self.node = self.cleanup(Node.connect(self.router.addresses[0]))
@@ -148,17 +152,17 @@ class ManagementTest(system_test.TestCase):
 
     def test_query_type_attributes(self):
         """Query with type and attribute names"""
-        attribute_names=['type', 'name', 'port']
+        attribute_names = ['type', 'name', 'port']
         response = self.node.query(type=LISTENER, attribute_names=attribute_names)
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in range(3)]
-        for r in expect: # We might have extras in results due to create tests
+        for r in expect:  # We might have extras in results due to create tests
             self.assertIn(r, response.results)
             self.assertIn(dict(zip(attribute_names, r)), response.get_dicts())
 
     def test_query_attributes(self):
         """Query with attributes only"""
-        attribute_names=['type', 'name', 'port']
+        attribute_names = ['type', 'name', 'port']
         response = self.node.query(attribute_names=attribute_names)
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in range(3)]
@@ -171,7 +175,7 @@ class ManagementTest(system_test.TestCase):
     def assertMapSubset(self, small, big):
         """Assert that mapping small is a subset of mapping big"""
         missing = [(k, v) for k, v in small.items() if (k, v) not in big.items()]
-        assert not missing, "Not a subset, missing %s, sub=%s, super=%s"%(missing, small, big)
+        assert not missing, "Not a subset, missing %s, sub=%s, super=%s" % (missing, small, big)
 
     def assert_create_ok(self, type, name, attributes):
         entity = self.node.create(attributes, type, name)
@@ -188,7 +192,7 @@ class ManagementTest(system_test.TestCase):
 
         port = self.get_port()
         # Note qdrouter schema defines port as string not int, since it can be a service name.
-        attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS', 'authenticatePeer': False}
+        attributes = {'name': 'foo', 'port': str(port), 'role': 'normal', 'saslMechanisms': 'ANONYMOUS', 'authenticatePeer': False}
         entity = self.assert_create_ok(LISTENER, 'foo', attributes)
         self.assertEqual(entity['name'], 'foo')
         self.assertEqual(entity['host'], '')
@@ -219,13 +223,13 @@ class ManagementTest(system_test.TestCase):
                           u'includeTimestamp': True,
                           u'type': u'org.apache.qpid.dispatch.log'})
 
-
         def check_log(log, error=True, debug=False):
             """Cause an error and check for expected error and debug logs"""
             bad_type = "nosuch"
             self.assertRaises(ManagementError, node.create, type=bad_type, name=bad_type)
             f = self.cleanup(open(log))
             logstr = f.read()
+
             def assert_expected(expect, regex, logstr):
                 match = re.search(regex, logstr)
                 assert bool(expect) == bool(match), "%s %s:\n%s" % (
@@ -246,7 +250,7 @@ class ManagementTest(system_test.TestCase):
         # Expect error but no debug
         update_check_log(dict(enable="warning+"))
         update_check_log(dict(enable="error"))
-        update_check_log(dict(enable="TRACE , Error info")) # Case and space insensitive
+        update_check_log(dict(enable="TRACE , Error info"))  # Case and space insensitive
 
         # Expect no error if not enabled.
         update_check_log(dict(enable="info,critical"), error=False)
@@ -340,7 +344,7 @@ class ManagementTest(system_test.TestCase):
         dummy2 = self.node.read(type=DUMMY, name='MyDummy')
         self.assertEqual(dummy.attributes, dummy2.attributes)
 
-        integers = [0, 1, 42, (2**63)-1, -1, -42, -(2**63)]
+        integers = [0, 1, 42, (2**63) - 1, -1, -42, -(2**63)]
         test_data = [BINARY("bytes"), u"string"] + integers
         for data in test_data:
             try:
@@ -433,7 +437,8 @@ class ManagementTest(system_test.TestCase):
         result = self.node.get_operations(type=DUMMY)
         self.assertEqual({DUMMY: ["CREATE", "READ", "UPDATE", "DELETE", "CALLME"]}, result)
         result = self.node.get_operations()
-        for type in LISTENER, LINK: self.assertIn(type, result)
+        for type in LISTENER, LINK:
+            self.assertIn(type, result)
         self.assertEqual(["UPDATE", "READ"], result[LINK])
 
     def test_get_attributes(self):
@@ -441,8 +446,10 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(set([u'arg1', u'arg2', u'num1', u'num2', u'name', u'identity', u'type']),
                          set(result[DUMMY]))
         result = self.node.get_attributes()
-        for type in LISTENER, LINK: self.assertIn(type, result)
-        for a in ['linkType', 'linkDir', 'owningAddr']: self.assertIn(a, result[LINK])
+        for type in LISTENER, LINK:
+            self.assertIn(type, result)
+        for a in ['linkType', 'linkDir', 'owningAddr']:
+            self.assertIn(a, result[LINK])
 
     def test_standalone_no_inter_router(self):
         """Verify that we do not allow inter-router connectors or listeners in standalone mode"""
@@ -457,17 +464,17 @@ class ManagementTest(system_test.TestCase):
             self.node.create, dict(attrs, type=CONNECTOR, name="bad2", port=str(self.get_port())))
 
         conf = Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'id': 'all_by_myself1'}),
-            ('listener', {'port':self.get_port(), 'role':'inter-router'})
+            ('router', {'mode': 'standalone', 'id': 'all_by_myself1'}),
+            ('listener', {'port': self.get_port(), 'role': 'inter-router'})
         ])
         r = self.qdrouterd('routerX', conf, wait=False)
         r.expect = Process.EXIT_FAIL
         self.assertTrue(r.wait() != 0)
 
         conf = Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'id': 'all_by_myself2'}),
-            ('listener', {'port':self.get_port(), 'role':'normal'}),
-            ('connector', {'port':self.get_port(), 'role':'inter-router'})
+            ('router', {'mode': 'standalone', 'id': 'all_by_myself2'}),
+            ('listener', {'port': self.get_port(), 'role': 'normal'}),
+            ('connector', {'port': self.get_port(), 'role': 'inter-router'})
         ])
         r = self.qdrouterd('routerY', conf, wait=False)
         r.expect = Process.EXIT_FAIL

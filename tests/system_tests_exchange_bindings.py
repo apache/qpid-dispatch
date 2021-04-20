@@ -23,7 +23,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import ast
-from time import sleep
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
@@ -31,7 +30,7 @@ from system_test import AsyncTestReceiver
 from system_test import unittest
 from proton import Message, Timeout
 from proton.reactor import AtMostOnce, AtLeastOnce
-from proton.utils import BlockingConnection, SendException
+from proton.utils import BlockingConnection
 
 _EXCHANGE_TYPE = "org.apache.qpid.dispatch.router.config.exchange"
 _BINDING_TYPE  = "org.apache.qpid.dispatch.router.config.binding"
@@ -41,14 +40,15 @@ class ExchangeBindingsTest(TestCase):
     """
     Tests the exchange/bindings of the dispatch router.
     """
+
     def _create_router(self, name, config):
 
         config = [
-            ('router',   {'mode': 'standalone', 'id': 'QDR.%s'%name}),
+            ('router',   {'mode': 'standalone', 'id': 'QDR.%s' % name}),
             ('listener', {'role': 'normal', 'host': '0.0.0.0',
                           'port': self.tester.get_port(),
-                          'saslMechanisms':'ANONYMOUS'})
-            ] + config
+                          'saslMechanisms': 'ANONYMOUS'})
+        ] + config
         return self.tester.qdrouterd(name, Qdrouterd.Config(config))
 
     def run_qdmanage(self, router, cmd, input=None, expect=Process.EXIT_OK):
@@ -67,7 +67,7 @@ class ExchangeBindingsTest(TestCase):
     def _validate_entity(self, name, kind, entities, expected):
         for entity in entities:
             if "name" in entity and entity["name"] == name:
-                for k,v in expected.items():
+                for k, v in expected.items():
                     self.assertIn(k, entity)
                     self.assertEqual(v, entity[k])
                 return
@@ -183,7 +183,7 @@ class ExchangeBindingsTest(TestCase):
         # binding deletion by id:
         bid = bindings[0]["identity"]
         self.run_qdmanage(router, "delete --type " + _BINDING_TYPE +
-                              " --identity %s" % bid)
+                          " --identity %s" % bid)
         _ = self.run_qdmanage(router, "query --type %s" % _BINDING_TYPE)
         bindings = ast.literal_eval(_)
         self.assertEqual(len(binding_config) - 1, len(bindings))
@@ -192,7 +192,7 @@ class ExchangeBindingsTest(TestCase):
 
         # binding deletion by name:
         self.run_qdmanage(router, "delete --type " + _BINDING_TYPE +
-                              " --name b14")
+                          " --name b14")
         _ = self.run_qdmanage(router, "query --type %s" % _BINDING_TYPE)
         bindings = ast.literal_eval(_)
         self.assertEqual(len(binding_config) - 2, len(bindings))
@@ -201,7 +201,7 @@ class ExchangeBindingsTest(TestCase):
 
         # exchange deletion by name:
         self.run_qdmanage(router, "delete --type " + _EXCHANGE_TYPE +
-                              " --name Exchange1")
+                          " --name Exchange1")
         _ = self.run_qdmanage(router, "query --type %s" % _EXCHANGE_TYPE)
         exchanges = ast.literal_eval(_)
         self.assertEqual(len(ex_config) - 1, len(exchanges))
@@ -263,7 +263,7 @@ class ExchangeBindingsTest(TestCase):
 
         # delete exchange by identity:
         self.run_qdmanage(router, "delete --type " + _EXCHANGE_TYPE +
-                              " --identity %s" % exchanges[0]["identity"])
+                          " --identity %s" % exchanges[0]["identity"])
 
     def test_forwarding(self):
         """
@@ -470,7 +470,7 @@ class ExchangeBindingsTest(TestCase):
             ('router',   {'mode': 'standalone', 'id': 'QDR.mcast'}),
             ('listener', {'role': 'normal', 'host': '0.0.0.0',
                           'port': self.tester.get_port(),
-                          'saslMechanisms':'ANONYMOUS'}),
+                          'saslMechanisms': 'ANONYMOUS'}),
             ('address', {'pattern': 'nextHop2/#', 'distribution': 'multicast'}),
             ('exchange', {'address':          'Address3',
                           'name':             'Exchange1',
@@ -517,10 +517,11 @@ class ExchangeBindingsTest(TestCase):
         Verify that the exchange and bindings are visible to other routers in
         the network
         """
+
         def router(self, name, extra_config):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name, 'allowUnsettledMulticast': 'yes'}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name, 'allowUnsettledMulticast': 'yes'}),
                 ('listener', {'port': self.tester.get_port(), 'stripAnnotations': 'no'})
             ] + extra_config
 
@@ -562,7 +563,7 @@ class ExchangeBindingsTest(TestCase):
                              'exchangeName':   'ExchangeA',
                              'bindingKey':     'a/#',
                              'nextHopAddress': 'NotSubscribed'})
-               ])
+                ])
 
         router(self, 'B',
                [('connector', {'name': 'connectorToA',
@@ -574,7 +575,7 @@ class ExchangeBindingsTest(TestCase):
                              'distribution': 'balanced'}),
                 ('address', {'pattern': 'nextHop3/#',
                              'distribution': 'closest'})
-               ])
+                ])
 
         self.routers[0].wait_router_connected('QDR.B')
         self.routers[1].wait_router_connected('QDR.A')
@@ -612,7 +613,7 @@ class ExchangeBindingsTest(TestCase):
         """
         Verify that multi-frame messages are forwarded properly
         """
-        MAX_FRAME=1024
+        MAX_FRAME = 1024
         config = [
             ('router', {'mode': 'interior', 'id': 'QDR.X',
                         'allowUnsettledMulticast': 'yes'}),
@@ -706,4 +707,3 @@ class ExchangeBindingsTest(TestCase):
 
 if __name__ == '__main__':
     unittest.main(main_module())
-

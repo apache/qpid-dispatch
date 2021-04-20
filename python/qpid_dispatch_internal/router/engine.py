@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from .data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR, \
+from .data import MessageHELLO, MessageRA, MessageLSU, MessageLSR, \
     isCompatibleVersion, getIdAndVersion
 from .hello import HelloProtocol
 from .link import LinkStateEngine
@@ -34,11 +34,12 @@ from traceback import format_exc, extract_stack
 import time
 
 ##
-## Import the Dispatch adapters from the environment.  If they are not found
-## (i.e. we are in a test bench, etc.), load the stub versions.
+# Import the Dispatch adapters from the environment.  If they are not found
+# (i.e. we are in a test bench, etc.), load the stub versions.
 ##
 from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LOG_WARNING, LOG_STACK_LIMIT
-from ..dispatch import TREATMENT_MULTICAST_FLOOD, TREATMENT_MULTICAST_ONCE
+from ..dispatch import TREATMENT_MULTICAST_FLOOD
+
 
 class RouterEngine(object):
     """
@@ -49,11 +50,11 @@ class RouterEngine(object):
         Initialize an instance of a router for a domain.
         """
         ##
-        ## Record important information about this router instance
+        # Record important information about this router instance
         ##
         self.domain         = "domain"
         self.router_adapter = router_adapter
-        self._config        = None # Not yet loaded
+        self._config        = None  # Not yet loaded
         self._log_hello     = LogAdapter("ROUTER_HELLO")
         self._log_ls        = LogAdapter("ROUTER_LS")
         self._log_general   = LogAdapter("ROUTER")
@@ -69,17 +70,17 @@ class RouterEngine(object):
                  (self.id, self.instance, self.max_routers))
 
         ##
-        ## Launch the sub-module engines
+        # Launch the sub-module engines
         ##
         self.node_tracker          = NodeTracker(self, self.max_routers)
         self.hello_protocol        = HelloProtocol(self, self.node_tracker)
         self.link_state_engine     = LinkStateEngine(self)
         self.path_engine           = PathEngine(self)
 
+    # ========================================================================================
+    # Adapter Entry Points - invoked from the adapter
+    # ========================================================================================
 
-    ##========================================================================================
-    ## Adapter Entry Points - invoked from the adapter
-    ##========================================================================================
     def getId(self):
         """
         Return the router's ID
@@ -95,7 +96,6 @@ class RouterEngine(object):
                 raise ValueError("No router configuration found")
         return self._config
 
-
     def setMobileSeq(self, router_maskbit, mobile_seq):
         """
         Another router's mobile sequence number has been changed and the Python router needs to store
@@ -103,7 +103,6 @@ class RouterEngine(object):
         """
         self.node_tracker.set_mobile_seq(router_maskbit, mobile_seq)
 
-        
     def setMyMobileSeq(self, mobile_seq):
         """
         This router's mobile sequence number has been changed and the Python router needs to store
@@ -112,14 +111,12 @@ class RouterEngine(object):
         self.link_state_engine.set_mobile_seq(mobile_seq)
         self.link_state_engine.send_ra(time.time())
 
-        
     def linkLost(self, link_id):
         """
         The control-link to a neighbor has been dropped.  We can cancel the neighbor from the
         link-state immediately instead of waiting for the hello-timeout to expire.
         """
         self.node_tracker.link_lost(link_id)
-
 
     def handleTimerTick(self):
         """
@@ -131,7 +128,6 @@ class RouterEngine(object):
             self.node_tracker.tick(now)
         except Exception:
             self.log(LOG_ERROR, "Exception in timer processing\n%s" % format_exc(LOG_STACK_LIMIT))
-
 
     def handleControlMessage(self, opcode, body, link_id, cost):
         """
@@ -145,7 +141,7 @@ class RouterEngine(object):
 
         try:
             now = time.time()
-            if   opcode == 'HELLO':
+            if opcode == 'HELLO':
                 msg = MessageHELLO(body)
                 self.log_hello(LOG_TRACE, "RCVD: %r" % msg)
                 self.hello_protocol.handle_hello(msg, now, link_id, cost)
@@ -169,7 +165,6 @@ class RouterEngine(object):
             self.log(LOG_ERROR, "Exception in control message processing\n%s" % format_exc(LOG_STACK_LIMIT))
             self.log(LOG_ERROR, "Control message error: opcode=%s body=%r" % (opcode, body))
 
-
     def receive(self, message, link_id, cost):
         """
         This is the IoAdapter message-receive handler
@@ -181,71 +176,65 @@ class RouterEngine(object):
             self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r" %
                      (message.properties, message.body))
 
-
     def getRouterData(self, kind):
         """
         """
         if kind == 'help':
-            return { 'help'           : "Get list of supported values for kind",
-                     'link-state'     : "This router's link state",
-                     'link-state-set' : "The set of link states from known routers",
-                     'next-hops'      : "Next hops to each known router"
-                     }
-        if kind == 'link-state'     : return self.neighbor_engine.link_state.to_dict()
+            return {'help'           : "Get list of supported values for kind",
+                    'link-state'     : "This router's link state",
+                    'link-state-set' : "The set of link states from known routers",
+                    'next-hops'      : "Next hops to each known router"
+                    }
+        if kind == 'link-state'     :
+            return self.neighbor_engine.link_state.to_dict()
         if kind == 'link-state-set' :
             copy = {}
-            for _id,_ls in self.link_state_engine.collection.items():
+            for _id, _ls in self.link_state_engine.collection.items():
                 copy[_id] = _ls.to_dict()
             return copy
 
-        return {'notice':'Use kind="help" to get a list of possibilities'}
+        return {'notice': 'Use kind="help" to get a list of possibilities'}
 
+    # ========================================================================================
+    # Adapter Calls - outbound calls to Dispatch
+    # ========================================================================================
 
-    ##========================================================================================
-    ## Adapter Calls - outbound calls to Dispatch
-    ##========================================================================================
     def log(self, level, text):
         """
         Emit a log message to the host's event log
         """
-        info = extract_stack(limit=2)[0] # Caller frame info
+        info = extract_stack(limit=2)[0]  # Caller frame info
         self._log_general.log(level, text, info[0], info[1])
-
 
     def log_hello(self, level, text):
         """
         Emit a log message to the host's event log
         """
-        info = extract_stack(limit=2)[0] # Caller frame info
+        info = extract_stack(limit=2)[0]  # Caller frame info
         self._log_hello.log(level, text, info[0], info[1])
-
 
     def log_ls(self, level, text):
         """
         Emit a log message to the host's event log
         """
-        info = extract_stack(limit=2)[0] # Caller frame info
+        info = extract_stack(limit=2)[0]  # Caller frame info
         self._log_ls.log(level, text, info[0], info[1])
-
 
     def log_ma(self, level, text):
         """
         Emit a log message to the host's event log
         """
-        info = extract_stack(limit=2)[0] # Caller frame info
+        info = extract_stack(limit=2)[0]  # Caller frame info
         self._log_ma.log(level, text, info[0], info[1])
-
 
     def send(self, dest, msg):
         """
         Send a control message to another router.
         """
-        app_props = {'opcode' : msg.get_opcode() }
+        app_props = {'opcode' : msg.get_opcode()}
         self.io_adapter[0].send(Message(address=dest, properties=app_props, body=msg.to_dict()), True, True)
-
 
     def node_updated(self, addr, reachable, neighbor):
         """
         """
         self.router_adapter(addr, reachable, neighbor)
-

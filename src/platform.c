@@ -17,17 +17,16 @@
  * under the License.
  */
 
+#include "qpid/dispatch/platform.h"
+
 #include "config.h"
 
-#include <stdio.h>
-#include <sys/time.h>
-#include <sys/resource.h>
+#include "qpid/dispatch/ctools.h"
+
 #include <inttypes.h>
 #include <stdbool.h>
-
-#include <qpid/dispatch/platform.h>
-#include <qpid/dispatch/ctools.h>
-
+#include <stdio.h>
+#include <sys/resource.h>
 
 uintmax_t qd_platform_memory_size(void)
 {

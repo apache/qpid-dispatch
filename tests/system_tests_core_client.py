@@ -37,6 +37,7 @@ from proton.reactor import Container
 CONTAINER_ID = "org.apache.qpid.dispatch.test_core_client"
 TARGET_ADDR = "test_core_client_address"
 
+
 class CoreClientAPITest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -164,7 +165,7 @@ class TestService(MessagingHandler):
         self._container.start()
         while self._container.process():
             if self._conn is None and self._container.quiesced:
-                break;
+                break
         self._container.stop()
         self._container.process()
 

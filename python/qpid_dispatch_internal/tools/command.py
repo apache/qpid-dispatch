@@ -25,17 +25,13 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys, json, argparse, os
-try:
-    from collections.abc import Mapping, Sequence
-except ImportError:
-    from collections import Mapping, Sequence
+import sys
+import argparse
+import os
+
 from qpid_dispatch_site import VERSION
 from proton import SSLDomain, Url
-from proton.utils import SyncRequestResponse, BlockingConnection
 
-def version_supports_mutually_exclusive_arguments():
-    return sys.version_info >= (2,8)
 
 class UsageError(Exception):
     """
@@ -43,6 +39,7 @@ class UsageError(Exception):
     Handled by L{main}
     """
     pass
+
 
 def main(run, argv=sys.argv, parser=None):
     """
@@ -63,6 +60,7 @@ def main(run, argv=sys.argv, parser=None):
         print("%s: %s" % (type(e).__name__, e))
     return 1
 
+
 def check_args(args, maxargs=0, minargs=0):
     """
     Check number of arguments, raise UsageError if in correct.
@@ -76,54 +74,60 @@ def check_args(args, maxargs=0, minargs=0):
         raise UsageError("Unexpected arguments: %s" % (" ".join(args[maxargs:])))
     return args + [None] * (maxargs - len(args))
 
+
 def parse_args_qdstat(BusManager, argv=None):
     parser = _qdstat_parser(BusManager)
     return parser.parse_args(args=argv)
+
 
 def parse_args_qdmanage(operations, argv=None):
     parser = _qdmanage_parser(operations)
     return parser.parse_known_args(args=argv)
 
+
 common_parser = argparse.ArgumentParser(add_help=False)
 common_parser.add_argument('--version', action='version', version=VERSION)
 common_parser.add_argument("-v", "--verbose", help="Show maximum detail",
-                           action="count") # support -vvv
+                           action="count")  # support -vvv
+
 
 def _custom_optional_arguments_parser(*args, **kwargs):
     parser = argparse.ArgumentParser(*args, **kwargs)
     parser._optionals.title = "Optional Arguments"
     return parser
 
+
 def add_connection_options(parser):
     group = parser.add_argument_group('Connection Options')
     group.add_argument("-b", "--bus", default="0.0.0.0",
-                     metavar="URL", help="URL of the messaging bus to connect to default %(default)s")
+                       metavar="URL", help="URL of the messaging bus to connect to default %(default)s")
     group.add_argument("-t", "--timeout", type=float, default=5, metavar="SECS",
-                      help="Maximum time to wait for connection in seconds default %(default)s")
+                       help="Maximum time to wait for connection in seconds default %(default)s")
     group.add_argument("--ssl-certificate", metavar="CERT",
-                     help="Client SSL certificate (PEM Format)")
+                       help="Client SSL certificate (PEM Format)")
     group.add_argument("--ssl-key", metavar="KEY",
-                     help="Client SSL private key (PEM Format)")
+                       help="Client SSL private key (PEM Format)")
     group.add_argument("--ssl-trustfile", metavar="TRUSTED-CA-DB",
-                     help="Trusted Certificate Authority Database file (PEM Format)")
+                       help="Trusted Certificate Authority Database file (PEM Format)")
     group.add_argument("--ssl-password", metavar="PASSWORD",
-                     help="Certificate password, will be prompted if not specifed.")
+                       help="Certificate password, will be prompted if not specifed.")
     # Use the --ssl-password-file option to avoid having the --ssl-password in history or scripts.
     group.add_argument("--ssl-password-file", metavar="SSL-PASSWORD-FILE",
-                     help="Certificate password, will be prompted if not specifed.")
+                       help="Certificate password, will be prompted if not specifed.")
 
     group.add_argument("--sasl-mechanisms", metavar="SASL-MECHANISMS",
-                     help="Allowed sasl mechanisms to be supplied during the sasl handshake.")
+                       help="Allowed sasl mechanisms to be supplied during the sasl handshake.")
     group.add_argument("--sasl-username", metavar="SASL-USERNAME",
-                     help="User name for SASL plain authentication")
+                       help="User name for SASL plain authentication")
     group.add_argument("--sasl-password", metavar="SASL-PASSWORD",
-                     help="Password for SASL plain authentication")
+                       help="Password for SASL plain authentication")
     # Use the --sasl-password-file option to avoid having the --sasl-password in history or scripts.
     group.add_argument("--sasl-password-file", metavar="SASL-PASSWORD-FILE",
-                     help="Password for SASL plain authentication")
+                       help="Password for SASL plain authentication")
     group.add_argument("--ssl-disable-peer-name-verify", action="store_true",
-                     help="Disables SSL peer name verification. WARNING - This option is insecure and must not be used "
-                          "in production environments")
+                       help="Disables SSL peer name verification. WARNING - This option is insecure and must not be used "
+                       "in production environments")
+
 
 def _qdstat_add_display_args(parser, BusManager):
     _group = parser.add_argument_group('Display', 'Choose what kind of \
@@ -177,6 +181,7 @@ def _qdstat_add_display_args(parser, BusManager):
 
     display.set_defaults(show=BusManager.displayGeneral.__name__)
 
+
 def _qdstat_parser(BusManager):
     parser = _custom_optional_arguments_parser(prog="qdstat", parents=[common_parser])
     _qdstat_add_display_args(parser, BusManager)
@@ -191,7 +196,6 @@ def _qdstat_parser(BusManager):
                         metavar="ROUTER-ID", help="Router to be queried")
     target.add_argument("-d", "--edge-router", metavar="EDGE-ROUTER-ID", help="Edge Router to be queried")
 
-
     # This limit can be used to limit the number of output rows and
     # can be used in conjunction with options
     # like -c, -l, -a, --autolinks, --linkroutes and --log.
@@ -202,42 +206,47 @@ def _qdstat_parser(BusManager):
     add_connection_options(parser)
     return parser
 
+
 def _qdmanage_add_args(parser):
     parser.add_argument("-r", "--router",
-                     metavar="ROUTER-ID", help="Router to be queried")
+                        metavar="ROUTER-ID", help="Router to be queried")
     # Edge routers are not part of the router network. Hence we need a separate option
     # to be able to query edge routers
     parser.add_argument("-d", '--edge-router', metavar="EDGE-ROUTER-ID", help='Edge Router to be queried')
-    parser.add_argument('--type', help='Type of entity to operate on.') # add choices
+    parser.add_argument('--type', help='Type of entity to operate on.')  # add choices
     parser.add_argument('--name', help='Name of entity to operate on.')
     parser.add_argument('--identity', help='Identity of entity to operate on.',
                         metavar="ID")
     parser.add_argument("--indent", type=int, default=2,
-                 help="Pretty-printing indent. -1 means don't pretty-print (default %(default)s)")
+                        help="Pretty-printing indent. -1 means don't pretty-print (default %(default)s)")
     parser.add_argument('--stdin', action='store_true',
-                  help='Read attributes as JSON map or list of maps from stdin.')
+                        help='Read attributes as JSON map or list of maps from stdin.')
     parser.add_argument('--body', help='JSON value to use as body of a non-standard operation call.')
     parser.add_argument('--properties', help='JSON map to use as properties for a non-standard operation call.')
+
 
 def _qdmanage_parser(operations):
     description = "Standard operations: %s. Use GET-OPERATIONS to find additional operations." % (", ".join(operations))
     parser = _custom_optional_arguments_parser(prog="qdmanage <operation>",
-                                     parents=[common_parser],
-                                     description=description)
+                                               parents=[common_parser],
+                                               description=description)
     _qdmanage_add_args(parser)
     add_connection_options(parser)
     return parser
 
+
 def get_password(file=None):
     if file:
         with open(file, 'r') as password_file:
-            return str(password_file.read()).strip() # Remove leading and trailing characters
+            return str(password_file.read()).strip()  # Remove leading and trailing characters
     return None
+
 
 class Sasl(object):
     """
     A simple object to hold sasl mechanisms, sasl username and password
     """
+
     def __init__(self, mechs=None, user=None, password=None, sasl_password_file=None):
         self.mechs = mechs
         self.user = user
@@ -245,6 +254,7 @@ class Sasl(object):
         self.sasl_password_file = sasl_password_file
         if self.sasl_password_file:
             self.password = get_password(self.sasl_password_file)
+
 
 def opts_url(opts):
     """Fix up default URL settings based on options"""
@@ -256,6 +266,7 @@ def opts_url(opts):
 
     return url
 
+
 def opts_sasl(opts):
     url = Url(opts.bus)
     mechs, user, password, sasl_password_file = opts.sasl_mechanisms, (opts.sasl_username or url.username), (opts.sasl_password or url.password), opts.sasl_password_file
@@ -265,17 +276,18 @@ def opts_sasl(opts):
 
     return Sasl(mechs, user, password, sasl_password_file)
 
+
 def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     """Return proton.SSLDomain from command line options or None if no SSL options specified.
     @param opts: Parsed optoins including connection_options()
     """
 
     certificate, key, trustfile, password, password_file, ssl_disable_peer_name_verify = opts.ssl_certificate,\
-                                                                                         opts.ssl_key,\
-                                                                                         opts.ssl_trustfile,\
-                                                                                         opts.ssl_password,\
-                                                                                         opts.ssl_password_file, \
-                                                                                         opts.ssl_disable_peer_name_verify
+        opts.ssl_key,\
+        opts.ssl_trustfile,\
+        opts.ssl_password,\
+        opts.ssl_password_file, \
+        opts.ssl_disable_peer_name_verify
 
     if not (certificate or trustfile):
         return None
@@ -295,4 +307,3 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     if certificate:
         domain.set_credentials(str(certificate), str(key), str(password))
     return domain
-

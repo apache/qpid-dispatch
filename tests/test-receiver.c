@@ -18,25 +18,21 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <signal.h>
-#include <time.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <math.h>
-
-#include "proton/reactor.h"
-#include "proton/message.h"
 #include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
 #include "proton/delivery.h"
 #include "proton/event.h"
 #include "proton/handlers.h"
+#include "proton/link.h"
+#include "proton/message.h"
+#include "proton/reactor.h"
+#include "proton/session.h"
 
+#include <inttypes.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 bool stop = false;
 

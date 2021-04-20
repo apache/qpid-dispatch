@@ -22,11 +22,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import time
-
 from system_test import TestCase, Qdrouterd, TIMEOUT
 from system_test import AsyncTestReceiver
-from system_test import unittest
 from test_broker import FakeBroker
 
 from proton import Disposition
@@ -121,7 +118,7 @@ class LinkRouteLookupTest(TestCase):
                    ('linkRoute', {'pattern': 'org.apache.B.#',
                                   'containerId': 'FakeBrokerB',
                                   'direction': 'out'})
-                ])
+               ])
         cls.INT_B = cls.routers[-1]
         cls.INT_B.edge_listener = cls.INT_B.addresses[1]
         cls.INT_B.broker_connector = cls.INT_B.connector_addresses[1]

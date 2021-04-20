@@ -19,7 +19,7 @@
 
 name: Build
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   compile:
@@ -53,6 +53,7 @@ jobs:
         -DCONSOLE_INSTALL=OFF
         -DUSE_BWRAP=ON
         -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
+        -DSANITIZE_3RD_PARTY=ON
 
       CCACHE_BASEDIR: ${{github.workspace}}
       CCACHE_DIR: ${{github.workspace}}/.ccache
@@ -67,7 +68,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: 'apache/qpid-proton'
-          ref: 'master'
+          ref: 'main'
           path: 'qpid-proton'
 
       - uses: actions/checkout@v2
@@ -82,7 +83,7 @@ jobs:
           string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
           message("::set-output name=timestamp::${current_date}")
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v2.1.4
         env:
           cache-name: cache-ccache
         with:
@@ -232,6 +233,76 @@ jobs:
           path: |
             **/core
 
+  docs:
+    name: 'Docs (${{ matrix.os }})'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-20.04 ]
+        buildType: [ RelWithDebInfo ]
+    env:
+      DispatchBuildDir: ${{github.workspace}}/build
+      InstallPrefix: ${{github.workspace}}/install
+      DispatchCMakeExtraArgs: >
+        -DCONSOLE_INSTALL=OFF
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - name: Create Build and Install directories
+        run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
+
+      - name: Add Qpid PPA repository
+        if: ${{ runner.os == 'Linux' }}
+        # the `released` ppa does not yet have Proton 0.33.0, have to use `testing`
+        run: |
+          sudo add-apt-repository ppa:qpid/testing && sudo apt-get update
+
+      - name: Install Linux build dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt install -y libqpid-proton-proactor1-dev python3-qpid-proton libpython3-dev libwebsockets-dev libnghttp2-dev
+
+      - name: "Workaround for: make[3]: *** No rule to make target '/usr/lib/x86_64-linux-gnu/libqpid-proton-core.so', needed by 'src/libqpid-dispatch.so'.  Stop."
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo ln -s /usr/lib/x86_64-linux-gnu/libqpid-proton-core.so.10 /usr/lib/x86_64-linux-gnu/libqpid-proton-core.so
+
+      - name: Install Linux docs dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt install -y asciidoc asciidoctor ruby-asciidoctor-pdf dblatex
+
+      - name: qpid-dispatch cmake configure
+        working-directory: ${{env.DispatchBuildDir}}
+        run: >
+          cmake "${{github.workspace}}" \
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
+            ${DispatchCMakeExtraArgs}
+
+      - name: CMake build for docs
+        run: cmake --build "${DispatchBuildDir}" -t docs
+
+      - name: Store the rendered user-guide
+        uses: actions/upload-artifact@v2
+        with:
+          name: UserGuide
+          path: ${{env.DispatchBuildDir}}/docs/books/user-guide
+
+      - name: Store the rendered html man pages
+        uses: actions/upload-artifact@v2
+        with:
+          name: Manpages
+          path: ${{env.DispatchBuildDir}}/docs/man/*.html
+
+      - name: Build the PDF version of the Dispatch book
+        run: asciidoctor-pdf --failure-level INFO ${{github.workspace}}/docs/books/user-guide/book.adoc
+
+      - name: Store the rendered Dispatch book PDF
+        uses: actions/upload-artifact@v2
+        with:
+          name: book.pdf
+          path: ${{github.workspace}}/docs/books/user-guide/book.pdf
+
   console-test:
     name: Console Tests
     runs-on: ubuntu-latest
@@ -261,7 +332,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/cache@v2.1.4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -269,8 +340,9 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Install JDK ${{ matrix.java }}
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v2
         with:
+          distribution: 'adopt'
           java-version: 11
 
       - name: RAT Check

@@ -19,10 +19,10 @@
  * under the License.
  */
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <qpid/dispatch/buffer.h>
+#include "qpid/dispatch/buffer.h"
 
+#include <stdbool.h>
+#include <stdint.h>
 
 /**@file
  * Iterate over message buffer chains and address fields.

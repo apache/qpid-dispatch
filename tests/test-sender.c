@@ -20,28 +20,27 @@
 
 #define ADD_ANNOTATIONS 1
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <signal.h>
-#include <time.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <math.h>
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/message.h"
 
-
-#include "proton/reactor.h"
-#include "proton/message.h"
 #include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
 #include "proton/delivery.h"
 #include "proton/event.h"
 #include "proton/handlers.h"
+#include "proton/link.h"
+#include "proton/message.h"
+#include "proton/reactor.h"
+#include "proton/session.h"
 
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/message.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <math.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #define BOOL2STR(b) ((b)?"true":"false")
 

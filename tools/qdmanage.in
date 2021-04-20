@@ -24,15 +24,16 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys, json, re
-import  qpid_dispatch_site
-import argparse
+import sys
+import json
+import re
 try:
     from collections.abc import Mapping, Sequence
 except ImportError:
     from collections import Mapping, Sequence
 
-from qpid_dispatch.management.client import Node, Url
+import qpid_dispatch_site  # noqa: F401 # imported for side-effects (inserts to sys.path)
+from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.tools.command import (UsageError, _qdmanage_parser, check_args,
                                                   main, opts_ssl_domain, opts_url, opts_sasl)
 from qpid_dispatch_internal.management.qdrouter import QdSchema
@@ -40,6 +41,7 @@ from qpid_dispatch_internal.compat import PY_TEXT_TYPE
 from qpid_dispatch_internal.compat import PY_STRING_TYPE
 
 INTEGER_TYPE = "integer"
+
 
 def attr_split(attrstr, qd_schema, type):
     """Split an attribute string of the form name=value or name to indicate None"""
@@ -87,11 +89,11 @@ class QdManage():
                                  edge_router=self.opts.edge_router)
 
         operation = self.args.pop(0)
-        method = operation.lower().replace('-','_')
+        method = operation.lower().replace('-', '_')
         if operation.upper() in self.operations and hasattr(self, method):
-            getattr(self, method)() # Built-in operation
+            getattr(self, method)()  # Built-in operation
         else:
-            self.operation(operation) # Custom operation
+            self.operation(operation)  # Custom operation
 
     def main(self, argv):
         return main(self.run, argv, self.op)
@@ -102,7 +104,8 @@ class QdManage():
 
     def print_result(self, result):
         """Print a string result as-is, else try json dump, else print as-is"""
-        if not result: return
+        if not result:
+            return
         if isinstance(result, (PY_STRING_TYPE, PY_TEXT_TYPE)):
             print("%s" % result)
         else:
@@ -145,7 +148,8 @@ class QdManage():
                 self.print_json(func(data).attributes)
             elif isinstance(data, Sequence):
                 self.print_json([func(attrs).attributes for attrs in data])
-            else: raise ValueError("stdin is not a JSON map or list")
+            else:
+                raise ValueError("stdin is not a JSON map or list")
         else:
             self.print_json(func(self.opts.attributes).attributes)
 
@@ -212,7 +216,7 @@ class QdManage():
         try:
             return json.loads(value)
         except ValueError as e:
-            if not re.search(r'["{}\[\]]', value): # Doesn't look like attempted JSON.
+            if not re.search(r'["{}\[\]]', value):  # Doesn't look like attempted JSON.
                 return value    # Just treat as plain string
             raise ValueError("Invalid JSON '%s': %s" % (value, e))
 
@@ -226,6 +230,7 @@ class QdManage():
             body = self.json_arg(self.opts.body)
         request = self.call_node('request', 'type', 'name', 'identity', operation=operation, body=body, **properties)
         self.print_result(self.node.call(request).body)
+
 
 if __name__ == "__main__":
     sys.exit(QdManage().main(sys.argv))

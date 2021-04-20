@@ -71,7 +71,7 @@ if(USE_BWRAP)
 else()
   set(BWRAP_ARGS "")
 endif()
-set(TEST_WRAP ${BWRAP_ARGS} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
+set(TEST_WRAP ${BWRAP_ARGS} ${Python_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
 add_test(unit_tests_size_10000 ${TEST_WRAP} unit_tests_size 10000)
 add_test(unit_tests_size_512   ${TEST_WRAP} unit_tests_size 512)
@@ -162,6 +162,7 @@ foreach(py_test_module
     system_tests_open_properties
     ${SYSTEM_TESTS_HTTP2}
     system_tests_http1_adaptor
+    system_tests_http1_over_tcp
     system_tests_tcp_adaptor
     )
 
@@ -256,6 +257,4 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/config-2
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests)
 
-if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8.5"))
-  add_subdirectory(c_unittests)
-endif()
+add_subdirectory(c_unittests)

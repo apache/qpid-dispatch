@@ -30,13 +30,16 @@ IS_PY2 = sys.version_info[0] == 2
 if IS_PY2:
     def dict_iteritems(d):
         return d.iteritems()
+
     def dict_iterkeys(d):
         return d.iterkeys()
 else:
     def dict_iteritems(d):
         return iter(d.items())
+
     def dict_iterkeys(d):
         return iter(d.keys())
+
 
 class Common():
 
@@ -61,7 +64,7 @@ class Common():
 
     # discovered router container names
     # len=n_logs
-    router_ids = [] # raw long names
+    router_ids = []  # raw long names
 
     # router display names shortened with popups
     router_display_names = []
@@ -140,6 +143,7 @@ def log_letter_of(idx):
         sys.exit('ERROR: too many log files')
     return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[idx]
 
+
 def index_of_log_letter(letter):
     '''
     Return the index 0..25 of the firster letter of the 'letter' string
@@ -152,6 +156,7 @@ def index_of_log_letter(letter):
         raise ValueError("index_of_log_letter Invalid log letter: %s", letter)
     return val
 
+
 class RestartRec():
     def __init__(self, _id, _router, _event, _datetime):
         self.id = _id
@@ -159,9 +164,11 @@ class RestartRec():
         self.event = _event
         self.datetime = _datetime
 
+
 def transfer_is_possibly_unsettled(plf):
     return (plf.data.transfer and not plf.data.transfer_more and
             not (plf.data.transfer_settled or plf.data.final_disposition is not None))
+
 
 global_colors = {
     "errors": "yellow",
@@ -177,8 +184,10 @@ global_colors = {
     "no_credit": "beige"
 }
 
+
 def color_of(obj_type):
     return global_colors.get(obj_type, "pink")
+
 
 html_escape_table = {
     "&": "&amp;",
@@ -186,8 +195,10 @@ html_escape_table = {
     "<": "&lt;",
 }
 
+
 def html_escape(text):
-    return "".join(html_escape_table.get(c,c) for c in text)
+    return "".join(html_escape_table.get(c, c) for c in text)
+
 
 def strings_of_proton_log(text):
     '''
@@ -199,8 +210,8 @@ def strings_of_proton_log(text):
     :param text:
     :return: strings embedded in text
     '''
-    r = "" # return result
-    sstate = 0 # when a backslash is seen, skip this many more input chars
+    r = ""  # return result
+    sstate = 0  # when a backslash is seen, skip this many more input chars
     skipping = False
     for elem in text:
         if sstate > 0:
@@ -215,6 +226,7 @@ def strings_of_proton_log(text):
                 skipping = False
                 r += elem
     return r
+
 
 def ls_eval(text):
     '''

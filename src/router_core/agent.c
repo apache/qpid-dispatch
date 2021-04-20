@@ -17,21 +17,20 @@
  * under the License.
  */
 
-#include <qpid/dispatch/amqp.h>
-#include "agent_config_address.h"
-#include "agent_config_link_route.h"
-#include "agent_config_auto_link.h"
-#include "agent_address.h"
-#include "agent_link.h"
-#include "agent_connection.h"
-#include "router_core_private.h"
-#include "exchange_bindings.h"
-#include <stdio.h>
-#include "agent_router.h"
-#include "agent_conn_link_route.h"
-#include "adaptors/tcp_adaptor.h"
 #include "adaptors/http1/http1_private.h"
+#include "adaptors/tcp_adaptor.h"
+#include "agent_address.h"
+#include "agent_config_address.h"
+#include "agent_config_auto_link.h"
+#include "agent_config_link_route.h"
+#include "agent_conn_link_route.h"
+#include "agent_connection.h"
+#include "agent_link.h"
+#include "agent_router.h"
+#include "exchange_bindings.h"
+#include "router_core_private.h"
 
+#include "qpid/dispatch/amqp.h"
 
 static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool discard);

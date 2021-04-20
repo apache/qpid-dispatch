@@ -17,33 +17,20 @@
 # under the License.
 #
 
-import os, sys
-from time import sleep, ctime
-import system_test
-from system_test import TestCase, Qdrouterd, QdManager, Process, SkipIfNeeded, TIMEOUT
-from subprocess import PIPE
+from system_test import TestCase, Qdrouterd, SkipIfNeeded, TIMEOUT
 try:
     import grpc
     import friendship_server as fs
     from friendship_pb2_grpc import FriendshipStub
     from friendship_pb2 import Person, FriendshipRequest, PersonEmail
+    _GRPC_UNAVAILABLE = False
 except ImportError:
-    pass
+    _GRPC_UNAVAILABLE = True
 
 
 def skip_test():
-    """
-    If grpc cannot be imported, test must be skipped
-    :return:
-    """
-    try:
-        import grpc
-        import friendship_server as fs
-        from friendship_pb2_grpc import FriendshipStub
-        from friendship_pb2 import Person, FriendshipRequest, PersonEmail
-        return False
-    except ImportError:
-        return True
+    """If grpc cannot be imported, test must be skipped"""
+    return _GRPC_UNAVAILABLE
 
 
 class GrpcServiceMethodsTest(TestCase):
@@ -125,8 +112,10 @@ class GrpcServiceMethodsTest(TestCase):
         ])
         cls.router_qdr = cls.tester.qdrouterd("grpc-test-router", config, wait=True)
 
-        # If you wanna try it without the router, set the grpc_channel directly to the grpc_server_port
-        cls.grpc_channel = grpc.insecure_channel('127.0.0.1:%s' % cls.router_http_port)
+        # If you wanna try it without the router, set the grpc_channel
+        # directly to the grpc_server_port
+        cls.grpc_channel = grpc.insecure_channel('127.0.0.1:%s' %
+                                                 cls.router_http_port)
         cls.grpc_stub = FriendshipStub(cls.grpc_channel)
 
     @classmethod

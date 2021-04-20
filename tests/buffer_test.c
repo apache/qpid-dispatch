@@ -18,10 +18,12 @@
  */
 
 #define _GNU_SOURCE
+#include "qpid/dispatch/buffer.h"
+
+#include "test_case.h"
+
 #include <stdio.h>
 #include <string.h>
-#include "test_case.h"
-#include <qpid/dispatch/buffer.h>
 
 
 static void fill_buffer(qd_buffer_list_t *list,
@@ -113,9 +115,11 @@ static char *test_buffer_list_append(void *context)
     }
     if (list_len != 26) {
         static char error[100];
-        sprintf(error, "Incorrect accumulated buffer size: %ld", list_len);
+        sprintf(error, "Incorrect accumulated buffer size: %zu", list_len);
         return error;
     }
+
+    qd_buffer_list_free_buffers(&list);
 
     return 0;
 }

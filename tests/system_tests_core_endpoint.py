@@ -25,9 +25,7 @@ from __future__ import print_function
 from proton import Message
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from qpid_dispatch_internal.compat import UNICODE
-from qpid_dispatch.management.client import Node
+from proton.reactor import Container
 
 
 class RouterTest(TestCase):
@@ -62,7 +60,6 @@ class RouterTest(TestCase):
 
         router('A', ('listener', {'role': 'inter-router', 'port': inter_router_port}), ["-T"])
 
-
     def test_01_denied_link(self):
         test = DenyLinkTest(self.routers[0].addresses[0], "org.apache.qpid.dispatch.router/test/deny")
         test.run()
@@ -91,7 +88,7 @@ class RouterTest(TestCase):
 
 class DenyLinkTest(MessagingHandler):
     def __init__(self, host, address):
-        super(DenyLinkTest, self).__init__(prefetch = 0)
+        super(DenyLinkTest, self).__init__(prefetch=0)
         self.host      = host
         self.address   = address
 
@@ -130,7 +127,7 @@ class DenyLinkTest(MessagingHandler):
 
 class DiscardTest(MessagingHandler):
     def __init__(self, host, address):
-        super(DiscardTest, self).__init__(prefetch = 0)
+        super(DiscardTest, self).__init__(prefetch=0)
         self.host      = host
         self.address   = address
 
@@ -178,7 +175,7 @@ class DiscardTest(MessagingHandler):
 
 class SourceTest(MessagingHandler):
     def __init__(self, host, address, count, expected_ps):
-        super(SourceTest, self).__init__(prefetch = 0)
+        super(SourceTest, self).__init__(prefetch=0)
         self.host        = host
         self.address     = address
         self.expected_ps = expected_ps
@@ -225,7 +222,7 @@ class SourceTest(MessagingHandler):
 
 class EchoTest(MessagingHandler):
     def __init__(self, host, address):
-        super(EchoTest, self).__init__(prefetch = 0)
+        super(EchoTest, self).__init__(prefetch=0)
         self.host      = host
         self.address   = address
 

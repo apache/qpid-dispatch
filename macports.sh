@@ -23,7 +23,7 @@ set -Exeuo pipefail
 
 export COLUMNS=80
 
-MACPORTS_VERSION=2.5.4
+MACPORTS_VERSION=2.6.4
 MACPORTS_PREFIX=/opt/local
 MACPORTS_SYNC=tarball
 

@@ -17,19 +17,27 @@
  * under the License.
  */
 
-#include "python_private.h"             // must be first!
-#include "dispatch_private.h"
-#include <qpid/dispatch/python_embedded.h>
+#include "python_private.h"  // must be first!
+#include "qpid/dispatch/python_embedded.h"
 
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/failoverlist.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/platform.h>
-#include <qpid/dispatch/proton_utils.h>
+#include "qpid/dispatch/server.h"
+
+#include "config.h"
+#include "dispatch_private.h"
+#include "entity.h"
+#include "policy.h"
+#include "remote_sasl.h"
+#include "server_private.h"
+#include "timer_private.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/failoverlist.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/platform.h"
+#include "qpid/dispatch/proton_utils.h"
+#include "qpid/dispatch/threading.h"
 
 #include <proton/event.h>
 #include <proton/listener.h>
@@ -38,19 +46,9 @@
 #include <proton/raw_connection.h>
 #include <proton/sasl.h>
 
-
-#include "entity.h"
-#include "entity_cache.h"
-#include "dispatch_private.h"
-#include "policy.h"
-#include "server_private.h"
-#include "timer_private.h"
-#include "config.h"
-#include "remote_sasl.h"
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
-#include <inttypes.h>
 
 struct qd_server_t {
     qd_dispatch_t            *qd;
@@ -1372,6 +1370,9 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
+
+    qd_http_server_free(qd_server->http);
+
     qd_connection_t *ctx = DEQ_HEAD(qd_server->conn_list);
     while (ctx) {
         qd_log(qd_server->log_source, QD_LOG_INFO,
@@ -1385,7 +1386,9 @@ void qd_server_free(qd_server_t *qd_server)
             qd_session_cleanup(ctx);
             pn_connection_set_context(ctx->pn_conn, 0);
         }
-        if (ctx->free_user_id) free((char*)ctx->user_id);
+        invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
+        if (ctx->free_user_id)
+            free((char*)ctx->user_id);
         sys_mutex_free(ctx->deferred_call_lock);
         free(ctx->name);
         free(ctx->role);
@@ -1487,8 +1490,6 @@ void qd_server_run(qd_dispatch_t *qd)
         sys_thread_free(threads[i]);
     }
     free(threads);
-    qd_http_server_stop(qd_server->http); /* Stop HTTP threads immediately */
-    qd_http_server_free(qd_server->http);
 
     qd_log(qd_server->log_source, QD_LOG_NOTICE, "Shut Down");
 }

@@ -22,23 +22,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from time import sleep
-from threading import Event
-from threading import Timer
-
-from proton import Message, Timeout, symbol
+from proton import Message
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout
-from system_test import AsyncTestReceiver
-from system_test import AsyncTestSender
-from system_test import QdManager
 from system_test import unittest
-from system_tests_link_routes import ConnLinkRouteService
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from proton.utils import BlockingConnection
-from qpid_dispatch.management.client import Node
-from subprocess import PIPE, STDOUT
-import re
+from proton.reactor import Container
 
 
 class AddrTimer(object):
@@ -88,7 +76,6 @@ class RouterTest(TestCase):
         cls.routers[0].wait_router_connected('INT.B')
         cls.routers[1].wait_router_connected('INT.A')
 
-
     def test_01_delayed_settlement_same_interior(self):
         test = DelayedSettlementTest(self.routers[0].addresses[0],
                                      self.routers[0].addresses[0],
@@ -101,7 +88,7 @@ class RouterTest(TestCase):
         test = DelayedSettlementTest(self.routers[2].addresses[0],
                                      self.routers[5].addresses[0],
                                      self.routers[2].addresses[0],
-                                     'dest.02', 10, [2,3,8], False)
+                                     'dest.02', 10, [2, 3, 8], False)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -109,7 +96,7 @@ class RouterTest(TestCase):
         test = DelayedSettlementTest(self.routers[2].addresses[0],
                                      self.routers[5].addresses[0],
                                      self.routers[5].addresses[0],
-                                     'dest.03', 10, [2,4,9], False)
+                                     'dest.03', 10, [2, 4, 9], False)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -117,7 +104,7 @@ class RouterTest(TestCase):
         test = DelayedSettlementTest(self.routers[2].addresses[0],
                                      self.routers[5].addresses[0],
                                      self.routers[0].addresses[0],
-                                     'dest.04', 10, [0,2,3,8], False)
+                                     'dest.04', 10, [0, 2, 3, 8], False)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -125,7 +112,7 @@ class RouterTest(TestCase):
         test = DelayedSettlementTest(self.routers[0].addresses[0],
                                      self.routers[0].addresses[0],
                                      self.routers[0].addresses[0],
-                                     'dest.05', 10, [0,2,4,9], True)
+                                     'dest.05', 10, [0, 2, 4, 9], True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -141,7 +128,7 @@ class RouterTest(TestCase):
         test = DelayedSettlementTest(self.routers[2].addresses[0],
                                      self.routers[5].addresses[0],
                                      self.routers[5].addresses[0],
-                                     'dest.07', 10, [0,9], True)
+                                     'dest.07', 10, [0, 9], True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -149,7 +136,7 @@ class RouterTest(TestCase):
         test = DelayedSettlementTest(self.routers[2].addresses[0],
                                      self.routers[5].addresses[0],
                                      self.routers[0].addresses[0],
-                                     'dest.08', 10, [1,2,3,4,5,6,7,8], True)
+                                     'dest.08', 10, [1, 2, 3, 4, 5, 6, 7, 8], True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -166,7 +153,7 @@ class RouterTest(TestCase):
 
 class DelayedSettlementTest(MessagingHandler):
     def __init__(self, sender_host, receiver_host, query_host, addr, dlv_count, stuck_list, close_link):
-        super(DelayedSettlementTest, self).__init__(auto_accept = False)
+        super(DelayedSettlementTest, self).__init__(auto_accept=False)
         self.sender_host   = sender_host
         self.receiver_host = receiver_host
         self.query_host    = query_host
@@ -276,7 +263,7 @@ class DelayedSettlementTest(MessagingHandler):
 
 class RxLinkCreditTest(MessagingHandler):
     def __init__(self, host):
-        super(RxLinkCreditTest, self).__init__(prefetch = 0)
+        super(RxLinkCreditTest, self).__init__(prefetch=0)
         self.host = host
 
         self.receiver_conn = None
@@ -342,14 +329,14 @@ class RxLinkCreditTest(MessagingHandler):
             # 10Credits
             #
             msg = self.proxy.query_links()
-            self.query_sender.send(msg)            
+            self.query_sender.send(msg)
 
         elif self.stage == 4:
             #
             # 20Credits
             #
             msg = self.proxy.query_links()
-            self.query_sender.send(msg)            
+            self.query_sender.send(msg)
 
     def on_message(self, event):
         if event.receiver == self.reply_receiver:
@@ -395,7 +382,7 @@ class RxLinkCreditTest(MessagingHandler):
                         if link.creditAvailable == 20:
                             self.fail(None)
                             return
-            
+
             self.poll_timer = event.reactor.schedule(0.5, PollTimeout(self))
 
     def poll_timeout(self):
@@ -473,7 +460,7 @@ class TxLinkCreditTest(MessagingHandler):
             # 250Credits
             #
             msg = self.proxy.query_links()
-            self.query_sender.send(msg)            
+            self.query_sender.send(msg)
 
     def on_message(self, event):
         if event.receiver == self.reply_receiver:
@@ -483,7 +470,7 @@ class TxLinkCreditTest(MessagingHandler):
                 # LinkBlocked
                 #
                 if response.results[0].linksBlocked == 1:
-                    self.receiver = event.container.create_receiver(self.sender_conn, self.addr);
+                    self.receiver = event.container.create_receiver(self.sender_conn, self.addr)
                     self.stage = 2
                     self.process()
                     return
@@ -516,5 +503,5 @@ class TxLinkCreditTest(MessagingHandler):
         Container(self).run()
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     unittest.main(main_module())

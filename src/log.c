@@ -17,19 +17,22 @@
  * under the License.
  */
 
-#include "python_private.h"   // must be first!
+#include "python_private.h"  // must be first!
 
-#include "log_private.h"
-#include "server_private.h"
+#include "qpid/dispatch/log.h"
+
+#include "aprintf.h"
 #include "entity.h"
 #include "entity_cache.h"
-#include "aprintf.h"
-#include <qpid/dispatch/atomic.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/log.h>
+#include "log_private.h"
+#include "server_private.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/threading.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>

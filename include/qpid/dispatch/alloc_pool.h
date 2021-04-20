@@ -19,10 +19,11 @@
  * under the License.
  */
 
-#include <stdlib.h>
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/threading.h"
+
 #include <stdint.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/ctools.h>
+#include <stdlib.h>
 
 /**
  * @file
@@ -80,7 +81,26 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool);
 /** De-allocate from a thread pool. Use via ALLOC_DECLARE */
 void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p);
 uint32_t qd_alloc_sequence(void *p);
-static inline void qd_nullify_safe_ptr(qd_alloc_safe_ptr_t *sp) { sp->ptr = 0; }
+
+// generic safe pointer api for any alloc pool item
+
+#define QD_SAFE_PTR_INIT(p) { .ptr = (void*)(p), .seq = qd_alloc_sequence(p) }
+
+static inline void qd_nullify_safe_ptr(qd_alloc_safe_ptr_t *sp)
+{
+    sp->ptr = 0;
+}
+
+static inline void qd_alloc_set_safe_ptr(qd_alloc_safe_ptr_t *sp, void *p)
+{
+    sp->ptr = p;
+    sp->seq = qd_alloc_sequence(p);
+}
+
+static inline void *qd_alloc_deref_safe_ptr(const qd_alloc_safe_ptr_t *sp)
+{
+    return sp->seq == qd_alloc_sequence(sp->ptr) ? sp->ptr : (void*) 0;
+}
 
 /**
  * Declare functions new_T and alloc_T
@@ -102,8 +122,8 @@ static inline void qd_nullify_safe_ptr(qd_alloc_safe_ptr_t *sp) { sp->ptr = 0; }
     __thread qd_alloc_pool_t *__local_pool_##T = 0;                     \
     T *new_##T(void) { return (T*) qd_alloc(&__desc_##T, &__local_pool_##T); }  \
     void free_##T(T *p) { qd_dealloc(&__desc_##T, &__local_pool_##T, (char*) p); } \
-    void set_safe_ptr_##T(T *p, T##_sp *sp) { sp->ptr = (void*) p; sp->seq = qd_alloc_sequence((void*) p); } \
-    T *safe_deref_##T(T##_sp sp) { return sp.seq == qd_alloc_sequence((void*) sp.ptr) ? (T*) sp.ptr : (T*) 0; } \
+    void set_safe_ptr_##T(T *p, T##_sp *sp) { qd_alloc_set_safe_ptr(sp, (void*)p); } \
+    T *safe_deref_##T(T##_sp sp) { return (T*) qd_alloc_deref_safe_ptr((qd_alloc_safe_ptr_t*) &(sp)); } \
     qd_alloc_stats_t *alloc_stats_##T(void) { return __desc_##T.stats; } \
     void *unused##T
 

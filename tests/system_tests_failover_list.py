@@ -60,13 +60,13 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_02_single_failover_host(self):
-        test = FailoverTest(self.routers[0].addresses[1], 1, [{'network-host':'other-host', 'port':'25000'}])
+        test = FailoverTest(self.routers[0].addresses[1], 1, [{'network-host': 'other-host', 'port': '25000'}])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_03_double_failover_host(self):
-        test = FailoverTest(self.routers[0].addresses[2], 2, \
-                            [{'network-host':'second-host', 'port':'25000'}, {'scheme': 'amqps', 'network-host':'third-host', 'port': '5671'}])
+        test = FailoverTest(self.routers[0].addresses[2], 2,
+                            [{'network-host': 'second-host', 'port': '25000'}, {'scheme': 'amqps', 'network-host': 'third-host', 'port': '5671'}])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -97,7 +97,7 @@ class FailoverTest(MessagingHandler):
             fol = None
 
         if self.count == 0:
-            if fol != None and fol != []:
+            if fol is not None and fol != []:
                 self.error = "Expected no failover-list, got: %r" % fol
 
         elif fol.__class__ != list:

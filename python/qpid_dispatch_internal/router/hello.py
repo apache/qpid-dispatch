@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from .data import MessageHELLO
-from ..dispatch import LOG_INFO, LOG_TRACE, LOG_CRITICAL
+from ..dispatch import LOG_TRACE, LOG_CRITICAL
 from ..compat import dict_keys
 from ..compat import dict_items
 
@@ -32,6 +32,7 @@ class HelloProtocol(object):
     """
     This module is responsible for running the HELLO protocol.
     """
+
     def __init__(self, container, node_tracker):
         self.container        = container
         self.node_tracker     = node_tracker
@@ -43,7 +44,6 @@ class HelloProtocol(object):
         self.hellos           = {}
         self.dup_reported     = False
 
-
     def tick(self, now):
         self._expire_hellos(now)
         self.ticks += 1.0
@@ -52,7 +52,6 @@ class HelloProtocol(object):
             msg = MessageHELLO(None, self.id, dict_keys(self.hellos), self.container.instance)
             self.container.send('amqp:/_local/qdhello', msg)
             self.container.log_hello(LOG_TRACE, "SENT: %r" % msg)
-
 
     def handle_hello(self, msg, now, link_id, cost):
         if msg.id == self.id:
@@ -64,7 +63,6 @@ class HelloProtocol(object):
         if msg.is_seen(self.id):
             self.node_tracker.neighbor_refresh(msg.id, msg.version, msg.instance, link_id, cost, now)
 
-
     def _expire_hellos(self, now):
         """
         Expire local records of received hellos.  This is not involved in the
@@ -74,4 +72,3 @@ class HelloProtocol(object):
             if now - last_seen > self.hello_max_age:
                 self.hellos.pop(key)
                 self.container.log_hello(LOG_TRACE, "HELLO peer expired: %s" % key)
-

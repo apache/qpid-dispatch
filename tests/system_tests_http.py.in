@@ -21,20 +21,18 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import errno
 import os
 import threading
-import sys
 import ssl
 
 try:
     from urllib2 import urlopen, build_opener, HTTPSHandler
     from urllib2 import HTTPError, URLError
-    import urllib2 as urllib
 except ImportError:
     # python3
     from urllib.request import urlopen, build_opener, HTTPSHandler
     from urllib.error import HTTPError, URLError
-    import urllib
 
 from system_test import TIMEOUT, Process, QdManager, retry
 from subprocess import PIPE, STDOUT
@@ -57,14 +55,10 @@ class RouterTestHttp(TestCase):
 
     @classmethod
     def get(cls, url, use_ca=True):
-        if sys.version_info >= (2, 7):
-            if use_ca:
-                http_data = urlopen(url, cafile=cls.ssl_file('ca-certificate.pem'))
-            else:
-                http_data = urlopen(url)
+        if use_ca:
+            http_data = urlopen(url, cafile=cls.ssl_file('ca-certificate.pem'))
         else:
-            req = urllib.Request(url=url)
-            http_data = urlopen(req)
+            http_data = urlopen(url)
         return http_data.read().decode('utf-8')
 
     @classmethod
@@ -101,7 +95,7 @@ class RouterTestHttp(TestCase):
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'bad'}),
             ('listener', {'port': listen_port, 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
-            ('listener', {'port': listen_port, 'http':True})])
+            ('listener', {'port': listen_port, 'http': True})])
         r = Qdrouterd(name="expect_fail", config=config, wait=False)
         self.assertEqual(1, r.wait())
 
@@ -112,10 +106,9 @@ class RouterTestHttp(TestCase):
             else:
                 self.get(url, use_ca=use_ca)
             return False
-        except Exception as e:
-            if "[Errno 111] Connection refused" in str(e):
-                return True
-            if "[Errno 104] Connection reset by peer" in str(e):
+        except (IOError, OSError) as e:  # TODO(DISPATCH-1539): in Python 3.3+ it is sufficient to catch only OSError
+            expected = (errno.ECONNREFUSED, errno.ECONNRESET)
+            if e.errno in expected or e.reason.errno in expected:
                 return True
             raise e
 
@@ -193,7 +186,8 @@ class RouterTestHttp(TestCase):
             self.assertRaises(HTTPError, urlopen, "http://localhost:%d/nosuch" % port)
 
         # Sequential calls on multiple ports
-        for port in r.ports: test(port)
+        for port in r.ports:
+            test(port)
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
@@ -201,22 +195,23 @@ class RouterTestHttp(TestCase):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None
                 self.start()
+
             def run(self):
-                try: test(self.port)
-                except Exception as e: self.ex = e
+                try:
+                    test(self.port)
+                except Exception as e:
+                    self.ex = e
         threads = [TestThread(p) for p in r.ports + r.ports]
-        for t in threads: t.join()
         for t in threads:
-            if t.ex: raise t.ex
+            t.join()
+        for t in threads:
+            if t.ex:
+                raise t.ex
 
         # https not configured
         self.assertRaises(URLError, urlopen, "https://localhost:%d/nosuch" % r.ports[0])
 
     def test_http_metrics(self):
-
-        if not sys.version_info >= (2, 7):
-            return
-
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.METRICS'}),
             ('listener', {'port': self.get_port(), 'http': 'yes'}),
@@ -235,7 +230,8 @@ class RouterTestHttp(TestCase):
             assert('deliveries_redirected_to_fallback' in data)
 
         # Sequential calls on multiple ports
-        for port in r.ports: test(port)
+        for port in r.ports:
+            test(port)
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
@@ -243,19 +239,20 @@ class RouterTestHttp(TestCase):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None
                 self.start()
+
             def run(self):
-                try: test(self.port)
-                except Exception as e: self.ex = e
+                try:
+                    test(self.port)
+                except Exception as e:
+                    self.ex = e
         threads = [TestThread(p) for p in r.ports + r.ports]
-        for t in threads: t.join()
         for t in threads:
-            if t.ex: raise t.ex
+            t.join()
+        for t in threads:
+            if t.ex:
+                raise t.ex
 
     def test_http_healthz(self):
-
-        if not sys.version_info >= (2, 7):
-            return
-
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.HEALTHZ'}),
             ('listener', {'port': self.get_port(), 'http': 'yes'}),
@@ -268,7 +265,8 @@ class RouterTestHttp(TestCase):
             self.assertEqual(200, result.getcode())
 
         # Sequential calls on multiple ports
-        for port in r.ports: test(port)
+        for port in r.ports:
+            test(port)
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
@@ -276,13 +274,18 @@ class RouterTestHttp(TestCase):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None
                 self.start()
+
             def run(self):
-                try: test(self.port)
-                except Exception as e: self.ex = e
+                try:
+                    test(self.port)
+                except Exception as e:
+                    self.ex = e
         threads = [TestThread(p) for p in r.ports + r.ports]
-        for t in threads: t.join()
         for t in threads:
-            if t.ex: raise t.ex
+            t.join()
+        for t in threads:
+            if t.ex:
+                raise t.ex
 
     def test_https_get(self):
         def http_listener(**kwargs):
@@ -304,7 +307,7 @@ class RouterTestHttp(TestCase):
                             'privateKeyFile': self.ssl_file('server-private-key.pem'),
                             'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
                             'password': 'server-password'
-            }),
+                            }),
             http_listener(sslProfile='simple-ssl', requireSsl=False, authenticatePeer=False),
             http_listener(sslProfile='simple-ssl', requireSsl=True, authenticatePeer=False),
             http_listener(sslProfile='simple-ssl', requireSsl=True, authenticatePeer=True),
@@ -332,28 +335,24 @@ class RouterTestHttp(TestCase):
         # authenticatePeer=True requires a client cert
         self.assertRaises((URLError, ssl.SSLError), self.assert_get, "https://localhost:%s" % r.ports[2])
 
-        # could not provide key password on python 2.6
-        if sys.version_info >= (2, 7):
-            # Provide client cert
+        # Provide client cert
+        self.assert_get_cert("https://localhost:%d" % r.ports[2])
+
+        # Try a get on the HTTP listener we are going to delete
+        self.assert_get_cert("https://localhost:%d" % r.ports[3])
+
+        if not self.skip_delete_http_listener_test:
+            # Delete the listener with name 'delete-me'
+            long_type = 'org.apache.qpid.dispatch.listener'
+            mgmt = QdManager(self, address=address())
+            mgmt.delete(long_type, name=name)
+
+            # Make sure that the listener got deleted.
+            ret_val = retry(lambda: self.is_get_request_failing("https://localhost:%s/system_tests_http.txt" % r.ports[3], use_get_cert=True), timeout=10, delay=2)
+            self.assertTrue(ret_val)
+
+            # Make sure other ports are working normally after the above delete.
             self.assert_get_cert("https://localhost:%d" % r.ports[2])
-
-            # Try a get on the HTTP listener we are going to delete
-            self.assert_get_cert("https://localhost:%d" % r.ports[3])
-
-            if not self.skip_delete_http_listener_test:
-                # Delete the listener with name 'delete-me'
-                long_type = 'org.apache.qpid.dispatch.listener'
-                mgmt = QdManager(self, address=address())
-                mgmt.delete(long_type, name=name)
-
-                # Make sure that the listener got deleted.
-                ret_val = retry(lambda: self.is_get_request_failing("https://localhost:%s/system_tests_http.txt" % r.ports[3], use_get_cert=True), timeout=10, delay=2)
-                self.assertTrue(ret_val)
-
-                # Make sure other ports are working normally after the above delete.
-                self.assert_get_cert("https://localhost:%d" % r.ports[2])
-
-
 
 
 if __name__ == '__main__':

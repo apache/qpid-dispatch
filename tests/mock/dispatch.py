@@ -43,18 +43,19 @@ TREATMENT_LINK_BALANCED    = 4
 
 
 class LogAdapter:
-  def __init__(self, mod_name):
-    self.mod_name = mod_name
+    def __init__(self, mod_name):
+        self.mod_name = mod_name
 
-  def log(self, level, text):
-    print("LOG: mod=%s level=%d text=%s" % (self.mod_name, level, text))
+    def log(self, level, text):
+        print("LOG: mod=%s level=%d text=%s" % (self.mod_name, level, text))
+
 
 class IoAdapter:
-  def __init__(self, handler, address, global_address=False):
-    self.handler = handler
-    self.address = address
-    self.global_address = global_address
+    def __init__(self, handler, address, global_address=False):
+        self.handler = handler
+        self.address = address
+        self.global_address = global_address
 
-  def send(self, address, properties, application_properties, body, correlation_id=None):
-    print("IO: send(addr=%s properties=%r application_properties=%r body=%r"
-          % (address, properties, application_properties, body))
+    def send(self, address, properties, application_properties, body, correlation_id=None):
+        print("IO: send(addr=%s properties=%r application_properties=%r body=%r"
+              % (address, properties, application_properties, body))

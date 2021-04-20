@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from proton import Message, Timeout
+from proton import Message
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout, Logger
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
@@ -72,7 +72,6 @@ class RouterTest(TestCase):
         cls.routers[0].wait_router_connected('B')
         cls.routers[1].wait_router_connected('A')
 
-
     def test_01_one_router_targeted_sender_no_tenant(self):
         test = MessageTransferTest(self.routers[0].addresses[0],
                                    self.routers[0].addresses[0],
@@ -82,7 +81,6 @@ class RouterTest(TestCase):
                                    "M0anything/addr_01")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_02_one_router_targeted_sender_tenant_on_sender(self):
         test = MessageTransferTest(self.routers[0].addresses[1],
@@ -94,7 +92,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_03_one_router_targeted_sender_tenant_on_receiver(self):
         test = MessageTransferTest(self.routers[0].addresses[0],
                                    self.routers[0].addresses[1],
@@ -104,7 +101,6 @@ class RouterTest(TestCase):
                                    "M00.0.0.0/addr_03")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_04_one_router_targeted_sender_tenant_on_both(self):
         test = MessageTransferTest(self.routers[0].addresses[1],
@@ -116,7 +112,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_05_two_router_targeted_sender_no_tenant(self):
         test = MessageTransferTest(self.routers[0].addresses[0],
                                    self.routers[1].addresses[0],
@@ -126,7 +121,6 @@ class RouterTest(TestCase):
                                    "M00.0.0.0/addr_05")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_06_two_router_targeted_sender_tenant_on_sender(self):
         test = MessageTransferTest(self.routers[0].addresses[1],
@@ -138,7 +132,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_07_two_router_targeted_sender_tenant_on_receiver(self):
         test = MessageTransferTest(self.routers[0].addresses[0],
                                    self.routers[1].addresses[1],
@@ -148,7 +141,6 @@ class RouterTest(TestCase):
                                    "M00.0.0.0/addr_07")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_08_two_router_targeted_sender_tenant_on_both(self):
         test = MessageTransferTest(self.routers[0].addresses[1],
@@ -160,7 +152,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_09_one_router_anonymous_sender_no_tenant(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[0],
                                        self.routers[0].addresses[0],
@@ -170,7 +161,6 @@ class RouterTest(TestCase):
                                        "M0anything/addr_09")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_10_one_router_anonymous_sender_tenant_on_sender(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[1],
@@ -182,7 +172,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_11_one_router_anonymous_sender_tenant_on_receiver(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[0],
                                        self.routers[0].addresses[1],
@@ -192,7 +181,6 @@ class RouterTest(TestCase):
                                        "M00.0.0.0/addr_11")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_12_one_router_anonymous_sender_tenant_on_both(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[1],
@@ -204,7 +192,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_13_two_router_anonymous_sender_no_tenant(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[0],
                                        self.routers[1].addresses[0],
@@ -214,7 +201,6 @@ class RouterTest(TestCase):
                                        "M0anything/addr_13")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_14_two_router_anonymous_sender_tenant_on_sender(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[1],
@@ -226,7 +212,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_15_two_router_anonymous_sender_tenant_on_receiver(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[0],
                                        self.routers[1].addresses[1],
@@ -236,7 +221,6 @@ class RouterTest(TestCase):
                                        "M00.0.0.0/addr_15")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_16_two_router_anonymous_sender_tenant_on_both(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[1],
@@ -248,7 +232,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_17_one_router_link_route_targeted(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[0].addresses[2],
@@ -258,7 +241,6 @@ class RouterTest(TestCase):
                              self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_18_one_router_link_route_targeted_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
@@ -270,7 +252,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_19_one_router_link_route_dynamic(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[0].addresses[2],
@@ -280,7 +261,6 @@ class RouterTest(TestCase):
                              self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_20_one_router_link_route_dynamic_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
@@ -292,7 +272,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_21_two_router_link_route_targeted(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[1].addresses[2],
@@ -302,7 +281,6 @@ class RouterTest(TestCase):
                              self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_22_two_router_link_route_targeted_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
@@ -314,7 +292,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_23_two_router_link_route_dynamic(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[1].addresses[2],
@@ -324,7 +301,6 @@ class RouterTest(TestCase):
                              self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_24_two_router_link_route_dynamic_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
@@ -336,7 +312,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_25_one_router_anonymous_sender_non_mobile(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[1],
                                        self.routers[0].addresses[0],
@@ -346,7 +321,6 @@ class RouterTest(TestCase):
                                        "Laddr_25")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_26_one_router_targeted_sender_non_mobile(self):
         test = MessageTransferTest(self.routers[0].addresses[1],
@@ -358,7 +332,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_27_two_router_anonymous_sender_non_mobile(self):
         test = MessageTransferAnonTest(self.routers[0].addresses[1],
                                        self.routers[1].addresses[0],
@@ -369,7 +342,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_28_two_router_targeted_sender_non_mobile(self):
         test = MessageTransferTest(self.routers[0].addresses[1],
                                    self.routers[1].addresses[0],
@@ -379,7 +351,6 @@ class RouterTest(TestCase):
                                    "Laddr_28")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_29_one_router_waypoint_no_tenant(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -392,7 +363,6 @@ class RouterTest(TestCase):
             test.logger.dump()
         self.assertEqual(None, test.error)
 
-
     def test_30_one_router_waypoint(self):
         test = WaypointTest(self.routers[0].addresses[1],
                             self.routers[0].addresses[2],
@@ -403,7 +373,6 @@ class RouterTest(TestCase):
         if test.error:
             test.logger.dump()
         self.assertEqual(None, test.error)
-
 
     def test_31_two_router_waypoint_no_tenant(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -416,7 +385,6 @@ class RouterTest(TestCase):
             test.logger.dump()
         self.assertEqual(None, test.error)
 
-
     def test_32_two_router_waypoint(self):
         test = WaypointTest(self.routers[0].addresses[1],
                             self.routers[1].addresses[2],
@@ -427,7 +395,6 @@ class RouterTest(TestCase):
         if test.error:
             test.logger.dump()
         self.assertEqual(None, test.error)
-
 
     def test_33_one_router_waypoint_no_tenant_external_addr(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -441,7 +408,6 @@ class RouterTest(TestCase):
             test.logger.dump()
         self.assertEqual(None, test.error)
 
-
     def test_34_one_router_waypoint_external_addr(self):
         test = WaypointTest(self.routers[0].addresses[1],
                             self.routers[0].addresses[2],
@@ -454,7 +420,6 @@ class RouterTest(TestCase):
             test.logger.dump()
         self.assertEqual(None, test.error)
 
-
     def test_35_two_router_waypoint_no_tenant_external_addr(self):
         test = WaypointTest(self.routers[0].addresses[0],
                             self.routers[1].addresses[2],
@@ -466,7 +431,6 @@ class RouterTest(TestCase):
         if test.error:
             test.logger.dump()
         self.assertEqual(None, test.error)
-
 
     def test_36_two_router_waypoint_external_addr(self):
         test = WaypointTest(self.routers[0].addresses[1],
@@ -536,7 +500,7 @@ class MessageTransferTest(MessagingHandler):
 
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_accepted=%d n_receiver_opened=%d n_sender_opened=%d" %\
-        (self.n_sent, self.n_rcvd, self.n_accepted, self.n_receiver_opened, self.n_sender_opened)
+            (self.n_sent, self.n_rcvd, self.n_accepted, self.n_receiver_opened, self.n_sender_opened)
         self.sender_conn.close()
         self.receiver_conn.close()
         self.lookup_conn.close()
@@ -624,7 +588,7 @@ class MessageTransferAnonTest(MessagingHandler):
 
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_accepted=%d n_agent_reads=%d n_receiver_opened=%d n_sender_opened=%d" %\
-        (self.n_sent, self.n_rcvd, self.n_accepted, self.n_agent_reads, self.n_receiver_opened, self.n_sender_opened)
+            (self.n_sent, self.n_rcvd, self.n_accepted, self.n_agent_reads, self.n_receiver_opened, self.n_sender_opened)
         self.sender_conn.close()
         self.receiver_conn.close()
         self.lookup_conn.close()
@@ -761,7 +725,6 @@ class LinkRouteTest(MessagingHandler):
         else:
             self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
 
-
     def on_start(self, event):
         self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.first_conn     = event.container.connect(self.first_host)
@@ -769,7 +732,6 @@ class LinkRouteTest(MessagingHandler):
         self.lookup_conn    = event.container.connect(self.lookup_host)
         self.reply_receiver = event.container.create_receiver(self.lookup_conn, dynamic=True)
         self.agent_sender   = event.container.create_sender(self.lookup_conn, "$management")
-
 
     def on_link_opening(self, event):
         if event.sender:
@@ -796,7 +758,6 @@ class LinkRouteTest(MessagingHandler):
             else:
                 self.fail("Incorrect address on incoming receiver: got %s, expected %s" %
                           (event.receiver.remote_target.address, self.second_address))
-
 
     def on_link_opened(self, event):
         if event.receiver:
@@ -880,7 +841,7 @@ class WaypointTest(MessagingHandler):
         self.timer.cancel()
         if self.error:
             self.outs = "n_sent=%d n_rcvd=%d n_thru=%d n_waypoint_rcvd=%d" % (self.n_sent, self.n_rcvd, self.n_thru, self.n_waypoint_rcvd)
-        print (self.outs)
+        print(self.outs)
 
     def send_client(self):
         while self.first_sender.credit > 0 and self.n_sent < self.count:

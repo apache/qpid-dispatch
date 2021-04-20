@@ -17,16 +17,16 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <qpid/dispatch.h>
+#include "python_private.h"
+#include "qpid/dispatch/python_embedded.h"
+
 #include "dispatch_private.h"
 #include "router_private.h"
-#include "entity_cache.h"
-#include "python_private.h"
+
+#include "qpid/dispatch.h"
+
+#include <stdlib.h>
+#include <string.h>
 
 static qd_log_source_t *log_source       = 0;
 static PyObject        *pyRouter         = 0;

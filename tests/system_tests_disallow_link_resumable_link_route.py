@@ -22,17 +22,17 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from time import sleep, time
-from subprocess import PIPE, STDOUT
+from time import sleep
 
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from system_test import unittest
 
-from proton import Message, Terminus
+from proton import Terminus
 from proton.reactor import DurableSubscription, SenderOption
 from proton.utils import BlockingConnection, LinkDetached
 
 from qpid_dispatch.management.client import Node
+
 
 class SenderExpiry(SenderOption):
     def __init__(self, expiry):
@@ -41,12 +41,14 @@ class SenderExpiry(SenderOption):
     def apply(self, sender):
         sender.target.expiry_policy = self.expiry
 
+
 class SenderTimeout(SenderOption):
     def __init__(self, timeout):
         self.timeout = timeout
 
     def apply(self, sender):
         sender.target.timeout = self.timeout
+
 
 class LinkRouteTest(TestCase):
     @classmethod
@@ -73,10 +75,10 @@ class LinkRouteTest(TestCase):
                ])
         router('B',
                [
-                   #disallow resumable links
-                   ('router', {'mode': 'interior', 'id': 'QDR.B', 'allowResumableLinkRoute':False}),
+                   # disallow resumable links
+                   ('router', {'mode': 'interior', 'id': 'QDR.B', 'allowResumableLinkRoute': False}),
                    ('listener', {'role': 'normal', 'host': '0.0.0.0', 'port': b_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
-                   #define link routes
+                   # define link routes
                    ('connector', {'name': 'broker', 'role': 'route-container', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    ('linkRoute', {'prefix': 'org.apache', 'containerId': 'QDR.A', 'dir': 'in'}),
                    ('linkRoute', {'prefix': 'org.apache', 'containerId': 'QDR.A', 'dir': 'out'}),
@@ -110,7 +112,6 @@ class LinkRouteTest(TestCase):
                 self.fail("Exception: " + str(e))
         if not counted:
             self.fail("Interrouter link route failed to connect after %f seconds" % waitTimeS)
-
 
     def test_normal_receiver_allowed(self):
         addr = self.routers[1].addresses[0]

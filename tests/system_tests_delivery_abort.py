@@ -66,7 +66,6 @@ class RouterTest(TestCase):
         cls.routers[0].wait_router_connected('B')
         cls.routers[1].wait_router_connected('A')
 
-
     def test_01_message_route_truncated_one_router(self):
         test = MessageRouteTruncateTest(self.routers[0].addresses[0],
                                         self.routers[0].addresses[0],
@@ -74,14 +73,12 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_02_message_route_truncated_two_routers(self):
         test = MessageRouteTruncateTest(self.routers[0].addresses[0],
                                         self.routers[1].addresses[0],
                                         "addr_02")
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_03_link_route_truncated_one_router(self):
         test = LinkRouteTruncateTest(self.routers[0].addresses[0],
@@ -91,7 +88,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_04_link_route_truncated_two_routers(self):
         test = LinkRouteTruncateTest(self.routers[1].addresses[0],
                                      self.routers[0].addresses[1],
@@ -99,7 +95,6 @@ class RouterTest(TestCase):
                                      self.routers[1].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_05_message_route_abort_one_router(self):
         test = MessageRouteAbortTest(self.routers[0].addresses[0],
@@ -110,7 +105,6 @@ class RouterTest(TestCase):
             test.logger.dump()
         self.assertEqual(None, test.error)
 
-
     def test_06_message_route_abort_two_routers(self):
         test = MessageRouteAbortTest(self.routers[0].addresses[0],
                                      self.routers[1].addresses[0],
@@ -119,7 +113,6 @@ class RouterTest(TestCase):
         if test.error:
             test.logger.dump()
         self.assertEqual(None, test.error)
-
 
     def test_07_multicast_truncate_one_router(self):
         test = MulticastTruncateTest(self.routers[0].addresses[0],
@@ -373,7 +366,7 @@ class LinkRouteTruncateTest(MessagingHandler):
 
     def run(self):
         container = Container(self)
-        container.container_id="LRC"
+        container.container_id = "LRC"
         container.run()
 
 
@@ -422,7 +415,7 @@ class MessageRouteAbortTest(MessagingHandler):
         op, size = self.program.pop(0) if len(self.program) > 0 else (None, None)
         self.logger.log("send - op=%s, size=%s" % (str(op), str(size)))
 
-        if op == None:
+        if op is None:
             return
 
         body = ""
@@ -434,7 +427,7 @@ class MessageRouteAbortTest(MessagingHandler):
             bod3 = "." + bod2[-9:]
             body = bod3 * (size // 10)
         msg = Message(body=body)
-        
+
         if op in 'DF':
             self.logger.log("send(): Send message size: %d" % (size))
             delivery = self.sender1.send(msg)
@@ -452,7 +445,7 @@ class MessageRouteAbortTest(MessagingHandler):
         self.sender_conn.close()
         self.receiver_conn.close()
         self.timer.cancel()
-        
+
     def on_sendable(self, event):
         self.logger.log("on_sendable")
         if event.sender == self.sender1:
@@ -468,7 +461,7 @@ class MessageRouteAbortTest(MessagingHandler):
         if m.body == "FINISH":
             self.finish()
         else:
-            self.logger.log("on_message receives len: %d" %(len(m.body)))
+            self.logger.log("on_message receives len: %d" % (len(m.body)))
             self.result.append(len(m.body))
             self.send()
 
@@ -582,6 +575,7 @@ class MulticastTruncateTest(MessagingHandler):
             self.sender3 = event.container.create_sender(self.sender_conn,
                                                          self.address,
                                                          name="S3")
+
     def on_message(self, event):
         m = event.message
         if event.receiver == self.receiver1:

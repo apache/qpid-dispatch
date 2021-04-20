@@ -24,7 +24,7 @@ from __future__ import print_function
 
 
 from proton import Message, symbol
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout
 from system_test import unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -94,7 +94,6 @@ class RouterTest(TestCase):
         cls.ROUTER_EA2_WP = cls.routers[3].addresses[1]
         cls.ROUTER_EB1_WP = cls.routers[4].addresses[1]
         cls.ROUTER_EB2_WP = cls.routers[5].addresses[1]
-
 
     def test_01_sender_first_primary_same_interior(self):
         test = SenderFirstTest(self.ROUTER_INTA,
@@ -813,5 +812,5 @@ class ReceiverFirstAutoLinkTest(MessagingHandler):
         Container(self).run()
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     unittest.main(main_module())

@@ -18,14 +18,13 @@
  */
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <inttypes.h>
 #include "test_case.h"
-#include <qpid/dispatch.h>
-#include <qpid/dispatch/proton_utils.h>
 
+#include "qpid/dispatch.h"
+#include "qpid/dispatch/proton_utils.h"
+
+#include <stdio.h>
+#include <string.h>
 
 typedef struct {
     const char     *encoded;
@@ -78,7 +77,7 @@ static char *test_data_as_string(void *context)
                 return error;
             }
 
-            if (strcmp(result, vector->expected)) {
+            if (strcmp(result, vector->expected) != 0) {
                 snprintf(error, MAX_ERROR, "Expected '%s', got '%s'", vector->expected, result);
                 free(result);
                 return error;

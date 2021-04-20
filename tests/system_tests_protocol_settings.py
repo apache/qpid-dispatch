@@ -22,11 +22,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import sys
 from system_test import TestCase, Qdrouterd, main_module
 from system_test import unittest
 from proton.utils import BlockingConnection
-import subprocess
-import sys
+
 
 class MaxFrameMaxSessionFramesTest(TestCase):
     """System tests setting proton negotiated size max-frame-size and incoming-window"""
@@ -384,7 +384,7 @@ class ConnectorSettingsNondefaultTest(TestCase):
         cls.routers[1].wait_router_connected('QDR.A')
 
     def test_connector_default(self):
-        with  open('../setUpClass/A.log', 'r') as router_log:
+        with open('../setUpClass/A.log', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "<- @open" in s]
             # nondefaults
@@ -392,7 +392,17 @@ class ConnectorSettingsNondefaultTest(TestCase):
             self.assertIn(' channel-max=19,', open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
             # nondefaults
-            self.assertIn(" incoming-window=10,", begin_lines[0])
+            SEARCH_STRING = " incoming-window=10,"
+            # Sometimes, the begin frame we are looking for might not be
+            # the first in the list. We just need to make sure that
+            # it is somewhere in the list
+            line_found = False
+            for begin_line in begin_lines:
+                if SEARCH_STRING in begin_line:
+                    line_found = True
+                    break
+
+            self.assertTrue(line_found)
 
 
 if __name__ == '__main__':

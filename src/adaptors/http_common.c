@@ -644,7 +644,9 @@ static qdr_http_request_info_t* _new_qdr_http_request_info_t()
 
 static char *_record_key(const char *host, const char *address, const char* site, bool ingress)
 {
-    if (!host) return 0;
+    if (!host)
+        return 0;
+
     size_t hostlen = strlen(host);
     size_t addresslen = address ? strlen(address) + 1 : 0;
     size_t sitelen = site ? strlen(site) + 1 : 0;
@@ -670,6 +672,13 @@ void qd_http_record_request(qdr_core_t *core, const char * method, uint32_t stat
                              const char *local_site, const char *remote_site, bool ingress,
                              uint64_t bytes_in, uint64_t bytes_out, uint64_t latency)
 {
+    //
+    // The _record_key() returns zero if there is no host. The qdr_http_request_info_t (record) should not even be created
+    // if the passed in host parameter is zero. There is no point in having a record without a key.
+    //
+    if (!host)
+        return;
+
     qdr_http_request_info_t* record = _new_qdr_http_request_info_t();
     record->ingress = ingress;
     record->address = address ? qd_strdup(address) : 0;

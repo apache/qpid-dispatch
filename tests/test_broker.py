@@ -30,11 +30,9 @@ import collections
 from threading import Thread
 import uuid
 
-from proton import Message
 from proton import Endpoint
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
-from proton.reactor import AtMostOnce
 
 from system_test import TIMEOUT
 
@@ -71,7 +69,7 @@ class FakeBroker(MessagingHandler):
                 rc = self._deliver_to(c)
                 count += rc
                 if rc == 0:
-                    break;
+                    break
             return count
 
         def _deliver_to(self, consumers):
@@ -82,7 +80,7 @@ class FakeBroker(MessagingHandler):
                         c.send(self.queue.popleft())
                         result += 1
                 return result
-            except IndexError: # no more messages
+            except IndexError:  # no more messages
                 return 0
 
     def __init__(self, url, container_id=None, **handler_kwargs):
@@ -197,6 +195,7 @@ class FakeService(FakeBroker):
     Like a broker, but proactively connects to the message bus
     Useful for testing link routes
     """
+
     def __init__(self, url, container_id=None, **handler_kwargs):
         super(FakeService, self).__init__(url, container_id, **handler_kwargs)
 

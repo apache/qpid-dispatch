@@ -35,14 +35,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
-import sys, ctypes
+import sys
+import ctypes
 from ctypes import c_char_p, c_long, py_object
-import qpid_dispatch_site
 from .compat import IS_PY2
+
 
 class CError(Exception):
     """Exception raised if there is an error in a C call"""
     pass
+
 
 class QdDll(ctypes.PyDLL):
     """
@@ -51,6 +53,7 @@ class QdDll(ctypes.PyDLL):
     NOTE: We use the python calling convention because the C library
     internally makes python calls.
     """
+
     def __init__(self, handle):
         super(QdDll, self).__init__("qpid-dispatch", handle=handle)
 
@@ -140,15 +143,18 @@ class QdDll(ctypes.PyDLL):
 # testing code.
 FORBIDDEN = ["proton"]
 
+
 def check_forbidden():
     bad = set(FORBIDDEN) & set(sys.modules)
     if bad:
         raise ImportError("Forbidden modules loaded: '%s'." % "', '".join(bad))
 
+
 def import_check(name, *args, **kw):
     if name in FORBIDDEN:
         raise ImportError("Python code running inside a dispatch router cannot import '%s', use the 'dispatch' module for internal messaging" % name)
     return builtin_import(name, *args, **kw)
+
 
 check_forbidden()
 if IS_PY2:

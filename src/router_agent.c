@@ -17,16 +17,11 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <qpid/dispatch.h>
 #include "dispatch_private.h"
-#include "router_private.h"
-#include "entity_cache.h"
 
+#include "qpid/dispatch.h"
+
+#include <string.h>
 
 const char *QD_ROUTER_TYPE = "router";
 

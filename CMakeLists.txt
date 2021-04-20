@@ -20,10 +20,45 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(qpid-dispatch C CXX)
 
+# This effectively checks for cmake version 3.1 or later
+if (DEFINED CMAKE_C_COMPILE_FEATURES)
+    set(CMAKE_C_STANDARD 11)
+    set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_C_EXTENSIONS ON) # gnu11
+
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+else()
+    set(C_STANDARD_GNU "-std=gnu11")
+    set(C_STANDARD_Clang "-std=gnu11")
+    set(C_STANDARD_SunPro "-std=c11")
+
+    set(C_STANDARD_FLAGS ${C_STANDARD_${CMAKE_C_COMPILER_ID}})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_STANDARD_FLAGS}")
+
+    set(CXX_STANDARD_FLAGS "-std=c++11")
+endif()
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(CMAKE_MACOSX_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# https://bugzilla.redhat.com/show_bug.cgi?id=1850174 GCC 4.8 claims to support atomics, but it's missing stdatomic.h
+include(CheckIncludeFile)
+check_include_file("stdatomic.h" HAVE_STDATOMIC_H)
+if (NOT HAVE_STDATOMIC_H)
+    add_definitions(-D__STDC_NO_ATOMICS__)
+endif()
+
+# Set warning compile flags
+set(C_WARNING_GNU -Wall -Wextra -Werror -Wpedantic -pedantic-errors -Wno-empty-body -Wno-implicit-fallthrough -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wno-sign-compare -Wno-type-limits)
+set(C_WARNING_Clang -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wno-sign-compare -Wno-gnu-statement-expression)
+set(C_WARNING_SunPro -errwarn=%all)
+
+set(C_WARNING_FLAGS ${C_WARNING_${CMAKE_C_COMPILER_ID}})
+add_compile_options(${C_WARNING_FLAGS})
 
 # Set default build type. Must use FORCE because project() sets default to ""
 if (NOT CMAKE_BUILD_TYPE)
@@ -62,8 +97,14 @@ else (NOT APPLE)
   set(rt "")
 endif (NOT APPLE)
 
-find_package(PythonInterp REQUIRED)
-find_package(PythonLibs REQUIRED)
+# This setting mirrors FindPythonInterp behavior on Windows/macOS, which did not consult registry/frameworks first.
+if (NOT DEFINED Python_FIND_REGISTRY)
+    set(Python_FIND_REGISTRY "LAST")
+endif ()
+if (NOT DEFINED Python_FIND_FRAMEWORK)
+    set(Python_FIND_FRAMEWORK "LAST")
+endif ()
+find_package(Python REQUIRED COMPONENTS Interpreter Development)
 find_package(Threads REQUIRED)
 find_package(Proton 0.33.0 REQUIRED COMPONENTS Core Proactor)
 message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERSION}\")" )
@@ -84,7 +125,7 @@ CMAKE_DEPENDENT_OPTION(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket suppor
 set(SKIP_DELETE_HTTP_LISTENER "True")
 if (LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
   # This is a fix for DISPATCH-1513. libwebsockets versions 3.2.0 introduces a new flag called LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER
-  # The new flag allows (as the flag says) HTTP pver HTTPS listeners. Since this flag is not available before lws 3.2.0 we need
+  # The new flag allows (as the flag says) HTTP over HTTPS listeners. Since this flag is not available before lws 3.2.0 we need
   # to selectively comment out a test.
   set(TEST_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER "#")
   set(LWS_VERSION_WITH_SSL_FIX "3.2.0")
@@ -102,39 +143,19 @@ if (LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
 endif(LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
 
 # Python
-if (PYTHON_VERSION_MAJOR STREQUAL 3)
+if (Python_VERSION_MAJOR STREQUAL 3)
     set(PY_STRING "python3")
-elseif(PYTHON_VERSION_MAJOR STREQUAL 2)
+elseif(Python_VERSION_MAJOR STREQUAL 2)
     set(PY_STRING "python")
 endif()
 
-enable_testing()
-
-# python unittest
-# For versions < 2.7 the developer needs to install the unittest2
-# module (available via 'yum install python-unittest2' or 'pip install unittest2'
-#
-if(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-  set(PYTHON_TEST_COMMAND "unit2")
-  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
-                  RESULT_VARIABLE UNITTEST_MISSING
-                  ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(UNITTEST_MISSING)
-    message(WARNING "python-unittest2 is not installed. ***unit tests cannot be run***\ntry 'pip install python-unittest2' to install python-unittest2")
-    # add bogus test for folk who may have missed the cmake warning
-    add_test(WARNING_python_unittest2_module_NOT_INSTALLED false)
-  endif(UNITTEST_MISSING)
-else(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-  set(PYTHON_TEST_COMMAND "-m" "unittest")
-endif(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-
-if(NOT UNITTEST_MISSING)
-  if (NOT DEFINED DISPATCH_TEST_TIMEOUT)
+if (NOT DEFINED DISPATCH_TEST_TIMEOUT)
     set(DISPATCH_TEST_TIMEOUT "600")
-  endif (NOT DEFINED DISPATCH_TEST_TIMEOUT)
-  SET(DART_TESTING_TIMEOUT ${DISPATCH_TEST_TIMEOUT} CACHE STRING "Default CTest timeout in seconds")
-  include (CTest)
-endif(NOT UNITTEST_MISSING)
+endif (NOT DEFINED DISPATCH_TEST_TIMEOUT)
+SET(DART_TESTING_TIMEOUT ${DISPATCH_TEST_TIMEOUT} CACHE STRING "Default CTest timeout in seconds")
+include (CTest)
+
+set(PYTHON_TEST_COMMAND "-m" "unittest")
 
 set (SO_VERSION_MAJOR 2)
 set (SO_VERSION_MINOR 0)
@@ -162,7 +183,7 @@ set(CONSOLE_BASE_INSTALL_DIR "share/qpid-dispatch/console")
 set(CONSOLE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CONSOLE_BASE_INSTALL_DIR}")
 set(CONSOLE_STAND_ALONE_INSTALL_DIR "${CONSOLE_INSTALL_DIR}")
 
-set(RUN ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/run.py)
+set(RUN ${Python_EXECUTABLE} ${CMAKE_BINARY_DIR}/run.py)
 
 # define the configuration directory based on whether or not the install prefix is defined
 if(NOT DEFINED SYSCONF_INSTALL_DIR)
@@ -174,12 +195,6 @@ if(NOT DEFINED SYSCONF_INSTALL_DIR)
 endif()
 
 set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
-
-if (NOT COMMAND add_compile_options)
-  macro (add_compile_options option)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${option}")
-  endmacro (add_compile_options)
-endif (NOT COMMAND add_compile_options)
 
 # Set up runtime checks (valgrind, sanitizers etc.)
 include(cmake/RuntimeChecks.cmake)
@@ -193,7 +208,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/include
     ${Proton_Proactor_INCLUDE_DIRS}
     ${Proton_Core_INCLUDE_DIRS}
-    ${PYTHON_INCLUDE_PATH}
+    ${Python_INCLUDE_DIRS}
     )
 
 # Originally from the LLVM project, https://opensource.apple.com/source/llvmCore/llvmCore-2358.3/CMakeLists.txt.auto.html
@@ -222,38 +237,22 @@ if(QD_ENABLE_ASSERTIONS)
     endif()
 endif()
 
-if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
- add_compile_options(-Werror)
- add_compile_options(-Wall)
- include(CheckCCompilerFlag)
- check_c_compiler_flag(-Wpedantic HAS_PEDANTIC_FLAG)
- if (HAS_PEDANTIC_FLAG)
-    add_compile_options(-Wpedantic)
- endif(HAS_PEDANTIC_FLAG)
- set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
- if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-   set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
-   set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
-   set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "--coverage")
-   set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "--coverage")
-   mark_as_advanced(
-     CMAKE_C_FLAGS_COVERAGE
-     CMAKE_EXE_LINKER_FLAGS_COVERAGE
-     CMAKE_MODULE_LINKER_FLAGS_COVERAGE
-     CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
-   make_directory(${CMAKE_BINARY_DIR}/coverage_results)
-   add_custom_target(coverage
-     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/coverage_results
-     COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
- endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
-else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
- add_compile_options(-xc99)
- add_compile_options(-errwarn=%all)
-endif (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
-
-if (CMAKE_C_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wno-gnu-statement-expression)
-endif()
+# Set up extra coverage analysis options for gcc and clang
+if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+ set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
+ set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
+ set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "--coverage")
+ set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "--coverage")
+ mark_as_advanced(
+   CMAKE_C_FLAGS_COVERAGE
+   CMAKE_EXE_LINKER_FLAGS_COVERAGE
+   CMAKE_MODULE_LINKER_FLAGS_COVERAGE
+   CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
+ make_directory(${CMAKE_BINARY_DIR}/coverage_results)
+ add_custom_target(coverage
+   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/coverage_results
+   COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
 ##
 ## Header file installation

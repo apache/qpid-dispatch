@@ -18,14 +18,13 @@
  */
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <inttypes.h>
-#include "test_case.h"
-#include <qpid/dispatch.h>
 #include "compose_private.h"
+#include "test_case.h"
 
+#include "qpid/dispatch.h"
+
+#include <inttypes.h>
+#include <stdio.h>
 
 static char *vector0 =
     "\x00\x53\x77"                             // amqp-value

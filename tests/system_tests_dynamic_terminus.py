@@ -39,7 +39,7 @@ class RouterTest(TestCase):
         super(RouterTest, cls).setUpClass()
 
         def router(name, connection):
-            
+
             config = [
                 ('router', {'mode': 'interior', 'id': name}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
@@ -48,21 +48,20 @@ class RouterTest(TestCase):
                 ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
                 connection
             ]
-            
+
             config = Qdrouterd.Config(config)
 
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
 
         cls.routers = []
-        
+
         inter_router_port = cls.tester.get_port()
-        
+
         router('A', ('listener', {'role': 'inter-router', 'port': inter_router_port}))
         router('B', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}))
 
         cls.routers[0].wait_router_connected('B')
         cls.routers[1].wait_router_connected('A')
-
 
     def test_01_dynamic_source_test(self):
         test = DynamicSourceTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
@@ -107,7 +106,7 @@ class DynamicSourceTest(MessagingHandler):
 
     def timeout(self):
         self.error = "Timeout Expired: n_sent_1=%d n_sent_2=%d n_rcvd=%d n_accepted=%d" %\
-        (self.n_sent_1, self.n_sent_2, self.n_rcvd, self.n_accepted)
+            (self.n_sent_1, self.n_sent_2, self.n_rcvd, self.n_accepted)
         self.sender_1_conn.close()
         self.sender_2_conn.close()
         self.receiver_conn.close()
@@ -124,7 +123,7 @@ class DynamicSourceTest(MessagingHandler):
         self.sender_2 = event.container.create_sender(self.sender_2_conn)
 
     def send(self):
-        if self.address == None:
+        if self.address is None:
             return
 
         while self.sender_1.credit > 0 and self.n_sent_1 < self.count:
@@ -148,7 +147,7 @@ class DynamicSourceTest(MessagingHandler):
     def on_message(self, event):
         if event.receiver == self.receiver:
             self.n_rcvd += 1
-            
+
     def on_accepted(self, event):
         self.n_accepted += 1
         if self.n_accepted == self.count * 2:
@@ -188,7 +187,7 @@ class DynamicTargetTest(MessagingHandler):
 
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_accepted=%d" %\
-        (self.n_sent, self.n_rcvd, self.n_accepted)
+            (self.n_sent, self.n_rcvd, self.n_accepted)
         self.sender_conn.close()
         self.receiver_conn.close()
 
@@ -217,7 +216,7 @@ class DynamicTargetTest(MessagingHandler):
     def on_message(self, event):
         if event.receiver == self.receiver:
             self.n_rcvd += 1
-            
+
     def on_accepted(self, event):
         self.n_accepted += 1
         if self.n_accepted == self.count:

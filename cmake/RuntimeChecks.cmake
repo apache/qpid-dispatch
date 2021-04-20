@@ -24,6 +24,7 @@
 #
 # -DRUNTIME_CHECK=tsan      # turns on thread sanitizer
 # -DRUNTIME_CHECK=asan      # address and undefined behavior sanitizer
+# -DRUNTIME_CHECK=hwasan    # hardware-supported asan for aarch64
 # -DRUNTIME_CHECK=memcheck  # valgrind memcheck (in progress)
 # -DRUNTIME_CHECK=helgrind  # valgrind helgrind (in progress)
 #
@@ -63,7 +64,7 @@ endmacro()
 
 # Valid options for RUNTIME_CHECK
 #
-set(runtime_checks OFF tsan asan memcheck helgrind)
+set(runtime_checks OFF tsan asan hwasan memcheck helgrind)
 
 # Set RUNTIME_CHECK value and deal with the older cmake flags for
 # valgrind and TSAN
@@ -95,7 +96,7 @@ elseif(RUNTIME_CHECK STREQUAL "helgrind")
   message(STATUS "Runtime race checker: valgrind helgrind")
   set(QDROUTERD_RUNNER "${VALGRIND_EXECUTABLE} --tool=helgrind ${VALGRIND_COMMON_ARGS}")
 
-elseif(RUNTIME_CHECK STREQUAL "asan")
+elseif(RUNTIME_CHECK STREQUAL "asan" OR RUNTIME_CHECK STREQUAL "hwasan")
   assert_has_sanitizers()
   find_library(ASAN_LIBRARY NAME asan libasan)
   if(ASAN_LIBRARY-NOTFOUND)
@@ -105,10 +106,45 @@ elseif(RUNTIME_CHECK STREQUAL "asan")
   if(UBSAN_LIBRARY-NOTFOUND)
     message(FATAL_ERROR "libubsan not installed - address sanitizer not available")
   endif(UBSAN_LIBRARY-NOTFOUND)
-  message(STATUS "Runtime memory checker: gcc/clang address sanitizers")
-  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=address,undefined")
-  set(RUNTIME_ASAN_ENV_OPTIONS "detect_leaks=true suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
-  set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp")
+  if(RUNTIME_CHECK STREQUAL "asan")
+    set(ASAN_VARIANTS "address,undefined")
+  elseif(RUNTIME_CHECK STREQUAL "hwasan")
+    set(ASAN_VARIANTS "hwaddress,undefined")
+    # hwasan currently needs lld, otherwise binaries crash on invalid instruction
+    #  https://github.com/google/sanitizers/issues/1241
+    add_link_options("-fuse-ld=lld")
+  endif()
+  message(STATUS "Runtime memory checker: gcc/clang address sanitizers: ${ASAN_VARIANTS}")
+  option(SANITIZE_3RD_PARTY "Detect leaks in 3rd party libraries used by Dispatch while running tests" OFF)
+  if (SANITIZE_3RD_PARTY)
+    add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/tests/lsan.supp
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/tests/lsan.supp ${CMAKE_BINARY_DIR}/tests/lsan.supp
+        DEPENDS ${CMAKE_SOURCE_DIR}/tests/lsan.supp
+        VERBATIM)
+  else (SANITIZE_3RD_PARTY)
+    # Append wholesale library suppressions
+    #  this is necessary if target system does not have debug symbols for these libraries installed
+    #  and therefore the more specific suppressions do not match
+    add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/tests/lsan.supp
+        COMMAND bash -c 'cat ${CMAKE_SOURCE_DIR}/tests/lsan.supp ${CMAKE_SOURCE_DIR}/tests/lsan_3rdparty.supp > ${CMAKE_BINARY_DIR}/tests/lsan.supp'
+        DEPENDS ${CMAKE_SOURCE_DIR}/tests/lsan.supp ${CMAKE_SOURCE_DIR}/tests/lsan_3rdparty.supp)
+  endif ()
+  add_custom_target(generate_lsan.supp ALL
+        DEPENDS ${CMAKE_BINARY_DIR}/tests/lsan.supp)
+  # force QD_MEMORY_DEBUG else lsan will catch alloc_pool suppressed leaks (ok to remove this once leaks are fixed)
+  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=${ASAN_VARIANTS} -DQD_MEMORY_DEBUG=1")
+  # Clang shipping with XCode does not include leak sanitizer feature
+  if (APPLE)
+    set(DETECT_LEAKS false)
+  else (APPLE)
+    set(DETECT_LEAKS true)
+  endif()
+  # https://github.com/openSUSE/systemd/blob/1270e56526cd5a3f485ae2aba975345c38860d37/docs/TESTING_WITH_SANITIZERS.md
+  set(RUNTIME_ASAN_ENV_OPTIONS "strict_string_checks=1 detect_stack_use_after_return=1 check_initialization_order=1 strict_init_order=1 detect_invalid_pointer_pairs=2 detect_leaks=${DETECT_LEAKS} suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
+  set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_BINARY_DIR}/tests/lsan.supp")
+  set(RUNTIME_UBSAN_ENV_OPTIONS "print_stacktrace=1 print_summary=1")
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()

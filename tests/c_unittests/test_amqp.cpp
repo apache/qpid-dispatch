@@ -20,7 +20,7 @@
 #include "qdr_doctest.h"
 
 extern "C" {
-#include <qpid/dispatch/amqp.h>
+#include "qpid/dispatch/amqp.h"
 }
 
 TEST_CASE("test_qd_port_int") {

@@ -18,7 +18,6 @@
  */
 
 #include "router_core_private.h"
-#include <stdio.h>
 
 
 // The AMQP 'error' type

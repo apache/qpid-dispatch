@@ -24,7 +24,8 @@ from __future__ import print_function
 
 import os
 from threading import Timer
-import json, re
+import json
+import re
 from system_test import main_module, TIMEOUT
 from system_test import TestCase, Qdrouterd, Process, TIMEOUT
 from system_test import unittest
@@ -67,28 +68,28 @@ class FailoverTest(TestCase):
         # original connection goes down, check that the router is trying to make connections to the failover urls.
         #
         FailoverTest.router('B', [
-                        ('router', {'mode': 'interior', 'id': 'B'}),
-                        ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.inter_router_port,
-                                      'failoverUrls': cls.failover_list}),
-                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
-                        ]
-              )
+            ('router', {'mode': 'interior', 'id': 'B'}),
+            ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.inter_router_port,
+                          'failoverUrls': cls.failover_list}),
+            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
+        ]
+        )
 
         FailoverTest.router('A',
-                    [
-                        ('router', {'mode': 'interior', 'id': 'A'}),
-                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
-                        ('connector', {'name': 'connectorToB', 'role': 'inter-router',
-                                       'port': cls.inter_router_port}),
-                    ]
-               )
+                            [
+                                ('router', {'mode': 'interior', 'id': 'A'}),
+                                ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
+                                ('connector', {'name': 'connectorToB', 'role': 'inter-router',
+                                               'port': cls.inter_router_port}),
+                            ]
+                            )
 
         FailoverTest.router('C', [
                             ('router', {'mode': 'interior', 'id': 'C'}),
                             ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.backup_port}),
                             ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
-                        ]
-              )
+                            ]
+                            )
 
         cls.routers[1].wait_router_connected('B')
 
@@ -116,14 +117,15 @@ class FailoverTest(TestCase):
 
     def run_qdstat(self, args, regexp=None, address=None):
         p = self.popen(
-            ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(TIMEOUT) ] + args,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(TIMEOUT)] + args,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        if regexp:
+            assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
         return out
 
     def test_1_connector_has_failover_list(self):
@@ -154,7 +156,7 @@ class FailoverTest(TestCase):
         output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
 
         expected = FailoverTest.backup_url  + ", " + "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port) \
-                   + ", " + "amqp://third-host:5671"
+            + ", " + "amqp://third-host:5671"
 
         if output[0].get('failoverUrls') == expected:
             self.success = True
@@ -196,7 +198,6 @@ class FailoverTest(TestCase):
 
         self.assertTrue(self.success)
 
-
     def schedule_C_to_B_failover_test(self):
         if self.attempts < self.max_attempts:
             if not self.success:
@@ -232,11 +233,11 @@ class FailoverTest(TestCase):
         but this test maskes sure that the new server url also shows up in the failoverUrls list.
         """
         FailoverTest.router('B', [
-                        ('router', {'mode': 'interior', 'id': 'B'}),
-                        ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': FailoverTest.inter_router_port,
-                                      'failoverUrls': FailoverTest.failover_list +  ', amqp://127.0.0.1:%d' % FailoverTest.my_server_port}),
-                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': FailoverTest.tester.get_port()}),
-                        ])
+            ('router', {'mode': 'interior', 'id': 'B'}),
+            ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': FailoverTest.inter_router_port,
+                          'failoverUrls': FailoverTest.failover_list +  ', amqp://127.0.0.1:%d' % FailoverTest.my_server_port}),
+            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': FailoverTest.tester.get_port()}),
+        ])
 
         FailoverTest.routers[3].wait_ready()
 
@@ -284,7 +285,6 @@ class FailoverTest(TestCase):
         Router A must look at this empty list and wipe out all failover information except the original connector information
         and the current connection info.
         """
-
 
         # Start MyServer
         proc = FailoverTest.tester.popen(

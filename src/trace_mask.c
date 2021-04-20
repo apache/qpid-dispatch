@@ -17,11 +17,12 @@
  * under the License.
  */
 
-#include <qpid/dispatch/trace_mask.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/alloc.h>
+#include "qpid/dispatch/trace_mask.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/hash.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/threading.h"
 
 typedef struct {
     qd_hash_handle_t *hash_handle;

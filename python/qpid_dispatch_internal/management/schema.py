@@ -34,9 +34,9 @@ from __future__ import print_function
 
 import sys
 import traceback
+from collections import OrderedDict
 from qpid_dispatch.management.entity import EntityBase
 from qpid_dispatch.management.error import NotImplementedStatus
-from ..compat import OrderedDict
 from ..compat import PY_STRING_TYPE
 from ..compat import PY_TEXT_TYPE
 from ..compat import dict_keys
@@ -49,9 +49,11 @@ except:
     # LogAdapter is not loaded. When running the router, the LogAdapter is available.
     logger_available = False
 
+
 class ValidationError(Exception):
     """Error raised if schema validation fails"""
     pass
+
 
 class Type(object):
     """Base class for schema types.
@@ -59,6 +61,7 @@ class Type(object):
     @ivar name: The type name.
     @ivar pytype: The python type for this schema type.
     """
+
     def __init__(self, name, pytype):
         """
         @param name: The type name.
@@ -90,7 +93,7 @@ class BooleanType(Type):
     def __init__(self):
         super(BooleanType, self).__init__("boolean", bool)
 
-    VALUES = {"yes":1, "true":1, "on":1, "no":0, "false":0, "off":0}
+    VALUES = {"yes": 1, "true": 1, "on": 1, "no": 0, "false": 0, "off": 0}
 
     def validate(self, value):
         """
@@ -103,7 +106,7 @@ class BooleanType(Type):
                 return self.VALUES[value.lower()]
             return bool(value)
         except:
-            raise ValidationError("Invalid Boolean value '%r'"%value)
+            raise ValidationError("Invalid Boolean value '%r'" % value)
 
 
 class EnumValue(str):
@@ -119,7 +122,7 @@ class EnumValue(str):
     def __long__(self): return self.value
     def __eq__(self, x): return str(self) == x or int(self) == x
     def __ne__(self, x): return not self == x
-    def __repr__(self): return "EnumValue('%s', %s)"%(str(self), int(self))
+    def __repr__(self): return "EnumValue('%s', %s)" % (str(self), int(self))
 
 
 class EnumType(Type):
@@ -130,7 +133,7 @@ class EnumType(Type):
         @param tags: A list of string values for the enumerated type.
         """
         assert isinstance(tags, list)
-        super(EnumType, self).__init__("enum%s"%([str(t) for t in tags]), int)
+        super(EnumType, self).__init__("enum%s" % ([str(t) for t in tags]), int)
         self.tags = tags
 
     def validate(self, value):
@@ -147,7 +150,7 @@ class EnumType(Type):
                 return EnumValue(self.tags[i], i)
             except (ValueError, IndexError):
                 pass
-        raise ValidationError("Invalid value for %s: %r"%(self.name, value))
+        raise ValidationError("Invalid value for %s: %r" % (self.name, value))
 
     def dump(self):
         """
@@ -157,7 +160,7 @@ class EnumType(Type):
 
     def __str__(self):
         """String description of enum type."""
-        return "One of [%s]" % ', '.join([("'%s'" %tag) for tag in self.tags])
+        return "One of [%s]" % ', '.join([("'%s'" % tag) for tag in self.tags])
 
 
 class PropertiesType(Type):
@@ -166,16 +169,17 @@ class PropertiesType(Type):
     See the "fields" type in:
     http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-fields
     """
+
     def __init__(self):
         super(PropertiesType, self).__init__("properties", dict)
 
     def validate(self, value):
         if not isinstance(value, dict):
-            raise ValidationError("Properties must be a map");
+            raise ValidationError("Properties must be a map")
 
         for key in value.keys():
             if (not isinstance(key, PY_STRING_TYPE)
-                or any(ord(x) > 127 for x in key)):
+                    or any(ord(x) > 127 for x in key)):
                 raise ValidationError("Property keys must be ASCII encoded")
         return value
 
@@ -191,6 +195,7 @@ BUILTIN_TYPES = OrderedDict(
                           PropertiesType(),
                           BooleanType()])
 
+
 def get_type(rep):
     """
     Get a schema type.
@@ -202,12 +207,14 @@ def get_type(rep):
         return BUILTIN_TYPES[rep]
     raise ValidationError("No such schema type: %s" % rep)
 
+
 def _dump_dict(items):
     """
     Remove all items with None value from a mapping.
     @return: Map of non-None items.
     """
     return OrderedDict((k, v) for k, v in items if v)
+
 
 class AttributeType(object):
     """
@@ -248,9 +255,9 @@ class AttributeType(object):
             if self.value is not None and self.default is not None:
                 raise ValidationError("Attribute '%s' has default value and fixed value" %
                                       self.name)
-            self.create=create
-            self.update=update
-            self.graph=graph
+            self.create = create
+            self.update = update
+            self.graph = graph
         except Exception:
             raise ValidationError("Attribute '%s': %s\n%s"
                                   % (name,
@@ -275,7 +282,7 @@ class AttributeType(object):
         @return: value converted to the correct python type. Rais exception if any check fails.
         """
         if self.value and value != self.value:
-            raise ValidationError("Attribute '%s' has fixed value '%s' but given '%s'"%(
+            raise ValidationError("Attribute '%s' has fixed value '%s' but given '%s'" % (
                 self.name, self.value, value))
         try:
             return self.atype.validate(value)
@@ -302,22 +309,27 @@ class AttributeType(object):
 
 class MessageDef(object):
     """A request or response message"""
+
     def __init__(self, body=None, properties=None):
         self.body = None
-        if body: self.body = AttributeType("body", **body)
+        if body:
+            self.body = AttributeType("body", **body)
         self.properties = dict((name, AttributeType(name, **value))
                                for name, value in (properties or {}).items())
 
 
 class OperationDef(object):
     """An operation definition"""
+
     def __init__(self, name, description=None, request=None, response=None):
         try:
             self.name = name
             self.description = description
             self.request = self.response = None
-            if request: self.request = MessageDef(**request)
-            if response: self.response = MessageDef(**response)
+            if request:
+                self.request = MessageDef(**request)
+            if response:
+                self.response = MessageDef(**response)
         except Exception as exc:
             raise ValidationError("Operation '%s': %s\n%s"
                                   % (name, str(exc), sys.exc_info()[2]))
@@ -333,6 +345,7 @@ class EntityType(object):
     @ivar singleton: If true only one entity of this type is allowed.
     @ivar referential: True if an entity can be referred to by name from another entity.
     """
+
     def __init__(self, name, schema, attributes=None, operations=None, operationDefs=None,
                  description="", fullName=True, singleton=False, deprecated=False,
                  extends=None, referential=False):
@@ -356,7 +369,7 @@ class EntityType(object):
             else:
                 self.name = self.short_name = name
             self.attributes = OrderedDict((k, AttributeType(k, defined_in=self, **v))
-                                              for k, v in (attributes or {}).items())
+                                          for k, v in (attributes or {}).items())
 
             self.deprecated_attributes = OrderedDict()
             for key, value in self.attributes.items():
@@ -393,7 +406,7 @@ class EntityType(object):
             self._init = False      # Have not yet initialized from base and attributes.
             # Operation definitions
             self.operation_defs = dict((name, OperationDef(name, **op))
-                                  for name, op in (operationDefs or {}).items())
+                                       for name, op in (operationDefs or {}).items())
         except Exception as exc:
             raise ValidationError("%s '%s': %s\n%s" % (type(self).__name__,
                                                        name,
@@ -402,7 +415,8 @@ class EntityType(object):
 
     def init(self):
         """Find bases after all types are loaded."""
-        if self._init: return
+        if self._init:
+            return
         self._init = True
         if self.base:
             self.base = self.schema.entity_type(self.base)
@@ -431,7 +445,7 @@ class EntityType(object):
 
     def attribute(self, name):
         """Get the AttributeType for name"""
-        if not name in self.attributes and not name in dict_keys(self.deprecated_attributes):
+        if name not in self.attributes and name not in dict_keys(self.deprecated_attributes):
             raise ValidationError("Unknown attribute '%s' for '%s'" % (name, self))
         if self.attributes.get(name):
             return self.attributes[name]
@@ -453,7 +467,8 @@ class EntityType(object):
         @param attributes: Map attributes name:value or Entity with attributes property.
             Modifies attributes: adds defaults, converts values.
         """
-        if isinstance(attributes, SchemaEntity): attributes = attributes.attributes
+        if isinstance(attributes, SchemaEntity):
+            attributes = attributes.attributes
 
         try:
             # Add missing values
@@ -466,7 +481,7 @@ class EntityType(object):
                         if value is not None:
                             if logger_available:
                                 self.log(LOG_WARNING, "Attribute '%s' of entity '%s' has been deprecated."
-                                                      " Use '%s' instead"%(deprecation_name, self.short_name, attr.name))
+                                                      " Use '%s' instead" % (deprecation_name, self.short_name, attr.name))
                             del attributes[deprecation_name]
 
                     if value is None:
@@ -479,7 +494,7 @@ class EntityType(object):
                     deprecation_name = attr.deprecation_name
                     if deprecation_name:
                         value = attributes.get(deprecation_name)
-                        if not value is None:
+                        if value is not None:
                             # Both name and deprecation name have values
                             # For example, both dir and direction of linkRoute have been specified, This is
                             # illegal. Just fail.
@@ -499,7 +514,7 @@ class EntityType(object):
     def allowed(self, op, body):
         """Raise exception if op is not a valid operation on entity."""
         op = op.upper()
-        if not op in self.operations:
+        if op not in self.operations:
             raise NotImplementedStatus("Operation '%s' not implemented for '%s' %s" % (
                 op, self.name, self.operations))
 
@@ -520,7 +535,7 @@ class EntityType(object):
         return _dump_dict([
             ('attributes', OrderedDict(
                 (k, v.dump()) for k, v in self.attributes.items()
-                if k != 'type')), # Don't dump 'type' attribute, dumped separately.
+                if k != 'type')),  # Don't dump 'type' attribute, dumped separately.
             ('operations', self.operations),
             ('description', self.description or None),
             ('fullyQualifiedType', self.name or None),
@@ -537,7 +552,6 @@ class EntityType(object):
         return self.name == self.schema.long_name(name)
 
 
-
 class Schema(object):
     """
     Schema defining entity types.
@@ -547,6 +561,7 @@ class Schema(object):
     @ivar entityTypes: Map of L{EntityType} by name.
     @ivar description: Text description of schema.
     """
+
     def __init__(self, prefix="", entityTypes=None, description=""):
         """
         @param prefix: Prefix for entity names.
@@ -580,19 +595,21 @@ class Schema(object):
     def log(self, level, text):
         if not self.log_adapter:
             return
-        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        info = traceback.extract_stack(limit=2)[0]  # Caller frame info
         self.log_adapter.log(level, text, info[0], info[1])
 
     def short_name(self, name):
         """Remove prefix from name if present"""
-        if not name: return name
+        if not name:
+            return name
         if name.startswith(self.prefixdot):
             name = name[len(self.prefixdot):]
         return name
 
     def long_name(self, name):
         """Add prefix to unqualified name"""
-        if not name: return name
+        if not name:
+            return name
         if not name.startswith(self.prefixdot):
             name = self.prefixdot + name
         return name
@@ -631,7 +648,7 @@ class Schema(object):
         entities = []
         for a in attribute_maps:
             self.validate_add(a, entities)
-            entities.append(a);
+            entities.append(a)
 
     def validate_add(self, attributes, entities):
         """
@@ -653,7 +670,7 @@ class Schema(object):
                 try:
                     if entity_type.attributes[a.name] == a and attributes[a.name] == e[a.name]:
                         raise ValidationError(
-                            "adding %s duplicates unique attribute '%s' from existing %s"%
+                            "adding %s duplicates unique attribute '%s' from existing %s" %
                             (attributes, a.name, e))
                 except KeyError:
                     continue    # Missing attribute or definition means no clash
@@ -669,7 +686,8 @@ class Schema(object):
 
     def filter(self, predicate):
         """Return an iterator over entity types that satisfy predicate."""
-        if predicate is None: return self.entity_types.values()
+        if predicate is None:
+            return self.entity_types.values()
         return (t for t in self.entity_types.values() if predicate(t))
 
     def by_type(self, type):
@@ -680,13 +698,16 @@ class Schema(object):
         else:
             return self.filter(lambda t: t.is_a(type))
 
+
 class SchemaEntity(EntityBase):
     """A map of attributes associated with an L{EntityType}"""
+
     def __init__(self, entity_type, attributes=None, validate=True, **kwattrs):
         super(SchemaEntity, self).__init__(attributes, **kwattrs)
         self.__dict__['entity_type'] = entity_type
         self.attributes.setdefault('type', entity_type.name)
-        if validate: self.validate()
+        if validate:
+            self.validate()
 
     def _set(self, name, value):
         super(SchemaEntity, self)._set(name, value)

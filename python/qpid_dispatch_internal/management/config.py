@@ -26,10 +26,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
-import json, re, sys
+import json
+import re
 import os
 import traceback
-from copy import copy
 from qpid_dispatch.management.entity import camelcase
 
 from ..dispatch import QdDll
@@ -67,7 +67,7 @@ class Config(object):
 
     def _log(self, level, text):
         if self._log_adapter is not None:
-            info = traceback.extract_stack(limit=2)[0] # Caller frame info
+            info = traceback.extract_stack(limit=2)[0]  # Caller frame info
             self._log_adapter.log(level, text, info[0], info[1])
 
     @staticmethod
@@ -75,11 +75,16 @@ class Config(object):
         for s in sections:
             s[0] = camelcase(s[0])
             s[1] = dict((camelcase(k), v) for k, v in dict_iteritems(s[1]))
-            if s[0] == "address":   s[0] = "router.config.address"
-            if s[0] == "linkRoute": s[0] = "router.config.linkRoute"
-            if s[0] == "autoLink":  s[0] = "router.config.autoLink"
-            if s[0] == "exchange":  s[0] = "router.config.exchange"
-            if s[0] == "binding":   s[0] = "router.config.binding"
+            if s[0] == "address":
+                s[0] = "router.config.address"
+            if s[0] == "linkRoute":
+                s[0] = "router.config.linkRoute"
+            if s[0] == "autoLink":
+                s[0] = "router.config.autoLink"
+            if s[0] == "exchange":
+                s[0] = "router.config.exchange"
+            if s[0] == "binding":
+                s[0] = "router.config.binding"
 
     def _parse(self, lines):
         """
@@ -192,11 +197,11 @@ class Config(object):
             self._line_num += 1
             return line
 
-        js_text = "[%s]"%("\n".join([sub(l) for l in lines]))
+        js_text = "[%s]" % ("\n".join([sub(l) for l in lines]))
         if self._in_json or self._child_level != 0:
             self._log(LOG_WARNING,
                       "Configuration file: invalid entity nesting detected.")
-        spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
+        spare_comma = re.compile(r',\s*([]}])')  # Strip spare commas
         js_text = re.sub(spare_comma, r'\1', js_text)
         # Convert dictionary keys to camelCase
         try:
@@ -213,7 +218,7 @@ class Config(object):
             # ignore comment lines that start with "[whitespace] #"
             line = "" if line.strip().startswith('#') else line
             return line
-        js_text = "%s"%("\n".join([sub(l) for l in lines]))
+        js_text = "%s" % ("\n".join([sub(l) for l in lines]))
         try:
             sections = json.loads(js_text)
         except Exception as e:
@@ -265,12 +270,14 @@ class Config(object):
         for idx in range(len(lines)):
             self._log(LOG_ERROR, "Line %d |%s" % (idx + 1, lines[idx]))
 
+
 class PolicyConfig(Config):
     def __init__(self, filename=None, schema=QdSchema(), raw_json=False):
         super(PolicyConfig, self).__init__(filename, schema, raw_json)
 
     def get_config_types(self):
         return [s for s in self.config_types if 'policy' in s.name]
+
 
 def configure_dispatch(dispatch, lib_handle, filename):
     """Called by C router code to load configuration file and do configuration"""

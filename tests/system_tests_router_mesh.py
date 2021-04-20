@@ -22,11 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import os
-import sys
-from time import sleep
 from signal import SIGINT
-from subprocess import PIPE
 
 from proton import Message
 
@@ -156,7 +152,6 @@ class ThreeRouterTest(TestCase):
         shuts down the AMQP endpoint before failing over.
         """
         self._rx_failover()
-
 
     def test_02_rx_failover_dirty(self):
         """

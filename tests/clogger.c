@@ -24,29 +24,23 @@
  * very large streaming messages and/or slow producers.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <signal.h>
-#include <time.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <math.h>
-#include <assert.h>
-#include <arpa/inet.h>
-#include <stdarg.h>
-
-
-#include "proton/reactor.h"
-#include "proton/message.h"
 #include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
 #include "proton/delivery.h"
-#include "proton/transport.h"
 #include "proton/event.h"
 #include "proton/handlers.h"
+#include "proton/link.h"
+#include "proton/reactor.h"
+#include "proton/session.h"
+#include "proton/transport.h"
+
+#include <arpa/inet.h>
+#include <inttypes.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define DEFAULT_MAX_FRAME  65535
 #define BOOL2STR(b) ((b)?"true":"false")

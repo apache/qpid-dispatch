@@ -23,12 +23,12 @@
 //
 #undef NDEBUG
 
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/ctools.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <pthread.h>
+#include "qpid/dispatch/threading.h"
+
+#include "qpid/dispatch/ctools.h"
+
 #include <assert.h>
+#include <pthread.h>
 
 struct sys_mutex_t {
     pthread_mutex_t mutex;

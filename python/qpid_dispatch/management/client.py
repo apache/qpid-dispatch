@@ -26,12 +26,12 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import qpid_dispatch_site
 import proton
 from proton import Url
-from .error import *        # import all error symbols for convenience to users.
+from .error import *  # noqa F403: import all error symbols for convenience to users.
 from .entity import EntityBase, clean_dict
 from proton.utils import SyncRequestResponse, BlockingConnection
+
 
 class Entity(EntityBase):
     """
@@ -52,7 +52,7 @@ class Entity(EntityBase):
 
     def __init__(self, node, attributes=None, **kwattrs):
         super(Entity, self).__init__(attributes, **kwattrs)
-        self.__dict__['_node'] = node # Avoid getattr recursion
+        self.__dict__['_node'] = node  # Avoid getattr recursion
 
     def call(self, operation, expect=OK, **arguments):
         """Call an arbitrary management method on this entity"""
@@ -104,9 +104,9 @@ class Node(object):
                                   timeout=timeout,
                                   ssl_domain=ssl_domain,
                                   sasl_enabled=sasl_enabled,
-                                  allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs != None else None,
-                                  user=str(sasl.user) if sasl and sasl.user != None else None,
-                                  password=str(sasl.password) if sasl and sasl.password != None else None)
+                                  allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs is not None else None,
+                                  user=str(sasl.user) if sasl and sasl.user is not None else None,
+                                  password=str(sasl.password) if sasl and sasl.password is not None else None)
 
     @staticmethod
     def connect(url=None, router=None, timeout=10, ssl_domain=None, sasl=None,
@@ -137,7 +137,7 @@ class Node(object):
         @param connection: a L{BlockingConnection} to the management agent.
         """
         self.name = self.identity = u'self'
-        self.type = u'org.amqp.management' # AMQP management node type
+        self.type = u'org.amqp.management'  # AMQP management node type
         self.locales = locales
 
         self.locales = locales
@@ -149,7 +149,7 @@ class Node(object):
 
     def set_client(self, url_path):
         if url_path:
-            self.url.path = u'%s'%url_path
+            self.url.path = u'%s' % url_path
             self.client = SyncRequestResponse(self.connection, self.url.path)
 
     def close(self):
@@ -159,7 +159,7 @@ class Node(object):
             self.client = None
 
     def __repr__(self):
-        return "%s(%s)"%(self.__class__.__name__, self.url)
+        return "%s(%s)" % (self.__class__.__name__, self.url)
 
     @staticmethod
     def check_response(response, expect=OK):
@@ -182,7 +182,8 @@ class Node(object):
         @param properties: Keyword arguments for application-properties of the request.
         @return: L{proton.Message} containining the management request.
         """
-        if self.locales: properties.setdefault(u'locales', self.locales)
+        if self.locales:
+            properties.setdefault(u'locales', self.locales)
         request = proton.Message()
         request.properties = clean_dict(properties)
         request.body = body or {}
@@ -207,6 +208,7 @@ class Node(object):
         @ivar attribute_names: List of attribute names for the results.
         @ivar results: list of lists of attribute values in same order as attribute_names
         """
+
         def __init__(self, node, attribute_names, results):
             """
             @param response: the respose message to a query.
@@ -221,15 +223,18 @@ class Node(object):
             @param clean: if True remove any None values from returned dictionaries.
             """
             for r in self.results:
-                if clean: yield clean_dict(zip(self.attribute_names, r))
-                else: yield dict(zip(self.attribute_names, r))
+                if clean:
+                    yield clean_dict(zip(self.attribute_names, r))
+                else:
+                    yield dict(zip(self.attribute_names, r))
 
         def iter_entities(self, clean=False):
             """
             Return an iterator that yields an L{Entity} for each result.
             @param clean: if True remove any None values from returned dictionaries.
             """
-            for d in self.iter_dicts(clean=clean): yield Entity(self.node, d)
+            for d in self.iter_dicts(clean=clean):
+                yield Entity(self.node, d)
 
         def get_dicts(self, clean=False):
             """Results as list of dicts."""
@@ -240,7 +245,7 @@ class Node(object):
             return [d for d in self.iter_entities(clean=clean)]
 
         def __repr__(self):
-            return "QueryResponse(attribute_names=%r, results=%r"%(self.attribute_names, self.results)
+            return "QueryResponse(attribute_names=%r, results=%r" % (self.attribute_names, self.results)
 
     def query(self, type=None, attribute_names=None, offset=None, count=None):
         """
@@ -265,7 +270,7 @@ class Node(object):
         if offset is None:
             offset = 0
 
-        if count is None or count==0:
+        if count is None or count == 0:
             # count has not been specified. For each request the
             # maximum number of rows we can get without proton
             # failing is MAX_ALLOWED_COUNT_PER_REQUEST
@@ -330,7 +335,8 @@ class Node(object):
         @param identity: Entity identity.
         @return: An L{Entity}
         """
-        if name and identity: name = None # Only specify one
+        if name and identity:
+            name = None  # Only specify one
         request = self.request(operation=u'READ', type=type, name=name, identity=identity)
         return Entity(self, self.call(request).body)
 
@@ -351,7 +357,8 @@ class Node(object):
         type = type or attributes.get(u'type')
         name = name or attributes.get(u'name')
         identity = identity or attributes.get(u'identity')
-        if name and identity: name = None # Only send one
+        if name and identity:
+            name = None  # Only send one
         request = self.request(operation=U'UPDATE', type=type, name=name,
                                identity=identity, body=self.clean_attrs(attributes))
         return Entity(self, self.call(request).body)
@@ -365,7 +372,8 @@ class Node(object):
         @param name: Entity name.
         @param identity: Entity identity.
         """
-        if name and identity: name = None # Only specify one
+        if name and identity:
+            name = None  # Only specify one
         request = self.request(operation=U'DELETE', type=type, name=name,
                                identity=identity)
         self.call(request, expect=NO_CONTENT)

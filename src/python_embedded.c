@@ -17,17 +17,15 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
 #include "python_private.h"
+#include "qpid/dispatch/python_embedded.h"
 
-#include "entity_cache.h"
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/error.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/router.h>
-#include <qpid/dispatch/error.h>
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/error.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/router.h"
+#include "qpid/dispatch/threading.h"
 
 #include <ctype.h>
 

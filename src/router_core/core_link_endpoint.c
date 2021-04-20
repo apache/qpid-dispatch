@@ -18,9 +18,11 @@
  */
 
 #include "core_link_endpoint.h"
-#include "qpid/dispatch/alloc.h"
+
 #include "delivery.h"
-#include <stdio.h>
+
+#include "qpid/dispatch/alloc.h"
+
 #include <inttypes.h>
 
 struct qdrc_endpoint_t {
@@ -116,13 +118,12 @@ void qdrc_endpoint_flow_CT(qdr_core_t *core, qdrc_endpoint_t *ep, int credit, bo
 
 void qdrc_endpoint_send_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t *dlv, bool presettled)
 {
-    uint64_t *tag = (uint64_t*) dlv->tag;
-
     set_safe_ptr_qdr_link_t(ep->link, &dlv->link_sp);
     dlv->settled       = presettled;
     dlv->presettled    = presettled;
-    *tag               = core->next_tag++;
     dlv->tag_length    = 8;
+    uint64_t next_tag  = core->next_tag++;
+    memcpy(dlv->tag, &next_tag, dlv->tag_length);
     dlv->ingress_index = -1;
 
     qdr_forward_deliver_CT(core, ep->link, dlv);
@@ -132,7 +133,6 @@ void qdrc_endpoint_send_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t
 qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qd_message_t *message)
 {
     qdr_delivery_t *dlv = new_qdr_delivery_t();
-    uint64_t       *tag = (uint64_t*) dlv->tag;
 
     if (endpoint->link->conn)
         endpoint->link->conn->last_delivery_time = core->uptime_ticks;
@@ -140,9 +140,10 @@ qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *end
     ZERO(dlv);
     set_safe_ptr_qdr_link_t(endpoint->link, &dlv->link_sp);
     dlv->msg            = message;
-    *tag                = core->next_tag++;
-    dlv->tag_length = 8;
-    dlv->ingress_index = -1;
+    dlv->tag_length     = 8;
+    uint64_t next_tag = core->next_tag++;
+    memcpy(dlv->tag, &next_tag, dlv->tag_length);
+    dlv->ingress_index  = -1;
     dlv->delivery_id = next_delivery_id();
     dlv->link_id     = endpoint->link->identity;
     dlv->conn_id     = endpoint->link->conn_id;

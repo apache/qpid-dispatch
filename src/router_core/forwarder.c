@@ -17,14 +17,13 @@
  * under the License.
  */
 
-#include "router_core_private.h"
-#include <qpid/dispatch/amqp.h>
-#include <stdio.h>
-#include <strings.h>
 #include "forwarder.h"
-#include "delivery.h"
-#include <inttypes.h>
 
+#include "delivery.h"
+#include "router_core_private.h"
+
+#include <inttypes.h>
+#include <strings.h>
 
 typedef struct qdr_forward_deliver_info_t {
     DEQ_LINKS(struct qdr_forward_deliver_info_t);
@@ -795,7 +794,9 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
     while (link_ref && eligible_link_value != 0) {
         qdr_link_t *link     = link_ref->link;
+        sys_mutex_lock(link->conn->work_lock);
         uint32_t    value    = DEQ_SIZE(link->undelivered) + DEQ_SIZE(link->unsettled);
+        sys_mutex_unlock(link->conn->work_lock);
         bool        eligible = link->capacity > value;
 
         //

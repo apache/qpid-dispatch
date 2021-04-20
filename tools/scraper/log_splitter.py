@@ -29,14 +29,15 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from datetime import *
 import os
 import sys
 import traceback
 from collections import defaultdict
+from datetime import datetime
 
 import common
 import text
+
 
 class connection():
     def __init__(self, instance, conn_id, logfile):
@@ -73,6 +74,7 @@ class parsed_attach():
     Parse an attach log line. The usual parser is way too slow
     so this does the essentials for --split.
     """
+
     def find_field(self, key, line):
         sti = line.find(key)
         if sti < 0:
@@ -84,7 +86,6 @@ class parsed_attach():
         if val.startswith('"'):
             val = val[1:-1]
         return val
-
 
     def __init__(self, instance, line, opaque):
         self.instance = instance
@@ -155,6 +156,7 @@ class parsed_attach():
         self.source = self.find_field('@source(40) [address=', self.line)
         self.target = self.find_field('@target(41) [address=', self.line)
 
+
 class LogFile:
     def __init__(self, fn, top_n=24):
         """
@@ -165,7 +167,7 @@ class LogFile:
         self.log_fn = fn    # file name
         self.top_n = top_n  # how many to report
         self.instance = 0   # incremented when router restarts in log file
-        self.amqp_lines = 0 # server trace lines
+        self.amqp_lines = 0  # server trace lines
         self.transfers = 0  # server transfers
         self.attaches = 0   # server attach
 
@@ -201,7 +203,7 @@ class LogFile:
         # histogram - count of connections with N logs < 10^index
         # [0] = N < 10^0
         # [1] = N < 10^1
-        self.histogram = [0,0,0,0,0,0,0,0,0,0]
+        self.histogram = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.hist_max = len(self.histogram) - 1
 
     def parse_identify(self, text, line, before_col=70):
@@ -226,7 +228,7 @@ class LogFile:
         """
         key_sstart = "SERVER (info) Container Name:"  # Normal 'router is starting' restart discovery line
         key_strace = "SERVER (trace) ["  # AMQP traffic
-        key_ptrace = "PROTOCOL (trace) [" # AMQP traffic
+        key_ptrace = "PROTOCOL (trace) ["  # AMQP traffic
         key_error = "@error(29)"
         key_openin = "<- @open(16)"
         key_xfer = "@transfer"
@@ -307,12 +309,11 @@ class LogFile:
         # create grand list of all connections
         for cursize in slist:
             lsm = smap[str(cursize)]
-            lsm = sorted(lsm, key = sortfunc2, reverse=True)
+            lsm = sorted(lsm, key=sortfunc2, reverse=True)
             #lsm = sorted(lsm, key = lambda x: int(x.conn_id))
             for ls in lsm:
                 conns_by_size.append(ls)
         return conns_by_size
-
 
     def summarize_connections(self):
         # sort connections based on transfer count and on n log lines
@@ -325,14 +326,14 @@ class LogFile:
             v.generate_paths()
 
         # Write the web doc to stdout
-        print ("""<!DOCTYPE html>
+        print("""<!DOCTYPE html>
 <html>
 <head>
 <title>%s qpid-dispatch log split</title>
 
 <style>
-    * { 
-    font-family: sans-serif; 
+    * {
+    font-family: sans-serif;
 }
 table {
     border-collapse: collapse;
@@ -349,7 +350,7 @@ function node_is_visible(node)
 {
   if(dojo.isString(node))
     node = dojo.byId(node);
-  if(!node) 
+  if(!node)
     return false;
   return node.style.display == "block";
 }
@@ -415,7 +416,7 @@ function show_node(node)
         print("<a name=\"c_restarts\"></a>")
         print("<h3>Restarts</h3>")
         for i in range(1, (self.instance + 1)):
-            rr = self.restarts[i-1]
+            rr = self.restarts[i - 1]
             print("(%d) - %s<br>" % (i, rr), end='')
         print("<hr>")
 
@@ -443,12 +444,12 @@ function show_node(node)
         print("</table>")
         print("<hr>")
 
-        ## histogram
-        #for cursize in self.sizelist:
+        # histogram
+        # for cursize in self.sizelist:
         #    self.histogram[self.log_of(cursize)] += len(self.sizemap[str(cursize)])
-        #print()
+        # print()
         #print("Log lines per connection distribution")
-        #for i in range(1, self.hist_max):
+        # for i in range(1, self.hist_max):
         #    print("N <  10e%d : %d" %(i, self.histogram[i]))
         #print("N >= 10e%d : %d" % ((self.hist_max - 1), self.histogram[self.hist_max]))
 
@@ -468,7 +469,7 @@ function show_node(node)
     def write_subfiles(self):
         # Q: Where to put the generated files? A: odir
         odir = self.odir()
-        odirs = ['dummy'] # dirs indexed by log of n-lines
+        odirs = ['dummy']  # dirs indexed by log of n-lines
 
         os.makedirs(odir)
         for i in range(1, self.hist_max):
@@ -574,7 +575,7 @@ function show_node(node)
             visitthis = ("<a href=\"#@@addr2_%d_data\">%s</a>" %
                          (n, k))
             line = ("<tr><td>%s %s</td> <td>%d</td> </tr>" %
-                  (showthis, visitthis, len(plfs)))
+                    (showthis, visitthis, len(plfs)))
             if len(plfs) <= ADDR_LEVEL:
                 addr_few.append(line)
             else:
@@ -586,7 +587,8 @@ function show_node(node)
         print("<div id=\"addr_table_many\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">")
         print("<h4>Addresses with many links (N=%d)</h4>" % (len(addr_many)))
         print("<table><tr> <th>Address</th> <th>N References</th> </tr>")
-        for line in addr_many: print(line)
+        for line in addr_many:
+            print(line)
         print("</table>")
         print("</div>")
 
@@ -596,7 +598,8 @@ function show_node(node)
         print("<div id=\"addr_table_few\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">")
         print("<h4>Addresses with few links (N=%d)</h4>" % (len(addr_few)))
         print("<table><tr> <th>Address</th> <th>N References</th> </tr>")
-        for line in addr_few: print(line)
+        for line in addr_few:
+            print(line)
         print("</table>")
         print("</div>")
 
@@ -628,11 +631,13 @@ IS_PY2 = sys.version_info[0] == 2
 if IS_PY2:
     def dict_iteritems(d):
         return d.iteritems()
+
     def dict_iterkeys(d):
         return d.iterkeys()
 else:
     def dict_iteritems(d):
         return iter(d.items())
+
     def dict_iterkeys(d):
         return iter(d.keys())
 
@@ -660,7 +665,7 @@ def main_except(log_fn):
 
     # write output
     for lf in log_files:
-        lf.summarize_connections() # prints web page to console
+        lf.summarize_connections()  # prints web page to console
         lf.write_subfiles()        # generates split files one-per-connection
         lf.aggregate_addresses()   # print address table html to console
 

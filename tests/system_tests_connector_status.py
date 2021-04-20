@@ -16,11 +16,12 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import json, re
+import json
 from threading import Timer
 
-from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
+from system_test import TestCase, Process, Qdrouterd, TIMEOUT
 from subprocess import PIPE, STDOUT
+
 
 class ConnectorStatusTest(TestCase):
 
@@ -55,7 +56,6 @@ class ConnectorStatusTest(TestCase):
             ('connector', {'name': 'connectorToA', 'role': 'inter-router',
                            'port': inter_router_port}),
         ]
-
 
         router('QDR.B', config_b)
 
@@ -113,7 +113,6 @@ class ConnectorStatusTest(TestCase):
         else:
             self.schedule_B_connector_test()
 
-
     def test_conn_status_before_connect(self):
         # The routers have connected and begun talking to each other
         # Verify that the connectionStatus field of the connector is set to SUCCESS.
@@ -146,5 +145,3 @@ class ConnectorStatusTest(TestCase):
         # SUCCESS. There is no good way to test if the connection status ever
         # reaches the FAILED state because the router immediately tries to
         # re-connect thus setting the status to CONNECTING in the process.
-
-

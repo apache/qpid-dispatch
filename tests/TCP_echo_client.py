@@ -25,7 +25,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import argparse
-import os
 import selectors
 import signal
 import socket
@@ -33,7 +32,6 @@ import sys
 from threading import Thread
 import time
 import traceback
-import types
 
 from system_test import Logger
 from system_test import TIMEOUT
@@ -217,6 +215,7 @@ class TcpEchoClient:
 
         except Exception:
             self.error = "ERROR: exception : '%s'" % traceback.format_exc()
+            self.sock.close()
 
         self.is_running = False
 

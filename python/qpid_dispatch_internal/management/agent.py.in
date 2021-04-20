@@ -66,7 +66,9 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import traceback, json, pstats
+import traceback
+import json
+import pstats
 import socket
 import unicodedata
 from traceback import format_exc
@@ -89,7 +91,7 @@ except ImportError:
 
 from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
-    BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
+    BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch.management.entity import camelcase
 from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
@@ -103,11 +105,13 @@ def dictstr(d):
     """Stringify a dict in the form 'k=v, k=v ...' instead of '{k:v, ...}'"""
     return ", ".join("%s=%s" % (k, v) for k, v in dict_iteritems(d))
 
+
 def required_property(prop, request):
     """Raise exception if required property is missing"""
     if not request.properties or prop not in request.properties:
-        raise BadRequestStatus("No '%s' property: %s"%(prop, request))
+        raise BadRequestStatus("No '%s' property: %s" % (prop, request))
     return request.properties[prop]
+
 
 def not_implemented(operation, entity_type):
     """Raise NOT_IMPLEMENTED exception"""
@@ -116,6 +120,7 @@ def not_implemented(operation, entity_type):
 
 class AtomicCount(object):
     """Simple atomic counter"""
+
     def __init__(self, count=0):
         self.count = count
         self.lock = Lock()
@@ -129,12 +134,14 @@ class AtomicCount(object):
 
 class Implementation(object):
     """Abstract implementation wrapper"""
+
     def __init__(self, entity_type, key):
         self.entity_type, self.key = entity_type, key
 
 
 class CImplementation(Implementation):
     """Wrapper for a C implementation pointer"""
+
     def __init__(self, qd, entity_type, pointer):
         super(CImplementation, self).__init__(entity_type, pointer)
         fname = "qd_entity_refresh_" + entity_type.short_name.replace('.', '_')
@@ -146,6 +153,7 @@ class CImplementation(Implementation):
 
 class PythonImplementation(Implementation):
     """Wrapper for a Python implementation object"""
+
     def __init__(self, entity_type, impl):
         """impl.refresh_entity(attributes) must be a valid function call"""
         super(PythonImplementation, self).__init__(entity_type, id(impl))
@@ -192,8 +200,10 @@ class EntityAdapter(SchemaEntity):
         Generate identifier. identity=type/identifier.
         Default is per-type counter, derived classes can override.
         """
-        try: counter = type(self)._identifier_count
-        except AttributeError: counter = type(self)._identifier_count = AtomicCount()
+        try:
+            counter = type(self)._identifier_count
+        except AttributeError:
+            counter = type(self)._identifier_count = AtomicCount()
         return str(counter.next())
 
     def _refresh(self):
@@ -215,7 +225,7 @@ class EntityAdapter(SchemaEntity):
         request_type = self.entity_type.schema.long_name(request.properties.get('type'))
         if request_type and self.type != request_type:
             raise NotFoundStatus("Entity type '%s' does match requested type '%s'" %
-                           (self.type, request_type))
+                                 (self.type, request_type))
         return (OK, self.attributes)
 
     def update(self, request):
@@ -320,6 +330,7 @@ class PolicyEntity(EntityAdapter):
     def __str__(self):
         return super(PolicyEntity, self).__str__().replace("Entity(", "PolicyEntity(")
 
+
 class VhostEntity(EntityAdapter):
     def create(self):
         self._policy.create_ruleset(self.attributes)
@@ -346,7 +357,7 @@ class VhostStatsEntity(EntityAdapter):
 
 
 def _host_port_name_identifier(entity):
-    for attr in ['host', 'port', 'name']: # Set default values if need be
+    for attr in ['host', 'port', 'name']:  # Set default values if need be
         entity.attributes.setdefault(
             attr, entity.entity_type.attribute(attr).missing_value())
 
@@ -362,11 +373,13 @@ class SslProfileEntity(EntityAdapter):
 
     def _delete(self):
         self._qd.qd_connection_manager_delete_ssl_profile(self._dispatch, self._implementations[0].key)
+
     def _identifier(self):
         return self.name
 
     def __str__(self):
         return super(SslProfileEntity, self).__str__().replace("Entity(", "SslProfileEntity(")
+
 
 class AuthServicePluginEntity(EntityAdapter):
     def create(self):
@@ -374,11 +387,13 @@ class AuthServicePluginEntity(EntityAdapter):
 
     def _delete(self):
         self._qd.qd_connection_manager_delete_sasl_plugin(self._dispatch, self._implementations[0].key)
+
     def _identifier(self):
         return self.name
 
     def __str__(self):
         return super(AuthServicePluginEntity, self).__str__().replace("Entity(", "AuthServicePluginEntity(")
+
 
 class ConnectionBaseEntity(EntityAdapter):
     """
@@ -387,14 +402,14 @@ class ConnectionBaseEntity(EntityAdapter):
     """
     # qdrouterd reserves a set of connection-property keys as well as any key
     # that starts with certain prefixes
-    _RESERVED_KEYS=['product',
-                    'version',
-                    'failover-server-list',
-                    'network-host',
-                    'port',
-                    'scheme'
-                    'hostname']
-    _RESERVED_PREFIXES=['qd.', 'x-opt-qd.']
+    _RESERVED_KEYS = ['product',
+                      'version',
+                      'failover-server-list',
+                      'network-host',
+                      'port',
+                      'scheme'
+                      'hostname']
+    _RESERVED_PREFIXES = ['qd.', 'x-opt-qd.']
 
     def validate(self, **kwargs):
         super(ConnectionBaseEntity, self).validate(**kwargs)
@@ -419,7 +434,7 @@ class ConnectionBaseEntity(EntityAdapter):
             role = self.attributes.get('role', 'normal')
             if role in ['inter-router', 'edge']:
                 raise ValidationError("openProperties not allowed for role %s"
-                                      % role);
+                                      % role)
 
 
 class ListenerEntity(ConnectionBaseEntity):
@@ -459,12 +474,14 @@ class ConnectorEntity(ConnectionBaseEntity):
     def __str__(self):
         return super(ConnectorEntity, self).__str__().replace("Entity(", "ConnectorEntity(")
 
+
 class AddressEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
 
     def __str__(self):
         return super(AddressEntity, self).__str__().replace("Entity(", "AddressEntity(")
+
 
 class LinkRouteEntity(EntityAdapter):
     def create(self):
@@ -473,12 +490,14 @@ class LinkRouteEntity(EntityAdapter):
     def __str__(self):
         return super(LinkRouteEntity, self).__str__().replace("Entity(", "LinkRouteEntity(")
 
+
 class AutoLinkEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
 
     def __str__(self):
         return super(AutoLinkEntity, self).__str__().replace("Entity(", "AutoLinkEntity(")
+
 
 class ConsoleEntity(EntityAdapter):
     def __str__(self):
@@ -493,10 +512,10 @@ class ConsoleEntity(EntityAdapter):
             for listener in listeners:
                 if listener.name == name:
                     try:
-                        #required
+                        # required
                         host   = listener.attributes['host']
                         port   = listener.attributes['port']
-                        #optional
+                        # optional
                         wsport = self.attributes.get('wsport')
                         home   = self.attributes.get('home')
                         args   = self.attributes.get('args')
@@ -510,15 +529,16 @@ class ConsoleEntity(EntityAdapter):
                                 dargs['$wsport'] = wsport
                             if home:
                                 dargs['$home'] = home
-                            for k,v in dict_iteritems(dargs):
-                                args = args.replace(k,str(v))
+                            for k, v in dict_iteritems(dargs):
+                                args = args.replace(k, str(v))
                             pargs += args.split()
 
-                        #run the external program
+                        # run the external program
                         Popen(pargs)
                     except:
                         self._agent.log(LOG_ERROR, "Can't parse console entity: %s" % (format_exc()))
                     break
+
 
 class DummyEntity(EntityAdapter):
     def callme(self, request):
@@ -561,6 +581,7 @@ class AllocatorEntity(EntityAdapter):
     def __str__(self):
         return super(AllocatorEntity, self).__str__().replace("Entity(", "AllocatorEntity(")
 
+
 class ExchangeEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_exchange(self._dispatch, self)
@@ -568,12 +589,14 @@ class ExchangeEntity(EntityAdapter):
     def __str__(self):
         return super(ExchangeEntity, self).__str__().replace("Entity(", "ExchangeEntity(")
 
+
 class BindingEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_binding(self._dispatch, self)
 
     def __str__(self):
         return super(BindingEntity, self).__str__().replace("Entity(", "BindingEntity(")
+
 
 class HttpListenerEntity(EntityAdapter):
     def create(self):
@@ -587,6 +610,7 @@ class HttpListenerEntity(EntityAdapter):
 
     def _delete(self):
         self._qd.qd_dispatch_delete_http_listener(self._dispatch, self._implementations[0].key)
+
 
 class TcpListenerEntity(EntityAdapter):
     def create(self):
@@ -616,6 +640,7 @@ class TcpConnectorEntity(EntityAdapter):
 
     def _delete(self):
         self._qd.qd_dispatch_delete_tcp_connector(self._dispatch, self._implementations[0].key)
+
 
 class HttpConnectorEntity(EntityAdapter):
     def create(self):
@@ -647,14 +672,14 @@ class EntityCache(object):
     def map_filter(self, function, test):
         """Filter with test then apply function."""
         if function is None:
-            function = lambda x: x  # return results of filter
+            def function(x): return x  # return results of filter
         return list(map(function, filter(test, self.entities)))
 
     def map_type(self, function, type):
         """Apply function to all entities of type, if type is None do all
         entities"""
         if function is None:
-            function = lambda x: x
+            def function(x): return x
         if type is None:
             return list(map(function, self.entities))
         else:
@@ -662,6 +687,7 @@ class EntityCache(object):
                 type = self.schema.entity_type(type)
             return list(map(function, filter(lambda e: e.entity_type.is_a(type),
                                              self.entities)))
+
     def validate_add(self, entity):
         self.schema.validate_add(entity, self.entities)
 
@@ -691,7 +717,8 @@ class EntityCache(object):
             self.entities.remove(entity)
             self.log(LOG_DEBUG, "Remove %s entity: %s" %
                      (entity.entity_type.short_name, entity.attributes['identity']))
-        except ValueError: pass
+        except ValueError:
+            pass
 
     def remove(self, entity):
         self._remove(entity)
@@ -717,7 +744,7 @@ class EntityCache(object):
                 action, type, pointer = events[i]
                 if action == ADD:
                     add[pointer] = i
-                elif pointer in add: # action == REMOVE and there's an ADD
+                elif pointer in add:  # action == REMOVE and there's an ADD
                     redundant.append(add[pointer])
                     redundant.append(i)
                     del add[pointer]
@@ -736,10 +763,12 @@ class EntityCache(object):
                     entity_type = self.schema.entity_type(type)
                     self._add_implementation(CImplementation(self.qd, entity_type, pointer))
             # Refresh the entity values while the lock is still held.
-            for e in self.entities: e._refresh()
+            for e in self.entities:
+                e._refresh()
         finally:
             self.qd.qd_entity_refresh_end()
             self.qd.qd_dispatch_router_unlock(self.agent.dispatch)
+
 
 class ManagementEntity(EntityAdapter):
     """An entity representing the agent itself. It is a singleton created by the agent."""
@@ -751,8 +780,10 @@ class ManagementEntity(EntityAdapter):
 
     def requested_type(self, request):
         type = request.properties.get('entityType')
-        if type: return self._schema.entity_type(type)
-        else: return None
+        if type:
+            return self._schema.entity_type(type)
+        else:
+            return None
 
     def query(self, request):
         """Management node query operation"""
@@ -775,13 +806,16 @@ class ManagementEntity(EntityAdapter):
             names = all_attrs
 
         results = []
+
         def add_result(entity):
             result = []
             non_empty = False
             for name in names:
                 result.append(entity.attributes.get(name))
-                if result[-1] is not None: non_empty = True
-            if non_empty: results.append(result)
+                if result[-1] is not None:
+                    non_empty = True
+            if non_empty:
+                results.append(result)
 
         self._agent.entities.map_type(add_result, entity_type)
         return (OK, {'attributeNames': names, 'results': results})
@@ -812,6 +846,7 @@ class ManagementEntity(EntityAdapter):
     def get_mgmt_nodes(self, request):
         router = self._agent.entities.map_type(None, 'router')[0]
         area = router.attributes['area']
+
         def node_address(node):
             return str(Address.topological(node.attributes['id'], "$management", area))
         return (OK, self._agent.entities.map_type(node_address, 'router.node'))
@@ -821,7 +856,8 @@ class ManagementEntity(EntityAdapter):
 
     def _intprop(self, request, prop):
         value = request.properties.get(prop)
-        if value is not None: value = int(value)
+        if value is not None:
+            value = int(value)
         return value
 
     def get_json_schema(self, request):
@@ -849,18 +885,19 @@ class ManagementEntity(EntityAdapter):
             stats = pstats.Stats(profile, stream=out)
             try:
                 stop = request.properties["stop"]
-                if stop == "kgrind": # Generate kcachegrind output using pyprof2calltree
+                if stop == "kgrind":  # Generate kcachegrind output using pyprof2calltree
                     from pyprof2calltree import convert
                     convert(stats, out)
-                elif stop == "visualize": # Start kcachegrind using pyprof2calltree
+                elif stop == "visualize":  # Start kcachegrind using pyprof2calltree
                     from pyprof2calltree import visualize
                     visualize(stats)
                 else:
-                    stats.print_stats() # Plain python profile stats
+                    stats.print_stats()  # Plain python profile stats
                 return (OK, out.getvalue())
             finally:
                 out.close()
         raise BadRequestStatus("Bad profile request %s" % (request))
+
 
 class Agent(object):
     """AMQP managment agent. Manages entities, directs requests to the correct entity."""
@@ -877,7 +914,7 @@ class Agent(object):
         self.add_entity(self.management)
 
     def log(self, level, text):
-        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        info = traceback.extract_stack(limit=2)[0]  # Caller frame info
         self.log_adapter.log(level, text, info[0], info[1])
 
     def activate(self, address):
@@ -907,24 +944,25 @@ class Agent(object):
 
     def respond(self, request, status=OK, description=None, body=None):
         """Send a response to the client"""
-        if body is None: body = {}
+        if body is None:
+            body = {}
         description = description or STATUS_TEXT[status]
         response = Message(
             address=request.reply_to,
             correlation_id=request.correlation_id,
             properties={'statusCode': status, 'statusDescription': description},
             body=body)
-        self.log(LOG_DEBUG, "Agent response:\n  %s\n  Responding to: \n  %s"%(response, request))
+        self.log(LOG_DEBUG, "Agent response:\n  %s\n  Responding to: \n  %s" % (response, request))
         try:
             self.io.send(response)
         except:
-            self.log(LOG_ERROR, "Can't respond to %s: %s"%(request, format_exc()))
+            self.log(LOG_ERROR, "Can't respond to %s: %s" % (request, format_exc()))
 
     def receive(self, request, unused_link_id, unused_cost):
         """Called when a management request is received."""
         def error(e, trace):
             """Raise an error"""
-            self.log(LOG_ERROR, "Error performing %s: %s"%(request.properties.get('operation'), e.description))
+            self.log(LOG_ERROR, "Error performing %s: %s" % (request.properties.get('operation'), e.description))
             self.respond(request, e.status, e.description)
 
         # If there's no reply_to, don't bother to process the request.
@@ -935,7 +973,7 @@ class Agent(object):
         with self.request_lock:
             try:
                 self.entities.refresh_from_c()
-                self.log(LOG_DEBUG, "Agent request %s"% request)
+                self.log(LOG_DEBUG, "Agent request %s" % request)
                 status, body = self.handle(request)
                 self.respond(request, status=status, body=body)
             except ManagementError as e:
@@ -943,11 +981,13 @@ class Agent(object):
             except ValidationError as e:
                 error(BadRequestStatus(str(e)), format_exc())
             except Exception as e:
-                error(InternalServerErrorStatus("%s: %s"%(type(e).__name__, e)), format_exc())
+                error(InternalServerErrorStatus("%s: %s" % (type(e).__name__, e)), format_exc())
 
     def entity_type(self, type):
-        try: return self.schema.entity_type(type)
-        except ValidationError as e: raise NotFoundStatus(str(e))
+        try:
+            return self.schema.entity_type(type)
+        except ValidationError as e:
+            raise NotFoundStatus(str(e))
 
     def handle(self, request):
         """
@@ -1055,7 +1095,7 @@ class Agent(object):
             """String form of the id attribute values for error messages"""
             return " ".join(["%s=%s" % (k, v) for k, v in dict_iteritems(ids)])
 
-        k, v = next(dict_iteritems(ids)) # Get the first id attribute
+        k, v = next(dict_iteritems(ids))  # Get the first id attribute
         found = self.entities.map_filter(None, lambda e: e.attributes.get(k) == v)
         if len(found) == 1:
             entity = found[0]
@@ -1066,7 +1106,8 @@ class Agent(object):
             raise NotFoundStatus("No entity with %s" % attrvals())
 
         for k, v in dict_iteritems(ids):
-            if entity[k] != v: raise BadRequestStatus("Conflicting %s" % attrvals())
+            if entity[k] != v:
+                raise BadRequestStatus("Conflicting %s" % attrvals())
 
         if requested_type:
             if not entity.entity_type.is_a(requested_type):

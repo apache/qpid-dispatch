@@ -18,8 +18,8 @@
 #
 
 ##
-## Define the current protocol version.  Any messages that do not contain version
-## information shall be considered to be coming from routers using version 0.
+# Define the current protocol version.  Any messages that do not contain version
+# information shall be considered to be coming from routers using version 0.
 ##
 
 from __future__ import unicode_literals
@@ -32,6 +32,7 @@ from ..compat import LONG
 from ..compat import PY_TEXT_TYPE
 
 ProtocolVersion = LONG(1)
+
 
 def getMandatory(data, key, cls=None):
     """
@@ -87,6 +88,7 @@ class LinkState(object):
     The link-state of a single router.  The link state consists of a list of neighbor routers reachable from
     the reporting router.  The link-state-sequence number is incremented each time the link state changes.
     """
+
     def __init__(self, body, _id=None, _ls_seq=None, _peers=None):
         self.last_seen = 0
         if body:
@@ -142,6 +144,7 @@ class MessageHELLO(object):
     This message is used by directly connected routers to determine with whom they have
     bidirectional connectivity.
     """
+
     def __init__(self, body, _id=None, _seen_peers=None, _instance=LONG(0)):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
@@ -180,6 +183,7 @@ class MessageRA(object):
     This message is sent periodically to indicate the originating router's sequence numbers
     for link-state and mobile-address-state.
     """
+
     def __init__(self, body, _id=None, _ls_seq=None, _mobile_seq=None, _instance=LONG(0)):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
@@ -201,7 +205,7 @@ class MessageRA(object):
 
     def __repr__(self):
         return "RA(id=%s pv=%d area=%s inst=%d ls_seq=%d mobile_seq=%d)" % \
-                (self.id, self.version, self.area, self.instance, self.ls_seq, self.mobile_seq)
+            (self.id, self.version, self.area, self.instance, self.ls_seq, self.mobile_seq)
 
     def to_dict(self):
         return {'id'         : self.id,
@@ -215,6 +219,7 @@ class MessageRA(object):
 class MessageLSU(object):
     """
     """
+
     def __init__(self, body, _id=None, _ls_seq=None, _ls=None, _instance=LONG(0)):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
@@ -236,7 +241,7 @@ class MessageLSU(object):
 
     def __repr__(self):
         return "LSU(id=%s pv=%d area=%s inst=%d ls_seq=%d ls=%r)" % \
-                (self.id, self.version, self.area, self.instance, self.ls_seq, self.ls)
+            (self.id, self.version, self.area, self.instance, self.ls_seq, self.ls)
 
     def to_dict(self):
         return {'id'       : self.id,
@@ -250,6 +255,7 @@ class MessageLSU(object):
 class MessageLSR(object):
     """
     """
+
     def __init__(self, body, _id=None):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
@@ -275,6 +281,7 @@ class MessageLSR(object):
 class MessageMAU(object):
     """
     """
+
     def __init__(self, body, _id=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None, _hints=None):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
@@ -303,28 +310,37 @@ class MessageMAU(object):
         _del = ''
         _exist = ''
         _hints = ''
-        if self.add_list != None:   _add   = ' add=%r'   % self.add_list
-        if self.del_list != None:   _del   = ' del=%r'   % self.del_list
-        if self.exist_list != None: _exist = ' exist=%r' % self.exist_list
-        if self.hints != None: _hints = ' hints=%r' % self.hints
+        if self.add_list is not None:
+            _add   = ' add=%r'   % self.add_list
+        if self.del_list is not None:
+            _del   = ' del=%r'   % self.del_list
+        if self.exist_list is not None:
+            _exist = ' exist=%r' % self.exist_list
+        if self.hints is not None:
+            _hints = ' hints=%r' % self.hints
         return "MAU(id=%s pv=%d area=%s mobile_seq=%d%s%s%s%s)" % \
-                (self.id, self.version, self.area, self.mobile_seq, _add, _del, _exist, _hints)
+            (self.id, self.version, self.area, self.mobile_seq, _add, _del, _exist, _hints)
 
     def to_dict(self):
         body = {'id'         : self.id,
                 'pv'         : self.version,
                 'area'       : self.area,
-                'mobile_seq' : self.mobile_seq }
-        if self.add_list != None:   body['add']   = self.add_list
-        if self.del_list != None:   body['del']   = self.del_list
-        if self.exist_list != None: body['exist'] = self.exist_list
-        if self.hints != None: body['hints'] = self.hints
+                'mobile_seq' : self.mobile_seq}
+        if self.add_list is not None:
+            body['add']   = self.add_list
+        if self.del_list is not None:
+            body['del']   = self.del_list
+        if self.exist_list is not None:
+            body['exist'] = self.exist_list
+        if self.hints is not None:
+            body['hints'] = self.hints
         return body
 
 
 class MessageMAR(object):
     """
     """
+
     def __init__(self, body, _id=None, _have_seq=None):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)

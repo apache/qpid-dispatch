@@ -25,7 +25,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 __all__ = [
-    "OrderedDict",
     "JSON_LOAD_KWARGS",
     "dictify",
     "IS_PY2",
@@ -33,6 +32,9 @@ __all__ = [
     "PY_TEXT_TYPE",
     "PY_BINARY_TYPE",
     "PY_INTEGER_TYPES",
+    "dict_keys",
+    "dict_values",
+    "dict_items",
     "dict_iterkeys",
     "dict_itervalues",
     "dict_iteritems",
@@ -42,15 +44,10 @@ __all__ = [
 
 import sys
 
-try:
-    from collections import OrderedDict
-except Exception:
-    from ordereddict import OrderedDict
+from collections import OrderedDict
 
-if sys.version_info >= (2, 7):
-    JSON_LOAD_KWARGS = {'object_pairs_hook':OrderedDict}
-else:
-    JSON_LOAD_KWARGS = {}
+JSON_LOAD_KWARGS = {'object_pairs_hook': OrderedDict}
+
 
 def dictify(od):
     """Recursively replace OrderedDict with dict"""
@@ -58,6 +55,7 @@ def dictify(od):
         return dict((k, dictify(v)) for k, v in dict_iteritems(od))
     else:
         return od
+
 
 IS_PY2 = sys.version_info[0] == 2
 
@@ -67,18 +65,25 @@ if IS_PY2:
     PY_BINARY_TYPE = str
     PY_INTEGER_TYPES = (int, long)  # noqa: F821
     PY_LONG_TYPE = long  # noqa: F821
+
     def dict_iterkeys(d):
         return d.iterkeys()
+
     def dict_itervalues(d):
         return d.itervalues()
+
     def dict_iteritems(d):
         return d.iteritems()
+
     def dict_keys(d):
         return d.keys()
+
     def dict_values(d):
         return d.values()
+
     def dict_items(d):
         return d.items()
+
     def BINARY(s):
         ts = type(s)
         if ts is str:
@@ -87,6 +92,7 @@ if IS_PY2:
             return s.encode("utf-8")
         else:
             raise TypeError("%s cannot be converted to binary" % ts)
+
     def UNICODE(s):
         if type(s) is str:
             return s.decode("utf-8")
@@ -94,6 +100,7 @@ if IS_PY2:
             return s
         else:
             return unicode(str(s), "utf-8")  # noqa: F821
+
     def LONG(i):
         return long(i)  # noqa: F821
 else:
@@ -102,21 +109,28 @@ else:
     PY_BINARY_TYPE = bytes
     PY_INTEGER_TYPES = (int,)
     PY_LONG_TYPE = int
+
     def dict_iterkeys(d):
         return iter(d.keys())
+
     def dict_itervalues(d):
         return iter(d.values())
+
     def dict_iteritems(d):
         return iter(d.items())
     # .keys(), .items(), .values()
     # now return a dict_view not a list. Should be ok unless dict is modified
     # when iterating over it. Use these if that's the case:
+
     def dict_keys(d):
         return list(d.keys())
+
     def dict_values(d):
         return list(d.values())
+
     def dict_items(d):
         return list(d.items())
+
     def BINARY(s):
         st = type(s)
         if st is str:
@@ -125,6 +139,7 @@ else:
             return s
         else:
             raise TypeError("%s cannot be converted to binary" % st)
+
     def UNICODE(s):
         if type(s) is bytes:
             return s.decode("utf-8")
@@ -132,5 +147,6 @@ else:
             return s
         else:
             return str(s)
+
     def LONG(i):
         return int(i)

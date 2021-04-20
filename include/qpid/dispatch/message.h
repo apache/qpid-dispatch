@@ -19,13 +19,14 @@
  * under the License.
  */
 
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/container.h>
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/container.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/parse.h"
+
 #include <proton/raw_connection.h>
 
 /**@file
@@ -248,15 +249,22 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery);
 qd_message_t * qd_get_message_context(pn_delivery_t *delivery);
 
 /**
+ * Returns true if there is at least one non-empty buffer at the head of the content->buffers list
+ * or if the content->pending buffer is non-empty.
+ *
+ * @param msg A pointer to a message.
+ */
+bool qd_message_has_data_in_content_or_pending_buffers(qd_message_t   *msg);
+
+/**
  * Send the message outbound on an outgoing link.
  *
  * @param msg A pointer to a message to be sent.
  * @param link The outgoing link on which to send the message.
  * @param strip_outbound_annotations [in] annotation control flag
- * @param restart_rx [out] indication to wake up receive process
  * @param q3_stalled [out] indicates that the link is stalled due to proton-buffer-full
  */
-void qd_message_send(qd_message_t *msg, qd_link_t *link, bool strip_outbound_annotations, bool *restart_rx, bool *q3_stalled);
+void qd_message_send(qd_message_t *msg, qd_link_t *link, bool strip_outbound_annotations, bool *q3_stalled);
 
 /**
  * Check that the message is well-formed up to a certain depth.  Any part of the message that is
@@ -296,6 +304,7 @@ void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *b
 void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content, bool receive_complete);
 void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, bool receive_complete);
 void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, qd_composed_field_t *content3, bool receive_complete);
+void qd_message_compose_5(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, qd_composed_field_t *field3, qd_composed_field_t *field4, bool receive_complete);
 
 /**
  * qd_message_extend
@@ -304,9 +313,10 @@ void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_c
  *
  * @param msg Pointer to a message
  * @param field A composed field to be appended to the end of the message's stream
+ * @param q2_blocked Set to true if this call caused Q2 to block
  * @return The number of buffers stored in the message's content
  */
-int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field);
+int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field, bool *q2_blocked);
 
 
 /**
@@ -404,9 +414,10 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *msg, q
  *
  * @param msg Pointer to message under construction
  * @param data List of buffers containing body data.
+ * @param qd_blocked Set to true if this call caused Q2 to block
  * @return The number of buffers stored in the message's content
  */
-int qd_message_stream_data_append(qd_message_t *msg, qd_buffer_list_t *data);
+int qd_message_stream_data_append(qd_message_t *msg, qd_buffer_list_t *data, bool *q2_blocked);
 
 
 /** Put string representation of a message suitable for logging in buffer.
@@ -556,12 +567,22 @@ bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg);
  */
 bool qd_message_is_Q2_blocked(const qd_message_t *msg);
 
+
 /**
- * Return qd_link through which the message is being received.
- * @param msg A pointer to the message
- * @return the qd_link
+ * Register a callback that will be invoked when the message has exited the Q2
+ * blocking state. Note that the callback can be invoked on any I/O thread.
+ * The callback must be thread safe.
+ *
+ * @param msg The message to monitor.
+ * @param callback The method to invoke
+ * @param context safe pointer holding the context
  */
-qd_link_t * qd_message_get_receiving_link(const qd_message_t *msg);
+
+typedef void (*qd_message_q2_unblocked_handler_t)(qd_alloc_safe_ptr_t context);
+void qd_message_set_q2_unblocked_handler(qd_message_t *msg,
+                                         qd_message_q2_unblocked_handler_t callback,
+                                         qd_alloc_safe_ptr_t context);
+void qd_message_clear_q2_unblocked_handler(qd_message_t *msg);
 
 /**
  * Return message aborted state

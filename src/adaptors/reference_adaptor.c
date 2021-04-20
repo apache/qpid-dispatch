@@ -17,13 +17,15 @@
  * under the License.
  */
 
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/protocol_adaptor.h"
 #include "delivery.h"
-#include "qpid/dispatch/timer.h"
+
+#include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/message.h"
-#include <stdio.h>
+#include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/timer.h"
+
 #include <inttypes.h>
+#include <stdio.h>
 
 static char *address1 = "examples";
 static char *address2 = "stream";
@@ -497,7 +499,8 @@ static void on_stream(void *context)
             //
             // Extend the streaming message and free the composed field
             //
-            depth = qd_message_extend(adaptor->streaming_message, field);
+            // TODO(kgiusti): need to handle Q2 blocking event
+            depth = qd_message_extend(adaptor->streaming_message, field, 0);
             qd_compose_free(field);
         }
 
@@ -519,7 +522,8 @@ static void on_stream(void *context)
         qd_compose_insert_symbol(footer, "second");
         qd_compose_insert_string(footer, "value2");
         qd_compose_end_map(footer);
-        depth = qd_message_extend(adaptor->streaming_message, footer);
+        // @TODO(kgiusti): need to handle Q2 blocking event
+        depth = qd_message_extend(adaptor->streaming_message, footer, 0);
         qd_compose_free(footer);
 
         qd_message_set_receive_complete(adaptor->streaming_message);

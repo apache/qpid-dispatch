@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from system_test import TestCase, Qdrouterd, TIMEOUT
+from system_test import TestCase, Qdrouterd
 from system_test import QdManager
 from proton.utils import BlockingConnection
 from proton import Message
@@ -27,6 +27,7 @@ from proton.reactor import Container
 import time
 
 apply_options = AtMostOnce()
+
 
 class ManyLogFilesTest(TestCase):
     @classmethod
@@ -71,7 +72,7 @@ class ManyLogFilesTest(TestCase):
         TEST_ADDRESS = "test_multiple_log_file"
 
         blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS)
-        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS,  options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS, options=apply_options)
 
         TEST_MSG = "LOGTEST"
         msg = Message(body=TEST_MSG)
@@ -86,7 +87,7 @@ class ManyLogFilesTest(TestCase):
                     parts = line.split(" ")
                     if (parts[3] != "SERVER"):
                         all_server_logs = False
-                        break;
+                        break
         except:
             server_log_found = False
 
@@ -94,14 +95,14 @@ class ManyLogFilesTest(TestCase):
         self.assertTrue(server_log_found)
 
         protocol_log_found = True
-        all_protocol_logs =True
+        all_protocol_logs = True
         try:
             with open(self.router.outdir + '/test-router-protocol.log', 'r') as protocol_log:
                 for line in protocol_log:
                     parts = line.split(" ")
                     if (parts[3] != "PROTOCOL"):
                         all_protocol_logs = False
-                        break;
+                        break
         except:
             protocol_log_found = False
 
@@ -116,7 +117,7 @@ class ManyLogFilesTest(TestCase):
                     parts = line.split(" ")
                     if parts[3] != "ROUTER_CORE" and parts[3] != "ROUTER":
                         all_core_router_logs = False
-                        break;
+                        break
 
         except:
             core_router_log_found = False
@@ -146,7 +147,7 @@ class LogModuleProtocolTest(TestCase):
         if not blocking_connection:
             blocking_connection = BlockingConnection(self.address)
         blocking_receiver = blocking_connection.create_receiver(address=test_address)
-        blocking_sender = blocking_connection.create_sender(address=test_address,  options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address=test_address, options=apply_options)
         msg = Message(body=test_msg)
         blocking_sender.send(msg)
         received_message = blocking_receiver.receive()
@@ -229,7 +230,7 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
         def router(name, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
                 ('listener', {'port': cls.tester.get_port()}),
                 connection
             ]
@@ -351,7 +352,6 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         container_1.container_id = CONTAINER_ID_1
         conn_1 = BlockingConnection(self.address, container=container_1)
 
-
         TEST_ADDR_2 = "EnableConnectionLevelProtocolTraceTest1"
         CONTAINER_ID_2 = "CONTAINERID_2"
         container_2 = Container()
@@ -390,11 +390,10 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         # turned on for that connection
         self.assertTrue(num_attaches_2 == 0)
 
-
         # Now turn off the connection tracing on that connection
         qd_manager.update("org.apache.qpid.dispatch.connection",
-                                      {"enableProtocolTrace": "off"},
-                                      identity=conn_id)
+                          {"enableProtocolTrace": "off"},
+                          identity=conn_id)
         blocking_receiver_1.close()
         blocking_sender_1.close()
 
@@ -410,6 +409,7 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         blocking_sender_2.close()
         conn_1.close()
         conn_2.close()
+
 
 class LogLevelUpdateTest(TestCase):
     @classmethod
@@ -434,7 +434,7 @@ class LogLevelUpdateTest(TestCase):
         if not blocking_connection:
             blocking_connection = BlockingConnection(self.address)
         blocking_receiver = blocking_connection.create_receiver(address=test_address)
-        blocking_sender = blocking_connection.create_sender(address=test_address,  options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address=test_address, options=apply_options)
         msg = Message(body=test_msg)
         blocking_sender.send(msg)
         received_message = blocking_receiver.receive()
@@ -483,7 +483,6 @@ class LogLevelUpdateTest(TestCase):
         # because we turned of trace logging.
         self.assertTrue(num_attaches == 0)
 
-
         # STEP 4: Tuen trace logging back on again and make sure num_attaches = 4
         TEST_ADDR = "apachetest3"
         qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "trace+"}, name="log/DEFAULT")
@@ -513,7 +512,6 @@ class LogLevelUpdateTest(TestCase):
                     num_attaches += 1
 
         self.assertTrue(num_attaches == 4)
-
 
     def test_02_toggle_server_trace_logging(self):
         """
@@ -575,7 +573,6 @@ class LogLevelUpdateTest(TestCase):
         self.assertTrue(num_attaches == 0)
 
 
-
 class RouterCoreModuleLogTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -598,14 +595,13 @@ class RouterCoreModuleLogTest(TestCase):
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
 
-
     def test_router_core_logger(self):
         blocking_connection = BlockingConnection(self.address)
 
         TEST_ADDRESS = "test_multiple_log_file"
 
         blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS)
-        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS,  options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS, options=apply_options)
 
         TEST_MSG_BODY = "LOGTEST"
         msg = Message(body=TEST_MSG_BODY)
@@ -632,7 +628,7 @@ class RouterCoreModuleLogTest(TestCase):
             with open(self.router.outdir + '/test-router-core.log', 'r') as core_log:
                 for line in core_log:
                     # Every line in the file must log to the router core module.
-                    if not "ROUTER_CORE" in line:
+                    if "ROUTER_CORE" not in line:
                         all_lines_router_core = False
                         break
         except:
@@ -640,4 +636,3 @@ class RouterCoreModuleLogTest(TestCase):
 
         self.assertTrue(core_log_file_found)
         self.assertTrue(all_lines_router_core)
-

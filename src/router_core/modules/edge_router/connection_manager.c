@@ -18,9 +18,10 @@
  */
 
 #include "connection_manager.h"
+
 #include "core_events.h"
 #include "router_core_private.h"
-#include <stdio.h>
+
 #include <inttypes.h>
 
 //

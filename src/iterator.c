@@ -17,12 +17,13 @@
  * under the License.
  */
 
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/hash.h>
-#include "message_private.h"
+#include "qpid/dispatch/iterator.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/hash.h"
+
 #include <stdio.h>
 #include <string.h>
 

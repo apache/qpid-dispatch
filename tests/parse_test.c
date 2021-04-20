@@ -18,13 +18,15 @@
  */
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <inttypes.h>
 #include "test_case.h"
-#include <qpid/dispatch.h>
-#include <qpid/dispatch/trace_mask.h>
+
+#include "qpid/dispatch.h"
+#include "qpid/dispatch/trace_mask.h"
+
+#include <assert.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
 
 struct fs_vector_t {
     const char *data;
@@ -58,15 +60,38 @@ struct fs_vector_t {
 {"\x55\x08",             2, QD_AMQP_SMALLLONG,  0, 0, 0, 1, 0, 0x08},                // 16
 {"\x45",                 1, QD_AMQP_LIST0,      0, 0, 0, 0, 0, 0},                   // 17
 {"\x70\xff\xff\xff\xff", 5, QD_AMQP_UINT,       1, 0, 0, 0, UINT32_MAX, 0},          // 18
+
 {"\x71\x7f\xff\xff\xff", 5, QD_AMQP_INT,        0, 0, 1, 0, 0, INT32_MAX},           // 19
-{"\x71\x80\x00\x00\x00", 5, QD_AMQP_INT,        0, 0, 1, 0, 0, INT32_MIN},           // 20
+{"\x71\x7f\xff\xff\xff", 5, QD_AMQP_INT,        0, 0, 0, 1, 0, INT32_MAX},           // 20
+{"\x71\x80\x00\x00\x00", 5, QD_AMQP_INT,        0, 0, 1, 0, 0, INT32_MIN},           // 21
+{"\x71\x80\x00\x00\x00", 5, QD_AMQP_INT,        0, 0, 0, 1, 0, INT32_MIN},           // 22
+
+{"\x51\x7f",             2, QD_AMQP_BYTE,       0, 0, 1, 0, 0, INT8_MAX},            // 23
+{"\x51\x7f",             2, QD_AMQP_BYTE,       0, 0, 0, 1, 0, INT8_MAX},            // 24
+{"\x51\x80",             2, QD_AMQP_BYTE,       0, 0, 1, 0, 0, INT8_MIN},            // 25
+{"\x51\x80",             2, QD_AMQP_BYTE,       0, 0, 0, 1, 0, INT8_MIN},            // 26
+
+{"\x61\x7f\xff",         3, QD_AMQP_SHORT,      0, 0, 1, 0, 0, INT16_MAX},           // 27
+{"\x61\x7f\xff",         3, QD_AMQP_SHORT,      0, 0, 0, 1, 0, INT16_MAX},           // 28
+{"\x61\x80\x00",         3, QD_AMQP_SHORT,      0, 0, 1, 0, 0, INT16_MIN},           // 29
+{"\x61\x80\x00",         3, QD_AMQP_SHORT,      0, 0, 0, 1, 0, INT16_MIN},           // 30
+
+{"\x54\x7f",             2, QD_AMQP_SMALLINT,   0, 0, 1, 0, 0, INT8_MAX},            // 31
+{"\x54\x7f",             2, QD_AMQP_SMALLINT,   0, 0, 0, 1, 0, INT8_MAX},            // 32
+{"\x54\x80",             2, QD_AMQP_SMALLINT,   0, 0, 1, 1, 0, INT8_MIN},            // 33
+{"\x54\x80",             2, QD_AMQP_SMALLINT,   0, 0, 0, 1, 0, INT8_MIN},            // 34
+
+{"\x55\x7f",             2, QD_AMQP_SMALLLONG,  0, 0, 1, 0, 0, INT8_MAX},            // 35
+{"\x55\x7f",             2, QD_AMQP_SMALLLONG,  0, 0, 0, 1, 0, INT8_MAX},            // 36
+{"\x55\x80",             2, QD_AMQP_SMALLLONG,  0, 0, 1, 0, 0, INT8_MIN},            // 37
+{"\x55\x80",             2, QD_AMQP_SMALLLONG,  0, 0, 0, 1, 0, INT8_MIN},            // 38
 
 {"\x80\xff\xff\xff\xff\xff\xff\xff\xff",
-                         9, QD_AMQP_ULONG,      0, 1, 0, 0, UINT64_MAX, 0},          // 21
+                         9, QD_AMQP_ULONG,      0, 1, 0, 0, UINT64_MAX, 0},          // 39
 {"\x81\x7f\xff\xff\xff\xff\xff\xff\xff",
-                         9, QD_AMQP_LONG,       0, 0, 0, 1, 0, INT64_MAX},           // 22
+                         9, QD_AMQP_LONG,       0, 0, 0, 1, 0, INT64_MAX},           // 40
 {"\x81\x80\x00\x00\x00\x00\x00\x00\x00",
-                         9, QD_AMQP_LONG,       0, 0, 0, 1, 0, INT64_MIN},           // 23
+                         9, QD_AMQP_LONG,       0, 0, 0, 1, 0, INT64_MIN},           // 41
 {0, 0, 0, 0, 0}
 };
 

@@ -34,7 +34,7 @@ from system_test import unittest
 from itertools import cycle
 
 
-class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-public-methods
+class DistributedQueueTest(system_test.TestCase):  # pylint: disable=too-many-public-methods
     """System tests involving routers and qpidd brokers"""
 
     if MISSING_REQUIREMENTS:
@@ -45,8 +45,8 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
         def setUpClass(cls):
             """Start 3 qpidd brokers, wait for them to be ready."""
             super(DistributedQueueTest, cls).setUpClass()
-            cls.qpidds = [cls.tester.qpidd('qpidd%s'%i, port=cls.get_port(), wait=False)
-                        for i in range(3)]
+            cls.qpidds = [cls.tester.qpidd('qpidd%s' % i, port=cls.get_port(), wait=False)
+                          for i in range(3)]
             for q in cls.qpidds:
                 q.wait_ready()
 
@@ -56,7 +56,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
 
         def setUp(self):
             super(DistributedQueueTest, self).setUp()
-            self.testq = 'testq.'+self.id().split('.')[-1] # The distributed queue name
+            self.testq = 'testq.' + self.id().split('.')[-1]  # The distributed queue name
 
         def common_router_conf(self, name, mode='standalone'):
             """Common router configuration for the tests"""
@@ -73,7 +73,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
                 msgr.subscribe(a)
             msgr.flush()
             n = 20                  # Messages per broker
-            r = ["x-%02d"%i for i in range(n*len(self.qpidds))]
+            r = ["x-%02d" % i for i in range(n * len(self.qpidds))]
             for b, a in zip(r, cycle(send_addresses)):
                 msgr.put(message(address=a, body=b))
             msgr.flush()
@@ -96,18 +96,19 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
 
             def router(i):
                 """Create router<i> with waypoints to each broker."""
-                name = "router%s"%i
+                name = "router%s" % i
                 rconf = self.common_router_conf(name, mode='interior')
                 rconf += [
-                    ('listener', {'port':self.get_port(), 'role':'normal'}),
+                    ('listener', {'port': self.get_port(), 'role': 'normal'}),
                 ]
                 for q in self.qpidds:
                     rconf += [
-                        ('connector', {'name':q.name, 'port':q.port})]
+                        ('connector', {'name': q.name, 'port': q.port})]
                 return self.qdrouterd(name, rconf, wait=False)
             routers = [router(i) for i in range(len(self.qpidds))]
-            for r in routers: r.wait_ready()
-            addrs = [r.addresses[0]+"/"+self.testq for r in routers]
+            for r in routers:
+                r.wait_ready()
+            addrs = [r.addresses[0] + "/" + self.testq for r in routers]
             self.verify_equal_spread(addrs, addrs)
 
 

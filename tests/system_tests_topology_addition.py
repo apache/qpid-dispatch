@@ -22,53 +22,48 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest, os, json
-from subprocess      import PIPE, STDOUT
-from proton          import Message, Timeout
-from system_test     import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+import unittest
+
+from proton import Message, Timeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
-from proton.reactor  import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
-from proton.utils    import BlockingConnection
-from qpid_dispatch.management.client import Node
+from proton.reactor import Container
 
-import time
-import datetime
 
-#====================================================
+# ====================================================
 # Helper classes for all tests.
-#====================================================
+# ====================================================
 
 
 # Named timers allow test code to distinguish between several
 # simultaneous timers, going off at different rates.
-class Timeout ( object ):
+class Timeout (object):
     def __init__(self, parent, name):
         self.parent = parent
         self.name   = name
 
     def on_timer_task(self, event):
-        self.parent.timeout ( self.name )
+        self.parent.timeout(self.name)
 
 
-
-#================================================================
+# ================================================================
 #     Setup
-#================================================================
+# ================================================================
 
-class TopologyAdditionTests ( TestCase ):
+class TopologyAdditionTests (TestCase):
 
     @classmethod
     def setUpClass(cls):
         super(TopologyAdditionTests, cls).setUpClass()
 
-        def router ( name, more_config ):
+        def router(name, more_config):
 
-            config = [ ('router',  {'mode': 'interior', 'id': name}),
-                       ('address', {'prefix': 'closest',   'distribution': 'closest'}),
-                       ('address', {'prefix': 'balanced',  'distribution': 'balanced'}),
-                       ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
-                     ]      \
-                     + more_config
+            config = [('router',  {'mode': 'interior', 'id': name}),
+                      ('address', {'prefix': 'closest',   'distribution': 'closest'}),
+                      ('address', {'prefix': 'balanced',  'distribution': 'balanced'}),
+                      ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
+                      ]      \
+                + more_config
 
             config = Qdrouterd.Config(config)
 
@@ -93,44 +88,44 @@ class TopologyAdditionTests ( TestCase ):
         # Only routers A and B are set up initially by this class.
         # Routers C and D are started by the test itself.
         router_A_config = [
-                            ( 'listener',
-                              { 'port': client_ports['A'],
-                                'role': 'normal',
-                                'stripAnnotations': 'no'
-                              }
-                            ),
-                            ( 'listener',
-                              {  'role': 'inter-router',
-                                 'port': cls.inter_router_ports['A']
-                              }
-                            )
-                         ]
+            ('listener',
+             {'port': client_ports['A'],
+              'role': 'normal',
+              'stripAnnotations': 'no'
+              }
+             ),
+            ('listener',
+             {'role': 'inter-router',
+              'port': cls.inter_router_ports['A']
+              }
+             )
+        ]
 
         router_B_config = [
-                            ( 'listener',
-                              { 'port': client_ports['B'],
-                                'role': 'normal',
-                                'stripAnnotations': 'no'
-                              }
-                            ),
-                            ( 'listener',
-                              { 'role': 'inter-router',
-                                'port': cls.inter_router_ports['B'],
-                                'stripAnnotations': 'no'
-                              }
-                            ),
-                            ( 'connector',
-                              {  'name': 'AB_connector',
-                                 'role': 'inter-router',
-                                 'port': cls.inter_router_ports['A'],
-                                 'cost':  initial_cost,
-                                 'stripAnnotations': 'no'
-                              }
-                            )
-                         ]
+            ('listener',
+             {'port': client_ports['B'],
+              'role': 'normal',
+              'stripAnnotations': 'no'
+              }
+             ),
+            ('listener',
+             {'role': 'inter-router',
+              'port': cls.inter_router_ports['B'],
+              'stripAnnotations': 'no'
+              }
+             ),
+            ('connector',
+             {'name': 'AB_connector',
+              'role': 'inter-router',
+              'port': cls.inter_router_ports['A'],
+              'cost': initial_cost,
+              'stripAnnotations': 'no'
+              }
+             )
+        ]
 
-        router ( 'A', router_A_config )
-        router ( 'B', router_B_config )
+        router('A', router_A_config)
+        router('B', router_B_config)
 
         router_A = cls.routers[0]
         router_B = cls.routers[1]
@@ -140,86 +135,82 @@ class TopologyAdditionTests ( TestCase ):
         cls.A_addr = router_A.addresses[0]
         cls.B_addr = router_B.addresses[0]
 
-
-
         # The two connections that this router will make, AC and BC,
         # will be lower cost than the direct AB route that the network
         # already has.
         cls.router_C_config = [
-                                ( 'listener',
-                                  { 'port': client_ports['C'],
-                                    'role': 'normal',
-                                    'stripAnnotations': 'no'
-                                  }
-                                ),
-                                ( 'connector',
-                                  {  'name': 'AC_connector',
-                                     'role': 'inter-router',
-                                     'port': cls.inter_router_ports['A'],
-                                     'cost':  int(lower_cost / 2),
-                                     'stripAnnotations': 'no',
-                                     'linkCapacity' : 1000
-                                  }
-                                ),
-                                ( 'connector',
-                                  {  'name': 'BC_connector',
-                                     'role': 'inter-router',
-                                     'port': cls.inter_router_ports['B'],
-                                     'cost':  int(lower_cost / 2),
-                                     'stripAnnotations': 'no',
-                                     'linkCapacity' : 1000
-                                  }
-                                )
-                              ]
+            ('listener',
+             {'port': client_ports['C'],
+              'role': 'normal',
+              'stripAnnotations': 'no'
+              }
+             ),
+            ('connector',
+             {'name': 'AC_connector',
+              'role': 'inter-router',
+              'port': cls.inter_router_ports['A'],
+              'cost': int(lower_cost / 2),
+              'stripAnnotations': 'no',
+              'linkCapacity' : 1000
+              }
+             ),
+            ('connector',
+             {'name': 'BC_connector',
+              'role': 'inter-router',
+              'port': cls.inter_router_ports['B'],
+              'cost': int(lower_cost / 2),
+              'stripAnnotations': 'no',
+              'linkCapacity' : 1000
+              }
+             )
+        ]
 
         # The two connections that this router will make, AD and BD,
         # will be higher cost than the other paths the networks already has
         # available to get from A to B.
         cls.router_D_config = [
-                                ( 'listener',
-                                  { 'port': client_ports['D'],
-                                    'role': 'normal',
-                                    'stripAnnotations': 'no'
-                                  }
-                                ),
-                                ( 'connector',
-                                  {  'name': 'AD_connector',
-                                     'role': 'inter-router',
-                                     'port': cls.inter_router_ports['A'],
-                                     'cost':  int(higher_cost / 2),
-                                     'stripAnnotations': 'no',
-                                     'linkCapacity' : 1000
-                                  }
-                                ),
-                                ( 'connector',
-                                  {  'name': 'BD_connector',
-                                     'role': 'inter-router',
-                                     'port': cls.inter_router_ports['B'],
-                                     'cost':  int(higher_cost / 2),
-                                     'stripAnnotations': 'no',
-                                     'linkCapacity' : 1000
-                                  }
-                                )
-                              ]
-
-
+            ('listener',
+             {'port': client_ports['D'],
+              'role': 'normal',
+              'stripAnnotations': 'no'
+              }
+             ),
+            ('connector',
+             {'name': 'AD_connector',
+              'role': 'inter-router',
+              'port': cls.inter_router_ports['A'],
+              'cost': int(higher_cost / 2),
+              'stripAnnotations': 'no',
+              'linkCapacity' : 1000
+              }
+             ),
+            ('connector',
+             {'name': 'BD_connector',
+              'role': 'inter-router',
+              'port': cls.inter_router_ports['B'],
+              'cost': int(higher_cost / 2),
+              'stripAnnotations': 'no',
+              'linkCapacity' : 1000
+              }
+             )
+        ]
 
     # This method allows test code to add new routers during the test,
     # rather than only at startup like A and B above.
-    def addRouter ( self, name, more_config ) :
-        config = [ ('router',  {'mode': 'interior', 'id': name}),
-                   ('address', {'prefix': 'closest',   'distribution': 'closest'}),
-                   ('address', {'prefix': 'balanced',  'distribution': 'balanced'}),
-                   ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
-                 ]    \
-                 + more_config
+
+    def addRouter(self, name, more_config) :
+        config = [('router',  {'mode': 'interior', 'id': name}),
+                  ('address', {'prefix': 'closest',   'distribution': 'closest'}),
+                  ('address', {'prefix': 'balanced',  'distribution': 'balanced'}),
+                  ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
+                  ]    \
+            + more_config
 
         config = Qdrouterd.Config(config)
 
         TopologyAdditionTests.routers.append(TopologyAdditionTests.tester.qdrouterd(name, config, wait=True))
 
-
-    def test_01_new_route_low_cost ( self ):
+    def test_01_new_route_low_cost(self):
         # During the test, test code will add a new router C,
         # connecting A and B with new low-cost links. At that
         # point the test's messages should switch from using
@@ -232,25 +223,23 @@ class TopologyAdditionTests ( TestCase ):
         # Since this test alters the path that the messages follow,
         # it is OK for some messages to be released rather than
         # delivered. It doesn't always happen - depends on timing.
-        initial_expected_trace = [ '0/A', '0/B' ]
-        final_expected_trace   = [ '0/A', '0/C', '0/B' ]
+        initial_expected_trace = ['0/A', '0/B']
+        final_expected_trace   = ['0/A', '0/C', '0/B']
         released_ok = True
 
-        test = AddRouter ( self.A_addr,
-                           self.B_addr,
-                           "closest/01",
-                           self,
-                           'C',
-                           self.router_C_config,
-                           [ initial_expected_trace, final_expected_trace ],
-                           released_ok
+        test = AddRouter(self.A_addr,
+                         self.B_addr,
+                         "closest/01",
+                         self,
+                         'C',
+                         self.router_C_config,
+                         [initial_expected_trace, final_expected_trace],
+                         released_ok
                          )
         test.run()
-        self.assertEqual ( None, test.error )
+        self.assertEqual(None, test.error)
 
-
-
-    def test_02_new_route_high_cost ( self ):
+    def test_02_new_route_high_cost(self):
         # During the test, test code will add a new router D,
         # connecting A and B with new links. But the links are
         # higher cost than what already exist. The network should
@@ -263,30 +252,28 @@ class TopologyAdditionTests ( TestCase ):
         # Since this test does not alter the path that the messages
         # follow, it is *not* OK for any messages to be released
         # rather than delivered.
-        only_expected_trace   = [ '0/A', '0/C', '0/B' ]
+        only_expected_trace   = ['0/A', '0/C', '0/B']
         released_ok = False
 
-        test = AddRouter ( self.A_addr,
-                           self.B_addr,
-                           "closest/02",
-                           self,
-                           'D',
-                           self.router_D_config,
-                           [ only_expected_trace ],
-                           released_ok
+        test = AddRouter(self.A_addr,
+                         self.B_addr,
+                         "closest/02",
+                         self,
+                         'D',
+                         self.router_D_config,
+                         [only_expected_trace],
+                         released_ok
                          )
         test.run()
-        self.assertEqual ( None, test.error )
+        self.assertEqual(None, test.error)
 
 
-
-
-#================================================================
+# ================================================================
 #     Tests
-#================================================================
+# ================================================================
 
 
-#--------------------------------------------------------------
+# --------------------------------------------------------------
 #
 # First test
 # ------------------
@@ -329,18 +316,18 @@ class TopologyAdditionTests ( TestCase ):
 # As in the first test, the caller tells us what routes ought
 # to be followed, by putting them in the 'expected_traces' arg.
 #
-#--------------------------------------------------------------
+# --------------------------------------------------------------
 
-class AddRouter ( MessagingHandler ):
-    def __init__ ( self,
-                   send_addr,
-                   recv_addr,
-                   destination,
-                   parent,
-                   new_router_name,
-                   new_router_config,
-                   expected_traces,
-                   released_ok
+class AddRouter (MessagingHandler):
+    def __init__(self,
+                 send_addr,
+                 recv_addr,
+                 destination,
+                 parent,
+                 new_router_name,
+                 new_router_config,
+                 expected_traces,
+                 released_ok
                  ):
         super(AddRouter, self).__init__(prefetch=100)
         self.send_addr         = send_addr
@@ -373,16 +360,14 @@ class AddRouter ( MessagingHandler ):
         # Make a little data structure that
         # will keep track of how many times each trace was seen.
         self.expected_trace_counts = list()
-        for i in range ( len(expected_traces )) :
-            self.expected_trace_counts.append ( [ expected_traces[i], 0 ] )
+        for i in range(len(expected_traces)) :
+            self.expected_trace_counts.append([expected_traces[i], 0])
 
-
-    def run ( self ) :
+    def run(self) :
         Container(self).run()
 
-
     # Close everything and allow the test to terminate.
-    def bail ( self, reason_for_bailing ) :
+    def bail(self, reason_for_bailing) :
         self.finishing = True
         self.error = reason_for_bailing
         self.receiver.close()
@@ -391,19 +376,18 @@ class AddRouter ( MessagingHandler ):
         self.test_timer.cancel()
         self.send_timer.cancel()
 
-
     # There are two timers. The 'test' timer should only expire if
     # something has gone wrong, in which case it terminates the test.
     # The 'send' timer expires frequently, and every time it goes off
     # we send out a little batch of messages.
-    def timeout ( self, name ):
+    def timeout(self, name):
 
         if self.finishing :
             return
 
         self.timeout_count += 1
         if name == "test" :
-            self.bail ( "Timeout Expired: %d messages received, %d expected." % (self.n_received, self.n_messages) )
+            self.bail("Timeout Expired: %d messages received, %d expected." % (self.n_received, self.n_messages))
         elif name == "send" :
             self.send()
             self.send_timer = self.reactor.schedule(1, Timeout(self, "send"))
@@ -414,8 +398,7 @@ class AddRouter ( MessagingHandler ):
             # network, and some will flow through the network with
             # the new router added.
             if self.timeout_count == 5 :
-                self.parent.addRouter ( self.new_router_name, self.new_router_config )
-
+                self.parent.addRouter(self.new_router_name, self.new_router_config)
 
     def on_start(self, event):
         self.reactor   = event.reactor
@@ -429,12 +412,11 @@ class AddRouter ( MessagingHandler ):
 
         self.sender      = event.container.create_sender(self.send_conn, self.dest)
         self.receiver    = event.container.create_receiver(self.recv_conn, self.dest)
-        self.receiver.flow ( self.n_messages )
+        self.receiver.flow(self.n_messages)
 
-
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     # Sender Side
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
 
     def send(self):
 
@@ -449,21 +431,18 @@ class AddRouter ( MessagingHandler ):
             if self.n_sent == self.n_messages :
                 return
 
-
     # The caller of this tests decides whether it is OK or
     # not OK to have some messages released during the test.
-    def on_released ( self, event ) :
+    def on_released(self, event) :
         if self.released_ok :
             self.n_released += 1
-            self.check_count ( )
+            self.check_count()
         else :
-            self.bail ( "a message was released." )
+            self.bail("a message was released.")
 
-
-    def on_accepted ( self, event ) :
+    def on_accepted(self, event) :
         self.n_accepted += 1
-        self.check_count ( )
-
+        self.check_count()
 
     #
     # Do the released plus the accepted messages add up to the number
@@ -479,47 +458,43 @@ class AddRouter ( MessagingHandler ):
     #   all sent messages -- whether they have been accepted by the receiver,
     #   or released by the router network.
     #
-    def check_count ( self ) :
+    def check_count(self) :
         if self.n_accepted + self.n_released == self.n_messages :
             self.finishing = True
-            self.finish_test ( )
+            self.finish_test()
 
-
-
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
     # Receiver Side
-    #------------------------------------------------------------
+    # ------------------------------------------------------------
 
     def on_message(self, event):
         if self.finishing :
             return
         self.n_received += 1
-        trace = event.message.annotations [ 'x-opt-qd.trace' ]
+        trace = event.message.annotations['x-opt-qd.trace']
         # Introduce flaws for debugging.
         # if self.n_received == 13 :
         #     trace = [ '0/B', '0/A', '0/D' ]
         # if self.n_received == 13 :
         #     self.n_received -= 1
-        self.record_trace ( trace )
-        self.check_count ( )
-
+        self.record_trace(trace)
+        self.check_count()
 
     # Compare the trace that came from a message to the list of
     # traces the caller told us to expect. If it is one of the
     # expected traces, count it. Otherwise, fail the test.
-    def record_trace ( self, observed_trace ):
+    def record_trace(self, observed_trace):
         for trace_record in self.expected_trace_counts :
-            trace = trace_record [ 0 ]
+            trace = trace_record[0]
             if observed_trace == trace :
-                trace_record [ 1 ] += 1
+                trace_record[1] += 1
                 return
         # If we get here, the trace is one we were not expecting. That's bad.
-        self.bail ( "Unexpected trace: %s" % observed_trace )
-
+        self.bail("Unexpected trace: %s" % observed_trace)
 
     # Shut down everything and make sure that all of the extected traces
     # have been seen.
-    def finish_test ( self ) :
+    def finish_test(self) :
         self.test_timer.cancel()
         self.send_timer.cancel()
         for trace_record in self.expected_trace_counts :
@@ -527,12 +502,11 @@ class AddRouter ( MessagingHandler ):
             # Deliberate flaw for debugging.
             # count = 0
             if count <= 0 :
-                self.bail ( "Trace %s was not seen." % trace_record[0] )
+                self.bail("Trace %s was not seen." % trace_record[0])
                 return
 
         # success
-        self.bail ( None )
-
+        self.bail(None)
 
 
 if __name__ == '__main__':

@@ -18,7 +18,6 @@
 #
 
 from concurrent import futures
-from typing import List
 
 import grpc
 
@@ -31,6 +30,7 @@ class FriendShipService(FriendshipServicer):
     Implementation of the gRPC FriendshipServicer.
     See the friendship.proto definition for more info.
     """
+
     def __init__(self):
         self.people = list()
 
@@ -90,8 +90,9 @@ class FriendShipService(FriendshipServicer):
         return None
 
 
-def serve(port):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
+def serve(port, options=None):
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1),
+                         options=options)
     add_FriendshipServicer_to_server(FriendShipService(), server)
     server.add_insecure_port('[::]:%s' % port)
     server.start()

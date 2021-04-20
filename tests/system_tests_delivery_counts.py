@@ -19,7 +19,7 @@
 
 from time import sleep
 
-from proton import Condition, Message, Delivery
+from proton import Message, Delivery
 from system_test import TestCase, Qdrouterd, TIMEOUT, get_link_info, \
     get_inter_router_links, has_mobile_dest_in_address_table, PollTimeout, TestTimeout
 from proton.handlers import MessagingHandler
@@ -39,11 +39,13 @@ _LINK_STATISTIC_KEYS = set(['unsettledCount',
                             'deliveryCount',
                             'modifiedCount'])
 
+
 def get_body(n_sent, large_message=False):
     if large_message:
         body = {'number': n_sent, 'msg': LARGE_PAYLOAD}
     else:
         body = {'number': n_sent}
+
 
 def _link_stats_are_zero(statistics, keys):
     """
@@ -52,7 +54,7 @@ def _link_stats_are_zero(statistics, keys):
     for key in keys:
         if statistics.get(key) != 0:
             return False
-    return True;
+    return True
 
 
 class OneRouterModifiedTest(TestCase):
@@ -106,6 +108,7 @@ class OneRouterModifiedTest(TestCase):
 
     def test_one_router_large_message_modified_counts(self):
         self.router_modified_counts(True)
+
 
 class OneRouterRejectedTest(TestCase):
     @classmethod
@@ -208,11 +211,13 @@ class OneRouterReleasedDroppedPresettledTest(TestCase):
                                                                          'releasedCount',
                                                                          'presettledCount',
                                                                          'droppedPresettledCount'])))
+
     def test_one_router_released_dropped_counts(self):
         self.one_router_released_dropped_count()
 
     def test_one_router_large_message_released_dropped_counts(self):
         self.one_router_released_dropped_count(True)
+
 
 class TwoRouterReleasedDroppedPresettledTest(TestCase):
     @classmethod
@@ -228,13 +233,13 @@ class TwoRouterReleasedDroppedPresettledTest(TestCase):
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
             ('listener', {'port': listen_port_1, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
             ('listener', {'role': 'inter-router', 'port': listen_port_inter_router, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
-           ])
+        ])
 
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'B'}),
             ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
             ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router}),
-            ])
+        ])
 
         cls.routers = []
         cls.routers.append(cls.tester.qdrouterd("A", config_1, wait=True))
@@ -285,7 +290,7 @@ class TwoRouterReleasedDroppedPresettledTest(TestCase):
         self.two_router_released_dropped_counts(True)
 
 
-class AddressCheckerTimeout ( object ):
+class AddressCheckerTimeout (object):
     def __init__(self, parent):
         self.parent = parent
 
@@ -293,12 +298,13 @@ class AddressCheckerTimeout ( object ):
         self.parent.address_check_timeout()
 
 
-class CounterCheckerTimeout ( object ):
+class CounterCheckerTimeout (object):
     def __init__(self, parent):
         self.parent = parent
 
     def on_timer_task(self, event):
         self.parent.count_check_timeout()
+
 
 class LargePresettledLinkCounterTest(MessagingHandler):
     def __init__(self, sender_addr, receiver_addr):
@@ -343,8 +349,8 @@ class LargePresettledLinkCounterTest(MessagingHandler):
             # to router A.
             self.sender_conn = self.container.connect(self.sender_addr)
             self.sender = self.container.create_sender(self.sender_conn,
-                                                        self.dest,
-                                                        name='SenderA')
+                                                       self.dest,
+                                                       name='SenderA')
         else:
             if self.num_attempts < 2:
                 self.address_check_timer = self.reactor.schedule(2,
@@ -406,7 +412,7 @@ class LargePresettledReleasedLinkCounterTest(MessagingHandler):
         self.receiver_dropoff_count = 50
         self.num_messages = 200
         self.num_attempts = 0
-        self.n_sent= 0
+        self.n_sent = 0
         self.done = False
         self.n_received = 0
         self.count_check_timer = None
@@ -516,13 +522,13 @@ class TwoRouterLargeMessagePresettledCountTest(TestCase):
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
             ('listener', {'port': listen_port_1, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
             ('listener', {'role': 'inter-router', 'port': listen_port_inter_router, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
-           ])
+        ])
 
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'B'}),
             ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
             ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router}),
-            ])
+        ])
 
         cls.routers = []
         cls.routers.append(cls.tester.qdrouterd("A", config_1, wait=True))
@@ -556,13 +562,13 @@ class TwoRouterLargeMessagePresettledReleasedCountTest(TestCase):
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
             ('listener', {'port': listen_port_1, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
             ('listener', {'role': 'inter-router', 'port': listen_port_inter_router, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
-           ])
+        ])
 
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'B'}),
             ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
             ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router}),
-            ])
+        ])
 
         cls.routers = []
         cls.routers.append(cls.tester.qdrouterd("A", config_1, wait=True))
@@ -582,7 +588,6 @@ class TwoRouterLargeMessagePresettledReleasedCountTest(TestCase):
         self.assertTrue(test.success)
 
 
-
 class LinkRouteIngressEgressTransitTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -592,7 +597,7 @@ class LinkRouteIngressEgressTransitTest(TestCase):
         def router(name, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
             ] + connection
 
             config = Qdrouterd.Config(config)
@@ -629,7 +634,7 @@ class LinkRouteIngressEgressTransitTest(TestCase):
 
                    ('linkRoute', {'prefix': 'pulp.task', 'direction': 'in'}),
                    ('linkRoute', {'prefix': 'pulp.task', 'direction': 'out'}),
-                ]
+               ]
                )
 
         # Wait for the routers to locate each other, and for route propagation
@@ -700,6 +705,7 @@ class LinkRouteIngressEgressTransitTest(TestCase):
     def test_link_route_large_message_ingress_egress_transit_counts(self):
         self.link_route_ingress_egress_transit_counts(True)
 
+
 class TwoRouterIngressEgressTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -713,13 +719,13 @@ class TwoRouterIngressEgressTest(TestCase):
             ('router', {'mode': 'interior', 'id': 'A'}),
             ('listener', {'port': listen_port_1, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
             ('listener', {'role': 'inter-router', 'port': listen_port_inter_router, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
-           ])
+        ])
 
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'B'}),
             ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
             ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router}),
-            ])
+        ])
 
         cls.routers = []
         cls.routers.append(cls.tester.qdrouterd("A", config_1, wait=True))
@@ -781,7 +787,6 @@ class TwoRouterIngressEgressTest(TestCase):
                                              _LINK_STATISTIC_KEYS - set(['deliveryCount',
                                                                          'acceptedCount'])))
 
-
         self.assertEqual(test.receiver_stats['deliveryCount'], num_messages)
         self.assertEqual(test.receiver_stats['acceptedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
@@ -799,6 +804,7 @@ class TwoRouterIngressEgressTest(TestCase):
 
     def test_two_router_large_message_ingress_egress_counts(self):
         self.two_router_ingress_egress_counts(True)
+
 
 class OneRouterIngressEgressTest(TestCase):
     @classmethod
@@ -947,7 +953,6 @@ class OneRouterLinkCountersTest(TestCase):
 
         cls.router = cls.tester.qdrouterd(name="LinkCounters", config=config, wait=True)
 
-
     class LinkCountersTest(MessagingHandler):
         """
         Create 1 sender and 1 receiver to router_addr.  Send count messages.
@@ -955,6 +960,7 @@ class OneRouterLinkCountersTest(TestCase):
         Explicitly set the receiver credit and whether to sender sends
         presettled or unsettled messages.
         """
+
         def __init__(self, router_addr, count=None, rx_limit=None,
                      credit=None, presettled=False, outcome=None,
                      large_message=False):
@@ -1020,6 +1026,7 @@ class OneRouterLinkCountersTest(TestCase):
             self.sender = event.container.create_sender(self.conn,
                                                         target="Test01",
                                                         name="Tx_Test01")
+
         def on_sendable(self, event):
             if self.sent < self.count:
                 if self.large_message:
@@ -1090,13 +1097,12 @@ class OneRouterLinkCountersTest(TestCase):
                                              - set(['deliveryCount',
                                                     'unsettledCount'])))
 
-
     def verify_presettled_count(self, large_message=False):
         """
         Verify the presettled dropped count link counter by exhausting credit
         before sending is complete
         """
-        limit = self.CREDIT//2  # 1/2 the capacity given the sender
+        limit = self.CREDIT // 2  # 1/2 the capacity given the sender
         test = self.LinkCountersTest(self.router.addresses[0],
                                      presettled=True,
                                      count=self.COUNT,
@@ -1197,7 +1203,6 @@ class OneRouterLinkCountersTest(TestCase):
         self.verify_one_credit_accepted(True)
 
 
-
 class RouteContainerIngressCount(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1286,9 +1291,9 @@ class IngressEgressTwoRouterTest(MessagingHandler):
         if not self.done and self.num_messages == self.n_received and self.n_accept == self.num_messages:
             self.done = True
             self.sender_stats = get_link_info('Tx_IngressEgressTwoRouterTest',
-                                               self.sender_address)
+                                              self.sender_address)
             self.receiver_stats = get_link_info('Rx_IngressEgressTwoRouterTest',
-                                                 self.receiver_address)
+                                                self.receiver_address)
             self.conn_sender.close()
             self.conn_recv.close()
             self.timer.cancel()
@@ -1570,9 +1575,9 @@ class IngressEgressTransitLinkRouteTest(MessagingHandler):
                               and self.n_sent == self.n_accepted):
             self.done = True
             self.sender_stats = get_link_info('Tx_IngressEgressTransitLinkRouteTest',
-                                               self.sender_addr)
+                                              self.sender_addr)
             self.receiver_stats = get_link_info('Rx_IngressEgressTransitLinkRouteTest',
-                                                 self.receiver_addr)
+                                                self.receiver_addr)
             self.receiver_conn.close()
             self.sender_conn.close()
             self.timer.cancel()
@@ -1636,7 +1641,7 @@ class ReleasedDroppedPresettledCountTest(MessagingHandler):
         if not self.done and self.expect_released == self.n_released:
             self.done = True
             self.sender_stats = get_link_info('ReleasedDroppedPresettledCountTest',
-                                               self.sender_addr)
+                                              self.sender_addr)
             self.sender_conn.close()
             self.timer.cancel()
 
@@ -1653,6 +1658,7 @@ class ReleasedDroppedPresettledCountTest(MessagingHandler):
         # will be dropped
         self.sender = event.container.create_sender(self.sender_conn,
                                                     name='ReleasedDroppedPresettledCountTest')
+
     def on_sendable(self, event):
         # We are sending a total of 20 deliveries. 10 unsettled and 10 pre-settled to a multicast address
         if self.n_sent < self.num_messages:

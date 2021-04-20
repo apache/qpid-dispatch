@@ -23,12 +23,17 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import runpy
+import sys
+import os
+from subprocess import Popen, PIPE
+
 """
 Run a tool or test in a build tree with the correct PATH, PYTHONPATH, etc.
 Run with no arguments for help.
 """
 
-usage="""
+usage = """
 Run a tool or test in a build tree with the correct PATH, PYTHONPATH, etc.
 
 Usage:
@@ -39,8 +44,6 @@ run.py -x <program> [<arg>....]            # Run an executable with the test run
 run.py --sh                                # Print a shell script to set the run.py environment.
 """
 
-import os, sys, runpy
-from subprocess import Popen, PIPE
 
 extra_paths = [
     "${CMAKE_SOURCE_DIR}/python",
@@ -48,10 +51,12 @@ extra_paths = [
     "${CMAKE_SOURCE_DIR}/tests"
 ]
 
+
 def dedup(l):
     """Remove duplicates from list l, keep first instance. Keep order of l."""
     s = set()
     return [i for i in l if i not in s and (s.add(i) or True)]
+
 
 def getpath(env):
     """Return a path environment variable split into a list"""
@@ -59,6 +64,7 @@ def getpath(env):
     if path:
         return path.split(os.pathsep)
     return []
+
 
 sys.path = dedup(extra_paths + sys.path)
 python_path = dedup(extra_paths + getpath("PYTHONPATH"))
@@ -75,8 +81,8 @@ env_vars = {
                                    os.path.join("${CMAKE_BINARY_DIR}", 'tools'),
                                    os.path.join("${CMAKE_SOURCE_DIR}", 'bin')] +
                                   getpath('PATH'))),
-    'MANPATH' : os.pathsep.join([os.path.join("${CMAKE_BINARY_DIR}",'doc','man')] +
-                                getpath('MANPATH')),
+    'MANPATH': os.pathsep.join([os.path.join("${CMAKE_BINARY_DIR}", 'doc', 'man')] +
+                               getpath('MANPATH')),
     'SOURCE_DIR': "${CMAKE_SOURCE_DIR}",
     'BUILD_DIR': "${CMAKE_BINARY_DIR}",
     'QPID_DISPATCH_HOME': "${CMAKE_SOURCE_DIR}",
@@ -87,6 +93,7 @@ env_vars = {
     'TSAN_OPTIONS': "${RUNTIME_TSAN_ENV_OPTIONS}",
     'ASAN_OPTIONS': "${RUNTIME_ASAN_ENV_OPTIONS}",
     'LSAN_OPTIONS': "${RUNTIME_LSAN_ENV_OPTIONS}",
+    'UBSAN_OPTIONS': "${RUNTIME_UBSAN_ENV_OPTIONS}",
 }
 os.environ.update(env_vars)
 
@@ -97,25 +104,31 @@ def find_exe(program):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
     mydir, name = os.path.split(program)
     if mydir:
-        if is_exe(program): return program
+        if is_exe(program):
+            return program
     else:
         for path in os.environ["PATH"].split(os.pathsep):
             exe_file = os.path.join(path, program)
-            if is_exe(exe_file): return exe_file
+            if is_exe(exe_file):
+                return exe_file
     return None
+
 
 def is_binary_exe(program):
     """True if the program is a binary executable"""
-    if not program: return None
+    if not program:
+        return None
     p = Popen(['file', '-bi', program], stdout=PIPE, stderr=PIPE)
     return p.communicate()[0].startswith('application/x-executable')
+
 
 def run_path(file_path, run_name=None):
     """Wrapper for run path that falls back to exec python for python < 2.7"""
     if hasattr(runpy, 'run_path'):
         runpy.run_path(file_path, run_name=run_name)
     else:                       # Python < 2.7
-        os.execvp(sys.executable, [sys.executable]+sys.argv)
+        os.execvp(sys.executable, [sys.executable] + sys.argv)
+
 
 if __name__ == "__main__":
     error_prefix = ""
@@ -124,26 +137,26 @@ if __name__ == "__main__":
             print("%s" % usage)
         elif sys.argv[1] == '-m':
             sys.argv = sys.argv[2:]
-            error_prefix = "Run python module '%s': "%(sys.argv[0])
+            error_prefix = "Run python module '%s': " % (sys.argv[0])
             runpy.run_module(sys.argv[0], alter_sys=True, run_name="__main__")
         elif sys.argv[1] == '-s':
             sys.argv = sys.argv[2:]
-            error_prefix = "Run python script '%s':"%(sys.argv[0])
+            error_prefix = "Run python script '%s':" % (sys.argv[0])
             run_path(sys.argv[0], run_name="__main__")
         elif sys.argv[1] == '--sh':
-            for name, value in env_vars.items(): print('%s="%s"'%(name, value))
-            print("export %s"%' '.join(env_vars.keys()))
+            for name, value in env_vars.items():
+                print('%s="%s"' % (name, value))
+            print("export %s" % ' '.join(env_vars.keys()))
         elif sys.argv[1] == '-x':
             args = qdrouterd_runner.split() + sys.argv[2:]
-            error_prefix = "Running '%s': "%(args)
+            error_prefix = "Running '%s': " % (args)
             os.execvp(args[0], args)
         elif sys.argv[1].startswith('-'):
             print(usage)
         else:
             args = sys.argv[1:]
-            error_prefix = "Running '%s': "%(args)
+            error_prefix = "Running '%s': " % (args)
             os.execvp(args[0], args)
     except Exception as e:
-        print("%s%s: %s"%(error_prefix, type(e).__name__, e))
+        print("%s%s: %s" % (error_prefix, type(e).__name__, e))
         raise
-

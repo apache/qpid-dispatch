@@ -53,8 +53,6 @@ class ManPageWriter(SchemaWriter):
                 return
         super(ManPageWriter, self).attribute_type(attr, holder, show_create=False, show_update=False)
 
-
-
     def man_page(self):
         self.writeln(r"""
 qdrouterd.conf(5)
@@ -158,6 +156,7 @@ SEE ALSO
 
 http://qpid.apache.org/components/dispatch-router
 """)
+
 
 if __name__ == '__main__':
     ManPageWriter().man_page()

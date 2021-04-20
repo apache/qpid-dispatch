@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from time import sleep, time
+from time import sleep
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout
@@ -28,13 +28,16 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 import json
 
+
 def parse_record(fields, line):
     return [line[f[0]:f[1]].strip() for f in fields]
+
 
 def parse_fields(header, items):
     pos = [header.find(name) for name in header.split()] + [len(header)]
     fields = list(zip(pos, pos[1:]))
     return [parse_record(fields, item) for item in items]
+
 
 class LinkRouteTest(TestCase):
     """
@@ -63,7 +66,7 @@ class LinkRouteTest(TestCase):
         def router(name, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
             ] + connection
 
             config = Qdrouterd.Config(config)
@@ -84,11 +87,11 @@ class LinkRouteTest(TestCase):
                    ('connector', {'name': 'broker', 'role': 'route-container', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    ('connector', {'name': 'routerC', 'role': 'inter-router', 'host': '0.0.0.0', 'port': c_listener_port}),
 
-                   ('linkRoute', {'prefix': 'foo', 'containerId': 'QDR.A', 'direction': 'in', 'addExternalPrefix':'bar.'}),
-                   ('linkRoute', {'prefix': 'foo', 'containerId': 'QDR.A', 'direction': 'out', 'addExternalPrefix':'bar.'}),
+                   ('linkRoute', {'prefix': 'foo', 'containerId': 'QDR.A', 'direction': 'in', 'addExternalPrefix': 'bar.'}),
+                   ('linkRoute', {'prefix': 'foo', 'containerId': 'QDR.A', 'direction': 'out', 'addExternalPrefix': 'bar.'}),
 
-                   ('linkRoute', {'prefix': 'qdr-a', 'containerId': 'QDR.A', 'direction': 'in', 'delExternalPrefix':'qdr-a.'}),
-                   ('linkRoute', {'prefix': 'qdr-a', 'containerId': 'QDR.A', 'direction': 'out', 'delExternalPrefix':'qdr-a.'})
+                   ('linkRoute', {'prefix': 'qdr-a', 'containerId': 'QDR.A', 'direction': 'in', 'delExternalPrefix': 'qdr-a.'}),
+                   ('linkRoute', {'prefix': 'qdr-a', 'containerId': 'QDR.A', 'direction': 'out', 'delExternalPrefix': 'qdr-a.'})
 
                ]
                )
@@ -97,12 +100,12 @@ class LinkRouteTest(TestCase):
                    ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(), 'saslMechanisms': 'ANONYMOUS'}),
                    ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': c_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
 
-                   ('linkRoute', {'prefix': 'foo', 'direction': 'in', 'addExternalPrefix':'bar.'}),
-                   ('linkRoute', {'prefix': 'foo', 'direction': 'out', 'addExternalPrefix':'bar.'}),
+                   ('linkRoute', {'prefix': 'foo', 'direction': 'in', 'addExternalPrefix': 'bar.'}),
+                   ('linkRoute', {'prefix': 'foo', 'direction': 'out', 'addExternalPrefix': 'bar.'}),
 
-                   ('linkRoute', {'prefix': 'qdr-a', 'direction': 'in', 'delExternalPrefix':'qdr-a.'}),
-                   ('linkRoute', {'prefix': 'qdr-a', 'direction': 'out', 'delExternalPrefix':'qdr-a.'})
-                ]
+                   ('linkRoute', {'prefix': 'qdr-a', 'direction': 'in', 'delExternalPrefix': 'qdr-a.'}),
+                   ('linkRoute', {'prefix': 'qdr-a', 'direction': 'out', 'delExternalPrefix': 'qdr-a.'})
+               ]
                )
 
         # Wait for the routers to locate each other, and for route propagation
@@ -116,12 +119,12 @@ class LinkRouteTest(TestCase):
         sleep(2)
 
     def run_qdstat_linkRoute(self, address, args=None):
-        cmd = ['qdstat', '--bus', str(address), '--timeout', str(TIMEOUT) ] + ['--linkroute']
+        cmd = ['qdstat', '--bus', str(address), '--timeout', str(TIMEOUT)] + ['--linkroute']
         if args:
             cmd = cmd + args
         p = self.popen(
             cmd,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]
@@ -143,7 +146,7 @@ class LinkRouteTest(TestCase):
     def test_qdstat_link_routes_on_B(self):
         output = self.run_qdstat_linkRoute(self.routers[1].addresses[0])
         lines = output.split("\n")
-        self.assertEqual(len(lines), 11) # 4 links, 3 lines of header and an empty line at the end
+        self.assertEqual(len(lines), 11)  # 4 links, 3 lines of header and an empty line at the end
         header = lines[4]
         columns = header.split()
         self.assertEqual(len(columns), 6)

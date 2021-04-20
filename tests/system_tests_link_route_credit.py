@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout, unittest
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout, PollTimeout, unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
@@ -82,7 +82,6 @@ class RouterTest(TestCase):
 
         cls.routers[0].wait_router_connected('INT.B')
         cls.routers[1].wait_router_connected('INT.A')
-
 
     def test_01_dest_sender_same_edge(self):
         test = LRDestSenderFlowTest(self.routers[2].addresses[0],
@@ -430,7 +429,7 @@ class LRDestSenderFlowTest(MessagingHandler):
 
     def on_message(self, event):
         if event.receiver == self.probe_receiver:
-            response = self.proxy.response(event.message);
+            response = self.proxy.response(event.message)
             self.last_action = "Handling probe response: remote: %d container: %d" \
                                % (response.remoteCount, response.containerCount)
             if response.status_code == 200 and response.remoteCount + response.containerCount == 1:
@@ -441,7 +440,6 @@ class LRDestSenderFlowTest(MessagingHandler):
                 self.last_action = "opening test receiver"
             else:
                 self.poll_timer = self.reactor.schedule(0.5, PollTimeout(self))
-                
 
     def run(self):
         container = Container(self)
@@ -541,7 +539,7 @@ class LRDestReceiverFlowTest(MessagingHandler):
 
     def on_message(self, event):
         if event.receiver == self.probe_receiver:
-            response = self.proxy.response(event.message);
+            response = self.proxy.response(event.message)
             self.last_action = "Handling probe response: remote: %d container: %d" \
                                % (response.remoteCount, response.containerCount)
             if response.status_code == 200 and response.remoteCount + response.containerCount == 1:
@@ -549,7 +547,6 @@ class LRDestReceiverFlowTest(MessagingHandler):
                 self.last_action = "opening test sender"
             else:
                 self.poll_timer = self.reactor.schedule(0.5, PollTimeout(self))
-                
 
     def run(self):
         container = Container(self)
@@ -593,5 +590,5 @@ class LRFastTeardownTest(MessagingHandler):
         container.run()
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     unittest.main(main_module())

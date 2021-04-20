@@ -17,10 +17,10 @@
  * under the License.
  */
 
-#include "router_core_private.h"
 #include "module.h"
-#include <qpid/dispatch/protocol_adaptor.h>
-#include "dispatch_private.h"
+#include "router_core_private.h"
+
+#include "qpid/dispatch/protocol_adaptor.h"
 
 /**
  * Creates a thread that is dedicated to managing and using the routing table.

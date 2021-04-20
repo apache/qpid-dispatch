@@ -18,25 +18,27 @@
 #
 
 
-#pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
+# pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest, json
+import unittest
+import json
+from collections import OrderedDict
 from qpid_dispatch_internal.management.schema import Schema, BooleanType, EnumType, AttributeType, ValidationError, EnumValue, EntityType
-from qpid_dispatch_internal.compat import OrderedDict
-import collections
+
 
 def replace_od(thing):
     """Replace OrderedDict with dict"""
     if isinstance(thing, OrderedDict):
-        return dict((k, replace_od(v)) for k,v in thing.iteritems())
+        return dict((k, replace_od(v)) for k, v in thing.iteritems())
     if isinstance(thing, list):
         return [replace_od(t) for t in thing]
     return thing
+
 
 SCHEMA_1 = {
     "prefix": "org.example",
@@ -49,7 +51,7 @@ SCHEMA_1 = {
                 "name": {"type": "string",
                          "required": True,
                          "unique": True},
-                "type": {"type":"string",
+                "type": {"type": "string",
                          "required": True}
             }
         },
@@ -57,7 +59,7 @@ SCHEMA_1 = {
             "attributes": {
                 "host": {"type": "string"},
                 "name": {"type": "string", "required": True, "unique": True},
-                "type": {"type":"string",  "required": True}
+                "type": {"type": "string", "required": True}
             }
         },
         "connector": {
@@ -66,12 +68,13 @@ SCHEMA_1 = {
                 "name": {"type": "string",
                          "required": True,
                          "unique": True},
-                "type": {"type":"string",
+                "type": {"type": "string",
                          "required": True}
             }
         }
     }
 }
+
 
 class SchemaTest(unittest.TestCase):
 
@@ -92,7 +95,7 @@ class SchemaTest(unittest.TestCase):
         self.assertRaises(ValidationError, e.validate, 'foo')
         self.assertRaises(ValidationError, e.validate, 3)
 
-        self.assertEqual('["x"]', json.dumps([EnumValue('x',3)]))
+        self.assertEqual('["x"]', json.dumps([EnumValue('x', 3)]))
 
     def test_attribute_def(self):
         a = AttributeType('foo', 'string', default='FOO')
@@ -103,14 +106,14 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual('FOO', a.missing_value())
 
         a = AttributeType('foo', 'string', required=True)
-        self.assertRaises(ValidationError, a.missing_value) # Missing required value.
+        self.assertRaises(ValidationError, a.missing_value)  # Missing required value.
 
-        a = AttributeType('foo', 'string', value='FOO') # Fixed value
+        a = AttributeType('foo', 'string', value='FOO')  # Fixed value
         self.assertEqual('FOO', a.missing_value())
         self.assertEqual(a.validate('FOO'), 'FOO')
-        self.assertRaises(ValidationError, a.validate, 'XXX') # Bad fixed value
+        self.assertRaises(ValidationError, a.validate, 'XXX')  # Bad fixed value
 
-        self.assertRaises(ValidationError, AttributeType, 'foo', 'string', value='FOO', default='BAR') # Illegal
+        self.assertRaises(ValidationError, AttributeType, 'foo', 'string', value='FOO', default='BAR')  # Illegal
 
         a = AttributeType('foo', 'integer')
         self.assertEqual(3, a.validate(3))
@@ -123,34 +126,34 @@ class SchemaTest(unittest.TestCase):
         s = Schema()
 
         e = EntityType('MyEntity', s, attributes={
-            'foo': {'type':'string', 'default':'FOO'},
-            'req': {'type':'integer', 'required':True},
-            'e': {'type':['x', 'y']}})
+            'foo': {'type': 'string', 'default': 'FOO'},
+            'req': {'type': 'integer', 'required': True},
+            'e': {'type': ['x', 'y']}})
 
         e.init()
-        self.assertRaises(ValidationError, e.validate, {}) # Missing required 'req'
-        self.assertEqual(e.validate({'req':42}), {'foo': 'FOO', 'req': 42})
+        self.assertRaises(ValidationError, e.validate, {})  # Missing required 'req'
+        self.assertEqual(e.validate({'req': 42}), {'foo': 'FOO', 'req': 42})
 
     def test_schema_validate(self):
         s = Schema(**SCHEMA_1)
         # Duplicate unique attribute 'name'
-        m = [{'type': 'listener', 'name':'x'},
-             {'type': 'listener', 'name':'x'}]
+        m = [{'type': 'listener', 'name': 'x'},
+             {'type': 'listener', 'name': 'x'}]
         self.assertRaises(ValidationError, s.validate_all, m)
         # Duplicate singleton entity 'container'
-        m = [{'type': 'container', 'name':'x'},
-             {'type': 'container', 'name':'y'}]
+        m = [{'type': 'container', 'name': 'x'},
+             {'type': 'container', 'name': 'y'}]
         self.assertRaises(ValidationError, s.validate_all, m)
         # Valid model
-        m = [{'type': 'container', 'name':'x'},
-             {'type': 'listener', 'name':'y'}]
+        m = [{'type': 'container', 'name': 'x'},
+             {'type': 'listener', 'name': 'y'}]
         s.validate_all(m)
 
     def test_schema_entity(self):
         s = Schema(**SCHEMA_1)
         self.assertRaises(ValidationError, s.entity, {'type': 'nosuch'})
         self.assertRaises(ValidationError, s.entity, {'type': 'listener', 'nosuch': 'x'})
-        e = s.entity({'host':'foo', 'type': 'listener', 'name': 'listener-1'})
+        e = s.entity({'host': 'foo', 'type': 'listener', 'name': 'listener-1'})
         self.assertEqual(e.attributes, {'host': 'foo', 'name': 'listener-1', 'type': 'org.example.listener'})
         self.assertEqual(e['host'], 'foo')
         self.assertRaises(ValidationError, e.__setitem__, 'nosuch', 'x')
@@ -167,7 +170,9 @@ class SchemaTest(unittest.TestCase):
         try:
             e.nosuch = 'x'
             self.fail("Expected exception")
-        except: pass
+        except:
+            pass
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -18,11 +18,13 @@
  */
 
 #include "test_case.h"
+
+#include "qpid/dispatch/hash.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/router.h"
+
 #include <stdio.h>
 #include <string.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/router.h>
 
 #define FAIL_TEXT_SIZE 10000
 static char fail_text[FAIL_TEXT_SIZE];

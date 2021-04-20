@@ -101,11 +101,11 @@ Updating the documentation involves fetching the latest code from the upstream r
 
 . Update your local repo with the latest changes from the upstream repository:
 
-.. Check out the master branch locally.
+.. Check out the main branch locally.
 +
 [source,bash,options="nowrap"]
 ----
-$ git checkout master
+$ git checkout main
 ----
 
 .. Fetch the current files from the upstream repository.
@@ -115,18 +115,18 @@ $ git checkout master
 $ git fetch upstream
 ----
 
-.. Update your cloned master branch on your local machine with the current files from the upstream repository:
+.. Update your cloned main branch on your local machine with the current files from the upstream repository:
 +
 [source,bash,options="nowrap"]
 ----
-$ git rebase upstream/master
+$ git rebase upstream/main
 ----
 
 .. Update your fork in GitHub (`origin`) with the current files from the upstream repository.
 +
 [source,bash,options="nowrap"]
 ----
-$ git push origin master
+$ git push origin main
 ----
 
 . If there is not a JIRA for your documentation update, create one in the link:https://issues.apache.org/jira/projects/DISPATCH[Apache Dispatch JIRA project].
@@ -143,7 +143,7 @@ When you create the JIRA:
 --
 [source,bash,options="nowrap",subs="+quotes"]
 ----
-$ git checkout -b _<branch-name>_ upstream/master
+$ git checkout -b _<branch-name>_ upstream/main
 ----
 The branch name should include the ID of the JIRA for which you are creating the documentation update.
 --

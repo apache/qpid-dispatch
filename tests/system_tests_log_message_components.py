@@ -32,7 +32,6 @@ from proton.reactor import Container
 from qpid_dispatch_internal.compat import BINARY
 
 
-
 class RouterMessageLogTestBase(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
         p = self.popen(
@@ -49,6 +48,7 @@ class RouterMessageLogTestBase(TestCase):
         except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
+
 
 class RouterMessageLogTestAll(RouterMessageLogTestBase):
     """System tests to check log messages emitted by router"""
@@ -83,7 +83,7 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
         message_logs = [log for log in logs if log[0] == u'MESSAGE']
         self.assertTrue(message_logs)
         test_message = [log for log in message_logs if "message-id=\"123455\"" in log[2]]
-        self.assertTrue(2 == len(test_message), message_logs) # Sent and Received
+        self.assertTrue(2 == len(test_message), message_logs)  # Sent and Received
         self.assertIn('Received', test_message[0][2])
         self.assertIn('Sent', test_message[1][2])
         for log in test_message:
@@ -97,6 +97,7 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
             self.assertIn('app-properties={"app-property"=[10, 20, 30], "some-other"=:"O_one"}', log[2])
             self.assertIn('creation-time="2017-02-22', log[2])
             self.assertIn('10:23.883', log[2])
+
 
 class RouterMessageLogTestNone(RouterMessageLogTestBase):
     """System tests to check log messages emitted by router"""
@@ -132,6 +133,7 @@ class RouterMessageLogTestNone(RouterMessageLogTestBase):
                 everything_ok = False
 
         self.assertTrue(everything_ok)
+
 
 class RouterMessageLogTestSome(RouterMessageLogTestBase):
     """System tests to check log messages emitted by router"""
@@ -171,6 +173,7 @@ class RouterMessageLogTestSome(RouterMessageLogTestBase):
         test_message = [log for log in message_logs if
                         u'Sent Message{user-id=b"testuser", subject="test-subject", reply-to="hello_world"}' in log[2]]
         self.assertTrue(test_message, message_logs)
+
 
 class LogMessageTest(MessagingHandler):
     def __init__(self, address):

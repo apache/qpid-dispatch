@@ -19,20 +19,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <time.h>
-
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/atomic.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/log.h>
-#include <nghttp2/nghttp2.h>
-#include <qpid/dispatch/protocol_adaptor.h>
-
-#include "server_private.h"
 #include "adaptors/http_common.h"
+#include "server_private.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/log.h"
+#include "qpid/dispatch/protocol_adaptor.h"
+#include "qpid/dispatch/server.h"
+#include "qpid/dispatch/threading.h"
+
+#include <nghttp2/nghttp2.h>
+#include <time.h>
 
 size_t QD_HTTP2_BUFFER_SIZE = 16384;
 size_t NUM_QD_BUFFERS_IN_ONE_HTTP2_BUFFER = 32;
@@ -64,7 +64,6 @@ struct qdr_http2_session_data_t {
     nghttp2_session             *session;    // A pointer to the nghttp2s' session object
     qd_http2_stream_data_list_t  streams;    // A session can have many streams.
     qd_http2_buffer_list_t       buffs;      // Buffers for writing
-    bool                         max_buffs_in_pool;
 };
 
 struct qdr_http2_stream_data_t {
@@ -104,6 +103,7 @@ struct qdr_http2_stream_data_t {
     bool                     use_footer_properties;
     bool                     full_payload_handled; // applies to the sending side.
     bool                     out_msg_has_body;
+    bool                     out_msg_data_flag_eof;
     bool                     out_msg_has_footer;
     bool                     out_msg_send_complete; // we use this flag to save the send_complete flag because the delivery and message associated with this stream might have been freed.
     bool                     disp_updated;   // Has the disposition already been set on the out_dlv
@@ -139,6 +139,7 @@ struct qdr_http2_connection_t {
     nghttp2_data_provider     data_prd;
     qd_http2_buffer_list_t    granted_read_buffs; //buffers for reading
     time_t                    prev_ping; // Time the previous PING frame was sent on egress connection.
+    time_t                    last_pn_raw_conn_read;  // The last time a PN_RAW_CONNECTION_READ event was invoked with more than zero bytes on an egress connection.
 
     bool                      connection_established;
     bool                      grant_initial_buffers;

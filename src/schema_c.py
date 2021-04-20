@@ -29,7 +29,7 @@ import re
 from qpid_dispatch_internal.management.schema import EnumType
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 
-copyright="""/*
+copyright = """/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,14 +61,14 @@ class Generator(object):
         self.generate_enums()
 
     def header(self, name, text):
-        with open(name+'.h', 'w') as f:
-            f.write("#ifndef __%s_h__\n#define __%s_h__\n"%(name, name) + copyright + text + "\n#endif\n")
+        with open(name + '.h', 'w') as f:
+            f.write("#ifndef __%s_h__\n#define __%s_h__\n" % (name, name) + copyright + text + "\n#endif\n")
 
     def source(self, name, text):
-        with open(name+'.c', 'w') as f:
+        with open(name + '.c', 'w') as f:
             f.write(copyright + text)
 
-    def identifier(self, name): return re.sub(r'\W','_', name)
+    def identifier(self, name): return re.sub(r'\W', '_', name)
 
     def underscore(self, names): return '_'.join([self.identifier(name) for name in names])
 
@@ -96,7 +96,7 @@ class Generator(object):
 
         def defn(self):
             return "const char *%s[%s] = {\n" % (self.array, self.count) + \
-                ",\n".join('    "%s"'%(self.name(tag)) for tag in self.tags) + \
+                ",\n".join('    "%s"' % (self.name(tag)) for tag in self.tags) + \
                 "\n};\n\n"
 
     def generate_enums(self):
@@ -106,6 +106,7 @@ class Generator(object):
                  if isinstance(attribute.atype, EnumType)]
         self.header('schema_enum', '\n'.join(e.decl() for e in enums))
         self.source('schema_enum', '#include "schema_enum.h"\n\n' + '\n'.join(e.defn() for e in enums))
+
 
 if __name__ == '__main__':
     Generator()

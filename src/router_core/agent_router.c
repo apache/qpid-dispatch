@@ -20,8 +20,8 @@
 #include "agent_router.h"
 
 #include "config.h"
+
 #include <inttypes.h>
-#include <stdio.h>
 
 
 #define QDR_ROUTER_NAME                                0
@@ -246,7 +246,7 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
         break;
 
     case QDR_ROUTER_MEMORY_USAGE: {
-        uint32_t size = qd_router_memory_usage();
+        uint64_t size = qd_router_memory_usage();
         if (size)
             qd_compose_insert_ulong(body, size);
         else  // memory usage not available

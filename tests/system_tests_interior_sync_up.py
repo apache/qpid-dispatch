@@ -22,10 +22,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from time import sleep
-from threading import Timer
-
-from proton import Message, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, \
     MgmtMsgProxy, TestTimeout, PollTimeout
 from system_test import unittest
@@ -77,7 +73,6 @@ class RouterTest(TestCase):
         router('INT.A', 'interior')
         router('INT.B', 'interior',
                ('listener', {'role': 'inter-router', 'port': inter_router_port}))
-
 
     def test_interior_sync_up(self):
         test = InteriorSyncUpTest(self.routers[0].addresses[0], self.routers[1].addresses[0], self.routers[1].ports[1])
@@ -173,7 +168,7 @@ class InteriorSyncUpTest(MessagingHandler):
             self.probe_sender = self.container.create_sender(self.conn_a, '$management')
         elif event.sender == self.probe_sender:
             ##
-            ## Create listeners for an address per count
+            # Create listeners for an address per count
             ##
             self.add_receivers()
             self.last_action = "started slow creation of receivers"
@@ -186,7 +181,7 @@ class InteriorSyncUpTest(MessagingHandler):
 
     def on_message(self, event):
         if event.receiver == self.probe_receiver:
-            response = self.proxy.response(event.message);
+            response = self.proxy.response(event.message)
 
             if response.status_code < 200 or response.status_code > 299:
                 self.fail("Unexpected operation failure: (%d) %s" % (response.status_code, response.status_description))
@@ -198,7 +193,7 @@ class InteriorSyncUpTest(MessagingHandler):
                         self.fail("Found address on host-a when we didn't expect it - %s" % addr.name)
 
                 ##
-                ## Hook up the two routers to start the sync-up
+                # Hook up the two routers to start the sync-up
                 ##
                 self.probe_sender.send(self.proxy.create_connector("IR", port=self.inter_router_port, role="inter-router"))
                 self.expect      = "create-success"
@@ -206,7 +201,7 @@ class InteriorSyncUpTest(MessagingHandler):
 
             elif self.expect == "create-success":
                 ##
-                ## Start polling for the addresses on host_a
+                # Start polling for the addresses on host_a
                 ##
                 response  = self.proxy.response(event.message)
                 self.probe_sender.send(self.proxy.query_addresses())
@@ -226,12 +221,11 @@ class InteriorSyncUpTest(MessagingHandler):
                     self.fail(None)
                 else:
                     self.poll_timer = self.reactor.schedule(0.5, PollTimeout(self))
-                
 
     def run(self):
         container = Container(self)
         container.run()
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     unittest.main(main_module())

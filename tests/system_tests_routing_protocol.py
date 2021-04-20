@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from proton import Message, Timeout, symbol, int32
+from proton import Message, symbol, int32
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from system_test import unittest, TestTimeout
 from proton.handlers import MessagingHandler
@@ -61,7 +61,6 @@ class RouterTest(TestCase):
 
         cls.routers[0].wait_router_connected('B')
         cls.routers[1].wait_router_connected('A')
-
 
     def test_01_reject_higher_version_hello(self):
         test = RejectHigherVersionHelloTest(self.routers[0].addresses[3])
@@ -121,7 +120,7 @@ class RejectHigherVersionHelloTest(MessagingHandler):
 
             hello = Message(address='_local/qdhello',
                             properties={'opcode': 'HELLO'},
-                            body={'id':'TEST', 'pv':int32(2), 'area':'0', 'instance':100, 'seen':[rid]})
+                            body={'id': 'TEST', 'pv': int32(2), 'area': '0', 'instance': 100, 'seen': [rid]})
             dlv = self.sender.send(hello)
             dlv.settle()
 
@@ -159,7 +158,7 @@ class RejectHigherVersionMARTest(MessagingHandler):
         self.normal_conn = event.container.connect(self.normal_host)
 
         ##
-        ## Attach a mobile address to cause mobile_Seq to be bumped
+        # Attach a mobile address to cause mobile_Seq to be bumped
         ##
         self.mobile_receiver = event.container.create_receiver(self.normal_conn, "mobile_address")
 
@@ -181,9 +180,9 @@ class RejectHigherVersionMARTest(MessagingHandler):
         if opcode == 'HELLO':
             self.hello_count += 1
 
-            hello = Message(address='_local/qdhello', 
+            hello = Message(address='_local/qdhello',
                             properties={'opcode': 'HELLO'},
-                            body={'id':'TEST', 'pv':int32(1), 'area':'0', 'instance':100, 'seen':[rid]})
+                            body={'id': 'TEST', 'pv': int32(1), 'area': '0', 'instance': 100, 'seen': [rid]})
             dlv = self.sender.send(hello)
             dlv.settle()
 
@@ -194,7 +193,7 @@ class RejectHigherVersionMARTest(MessagingHandler):
 
             mar = Message(address='_topo/0/%s/qdrouter.ma' % rid,
                           properties={'opcode': 'MAR'},
-                          body={'id':'TEST', 'pv':int32(2), 'area':'0', 'have_seq':int32(0)})
+                          body={'id': 'TEST', 'pv': int32(2), 'area': '0', 'have_seq': int32(0)})
             dlv = self.sender.send(mar)
             dlv.settle()
             self.mar_count += 1

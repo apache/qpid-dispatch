@@ -26,6 +26,7 @@ from os import environ
 
 """Install public packages and scripts for Qpid Dispatch."""
 
+
 class BuildPy(build_py):
     """Extend standard build command, add generated modules from binary directory."""
 
@@ -39,7 +40,8 @@ class BuildPy(build_py):
     def get_outputs(self, **kwargs):
         return build_py.get_outputs(self, **kwargs) + [join(self.build_lib, m) for m in self.MODULES]
 
-options={}
+
+options = {}
 destdir = environ.get("DESTDIR")
 if destdir:
     options["install"] = {"root": destdir}

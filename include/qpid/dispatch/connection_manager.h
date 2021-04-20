@@ -23,8 +23,8 @@
  * Manage listeners and connectors.
  */
 
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/server.h>
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/server.h"
 
 typedef struct qd_connection_manager_t qd_connection_manager_t;
 typedef struct qd_config_ssl_profile_t qd_config_ssl_profile_t;

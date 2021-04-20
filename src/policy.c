@@ -17,24 +17,26 @@
  * under the License.
  */
 
+#include "python_private.h"
 #include "qpid/dispatch/python_embedded.h"
+
 #include "policy.h"
-#include "policy_internal.h"
-#include "parse_tree.h"
-#include <stdio.h>
-#include <string.h>
+
 #include "dispatch_private.h"
+#include "parse_tree.h"
+#include "policy_internal.h"
+
 #include "qpid/dispatch/container.h"
 #include "qpid/dispatch/server.h"
-#include <proton/message.h>
+
 #include <proton/condition.h>
 #include <proton/connection.h>
-#include <proton/transport.h>
-#include <proton/error.h>
 #include <proton/event.h>
-#include <inttypes.h>
-#include "python_private.h"
+#include <proton/transport.h>
 
+#include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
 
 //
 // The current statistics maintained globally through multiple

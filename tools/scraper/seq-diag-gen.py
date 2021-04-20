@@ -19,11 +19,7 @@
 # under the License.
 #
 
-from typing import List
 import optparse
-import fileinput
-import json
-import re
 import sys
 
 """
@@ -41,6 +37,7 @@ IDX_ROUTER_LINE = 5
 # Exactly how to predict how much 'space' asynchronous messages take is vague.
 MAGIC_SPACE_NUMBER = 1   # tested with entryspacing 0.1
 
+
 class log_record:
     def __init__(self, index, line):
         # print("DEBUG input line: ", index, line)
@@ -52,9 +49,9 @@ class log_record:
         self.direction = direction.strip()
         self.name_right = name_right.strip()
         self.performative = perf.strip()
-        self.router_line = router_line.strip() # diag
+        self.router_line = router_line.strip()  # diag
         self.peer_log_rec = None
-        dir_out = (direction == '->') # name_left -> name_right
+        dir_out = (direction == '->')  # name_left -> name_right
         self.sentby = name_left.strip() if dir_out else name_right.strip()
         self.rcvdby = name_right.strip() if dir_out else name_left.strip()
 
@@ -93,7 +90,7 @@ class log_record:
                 linediff = int(self.peer_log_rec.index) - int(self.index)
                 space = -MAGIC_SPACE_NUMBER * (linediff - 1)
                 if showtime:
-                    print("%s->(%s)%s:%s %s" %(self.sentby, str(linediff), self.rcvdby, self.time, self.performative))
+                    print("%s->(%s)%s:%s %s" % (self.sentby, str(linediff), self.rcvdby, self.time, self.performative))
                 else:
                     print("%s->(%s)%s:%s" % (self.sentby, str(linediff), self.rcvdby, self.performative))
                 print("space %s" % (str(space)))
@@ -140,8 +137,8 @@ def match_logline_pairs(log_recs):
     :param log_lines:
     :return:
     '''
-    for idx in range(len(log_recs)-2):
-        for idx2 in range(idx+1, len(log_recs)-1):
+    for idx in range(len(log_recs) - 2):
+        for idx2 in range(idx + 1, len(log_recs) - 1):
             if log_recs[idx].absorb_peer_rec(log_recs[idx2]):
                 break
 
@@ -166,7 +163,7 @@ if __name__ == "__main__":
             index = 0
             for logline in log_lines:
                 if len(logline) > 0:
-                    log_recs.append( log_record(index, logline) )
+                    log_recs.append(log_record(index, logline))
                     index += 1
             match_logline_pairs(log_recs)
 
@@ -191,7 +188,7 @@ if __name__ == "__main__":
 
             # diag dump
             #print("\nDiag dump")
-            #for log_rec in log_recs:
+            # for log_rec in log_recs:
             #    log_rec.diag_dump()
         else:
             print("Log file has fewer than two lines. I give up.")

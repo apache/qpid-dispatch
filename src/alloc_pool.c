@@ -18,19 +18,25 @@
  */
 
 #include <Python.h>
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/log.h>
-#include <memory.h>
-#include <inttypes.h>
-#include <stdio.h>
+
+#include "qpid/dispatch/alloc_pool.h"
+
+#include "config.h"
 #include "entity.h"
 #include "entity_cache.h"
-#include "config.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/log.h"
+
+#include <inttypes.h>
+#include <memory.h>
+#include <stdio.h>
 
 #ifdef QD_MEMORY_DEBUG
-#include <execinfo.h>
 #include "log_private.h"
+
+#include <execinfo.h>
 #endif
 
 const char *QD_ALLOCATOR_TYPE = "allocator";
@@ -77,14 +83,15 @@ DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 // Be a Good Citizen when adding unexpected leaks to this list and include the
 // corresponding JIRA in a comment!
 //
+// When nirvana is reached and we have fixed all of these then please remove
+// -DQD_MEMORY_DEBUG=1 from RuntimeChecks.cmake and .travis.yml when doing
+// RUNTIME=asan testing
+//
 #if QD_MEMORY_STATS
 static const char *leaking_types[] = {
     // DISPATCH-1679:
     "qd_timer_t", "qd_connector_t",
-
     "qd_hash_handle_t",       // DISPATCH-1696
-    "qdr_conn_identifier_t",  // DISPATCH-1697
-    "qdr_connection_ref_t",   // DISPATCH-1698
 
     // system_tests_edge_router (centos7)
     // DISPATCH-1699
@@ -102,6 +109,7 @@ static const char *leaking_types[] = {
     "qdr_field_t",
     "qdr_link_work_t",
     "qd_buffer_t",
+    "qd_bitmask_t",
 
     "qd_parsed_field_t",  // DISPATCH-1701
     "qdr_delivery_ref_t", // DISPATCH-1702
@@ -348,7 +356,8 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         DEQ_INSERT_TAIL(qtype->allocated, item);
         sys_mutex_unlock(desc->lock);
         item->header = PATTERN_FRONT;
-        *((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
+        const uint32_t pb = PATTERN_BACK;
+        memcpy((char*) &item[1] + desc->total_size, &pb, sizeof(pb));
         QD_MEMORY_FILL(&item[1], QD_MEMORY_INIT, desc->total_size);
 #endif
         return &item[1];
@@ -414,7 +423,8 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         DEQ_INSERT_TAIL(qtype->allocated, item);
         sys_mutex_unlock(desc->lock);
         item->header = PATTERN_FRONT;
-        *((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
+        const uint32_t pb = PATTERN_BACK;
+        memcpy((char*) &item[1] + desc->total_size, &pb, sizeof(pb));
         QD_MEMORY_FILL(&item[1], QD_MEMORY_INIT, desc->total_size);
 #endif
         return &item[1];
@@ -434,7 +444,9 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
     assert (desc->header  == PATTERN_FRONT);
     assert (desc->trailer == PATTERN_BACK);
     assert (item->header  == PATTERN_FRONT);
-    assert (*((uint32_t*) (p + desc->total_size)) == PATTERN_BACK);
+    const uint32_t pb = PATTERN_BACK;
+    (void)pb;  // prevent unused warning
+    assert (memcmp(p + desc->total_size, &pb, sizeof(pb)) == 0);
     assert (item->desc == desc);  // Check for double-free
     qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
     sys_mutex_lock(desc->lock);
@@ -503,6 +515,10 @@ uint32_t qd_alloc_sequence(void *p)
         return 0;
 
     qd_alloc_item_t *item = ((qd_alloc_item_t*) p) - 1;
+#ifdef QD_MEMORY_DEBUG
+    // ensure p actually points to an alloc pool item
+    assert(item->header == PATTERN_FRONT);
+#endif
     return item->sequence;
 }
 

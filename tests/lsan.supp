@@ -1,14 +1,37 @@
 # Suppression file for memory leaks
 # found by AddressSanitizer (ASAN)
 #
-leak:_flush_send_queue_CT
-leak:qd_dispatch_configure_connector
-leak:parse_failover_property_list
-leak:load_server_config
-leak:qd_message_receive
-leak:qd_policy_c_counts_alloc
-leak:qd_policy_open_fetch_settings
-leak:qdr_error_description
+
+# to be triaged; pretty much all tests
+leak:^IoAdapter_init$
+
+# to be triaged; pretty much all tests
+leak:^load_server_config$
+leak:^qd_dispatch_configure_connector$
+
+# to be triaged; system_tests_autolinks
+leak:^qdr_error_description$
+
+# to be triaged; system_tests_one_router, system_tests_policy
+leak:^qd_policy_open_fetch_settings$
+
+# to be triaged; system_tests_handle_failover
+leak:^parse_failover_property_list$
+
+# to be triaged; system_tests_policy, system_tests_policy_oversize_basic
+leak:^qd_policy_c_counts_alloc$
+
+# to be triaged; system_tests_http
+leak:^callback_healthz$
+leak:^callback_metrics$
+
+# to be triaged; system_tests_http1_adaptor
+leak:^pn_condition$
+leak:^pn_raw_connection$
+leak:^pgetaddrinfo$
+
+# to be triaged; system_tests_link_routes
+leak:^pni_init_default_logger$
 
 # DISPATCH-1844 - shutdown leak
 leak:sys_mutex
@@ -23,15 +46,52 @@ leak:_ctypes_alloc_format_string
 leak:__strdup
 
 ####
-#### Miscellaneous 3rd party libraries, test code, etc:
+#### Miscellaneous 3rd party libraries:
 ####
 
-leak:*libpython*
-leak:*libwebsockets*
-leak:*python2*
+### Python
 
-# We should be able to uncomment these once all known dispatch leaks have been fixed
-leak:*libqpid-proton*
+# these Python leaks happen even after simple Py_Initialize(); Py_Finalize();
+#  https://bugs.python.org/issue1635741
+leak:^_PyObject_Realloc
+leak:^PyObject_Malloc$
+leak:^PyThread_allocate_lock$
 
-# Ignore test code
-leak:run_unit_tests.c
+# the PyMalloc mechanism is incompatible with Valgrind, it must be disabled or reported "leaks" must be suppressed
+#  https://pythonextensionpatterns.readthedocs.io/en/latest/debugging/debug_python.html#debug-version-of-python-memory-alloc-label
+leak:^PyMem_Malloc$
+leak:^PyMem_Calloc$
+leak:^_PyObject_GC_Resize$
+# Python uses these alloc functions if you define PYTHONDEVMODE=1
+leak:^_PyMem_DebugRawAlloc$
+leak:^_PyMem_DebugRawRealloc$
+# All the rest
+leak:^list_append$
+leak:^list_resize$
+leak:^_PyBytes_Resize$
+leak:^resize_compact$
+leak:^unicode_resize$
+# Python 2.7
+leak:^PyString_FromStringAndSize$
+leak:^PyString_FromString$
+leak:^PyObject_Realloc$
+leak:^_PyObject_GC_Malloc$
+leak:^_PyString_Resize$
+leak:^PyUnicodeUCS4_FromUnicode$
+leak:^PyList_Append$
+leak:^PyList_New$
+
+### Qpid Proton
+
+# Proton suppressions taken from Proton's lsan.supp
+#  this appears in system_tests_open_properties:
+leak:^pni_data_grow$
+leak:^pn_buffer$
+leak:^pn_buffer_ensure$
+#  this appears in system_tests_http1_adaptor:
+leak:^pn_string_grow$
+leak:^pn_object_new$
+leak:^pn_list$
+leak:^pni_record_create$
+
+### CMake will append .so 3rd party suppressions here, unless disabled:

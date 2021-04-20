@@ -17,17 +17,19 @@
  * under the License.
  */
 
-#include <stdio.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/router.h>
-#include <qpid/dispatch/router_core.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/alloc.h>
-#include "router_core_private.h"
-#include "dispatch_private.h"
 #include "agent_link.h"
+#include "dispatch_private.h"
+#include "router_core_private.h"
+
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/parse.h"
+#include "qpid/dispatch/router.h"
+#include "qpid/dispatch/router_core.h"
+
+#include <stdio.h>
 
 const char *ENTITY = "entityType";
 const char *TYPE = "type";

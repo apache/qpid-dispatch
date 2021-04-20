@@ -18,14 +18,12 @@
  */
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <inttypes.h>
-#include "test_case.h"
-#include <qpid/dispatch.h>
-#include <qpid/dispatch/failoverlist.h>
+#include "qpid/dispatch/failoverlist.h"
 
+#include "test_case.h"
+
+#include <stdio.h>
+#include <string.h>
 
 static char *test_failover_list_empty(void *unused)
 {

@@ -17,14 +17,17 @@
  * under the License.
  */
 
-#include "test_case.h"
-#include <stdio.h>
-#include <string.h>
 #include "message_private.h"
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/amqp.h>
+#include "test_case.h"
+
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/iterator.h"
+
 #include <proton/message.h>
 #include <proton/raw_connection.h>
+
+#include <stdio.h>
+#include <string.h>
 
 #define FLAT_BUF_SIZE (100000)
 static unsigned char buffer[FLAT_BUF_SIZE];
@@ -738,7 +741,7 @@ static void stream_data_generate_message(qd_message_t *msg, char *s_chunk_size, 
         // the buffers in 'field' are inserted into message 'msg'.
         qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
         qd_compose_insert_binary_buffers(field, &mule_content->buffers);
-        qd_message_extend(msg, field);
+        qd_message_extend(msg, field, 0);
 
         // Clean up temporary resources
         free(buf2);
@@ -979,10 +982,17 @@ static char *test_check_stream_data_append(void * context)
     // snapshot the message buffer count to use as a baseline
     const size_t base_bufct = DEQ_SIZE(MSG_CONTENT(msg)->buffers);
 
-    int depth = qd_message_stream_data_append(msg, &bin_data);
+    bool blocked;
+    int depth = qd_message_stream_data_append(msg, &bin_data, &blocked);
     if (depth <= body_bufct) {
         // expected to add extra buffer(s) for meta-data
         result = "append length is incorrect";
+        goto exit;
+    }
+
+    // expected that the append has triggered Q2 blocking:
+    if (!blocked) {
+        result = "expected Q2 block event did not occur!";
         goto exit;
     }
 
@@ -994,7 +1004,7 @@ static char *test_check_stream_data_append(void * context)
     qd_compose_insert_symbol(field, "Key2");
     qd_compose_insert_string(field, "Value2");
     qd_compose_end_map(field);
-    qd_message_extend(msg, field);
+    qd_message_extend(msg, field, 0);
     qd_compose_free(field);
 
     qd_message_set_receive_complete(msg);
@@ -1123,7 +1133,7 @@ static char *test_check_stream_data_fanout(void *context)
     memset(buffer, '5', 1001);
     qd_compose_insert_binary(field, buffer, 5);
 
-    qd_message_extend(in_msg, field);
+    qd_message_extend(in_msg, field, 0);
     qd_compose_free(field);
 
     qd_message_set_receive_complete(in_msg);
@@ -1232,6 +1242,7 @@ static char *test_check_stream_data_footer(void *context)
     const size_t base_bufct = DEQ_SIZE(MSG_CONTENT(in_msg)->buffers);
 
     // Append a footer
+    bool q2_blocked;
     field = qd_compose(QD_PERFORMATIVE_FOOTER, 0);
     qd_compose_start_map(field);
     qd_compose_insert_symbol(field, "Key1");
@@ -1239,8 +1250,15 @@ static char *test_check_stream_data_footer(void *context)
     qd_compose_insert_symbol(field, "Key2");
     qd_compose_insert_string(field, "Value2");
     qd_compose_end_map(field);
-    qd_message_extend(in_msg, field);
+    qd_message_extend(in_msg, field, &q2_blocked);
     qd_compose_free(field);
+
+    // this small message should not have triggered Q2
+    assert(DEQ_SIZE(MSG_CONTENT(in_msg)->buffers) < QD_QLIMIT_Q2_UPPER);
+    if (q2_blocked) {
+        result = "Unexpected Q2 block on message extend";
+        goto exit;
+    }
 
     qd_message_set_receive_complete(in_msg);
 

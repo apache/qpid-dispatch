@@ -24,25 +24,16 @@ from __future__ import print_function
 
 import os
 import errno
-import re
 import time
 import unittest
-from subprocess import PIPE
 import subprocess
+from subprocess import PIPE
 from system_test import main_module, SkipIfNeeded, TestCase
 from system_test import Qdrouterd, TIMEOUT, AsyncTestSender, AsyncTestReceiver
-try:
-    import queue as Queue   # 3.x
-except ImportError:
-    import Queue as Queue   # 2.7
-
-from threading import Thread
-from threading import Event
-import uuid
 
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactor import Container
+
 
 class ConsolePreReq(object):
     @staticmethod
@@ -64,6 +55,7 @@ class ConsolePreReq(object):
             return not found_npm
         except OSError:
             return True
+
 
 class ConsoleTest(TestCase):
     """Run npm console tests"""
@@ -100,7 +92,7 @@ class ConsoleTest(TestCase):
 
         router('B', 'interior',
                [('connector', {'name': 'connectorToA', 'role': 'inter-router',
-                    'port': interrouter_port}),
+                               'port': interrouter_port}),
                 ('listener', {'role': 'normal', 'port': cls.receiver_port})])
         cls.INT_B = cls.routers[1]
         cls.INT_B.listener = cls.INT_B.addresses[0]
@@ -117,13 +109,13 @@ class ConsoleTest(TestCase):
         pret = 0
 
         out = ''
-        prg = ['npm',  'test', '--', '--watchAll=false']
+        prg = ['npm', 'test', '--', '--watchAll=false']
 
-        p = self.popen(prg, 
-            cwd=os.path.join(os.environ.get('BUILD_DIR'), 'console'),
-            env=dict(os.environ, TEST_PORT="%d" % self.http_port),
-            stdout=PIPE, 
-            expect=None)
+        p = self.popen(prg,
+                       cwd=os.path.join(os.environ.get('BUILD_DIR'), 'console'),
+                       env=dict(os.environ, TEST_PORT="%d" % self.http_port),
+                       stdout=PIPE,
+                       expect=None)
         out = p.communicate()[0]
         pret = p.returncode
 
@@ -145,6 +137,7 @@ class ConsoleTest(TestCase):
     @SkipIfNeeded(ConsolePreReq.should_skip(), 'Test skipped: npm command not found')
     def test_console(self):
         self.run_console_test()
+
 
 class AsyncStopableSender(AsyncTestSender):
     def __init__(self, hostport, address):
@@ -172,6 +165,8 @@ class AsyncStopableSender(AsyncTestSender):
             raise Exception("AsyncStopableSender did not exit")
 
 # Based on gsim's slow_recv.py
+
+
 class TimedFlow(MessagingHandler):
     def __init__(self, receiver, credit):
         super(TimedFlow, self).__init__()
@@ -180,6 +175,7 @@ class TimedFlow(MessagingHandler):
 
     def on_timer_task(self, event):
         self.receiver.flow(self.credit)
+
 
 class AsyncSlowReceiver(AsyncTestReceiver):
     def __init__(self, hostport, target):
@@ -200,9 +196,10 @@ class AsyncSlowReceiver(AsyncTestReceiver):
             self.request_batch(event)
 
     def on_message(self, event):
-        print (event.message.body)
+        print(event.message.body)
         if self.check_empty(event.receiver):
             self.request_batch(event)
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

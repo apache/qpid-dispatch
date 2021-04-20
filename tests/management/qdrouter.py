@@ -17,14 +17,14 @@
 # under the License
 #
 
-#pylint: disable=wildcard-import,unused-wildcard-import,missing-docstring,too-many-public-methods
+# pylint: disable=wildcard-import,unused-wildcard-import,missing-docstring,too-many-public-methods
 
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest, sys
+import unittest
 from qpid_dispatch_internal.management.config import Config
 
 # Dash-separated configuration file
@@ -80,6 +80,7 @@ listener {
     port: 4567
 }
 """
+
 
 class QdrouterTest(unittest.TestCase):
     """Tests for qpid_dispatch_internal.config.qdrouter"""

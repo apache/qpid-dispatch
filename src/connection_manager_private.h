@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include <qpid/dispatch/server.h>
+#include "qpid/dispatch/server.h"
 
 /**
  * @file

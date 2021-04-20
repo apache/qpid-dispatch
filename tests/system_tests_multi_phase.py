@@ -22,14 +22,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from time import sleep
-from threading import Event
-from threading import Timer
-
 from proton import Message, symbol
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, unittest, TestTimeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
 
 class AddrTimer(object):
     def __init__(self, parent):
@@ -79,7 +76,6 @@ class RouterTest(TestCase):
 
         cls.routers[0].wait_router_connected('INT.B')
         cls.routers[1].wait_router_connected('INT.A')
-
 
     def test_01_waypoint_same_interior(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -206,8 +202,8 @@ class RouterTest(TestCase):
                                   self.routers[0].addresses[0],
                                   self.routers[1].addresses[0],
                                   self.routers[2].addresses[0]
-                              ],
-                              'multi.15')
+        ],
+            'multi.15')
         test.run()
         self.assertEqual(None, test.error)
 
@@ -224,8 +220,8 @@ class RouterTest(TestCase):
                                   self.routers[5].addresses[0],
                                   self.routers[3].addresses[0],
                                   self.routers[1].addresses[0]
-                              ],
-                              'multi.16')
+        ],
+            'multi.16')
         test.run()
         self.assertEqual(None, test.error)
 
@@ -242,8 +238,8 @@ class RouterTest(TestCase):
                                   self.routers[0].addresses[0],
                                   self.routers[1].addresses[0],
                                   self.routers[2].addresses[0]
-                              ],
-                              'multi.17')
+        ],
+            'multi.17')
         test.run()
         self.assertEqual(None, test.error)
 
@@ -326,7 +322,7 @@ class MultiPhaseTest(MessagingHandler):
         self.error          = None
         self.n_tx           = 0
         self.n_rx           = 0
-        self.n_thru         = [0,0,0,0,0,0,0,0,0]
+        self.n_thru         = [0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     def timeout(self):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_thru=%r" % (self.n_tx, self.n_rx, self.n_thru)
@@ -388,5 +384,5 @@ class MultiPhaseTest(MessagingHandler):
         Container(self).run()
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     unittest.main(main_module())

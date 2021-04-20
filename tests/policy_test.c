@@ -17,12 +17,14 @@
  * under the License.
  */
 
+#include "policy.h"
+
+#include "parse_tree.h"
+#include "policy_internal.h"
 #include "test_case.h"
+
 #include <stdio.h>
 #include <string.h>
-#include "policy.h"
-#include "policy_internal.h"
-#include "parse_tree.h"
 
 static char *test_link_name_lookup(void *context)
 {

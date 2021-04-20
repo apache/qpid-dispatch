@@ -17,13 +17,14 @@
  * under the License.
  */
 
-#include <qpid/dispatch/proton_utils.h>
-#include <string.h>
-#include <inttypes.h>
-#include <time.h>
-#include <ctype.h>
-#include <stdio.h>
+#include "qpid/dispatch/proton_utils.h"
+
 #include <assert.h>
+#include <ctype.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 char *qdpn_data_as_string(pn_data_t *data)
 {

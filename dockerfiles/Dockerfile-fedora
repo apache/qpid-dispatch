@@ -29,7 +29,7 @@ FROM fedora:latest
 
 MAINTAINER "dev@qpid.apache.org"
 
-# Install required packages. Some in this list are from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/master/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/master/README)
+# Install required packages. Some in this list are from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/main/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/main/README)
 RUN dnf -y install gcc gcc-c++ cmake openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig java-1.8.0-openjdk-devel git make valgrind emacs libwebsockets-devel python-devel libnghttp2-devel curl
 
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py

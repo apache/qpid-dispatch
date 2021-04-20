@@ -21,9 +21,9 @@
 // API for interacting with the core address lookup server
 //
 
-#include <qpid/dispatch/address_lookup_server.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/parse.h>
+#include "qpid/dispatch/address_lookup_server.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/parse.h"
 
 /* create the message application properties and body for the link route lookup
  * request message

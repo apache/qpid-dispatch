@@ -17,9 +17,9 @@
  * under the License.
  */
 
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch.h>
-#include <qpid/dispatch/buffer.h>
+#include "qpid/dispatch.h"
+#include "qpid/dispatch/buffer.h"
+
 #include <stdio.h>
 
 int tool_tests(void);

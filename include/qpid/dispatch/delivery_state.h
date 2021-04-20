@@ -20,6 +20,7 @@
  */
 
 #include <stdbool.h>
+#include <inttypes.h>
 
 /**
  * AMQP 1.0 defines a delivery-state type property.  Delivery-state is passed
@@ -31,6 +32,10 @@
  */
 
 typedef struct {
+
+    //RECEIVED - see section 3.4.1
+    uint32_t  section_number;
+    uint64_t  section_offset;
 
     // REJECTED - see section 3.4.3
     struct qdr_error_t *error;

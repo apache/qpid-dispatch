@@ -18,8 +18,9 @@
  */
 
 #include "python_private.h"
-#include "http1_private.h"
+
 #include "adaptors/adaptor_utils.h"
+#include "http1_private.h"
 
 #include <proton/listener.h>
 #include <proton/proactor.h>
@@ -106,7 +107,7 @@ static int _client_rx_response_cb(h1_codec_request_state_t *lib_rs,
                                   uint32_t version_minor);
 static int _client_rx_header_cb(h1_codec_request_state_t *lib_rs, const char *key, const char *value);
 static int _client_rx_headers_done_cb(h1_codec_request_state_t *lib_rs, bool has_body);
-static int _client_rx_body_cb(h1_codec_request_state_t *lib_rs, qd_buffer_list_t *body, uintmax_t len, bool more);
+static int _client_rx_body_cb(h1_codec_request_state_t *lib_rs, qd_buffer_list_t *body, size_t len, bool more);
 static void _client_rx_done_cb(h1_codec_request_state_t *lib_rs);
 static void _client_request_complete_cb(h1_codec_request_state_t *lib_rs, bool cancelled);
 static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, void *context);
@@ -133,6 +134,7 @@ static qdr_http1_connection_t *_create_client_connection(qd_http_listener_t *li)
     hconn->adaptor = qdr_http1_adaptor;
     hconn->handler_context.handler = &_handle_connection_events;
     hconn->handler_context.context = hconn;
+    sys_atomic_init(&hconn->q2_restart, 0);
 
     hconn->client.next_msg_id = 1;
 
@@ -364,6 +366,36 @@ static void _setup_client_connection(qdr_http1_connection_t *hconn)
 }
 
 
+// handle PN_RAW_CONNECTION_READ
+static int _handle_conn_read_event(qdr_http1_connection_t *hconn)
+{
+    int error = 0;
+    qd_buffer_list_t blist;
+    uintmax_t length;
+    qda_raw_conn_get_read_buffers(hconn->raw_conn, &blist, &length);
+    if (length) {
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+               "[C%"PRIu64"][L%"PRIu64"] Read %"PRIuMAX" bytes from client (%zu buffers)",
+               hconn->conn_id, hconn->in_link_id, length, DEQ_SIZE(blist));
+        hconn->in_http1_octets += length;
+        error = h1_codec_connection_rx_data(hconn->http_conn, &blist, length);
+    }
+    return error;
+}
+
+
+// handle PN_RAW_CONNECTION_NEED_READ_BUFFERS
+static void _handle_conn_need_read_buffers(qdr_http1_connection_t *hconn)
+{
+    // @TODO(kgiusti): backpressure if no credit
+    if (hconn->client.reply_to_addr || hconn->cfg.event_channel /* && hconn->in_link_credit > 0 */) {
+        int granted = qda_raw_conn_grant_read_buffers(hconn->raw_conn);
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %d read buffers granted",
+               hconn->conn_id, granted);
+    }
+}
+
+
 // Proton Connection Event Handler
 //
 static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, void *context)
@@ -424,31 +456,34 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need read buffers", hconn->conn_id);
-        // @TODO(kgiusti): backpressure if no credit
-        if (hconn->client.reply_to_addr || hconn->cfg.event_channel /* && hconn->in_link_credit > 0 */) {
-            int granted = qda_raw_conn_grant_read_buffers(hconn->raw_conn);
-            qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] %d read buffers granted",
-                   hconn->conn_id, granted);
-        }
+        _handle_conn_need_read_buffers(hconn);
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
+        int error = 0;
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Wake-up", hconn->conn_id);
+
+        if (sys_atomic_set(&hconn->q2_restart, 0)) {
+            // note: unit tests grep for this log!
+            qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] client link unblocked from Q2 limit", hconn->conn_id);
+            hconn->q2_blocked = false;
+            error = _handle_conn_read_event(hconn);  // restart receiving
+            _handle_conn_need_read_buffers(hconn);
+        }
+
         while (qdr_connection_process(hconn->qdr_conn)) {}
+
+        if (error)
+            qdr_http1_close_connection(hconn, "Incoming request message failed to parse");
+
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Processing done", hconn->conn_id);
         break;
     }
     case PN_RAW_CONNECTION_READ: {
-        qd_buffer_list_t blist;
-        uintmax_t length;
-        qda_raw_conn_get_read_buffers(hconn->raw_conn, &blist, &length);
-        if (length) {
-            qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Read %"PRIuMAX" bytes from client",
-                   hconn->conn_id, hconn->in_link_id, length);
-            hconn->in_http1_octets += length;
-            int error = h1_codec_connection_rx_data(hconn->http_conn, &blist, length);
+        if (!hconn->q2_blocked) {
+            int error = _handle_conn_read_event(hconn);
             if (error)
-                qdr_http1_close_connection(hconn, "Incoming request message failed to parse");
+                qdr_http1_close_connection(hconn, "Incoming response message failed to parse");
         }
         break;
     }
@@ -581,7 +616,7 @@ static void _client_tx_buffers_cb(h1_codec_request_state_t *hrs, qd_buffer_list_
     }
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%"PRIu64"][L%"PRIu64"] %u request octets encoded",
+           "[C%"PRIu64"][L%"PRIu64"] %u response octets encoded",
            hconn->conn_id, hconn->out_link_id, len);
 
 
@@ -825,6 +860,13 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     qd_compose_free(hreq->request_props);
     hreq->request_props = 0;
 
+    // future-proof: ensure the message headers have not caused Q2
+    // blocking.  We only check for Q2 events while adding body data.
+    assert(!qd_message_is_Q2_blocked(hreq->request_msg));
+
+    qd_alloc_safe_ptr_t hconn_sp = QD_SAFE_PTR_INIT(hconn);
+    qd_message_set_q2_unblocked_handler(hreq->request_msg, qdr_http1_q2_unblocked_handler, hconn_sp);
+
     // Use up one credit to obtain a delivery and forward to core.  If no
     // credit is available the request is stalled until the core grants more
     // flow.
@@ -848,6 +890,7 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
 static int _client_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, size_t len,
                               bool more)
 {
+    bool               q2_blocked = false;
     _client_request_t       *hreq = (_client_request_t*) h1_codec_request_state_get_context(hrs);
     qdr_http1_connection_t *hconn = hreq->base.hconn;
     if (hconn->cfg.event_channel && strcasecmp(h1_codec_request_state_method(hrs), POST_METHOD) != 0) {
@@ -860,7 +903,12 @@ static int _client_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
            "[C%"PRIu64"][L%"PRIu64"] HTTP request body received len=%zu.",
            hconn->conn_id, hconn->in_link_id, len);
 
-    qd_message_stream_data_append(msg, body);
+    qd_message_stream_data_append(msg, body, &q2_blocked);
+    hconn->q2_blocked = hconn->q2_blocked || q2_blocked;
+    if (q2_blocked) {
+        // note: unit tests grep for this log!
+        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] client link blocked on Q2 limit", hconn->conn_id);
+    }
 
     //
     // Notify the router that more data is ready to be pushed out on the delivery
@@ -1634,6 +1682,10 @@ static void _write_pending_response(_client_request_t *hreq)
 static void _client_request_free(_client_request_t *hreq)
 {
     if (hreq) {
+        // deactivate the Q2 callback
+        qd_message_t *msg = hreq->request_dlv ? qdr_delivery_message(hreq->request_dlv) : hreq->request_msg;
+        qd_message_clear_q2_unblocked_handler(msg);
+
         qdr_http1_request_base_cleanup(&hreq->base);
         qd_message_free(hreq->request_msg);
         if (hreq->request_dlv) {

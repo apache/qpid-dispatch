@@ -20,6 +20,7 @@
 #include "adaptor_utils.h"
 
 #include <proton/netaddr.h>
+
 #include <string.h>
 
 

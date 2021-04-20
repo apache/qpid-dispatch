@@ -23,7 +23,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import json
-import sys
 
 from system_test import unittest
 
@@ -33,6 +32,7 @@ from qpid_dispatch_internal.policy.policy_util import PolicyError
 from qpid_dispatch_internal.policy.policy_util import PolicyAppConnectionMgr
 from qpid_dispatch_internal.policy.policy_local import PolicyLocal
 from system_test import TestCase, main_module
+
 
 class PolicyHostAddrTest(TestCase):
 
@@ -49,11 +49,11 @@ class PolicyHostAddrTest(TestCase):
         # check that the internal struct version matches, too
         ha = HostStruct(tString)
         if expectOk:
-            self.assertTrue( tHostAddr.match_str(tString) )
-            self.assertTrue( tHostAddr.match_bin(ha) )
+            self.assertTrue(tHostAddr.match_str(tString))
+            self.assertTrue(tHostAddr.match_bin(ha))
         else:
-            self.assertFalse( tHostAddr.match_str(tString) )
-            self.assertFalse( tHostAddr.match_bin(ha) )
+            self.assertFalse(tHostAddr.match_str(tString))
+            self.assertFalse(tHostAddr.match_bin(ha))
 
     def test_policy_hostaddr_ipv4(self):
         # Create simple host and range
@@ -90,30 +90,30 @@ class PolicyHostAddrTest(TestCase):
 
     def test_policy_hostaddr_ipv4_wildcard(self):
         aaa = HostAddr("*")
-        self.check_hostaddr_match(aaa,"0.0.0.0")
-        self.check_hostaddr_match(aaa,"127.0.0.1")
-        self.check_hostaddr_match(aaa,"255.254.253.252")
-
+        self.check_hostaddr_match(aaa, "0.0.0.0")
+        self.check_hostaddr_match(aaa, "127.0.0.1")
+        self.check_hostaddr_match(aaa, "255.254.253.252")
 
     def test_policy_hostaddr_ipv6_wildcard(self):
         if not is_ipv6_enabled():
             self.skipTest("System IPv6 support is not available")
         aaa = HostAddr("*")
-        self.check_hostaddr_match(aaa,"::0")
-        self.check_hostaddr_match(aaa,"::1")
-        self.check_hostaddr_match(aaa,"ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+        self.check_hostaddr_match(aaa, "::0")
+        self.check_hostaddr_match(aaa, "::1")
+        self.check_hostaddr_match(aaa, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
 
     def test_policy_malformed_hostaddr_ipv4(self):
-        self.expect_deny( "0.0.0.0.0", "Name or service not known")
-        self.expect_deny( "1.1.1.1,2.2.2.2,3.3.3.3", "arg count")
-        self.expect_deny( "9.9.9.9,8.8.8.8", "a > b")
+        self.expect_deny("0.0.0.0.0", "Name or service not known")
+        self.expect_deny("1.1.1.1,2.2.2.2,3.3.3.3", "arg count")
+        self.expect_deny("9.9.9.9,8.8.8.8", "a > b")
 
     def test_policy_malformed_hostaddr_ipv6(self):
         if not is_ipv6_enabled():
             self.skipTest("System IPv6 support is not available")
-        self.expect_deny( "1::2::3", "Name or service not known")
-        self.expect_deny( "::1,::2,::3", "arg count")
-        self.expect_deny( "0:ff:0,0:fe:ffff:ffff::0", "a > b")
+        self.expect_deny("1::2::3", "Name or service not known")
+        self.expect_deny("::1,::2,::3", "arg count")
+        self.expect_deny("0:ff:0,0:fe:ffff:ffff::0", "a > b")
+
 
 class QpidDispatch(object):
     def qd_dispatch_policy_c_counts_alloc(self):
@@ -122,12 +122,14 @@ class QpidDispatch(object):
     def qd_dispatch_policy_c_counts_refresh(self, cstats, entitymap):
         pass
 
+
 class MockAgent(object):
     def __init__(self):
         self.qd = QpidDispatch()
 
     def add_implementation(self, entity, cfg_obj_name):
         pass
+
 
 class MockPolicyManager(object):
     def __init__(self):
@@ -156,6 +158,7 @@ class MockPolicyManager(object):
 
     def get_agent(self):
         return self.agent
+
 
 class PolicyFile(TestCase):
 
@@ -191,12 +194,12 @@ class PolicyFile(TestCase):
 
     def test_policy1_test_zeke_bad_app(self):
         self.assertTrue(
-            PolicyFile.policy.lookup_user('zeke', '192.168.100.5','galleria', "connid", 5) == '')
+            PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'galleria', "connid", 5) == '')
 
     def test_policy1_test_users_same_permissions(self):
         zname = PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33333', 6)
         yname = PolicyFile.policy.lookup_user('ynot', '10.48.255.254', 'photoserver', '192.168.100.5:33334', 7)
-        self.assertTrue( zname == yname )
+        self.assertTrue(zname == yname)
 
     def test_policy1_lookup_unknown_application(self):
         upolicy = {}
@@ -209,6 +212,7 @@ class PolicyFile(TestCase):
         self.assertFalse(
             PolicyFile.policy.lookup_settings('photoserver', 'unknown', upolicy)
         )
+
 
 class PolicyFileApplicationFallback(TestCase):
     manager = MockPolicyManager()
@@ -245,6 +249,7 @@ class PolicyFileApplicationFallback(TestCase):
         self.policy.set_default_vhost('')
         self.assertTrue(
             self.policy.lookup_user('zeke', '192.168.100.5', 'galleria', "connid", 5) == '')
+
 
 class PolicyAppConnectionMgrTests(TestCase):
 
@@ -350,7 +355,7 @@ class PolicyAliases(TestCase):
 
     #
     def test_AliasesRenameOwnVhost(self):
-        config_str="""
+        config_str = """
 [{
   "hostname": "$default",
   "allowUnknownUser": true,
@@ -379,7 +384,7 @@ class PolicyAliases(TestCase):
 
     #
     def test_SameAliasOnTwoVhosts(self):
-        config_str="""
+        config_str = """
 [{
   "hostname": "$default",
   "aliases": "a,b,c,d,e",
@@ -412,7 +417,7 @@ class PolicyAliases(TestCase):
 
     #
     def test_AliasConflictsWithVhost(self):
-        config_str="""
+        config_str = """
 [{
   "hostname": "$default",
   "groups": {

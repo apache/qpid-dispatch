@@ -22,11 +22,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import os, json
-from subprocess import PIPE, Popen, STDOUT
+import os
+from subprocess import PIPE, Popen
 from system_test import TestCase, Qdrouterd, main_module, DIR, Process, SkipIfNeeded
 from system_test import unittest
-from proton import Array, Data, Message, SASL, symbol, UNDESCRIBED
+from proton import Message, SASL
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
@@ -57,7 +57,6 @@ sasldb_path: users.sasldb
 mech_list: SCRAM-SHA-1 PLAIN
 """)
 
-
     @classmethod
     def setUpClass(cls):
         """
@@ -71,21 +70,22 @@ mech_list: SCRAM-SHA-1 PLAIN
         cls.createSaslFiles()
 
         cls.auth_service_port = cls.tester.get_port()
-        cls.tester.popen(['/usr/bin/env', '${PY_STRING}', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'), '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
+        cls.tester.popen(['/usr/bin/env', '${PY_STRING}', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'),
+                          '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
         policy_config_path = os.path.join(DIR, 'policy-authz')
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
-                     ('sslProfile', {'name':'myssl'}),
-                     ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'}),
-                     # authService attribute has been deprecated. We are using it here to make sure that we are
-                     # still backward compatible.
-                     ('authServicePlugin', {'name':'myauth', 'sslProfile':'myssl', 'port': cls.auth_service_port, 'host': '127.0.0.1'}),
-                     ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin':'myauth', 'saslMechanisms':'SCRAM-SHA-1 PLAIN'}),
-                     ('router', {'mode': 'standalone', 'id': 'router',
-                                 'saslConfigName': 'tests-mech-SCRAM',
-                                 'saslConfigPath': os.getcwd()})
+            ('sslProfile', {'name': 'myssl'}),
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'}),
+            # authService attribute has been deprecated. We are using it here to make sure that we are
+            # still backward compatible.
+            ('authServicePlugin', {'name': 'myauth', 'sslProfile': 'myssl', 'port': cls.auth_service_port, 'host': '127.0.0.1'}),
+            ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin': 'myauth', 'saslMechanisms': 'SCRAM-SHA-1 PLAIN'}),
+            ('router', {'mode': 'standalone', 'id': 'router',
+                        'saslConfigName': 'tests-mech-SCRAM',
+                        'saslConfigPath': os.getcwd()})
         ])).wait_ready()
 
     @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
@@ -155,19 +155,22 @@ class AuthServicePluginAuthzDeprecatedTest(AuthServicePluginAuthzTest):
         cls.createSaslFiles()
 
         cls.auth_service_port = cls.tester.get_port()
-        cls.tester.popen(['/usr/bin/env', '${PY_STRING}', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'), '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
+        cls.tester.popen(['/usr/bin/env', '${PY_STRING}', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'),
+                          '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
-                     ('sslProfile', {'name':'myssl'}),
-                     # authService and authSslProfile attributea have been deprecated.
-                     # We are using it here to make sure that we are backward compatible.
-                     ('authServicePlugin', {'name':'myauth', 'authSslProfile':'myssl', 'authService': '127.0.0.1:%d' % cls.auth_service_port}),
-                     ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin':'myauth', 'saslMechanisms':'SCRAM-SHA-1 PLAIN'}),
-                     ('router', {'mode': 'standalone', 'id': 'router',
-                                 'saslConfigName': 'tests-mech-SCRAM',
-                                 'saslConfigPath': os.getcwd()})
+            ('sslProfile', {'name': 'myssl'}),
+            # authService and authSslProfile attributea have been deprecated.
+            # We are using it here to make sure that we are backward compatible.
+            ('authServicePlugin', {'name': 'myauth', 'authSslProfile': 'myssl', 'authService': '127.0.0.1:%d' % cls.auth_service_port}),
+            ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin': 'myauth', 'saslMechanisms': 'SCRAM-SHA-1 PLAIN'}),
+            ('router', {'mode': 'standalone', 'id': 'router',
+                        'saslConfigName': 'tests-mech-SCRAM',
+                        'saslConfigPath': os.getcwd()})
         ])).wait_ready()
+
+
 class ConnectionHandler(MessagingHandler):
     def __init__(self, address, count):
         super(ConnectionHandler, self).__init__()
@@ -185,7 +188,7 @@ class ConnectionHandler(MessagingHandler):
     def on_sendable(self, event):
         if self.sent < self.count:
             self.sent += 1
-            event.sender.send(Message(body='msg-%s' %self.sent))
+            event.sender.send(Message(body='msg-%s' % self.sent))
 
     def on_link_error(self, event):
         self.errors.append(event.link.remote_condition.name)
@@ -194,6 +197,7 @@ class ConnectionHandler(MessagingHandler):
     def on_connection_opened(self, event):
         event.container.create_receiver(event.connection, self.address)
         event.container.create_sender(event.connection, self.address)
+
 
 class DynamicSourceAnonymousSender(MessagingHandler):
     def __init__(self):
@@ -205,7 +209,7 @@ class DynamicSourceAnonymousSender(MessagingHandler):
         self.errors = []
 
     def on_message(self, event):
-        self.message = event.message.body;
+        self.message = event.message.body
 
     def on_link_opened(self, event):
         if event.receiver:
@@ -223,6 +227,6 @@ class DynamicSourceAnonymousSender(MessagingHandler):
         self.rejected += 1
         event.connection.close()
 
+
 if __name__ == '__main__':
     unittest.main(main_module())
-

@@ -18,11 +18,13 @@
  */
 
 #include "python_private.h"  // must be first!
+#include "qpid/dispatch/python_embedded.h"
 
-#include <qpid/dispatch/error.h>
-#include <qpid/dispatch/python_embedded.h>
-#include "dispatch_private.h"
 #include "entity.h"
+
+#include "dispatch_private.h"
+
+#include "qpid/dispatch/error.h"
 
 struct qd_entity_t {
     PyObject py_object;      /* Any object supporting __set/get_item__, e.g. dict. */

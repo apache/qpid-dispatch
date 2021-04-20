@@ -93,6 +93,7 @@ class AutoLinkDetachAfterAttachTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
 class NameCollisionTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -109,7 +110,7 @@ class NameCollisionTest(TestCase):
                           'connection': 'brokerConnection',
                           'direction': 'in'}),
             ('linkRoute', {'name': 'linkRoute',
-                          'prefix': 'linkRoute',
+                           'prefix': 'linkRoute',
                            'connection': 'brokerConnection',
                            'direction': 'in'}),
             ('address',   {'name': 'address',
@@ -254,36 +255,36 @@ class AutoLinkRetryTest(TestCase):
         cls.inter_router_port = cls.tester.get_port()
 
         cls.router('B',
-                    [
-                        ('router', {'mode': 'standalone', 'id': 'B'}),
-                        ('listener', {'role': 'normal',
-                                      'port': cls.tester.get_port()}),
-                        ('listener', {'host': '127.0.0.1',
-                                      'role': 'normal',
-                                      'port': cls.inter_router_port}),
-                        # Note here that the distribution of the address
-                        # 'examples' is set to 'unavailable'
-                        # This will ensure that any attach coming in for
-                        # this address will be rejected.
-                        ('address',
-                         {'prefix': 'examples',
-                          'name': 'unavailable-address',
-                          'distribution': 'unavailable'}),
-                    ])
+                   [
+                       ('router', {'mode': 'standalone', 'id': 'B'}),
+                       ('listener', {'role': 'normal',
+                                     'port': cls.tester.get_port()}),
+                       ('listener', {'host': '127.0.0.1',
+                                     'role': 'normal',
+                                     'port': cls.inter_router_port}),
+                       # Note here that the distribution of the address
+                       # 'examples' is set to 'unavailable'
+                       # This will ensure that any attach coming in for
+                       # this address will be rejected.
+                       ('address',
+                        {'prefix': 'examples',
+                         'name': 'unavailable-address',
+                         'distribution': 'unavailable'}),
+                   ])
 
         cls.router('A', [
-                        ('router', {'mode': 'standalone', 'id': 'A'}),
-                        ('listener', {'host': '127.0.0.1', 'role': 'normal',
-                                      'port': cls.tester.get_port()}),
+            ('router', {'mode': 'standalone', 'id': 'A'}),
+            ('listener', {'host': '127.0.0.1', 'role': 'normal',
+                          'port': cls.tester.get_port()}),
 
             ('connector', {'host': '127.0.0.1', 'name': 'connectorToB',
                            'role': 'route-container',
                            'port': cls.inter_router_port}),
 
-                        ('autoLink', {'connection': 'connectorToB',
-                                      'address': 'examples', 'direction': 'in'}),
-                        ('autoLink', {'connection': 'connectorToB',
-                                      'address': 'examples', 'direction': 'out'}),
+            ('autoLink', {'connection': 'connectorToB',
+                          'address': 'examples', 'direction': 'in'}),
+            ('autoLink', {'connection': 'connectorToB',
+                          'address': 'examples', 'direction': 'out'}),
         ])
 
     def __init__(self, test_method):
@@ -350,7 +351,7 @@ class AutoLinkRetryTest(TestCase):
         # re-attempt to establish the autoLink and once the  autoLink
         # is up, it should return to the 'active' state.
         delete_command = 'DELETE --type=address --name=unavailable-address'
-        self.run_qdmanage(delete_command,  address=self.routers[0].addresses[0])
+        self.run_qdmanage(delete_command, address=self.routers[0].addresses[0])
 
         self.schedule_auto_link_reconnect_test()
 
@@ -381,23 +382,23 @@ class WaypointReceiverPhaseTest(TestCase):
         cls.backup_url = 'amqp://0.0.0.0:' + str(cls.backup_port)
 
         WaypointReceiverPhaseTest.router('A', [
-                        ('router', {'mode': 'interior', 'id': 'A'}),
-                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
-                        ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.inter_router_port}),
-                        ('autoLink', {'address': '0.0.0.0/queue.ext', 'direction': 'in', 'externalAddress': 'EXT'}),
-                        ('autoLink', {'address': '0.0.0.0/queue.ext', 'direction': 'out', 'externalAddress': 'EXT'}),
-                        ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
+            ('router', {'mode': 'interior', 'id': 'A'}),
+            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
+            ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.inter_router_port}),
+            ('autoLink', {'address': '0.0.0.0/queue.ext', 'direction': 'in', 'externalAddress': 'EXT'}),
+            ('autoLink', {'address': '0.0.0.0/queue.ext', 'direction': 'out', 'externalAddress': 'EXT'}),
+            ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
 
-            ])
+        ])
 
         WaypointReceiverPhaseTest.router('B',
-                    [
-                        ('router', {'mode': 'interior', 'id': 'B'}),
-                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
-                        ('connector', {'name': 'connectorToB', 'role': 'inter-router',
-                                       'port': cls.inter_router_port}),
-                        ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
-                    ])
+                                         [
+                                             ('router', {'mode': 'interior', 'id': 'B'}),
+                                             ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
+                                             ('connector', {'name': 'connectorToB', 'role': 'inter-router',
+                                                            'port': cls.inter_router_port}),
+                                             ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
+                                         ])
 
         cls.routers[1].wait_router_connected('A')
 
@@ -501,7 +502,7 @@ class AutolinkTest(TestCase):
             #
             # Set up the prefix 'node' as a prefix for waypoint addresses
             #
-            ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
+            ('address', {'prefix': 'node', 'waypoint': 'yes'}),
 
             #
             # Create a pair of default auto-links for 'node.1'
@@ -540,7 +541,7 @@ class AutolinkTest(TestCase):
         cmd = ['qdstat', '--bus', str(AutolinkTest.normal_address), '--timeout', str(TIMEOUT)] + ['-g']
         p = self.popen(
             cmd,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
         out = p.communicate()[0]
@@ -1147,7 +1148,7 @@ class ManageAutolinksTest(MessagingHandler):
         self.route_conn  = event.container.connect(self.route_address)
         self.normal_conn = event.container.connect(self.normal_address)
         self.reply       = event.container.create_receiver(self.normal_conn, dynamic=True)
-        self.agent       = event.container.create_sender(self.normal_conn, "$management");
+        self.agent       = event.container.create_sender(self.normal_conn, "$management")
 
     def on_link_opening(self, event):
         if event.sender:
@@ -1164,7 +1165,7 @@ class ManageAutolinksTest(MessagingHandler):
                 self.send_ops()
 
     def on_link_remote_close(self, event):
-        if event.link.remote_condition != None:
+        if event.link.remote_condition is not None:
             self.error = "Received unexpected error on link-close: %s" % event.link.remote_condition.name
             self.timer.cancel()
             self.normal_conn.close()
@@ -1181,10 +1182,10 @@ class ManageAutolinksTest(MessagingHandler):
             while self.n_created < self.count and self.agent.credit > 0:
                 props = {'operation': 'CREATE',
                          'type': 'org.apache.qpid.dispatch.router.config.autoLink',
-                         'name': 'AL.%d' % self.n_created }
+                         'name': 'AL.%d' % self.n_created}
                 body  = {'direction': 'out',
                          'containerId': 'container.new',
-                         'address': 'node.%d' % self.n_created }
+                         'address': 'node.%d' % self.n_created}
                 msg = Message(properties=props, body=body, reply_to=self.reply_to)
                 self.agent.send(msg)
                 self.n_created += 1
@@ -1192,7 +1193,7 @@ class ManageAutolinksTest(MessagingHandler):
             while self.n_deleted < self.count and self.agent.credit > 0:
                 props = {'operation': 'DELETE',
                          'type': 'org.apache.qpid.dispatch.router.config.autoLink',
-                         'name': 'AL.%d' % self.n_deleted }
+                         'name': 'AL.%d' % self.n_deleted}
                 body  = {}
                 msg = Message(properties=props, body=body, reply_to=self.reply_to)
                 self.agent.send(msg)

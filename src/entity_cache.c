@@ -17,18 +17,16 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/ctools.h>
-#include <structmember.h>
+#include "qpid/dispatch/python_embedded.h"
+
 #include "entity_cache.h"
+
 #include "entity.h"
-#include "dispatch_private.h"
-#include "router_private.h"
 
-#include <stdbool.h>
-#include <pthread.h>
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/threading.h"
 
+#include <structmember.h>
 
 typedef enum { REMOVE=0, ADD=1 }  action_t;
 

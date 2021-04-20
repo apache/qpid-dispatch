@@ -26,8 +26,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import json
-import pdb
-import sys
 from .policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr, is_ipv6_enabled
 from ..compat import PY_STRING_TYPE
 from ..compat import PY_TEXT_TYPE
@@ -41,6 +39,8 @@ Entity implementing the business logic of user connection/access policy.
 
 #
 #
+
+
 class PolicyKeys(object):
     """
     String constants
@@ -118,6 +118,8 @@ class PolicyKeys(object):
 
 #
 #
+
+
 class PolicyCompiler(object):
     """
     Validate incoming configuration for legal schema.
@@ -139,7 +141,7 @@ class PolicyCompiler(object):
         PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
         PolicyKeys.KW_GROUPS,
         PolicyKeys.KW_VHOST_ALIASES
-        ]
+    ]
 
     allowed_settings_options = [
         PolicyKeys.KW_USERS,
@@ -163,14 +165,13 @@ class PolicyCompiler(object):
         PolicyKeys.KW_TARGETS,
         PolicyKeys.KW_SOURCE_PATTERN,
         PolicyKeys.KW_TARGET_PATTERN
-        ]
+    ]
 
     def __init__(self):
         """
         Create a validator
         """
         pass
-
 
     def validateNumber(self, val, v_min, v_max, errors):
         """
@@ -193,7 +194,6 @@ class PolicyCompiler(object):
             errors.append("Value '%s' is above maximum '%s'." % (val, v_max))
             return False
         return True
-
 
     def compile_connection_group(self, vhostname, groupname, val, list_out, warnings, errors):
         """
@@ -229,10 +229,9 @@ class PolicyCompiler(object):
                 list_out.append(coha)
             except Exception as e:
                 errors.append("Policy vhost '%s' user group '%s' option '%s' connectionOption '%s' failed to translate: '%s'." %
-                                (vhostname, groupname, key, coname, e))
+                              (vhostname, groupname, key, coname, e))
                 return False
         return True
-
 
     def compile_app_settings(self, vhostname, usergroup, policy_in, policy_out, warnings, errors):
         """
@@ -268,7 +267,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_TARGETS] = ''
         policy_out[PolicyKeys.KW_SOURCE_PATTERN] = ''
         policy_out[PolicyKeys.KW_TARGET_PATTERN] = ''
-        policy_out[PolicyKeys.KW_MAXCONNPERHOST] = None # optional group limit
+        policy_out[PolicyKeys.KW_MAXCONNPERHOST] = None  # optional group limit
         policy_out[PolicyKeys.KW_MAXCONNPERUSER] = None
 
         cerror = []
@@ -284,18 +283,18 @@ class PolicyCompiler(object):
                        PolicyKeys.KW_MAXCONNPERUSER
                        ]:
                 if not self.validateNumber(val, 0, 65535, cerror):
-                    msg = ("Policy vhost '%s' user group '%s' option '%s' has error '%s'." % 
+                    msg = ("Policy vhost '%s' user group '%s' option '%s' has error '%s'." %
                            (vhostname, usergroup, key, cerror[0]))
                     errors.append(msg)
                     return False
                 policy_out[key] = int(val)
             elif key in [PolicyKeys.KW_MAX_FRAME_SIZE,
-                       PolicyKeys.KW_MAX_MESSAGE_SIZE,
-                       PolicyKeys.KW_MAX_RECEIVERS,
-                       PolicyKeys.KW_MAX_SENDERS,
-                       PolicyKeys.KW_MAX_SESSION_WINDOW,
-                       PolicyKeys.KW_MAX_SESSIONS
-                       ]:
+                         PolicyKeys.KW_MAX_MESSAGE_SIZE,
+                         PolicyKeys.KW_MAX_RECEIVERS,
+                         PolicyKeys.KW_MAX_SENDERS,
+                         PolicyKeys.KW_MAX_SESSION_WINDOW,
+                         PolicyKeys.KW_MAX_SESSIONS
+                         ]:
                 if not self.validateNumber(val, 0, 0, cerror):
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has error '%s'." %
                                   (vhostname, usergroup, key, cerror[0]))
@@ -378,7 +377,7 @@ class PolicyCompiler(object):
                                 if key in [PolicyKeys.KW_SOURCE_PATTERN,
                                            PolicyKeys.KW_TARGET_PATTERN]:
                                     errors.append("Policy vhost '%s' user group '%s' policy key '%s' item '%s' may contain match pattern '%s' as a prefix or a suffix only." %
-                                          (vhostname, usergroup, key, v, utoken))
+                                                  (vhostname, usergroup, key, v, utoken))
                                     return False
                                 eVal.append(PolicyKeys.KC_TUPLE_EMBED)
                                 eVal.append(v[0:v.find(utoken)])
@@ -413,7 +412,6 @@ class PolicyCompiler(object):
 
         return True
 
-
     def compile_access_ruleset(self, name, policy_in, policy_out, warnings, errors):
         """
         Compile a vhost schema from processed json format to local internal format.
@@ -447,13 +445,13 @@ class PolicyCompiler(object):
                        PolicyKeys.KW_MAXCONNPERUSER
                        ]:
                 if not self.validateNumber(val, 0, 65535, cerror):
-                    msg = ("Policy vhost '%s' option '%s' has error '%s'." % 
+                    msg = ("Policy vhost '%s' option '%s' has error '%s'." %
                            (name, key, cerror[0]))
                     errors.append(msg)
                     return False
                 policy_out[key] = val
             elif key in [PolicyKeys.KW_MAX_MESSAGE_SIZE
-                       ]:
+                         ]:
                 if not self.validateNumber(val, 0, 0, cerror):
                     msg = ("Policy vhost '%s' option '%s' has error '%s'." %
                            (name, key, cerror[0]))
@@ -513,7 +511,7 @@ class PolicyCompiler(object):
 
         # Default connections require a default settings
         if policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
-            if not PolicyKeys.KW_DEFAULT_SETTINGS in policy_out[PolicyKeys.KW_GROUPS]:
+            if PolicyKeys.KW_DEFAULT_SETTINGS not in policy_out[PolicyKeys.KW_GROUPS]:
                 errors.append("Policy vhost '%s' allows connections by default but default settings are not defined" %
                               (name))
                 return False
@@ -527,13 +525,14 @@ class AppStats(object):
     """
     Maintain live state and statistics for an vhost.
     """
+
     def __init__(self, id, manager, ruleset):
         self.my_id = id
         self._manager = manager
         self.conn_mgr = PolicyAppConnectionMgr(
-                ruleset[PolicyKeys.KW_MAXCONN],
-                ruleset[PolicyKeys.KW_MAXCONNPERUSER],
-                ruleset[PolicyKeys.KW_MAXCONNPERHOST])
+            ruleset[PolicyKeys.KW_MAXCONN],
+            ruleset[PolicyKeys.KW_MAXCONNPERUSER],
+            ruleset[PolicyKeys.KW_MAXCONNPERHOST])
         self._cstats = self._manager.get_agent().qd.qd_dispatch_policy_c_counts_alloc()
         self._manager.get_agent().add_implementation(self, "vhostStats")
 
@@ -576,6 +575,8 @@ class AppStats(object):
 
 #
 #
+
+
 class ConnectionFacts(object):
     def __init__(self, user, host, app, conn_name):
         self.user = user
@@ -585,6 +586,8 @@ class ConnectionFacts(object):
 
 #
 #
+
+
 class PolicyLocal(object):
     """
     The local policy database.
@@ -651,6 +654,7 @@ class PolicyLocal(object):
     #
     # Service interfaces
     #
+
     def create_ruleset(self, attributes):
         """
         Create or update named policy ruleset.
@@ -914,16 +918,16 @@ class PolicyLocal(object):
 
             if vhost not in self.rulesetdb:
                 self._manager.log_info(
-                        "lookup_settings fail for vhost '%s', user group '%s': "
-                        "No policy defined for this vhost" % (vhost, groupname))
+                    "lookup_settings fail for vhost '%s', user group '%s': "
+                    "No policy defined for this vhost" % (vhost, groupname))
                 return False
 
             ruleset = self.rulesetdb[vhost]
 
             if groupname not in ruleset[PolicyKeys.KW_GROUPS]:
                 self._manager.log_trace(
-                        "lookup_settings fail for vhost '%s', user group '%s': "
-                        "This vhost has no settings for the user group" % (vhost, groupname))
+                    "lookup_settings fail for vhost '%s', user group '%s': "
+                    "This vhost has no settings for the user group" % (vhost, groupname))
                 return False
 
             upolicy.update(ruleset[PolicyKeys.KW_GROUPS][groupname])

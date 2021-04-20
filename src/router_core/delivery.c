@@ -18,6 +18,7 @@
  */
 
 #include "delivery.h"
+
 #include <inttypes.h>
 
 ALLOC_DEFINE(qdr_delivery_t);
@@ -718,7 +719,7 @@ static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv
     // unlinked.  It shall not be freed until the connection-side thread
     // settles the PN delivery.
     //
-    if (new_disp != dlv->remote_disposition) {
+    if (new_disp != dlv->remote_disposition || new_disp == PN_RECEIVED) {
         //
         // Remote disposition has changed, propagate the change to the peer
         // delivery local disposition.
