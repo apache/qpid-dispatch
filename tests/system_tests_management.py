@@ -270,6 +270,14 @@ class ManagementTest(system_test.TestCase):
 
         # Invalid values
         self.assertRaises(ManagementError, node.update, dict(identity="log/AGENT", enable="foo"))
+        self.assertRaises(ManagementError, node.update,
+                          dict(identity="log/AGENT", enable="default",
+                               includeTimestamp="blahblah"))
+        self.assertRaises(ManagementError, node.update,
+                          dict(identity="log/AGENT", enable="default",
+                               includeSource="blahblah"))
+        self.assertRaises(ManagementError, node.update,
+                          dict(identity="BOGUS", enable="default"))
 
     def test_create_config_address(self):
         self.assert_create_ok(CONFIG_ADDRESS, 'myConfigAddr', dict(prefix='prefixA'))
