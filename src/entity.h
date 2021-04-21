@@ -41,6 +41,13 @@ bool qd_entity_has(qd_entity_t* entity, const char *attribute);
  **/
 char *qd_entity_get_string(qd_entity_t *entity, const char* attribute);
 
+/**
+ * Gets a string valued attribute. The difference between this and qd_entity_get_string() is
+ * that this function does not write anything to the log. It gives the caller the ability to log
+ * his own error.
+ */
+char *qd_entity_get_string_no_error(qd_entity_t *entity, const char* attribute);
+
 /** Get an integer valued attribute. Return -1 and set qd_error if there is an error. */
 long qd_entity_get_long(qd_entity_t *entity, const char* attribute);
 

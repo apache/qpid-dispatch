@@ -154,11 +154,10 @@ static log_sink_t* log_sink_lh(const char* name) {
             file = fopen(name, "a");
         }
 
-        //If file is not there, log an error and return 0.
+        //If file is not there, return 0.
+        // We are not logging an error here since we are already holding the log_source_lock
+        // Writing a log message will try to re-obtain the log_source_lock lock and cause a deadlock.
         if (!file && !syslog) {
-            char msg[TEXT_MAX];
-            snprintf(msg, sizeof(msg), "Failed to open log file '%s'", name);
-            qd_error(QD_ERROR_CONFIG, msg);
             return 0;
         }
 
@@ -194,7 +193,6 @@ struct qd_log_source_t {
 
 DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
 
-static sys_mutex_t          *log_lock = 0;
 static sys_mutex_t          *log_source_lock = 0;
 static qd_log_source_list_t  source_list = {0};
 
@@ -331,6 +329,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 
     if (default_bool(log_source->includeSource, default_log_source->includeSource) && entry->file)
         aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
+
     aprintf(&begin, end, "\n");
 
     if (sink->file) {
@@ -425,7 +424,10 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     }
 
     // Bounded buffer of log entries, keep most recent.
-    sys_mutex_lock(log_lock);
+    // Obtain the log_source_lock global lock. We need to do this, if not, the qd_log_entity() function
+    // could free the log_source->sink from underneath you and replace it with a new sink.
+    // Once we obtain this lock, we only release the lock once the log line is written to the sink.
+    sys_mutex_lock(log_source_lock);
     qd_log_entry_t *entry = new_qd_log_entry_t();
     DEQ_ITEM_INIT(entry);
     entry->module = source->module;
@@ -438,7 +440,7 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     DEQ_INSERT_TAIL(entries, entry);
     if (DEQ_SIZE(entries) > LIST_MAX)
         qd_log_entry_free_lh(DEQ_HEAD(entries));
-    sys_mutex_unlock(log_lock);
+    sys_mutex_unlock(log_source_lock);
 }
 
 void qd_log_impl_v1(qd_log_source_t *source, qd_log_level_t level,  const char *file, int line, const char *fmt, ...)
@@ -505,7 +507,6 @@ void qd_log_initialize(void)
     for (level_index_t i = NONE + 1; i < N_LEVELS; ++i)
         aprintf(&begin, end, ", %s", levels[i].name);
 
-    log_lock = sys_mutex();
     log_source_lock = sys_mutex();
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
@@ -536,6 +537,8 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     char *output = 0;
     char *enable = 0;
     bool trace_enabled = false;
+    bool output_in_error = false;
+
 
     do {
 
@@ -545,15 +548,22 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
         qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
 
         if (qd_entity_has(entity, "outputFile")) {
-            output = qd_entity_get_string(entity, "outputFile");
-            QD_ERROR_BREAK();
+            output = qd_entity_get_string_no_error(entity, "outputFile");
+            if (!output) {
+                output_in_error = true;
+                break;
+            }
             log_sink_t* sink = log_sink_lh(output);
-            QD_ERROR_BREAK();
+            if (!sink) {
+                output_in_error = true;
+                break;
+            }
 
             /* DEFAULT source may already have a sink, so free the old sink first */
             if (src->sink) {
                 log_sink_free_lh(src->sink);
             }
+
             src->sink = sink;           /* Assign the new sink   */
 
             if (src->sink->syslog) /* Timestamp off for syslog. */
@@ -581,14 +591,20 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
         QD_ERROR_BREAK();
     } while(0);
 
+    sys_mutex_unlock(log_source_lock);
+
+    if (output_in_error) {
+        char msg[TEXT_MAX];
+        snprintf(msg, sizeof(msg), "Failed to open log file '%s'", output);
+        qd_error(QD_ERROR_CONFIG, msg);
+    }
+
     if (module)
         free(module);
     if (output)
         free(output);
     if (enable)
         free(enable);
-
-    sys_mutex_unlock(log_source_lock);
 
     //
     // If trace logging is enabled, loop thru all connections in the router and call the pn_transport_set_tracer callback

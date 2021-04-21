@@ -45,6 +45,14 @@ bool qd_entity_has(qd_entity_t* entity, const char *attribute) {
     return value != NULL;
 }
 
+char *qd_entity_get_string_no_error(qd_entity_t *entity, const char* attribute) {
+    qd_error_clear();
+    PyObject *py_obj = qd_entity_get_py(entity, attribute);
+    char *str = py_string_2_c(py_obj);
+    Py_XDECREF(py_obj);
+    return str;
+}
+
 char *qd_entity_get_string(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
     PyObject *py_obj = qd_entity_get_py(entity, attribute);
