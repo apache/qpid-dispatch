@@ -1424,7 +1424,6 @@ class Logger(object):
         print(self)
         sys.stdout.flush()
 
-    @property
     def __str__(self):
         lines = [self.title]
         for ts, msg in self.logs:
