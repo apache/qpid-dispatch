@@ -1344,6 +1344,7 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
             }
 
             qd_delivery_state_free(dstate);
+            qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
 
             if (window_opened) {
                 // now that the window has opened fetch any outstanding read data

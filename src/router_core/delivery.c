@@ -280,6 +280,9 @@ void qdr_delivery_reject_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_error_t *
     dlv->settled = true;
     if (error) {
         qd_delivery_state_free(dlv->local_state);
+
+            qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dlv->local_state);
+        
         dlv->local_state = qd_delivery_state_from_error(error);
     }
 
@@ -480,7 +483,10 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     qdr_link_work_release(delivery->link_work);
     qd_bitmask_free(delivery->link_exclusion);
     qd_delivery_state_free(delivery->local_state);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)delivery->local_state);
+
     qd_delivery_state_free(delivery->remote_state);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)delivery->remote_state);
 
     free_qdr_delivery_t(delivery);
 }
@@ -657,6 +663,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         qdr_delivery_decref_CT(core, action->args.delivery.delivery,
                                "qdr_update_delivery_CT - remove from action on discard");
         qd_delivery_state_free(dstate);
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
         return;
     }
 
@@ -667,6 +674,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         //
         qdr_delivery_mcast_inbound_update_CT(core, dlv, new_disp, settled);
         qd_delivery_state_free(dstate);  // kgiusti(TODO): handle propagation!
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
 
     } else if (peer && peer->multicast) {
         //
@@ -676,6 +684,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         // coverity[swapped_arguments]
         qdr_delivery_mcast_outbound_update_CT(core, peer, dlv, new_disp, settled);
         qd_delivery_state_free(dstate);  // kgiusti(TODO): handle propagation!
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
 
     } else {
         //
@@ -1226,12 +1235,22 @@ bool qdr_delivery_set_remote_delivery_state(qdr_delivery_t *dlv, uint64_t remote
 {
     qdr_link_t *link = qdr_delivery_link(dlv);
 
-    if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
-    if (dlv->remote_state)
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "SET REMOTE: dlv="DLV_FMT" dstate=%p",
+           DLV_ARGS(dlv), (void*)remote_state);
+
+    //if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
+    sys_mutex_lock(link->conn->work_lock);
+    if (dlv->remote_state) {
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "SET REMOTE: dlv="DLV_FMT" FREEING OLD DSTATE: %p", DLV_ARGS(dlv),
+               (void*)dlv->remote_state);
         qd_delivery_state_free(dlv->remote_state);
+    }
     dlv->remote_state = remote_state;
     dlv->remote_disposition = remote_dispo;
-    if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
+    //if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
+    sys_mutex_unlock(link->conn->work_lock);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "SET REMOTE: dlv="DLV_FMT" dstate=%p DONE!",
+           DLV_ARGS(dlv), (void*)remote_state);
     return true;
 }
 
@@ -1243,12 +1262,20 @@ qd_delivery_state_t *qdr_delivery_take_local_delivery_state(qdr_delivery_t *dlv,
 {
     qdr_link_t *link = qdr_delivery_link(dlv);
 
-    if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "TAKE: dlv="DLV_FMT, DLV_ARGS(dlv));
+
+    //if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
+    sys_mutex_lock(link->conn->work_lock);
     /// atomic
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "TAKE: LOCK dlv="DLV_FMT" lock=%p dlv=%p link=%p conn=%p", DLV_ARGS(dlv), link->conn->work_lock,
+           (void*)dlv, (void*)link, (void*)link->conn);
     qd_delivery_state_t *dstate = dlv->local_state;
     dlv->local_state = 0;
     *dispo = dlv->disposition;
-    if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
+    //if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "TAKE: UNLOCK dlv="DLV_FMT" lock=%p", DLV_ARGS(dlv), link->conn->work_lock);
+    sys_mutex_unlock(link->conn->work_lock);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "TAKE: TAKEN dlv="DLV_FMT" dstate=%p", DLV_ARGS(dlv), (void*)dstate);
 
     return dstate;
 }
@@ -1265,22 +1292,36 @@ void qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *pe
     // if state is already present do not overwrite it as the outgoing
     // I/O thread may be in the process of writing it to proton
 
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: src="DLV_FMT" dest="DLV_FMT, DLV_ARGS(dlv), DLV_ARGS(peer));
+
     qdr_link_t *link = qdr_delivery_link(dlv);
     qdr_link_t *peer_link = qdr_delivery_link(dlv);
 
     qd_delivery_state_t *dstate = 0;
     uint64_t dispo = 0;
 
-    if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
+    //if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
+    sys_mutex_lock(link->conn->work_lock);
     dstate = dlv->remote_state;
     dispo = dlv->remote_disposition;
     dlv->remote_state = 0;
-    if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
+    //if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
+    sys_mutex_unlock(link->conn->work_lock);
 
-    if (peer_link && peer_link->conn) sys_mutex_lock(peer_link->conn->work_lock);
-    if (peer->local_state)
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: removed remote_state src="DLV_FMT" dstate=%p", DLV_ARGS(dlv), (void*)dstate);
+
+    //if (peer_link && peer_link->conn) sys_mutex_lock(peer_link->conn->work_lock);
+    sys_mutex_lock(peer_link->conn->work_lock);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: LOCK dest="DLV_FMT" lock=%p dlv=%p link=%p conn=%p", DLV_ARGS(peer), peer_link->conn->work_lock, (void*)peer, (void*)peer_link, (void*)peer_link->conn);
+    if (peer->local_state) {
+        assert(peer->local_state != dstate);
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: free old dest state dest="DLV_FMT" old=%p", DLV_ARGS(peer), (void*)peer->local_state);
         qd_delivery_state_free(peer->local_state);
+    }
     peer->local_state = dstate;
     peer->disposition = dispo;
-    if (peer_link && peer_link->conn) sys_mutex_unlock(peer_link->conn->work_lock);
+    //if (peer_link && peer_link->conn) sys_mutex_unlock(peer_link->conn->work_lock);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: done dest="DLV_FMT" new=%p", DLV_ARGS(peer), (void*)peer->local_state);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: UNLOCK dest="DLV_FMT" lock=%p", DLV_ARGS(peer), peer_link->conn->work_lock);
+    sys_mutex_unlock(peer_link->conn->work_lock);
 }

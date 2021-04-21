@@ -1953,6 +1953,7 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
             pn_delivery_update(pdlv, disposition);
         }
         qd_delivery_state_free(dstate);
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
 
         //
         // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
@@ -2074,8 +2075,10 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         uint64_t ignore = 0;  // expect same value as 'disp'
         qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
         assert(ignore == disp);
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "WRITING DSTATE: %p", (void*)dstate);
         qd_delivery_write_local_state(pnd, disp, dstate);
         qd_delivery_state_free(dstate);
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
 
         //assert(qdr_delivery_disposition(dlv) == disp) ;
         //if ( || disp == PN_RECEIVED) {

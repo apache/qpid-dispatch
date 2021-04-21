@@ -28,6 +28,7 @@ qd_delivery_state_t *qd_delivery_state()
 {
     qd_delivery_state_t *dstate = new_qd_delivery_state_t();
     ZERO(dstate);
+    qd_log(qd_message_log_source(), QD_LOG_INFO, "ALLOC DSTATE %p", (void*)dstate);
     return dstate;
 }
 
@@ -47,6 +48,7 @@ qd_delivery_state_t *qd_delivery_state_from_error(qdr_error_t *err)
 void qd_delivery_state_free(qd_delivery_state_t *dstate)
 {
     if (dstate) {
+        qd_log(qd_message_log_source(), QD_LOG_INFO, "FREEING DSTATE %p", (void*)dstate);
         qdr_error_free(dstate->error);
         if (dstate->annotations)
             pn_data_free(dstate->annotations);

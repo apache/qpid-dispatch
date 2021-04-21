@@ -616,6 +616,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     //
     // Adjust the delivery's identity
     //
+
+    //  BARK!!!!!!
     if (initial_delivery) {
         initial_delivery->conn_id = link->conn->identity;
         initial_delivery->link_id = link->identity;

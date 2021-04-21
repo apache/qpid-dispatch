@@ -349,6 +349,7 @@ void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
             // setting the local state will cause proton to send this
             // error to the remote
             qd_delivery_state_free(work->delivery->local_state);
+            qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)work->delivery->local_state);
             work->delivery->local_state = qd_delivery_state_from_error(error);
         }
 
@@ -381,6 +382,7 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
                 // setting the local state will cause proton to send this
                 // error to the remote
                 qd_delivery_state_free(in_delivery->local_state);
+            qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)in_delivery->local_state);
                 in_delivery->local_state = qd_delivery_state_from_error(error);
             }
             qdr_delivery_push_CT(core, in_delivery);
