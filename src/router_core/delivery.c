@@ -481,6 +481,7 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
         ref = DEQ_HEAD(delivery->peers);
     }
 
+    qdr_link_work_release(delivery->link_work);
     qd_bitmask_free(delivery->link_exclusion);
     qd_delivery_state_free(delivery->local_state);
     qd_delivery_state_free(delivery->remote_state);

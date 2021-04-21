@@ -316,6 +316,7 @@ typedef enum {
 typedef struct qdr_link_work_t {
     DEQ_LINKS(struct qdr_link_work_t);
     qdr_link_work_type_t          work_type;
+    sys_atomic_t                  ref_count;
     qdr_error_t                  *error;
     int                           value;
     qdr_link_work_drain_action_t  drain_action;
@@ -326,7 +327,8 @@ typedef struct qdr_link_work_t {
 DEQ_DECLARE(qdr_link_work_t, qdr_link_work_list_t);
 
 qdr_link_work_t *qdr_link_work(qdr_link_work_type_t type);
-void qdr_link_work_free(qdr_link_work_t *work);
+qdr_link_work_t *qdr_link_work_getref(qdr_link_work_t *work);
+void qdr_link_work_release(qdr_link_work_t *work);
 
 
 #define QDR_AGENT_MAX_COLUMNS 64

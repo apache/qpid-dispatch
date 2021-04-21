@@ -250,7 +250,7 @@ void qdr_core_free(qdr_core_t *core)
         qdr_link_work_t *link_work = DEQ_HEAD(link->work_list);
         while (link_work) {
             DEQ_REMOVE_HEAD(link->work_list);
-            qdr_link_work_free(link_work);
+            qdr_link_work_release(link_work);
             link_work = DEQ_HEAD(link->work_list);
         }
         sys_mutex_unlock(link->conn->work_lock);
@@ -1085,17 +1085,31 @@ qdr_link_work_t *qdr_link_work(qdr_link_work_type_t type)
     if (work) {
         ZERO(work);
         work->work_type = type;
+        sys_atomic_init(&work->ref_count, 1);
     }
     return work;
 }
 
-void qdr_link_work_free(qdr_link_work_t *work)
+
+qdr_link_work_t *qdr_link_work_getref(qdr_link_work_t *work)
 {
     if (work) {
-        // ensure no qdr_delivery_t reference this work item:
-        assert(work->work_type != QDR_LINK_WORK_DELIVERY || work->value == 0);
-        qdr_error_free(work->error);
-        free_qdr_link_work_t(work);
+        uint32_t old = sys_atomic_inc(&work->ref_count);
+        (void)old;  // mask unused var compiler warning
+        assert(old != 0);
+    }
+    return work;
+}
+
+void qdr_link_work_release(qdr_link_work_t *work)
+{
+    if (work) {
+        uint32_t old = sys_atomic_dec(&work->ref_count);
+        assert(old != 0);
+        if (old == 1) {
+            qdr_error_free(work->error);
+            free_qdr_link_work_t(work);
+        }
     }
 }
 

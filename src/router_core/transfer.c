@@ -207,6 +207,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 
                         assert(dlv == DEQ_HEAD(link->undelivered));
                         DEQ_REMOVE_HEAD(link->undelivered);
+                        qdr_link_work_release(dlv->link_work);
                         dlv->link_work = 0;
 
                         if (settled || qdr_delivery_oversize(dlv) || qdr_delivery_is_aborted(dlv)) {
@@ -229,6 +230,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                         //
                         if (dlv == DEQ_HEAD(link->undelivered)) {
                             DEQ_REMOVE_HEAD(link->undelivered);
+                            qdr_link_work_release(dlv->link_work);
                             dlv->link_work = 0;
                             dlv->where = QDR_DELIVERY_NOWHERE;
                             qd_nullify_safe_ptr(&dlv->link_sp);
@@ -301,7 +303,8 @@ void qdr_link_complete_sent_message(qdr_core_t *core, qdr_link_t *link)
 
             if (dlv->link_work->value == 0) {
                 DEQ_REMOVE_HEAD(link->work_list);
-                qdr_link_work_free(dlv->link_work);
+                qdr_link_work_release(dlv->link_work);  // for work_list ref
+                qdr_link_work_release(dlv->link_work);  // for dlv ref
                 dlv->link_work = 0;
             }
         }

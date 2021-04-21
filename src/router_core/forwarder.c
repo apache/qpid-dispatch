@@ -232,7 +232,8 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
             assert(dlv->link_work);
             if (dlv->link_work && (--dlv->link_work->value == 0)) {
                 DEQ_REMOVE(link->work_list, dlv->link_work);
-                qdr_link_work_free(dlv->link_work);
+                qdr_link_work_release(dlv->link_work); // for work_list
+                qdr_link_work_release(dlv->link_work); // for dlv ref
                 dlv->link_work = 0;
             }
             dlv->disposition = PN_RELEASED;
@@ -280,7 +281,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery
     }
     qdr_add_link_ref(&out_link->conn->links_with_work[out_link->priority], out_link, QDR_LINK_LIST_CLASS_WORK);
 
-    out_dlv->link_work = work;
+    out_dlv->link_work = qdr_link_work_getref(work);
     sys_mutex_unlock(out_link->conn->work_lock);
 
     //
