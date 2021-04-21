@@ -342,21 +342,6 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
                conn->conn_id, conn->incoming_id, conn->instream->delivery_id);
 
         conn->incoming_started = true;
-
-        // Handle deferment of write side close.
-        sys_mutex_lock(conn->activation_lock);
-        if (conn->read_eos_seen && !conn->raw_closed_write) {
-            // to-raw-conn EOS was seen before the from-raw-conn instream delivery existed.
-            // Now that the delivery has been created the write clousre can be sent.
-            conn->raw_closed_write = true;
-            sys_mutex_unlock(conn->activation_lock);
-            qd_log(log, QD_LOG_DEBUG,
-                "[C%"PRIu64"][L%"PRIu64"][D%"PRIu64"] EOS already seen. call pn_raw_connection_write_close",
-                conn->conn_id, conn->incoming_id, conn->instream->delivery_id);
-            pn_raw_connection_write_close(conn->pn_raw_conn);
-        } else {
-            sys_mutex_unlock(conn->activation_lock);
-        }
     }
 
     // Don't read from proton if in Q2 holdoff
@@ -635,19 +620,13 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
         }
 
         if (conn->read_eos_seen) {
-            if (conn->incoming_started) {
-                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
-                    "[C%"PRIu64"] handle_outgoing calling pn_raw_connection_write_close(). rcv_complete:%s, send_complete:%s",
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+                   "[C%"PRIu64"] handle_outgoing calling pn_raw_connection_write_close(). rcv_complete:%s, send_complete:%s",
                     conn->conn_id, qd_message_receive_complete(msg) ? "T" : "F", qd_message_send_complete(msg) ? "T" : "F");
-                sys_mutex_lock(conn->activation_lock);
-                conn->raw_closed_write = true;
-                sys_mutex_unlock(conn->activation_lock);
-                pn_raw_connection_write_close(conn->pn_raw_conn);
-            } else {
-                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
-                    "[C%"PRIu64"] handle_outgoing EOS seen; deferring call to pn_raw_connection_write_close()",
-                    conn->conn_id);
-            }
+            sys_mutex_lock(conn->activation_lock);
+            conn->raw_closed_write = true;
+            sys_mutex_unlock(conn->activation_lock);
+            pn_raw_connection_write_close(conn->pn_raw_conn);
         }
     }
 }
@@ -1467,14 +1446,21 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
                DLV_FMT" qdr_tcp_delivery_update: disp: %"PRIu64", settled: %s",
                DLV_ARGS(dlv), disp, settled ? "true" : "false");
 
-        //
-        // If one of the streaming deliveries is ever settled, the connection must be torn down.
-        //
         if (settled) {
-            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
-                   DLV_FMT" qdr_tcp_delivery_update: stream is settled: call pn_raw_connection_close()",
-                DLV_ARGS(dlv));
-            pn_raw_connection_close(tc->pn_raw_conn);
+            if (dlv == tc->instream) {
+                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+                       DLV_FMT" qdr_tcp_delivery_update: instream is settled: call pn_raw_connection_read_close()",
+                       DLV_ARGS(dlv));
+                pn_raw_connection_read_close(tc->pn_raw_conn);
+            } else if (dlv == tc->outstream) {
+                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+                       DLV_FMT" qdr_tcp_delivery_update: outstream is settled: call pn_raw_connection_write_close()",
+                       DLV_ARGS(dlv));
+                pn_raw_connection_write_close(tc->pn_raw_conn);
+            } else {
+                qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "Unexpected delivery settled");
+                assert(false);
+            }
         }
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_delivery_update: no link context");
