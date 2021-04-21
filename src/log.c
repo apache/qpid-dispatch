@@ -52,7 +52,7 @@ typedef struct qd_log_entry_t qd_log_entry_t;
 
 struct qd_log_entry_t {
     DEQ_LINKS(qd_log_entry_t);
-    const char     *module;
+    char           *module;
     int             level;
     char           *file;
     int             line;
@@ -69,6 +69,7 @@ static qd_log_list_t         entries = {0};
 static void qd_log_entry_free_lh(qd_log_entry_t* entry) {
     DEQ_REMOVE(entries, entry);
     free(entry->file);
+    free(entry->module);
     free_qd_log_entry_t(entry);
 }
 
@@ -133,10 +134,10 @@ static void log_sink_free_lh(log_sink_t* sink) {
 
 static log_sink_t* log_sink_lh(const char* name) {
     log_sink_t* sink = find_log_sink_lh(name);
-    if (sink)
+    if (sink) {
         sys_atomic_inc(&sink->ref_count);
+    }
     else {
-
         bool syslog = false;
         FILE *file = 0;
 
@@ -154,11 +155,12 @@ static log_sink_t* log_sink_lh(const char* name) {
             file = fopen(name, "a");
         }
 
-        //If file is not there, log an error and return 0.
+
+
+        //If file is not there, return 0.
+        // We are not logging an error here since we are already holding the log_source_lock
+        // Writing a log message will try to re-obtain the log_source_lock lock and cause a deadlock.
         if (!file && !syslog) {
-            char msg[TEXT_MAX];
-            snprintf(msg, sizeof(msg), "Failed to open log file '%s'", name);
-            qd_error(QD_ERROR_CONFIG, msg);
             return 0;
         }
 
@@ -194,7 +196,6 @@ struct qd_log_source_t {
 
 DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
 
-static sys_mutex_t          *log_lock = 0;
 static sys_mutex_t          *log_source_lock = 0;
 static qd_log_source_list_t  source_list = {0};
 
@@ -222,6 +223,8 @@ static level_t levels[] = {
     LEVEL("critical", QD_LOG_CRITICAL, LOG_CRIT)
 };
 
+static const level_t invalid_level = {"invalid", -2, -2, 0};
+
 static char level_names[TEXT_MAX] = {0}; /* Set up in qd_log_initialize */
 
 /// Return NULL and set qd_error if not a valid bit.
@@ -229,8 +232,7 @@ static const level_t* level_for_bit(int bit) {
     level_index_t i = 0;
     while (i < N_LEVELS && levels[i].bit != bit) ++i;
     if (i == N_LEVELS) {
-        qd_error(QD_ERROR_CONFIG, "'%d' is not a valid log level bit.", bit);
-        return NULL;
+        return &invalid_level;
     }
     return &levels[i];
 }
@@ -240,9 +242,7 @@ static const level_t* level_for_name(const char *name, int len) {
     level_index_t i = 0;
     while (i < N_LEVELS && strncasecmp(levels[i].name, name, len) != 0) ++i;
     if (i == N_LEVELS) {
-        qd_error(QD_ERROR_CONFIG, "'%s' is not a valid log level. Should be one of {%s}.",
-                 name, level_names);
-        return NULL;
+        return &invalid_level;
     }
     return &levels[i];
 }
@@ -283,7 +283,6 @@ static int enable_mask(const char *enable_) {
         int len = strlen(token);
         int plus = (len > 0 && token[len-1] == '+') ? 1 : 0;
         const level_t* level = level_for_name(token, len-plus);
-        if (!level) return -1;  /* qd_error already set */
         mask |= (plus ? level->mask : level->bit);
     }
     return mask;
@@ -313,7 +312,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
     char *end = log_str + LOG_MAX;
 
     const level_t *level = level_for_bit(entry->level);
-    if (!level) {
+    if (level->bit == -2) {
         level = &levels[INFO];
         qd_error_clear();
     }
@@ -331,6 +330,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 
     if (default_bool(log_source->includeSource, default_log_source->includeSource) && entry->file)
         aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
+
     aprintf(&begin, end, "\n");
 
     if (sink->file) {
@@ -425,10 +425,16 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     }
 
     // Bounded buffer of log entries, keep most recent.
-    sys_mutex_lock(log_lock);
     qd_log_entry_t *entry = new_qd_log_entry_t();
     DEQ_ITEM_INIT(entry);
-    entry->module = source->module;
+
+    //
+    // Obtain the log_source_lock global lock. We need to do this, if not, the qd_log_entity() function
+    // could free the log_source->sink from underneath you and replace it with a new sink.
+    // Once we obtain this lock, we only release the lock once the log line is written to the sink.
+    //
+    sys_mutex_lock(log_source_lock);
+    entry->module = source->module ? strdup(source->module) : 0;
     entry->level  = level;
     entry->file   = file ? strdup(file) : 0;
     entry->line   = line;
@@ -438,7 +444,7 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     DEQ_INSERT_TAIL(entries, entry);
     if (DEQ_SIZE(entries) > LIST_MAX)
         qd_log_entry_free_lh(DEQ_HEAD(entries));
-    sys_mutex_unlock(log_lock);
+    sys_mutex_unlock(log_source_lock);
 }
 
 void qd_log_impl_v1(qd_log_source_t *source, qd_log_level_t level,  const char *file, int line, const char *fmt, ...)
@@ -505,7 +511,6 @@ void qd_log_initialize(void)
     for (level_index_t i = NONE + 1; i < N_LEVELS; ++i)
         aprintf(&begin, end, ", %s", levels[i].name);
 
-    log_lock = sys_mutex();
     log_source_lock = sys_mutex();
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
@@ -525,70 +530,143 @@ void qd_log_finalize(void) {
         log_sink_free_lh(DEQ_HEAD(sink_list));
 }
 
-qd_error_t qd_log_entity(qd_entity_t *entity) {
-
+qd_error_t qd_log_entity(qd_entity_t *entity)
+{
     qd_error_clear();
 
-    //Obtain the log_source_lock global lock
-    sys_mutex_lock(log_source_lock);
-
     char* module = 0;
-    char *output = 0;
+    char *outputFile = 0;
     char *enable = 0;
+    int include_timestamp = 0;
+    int include_source = 0;
+
+    bool has_enable = false;
+    bool has_output_file = false;
+    bool has_include_timestamp = false;
+    bool has_include_source = false;
+    bool is_sink_syslog = false;
     bool trace_enabled = false;
+    bool error_in_output = false;
+    bool error_in_enable = false;
 
     do {
-
+        //
+        // A module attribute MUST be specified for a log entity.
+        // Every other attribute is optional.
+        //
         module = qd_entity_get_string(entity, "module");
+
+        //
+        // If the module is not specified, there is nothing to do, just log an
+        // error and break out of this do loop.
+        //
         QD_ERROR_BREAK();
 
-        qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
+        //
+        // Obtain all attributes from the entity before obtaining the log_source_lock.
+        // We do this because functions like qd_entity_get_string and qd_entity_get_bool ultimately call qd_vlog_impl() which
+        // also holds the log_source_lock when calling write_log().
+        //
 
         if (qd_entity_has(entity, "outputFile")) {
-            output = qd_entity_get_string(entity, "outputFile");
+            has_output_file = true;
+            outputFile = qd_entity_get_string(entity, "outputFile");
             QD_ERROR_BREAK();
-            log_sink_t* sink = log_sink_lh(output);
-            QD_ERROR_BREAK();
-
-            /* DEFAULT source may already have a sink, so free the old sink first */
-            if (src->sink) {
-                log_sink_free_lh(src->sink);
-            }
-            src->sink = sink;           /* Assign the new sink   */
-
-            if (src->sink->syslog) /* Timestamp off for syslog. */
-                src->includeTimestamp = 0;
         }
 
         if (qd_entity_has(entity, "enable")) {
+            has_enable = true;
             enable = qd_entity_get_string(entity, "enable");
             QD_ERROR_BREAK();
+        }
 
-            src->mask = enable_mask(enable);
+        if (qd_entity_has(entity, "includeTimestamp")) {
+            has_include_timestamp = true;
+            include_timestamp = qd_entity_get_bool(entity, "includeTimestamp");
+            QD_ERROR_BREAK();
+        }
+
+        if (qd_entity_has(entity, "includeSource")) {
+            has_include_source = true;
+            include_source = qd_entity_get_bool(entity, "includeSource");
+            QD_ERROR_BREAK();
+        }
+
+        //
+        // Obtain the log_source_lock lock. This lock is also used when write_log() is called.
+        //
+        sys_mutex_lock(log_source_lock);
+
+        qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
+
+        if (has_output_file) {
+            log_sink_t* sink = log_sink_lh(outputFile);
+            if (!sink) {
+                error_in_output = true;
+                sys_mutex_unlock(log_source_lock);
+                break;
+            }
+
+            // DEFAULT source may already have a sink, so free the old sink first
+            if (src->sink) {
+                log_sink_free_lh(src->sink);
+            }
+
+            // Assign the new sink
+            src->sink = sink;
+
+            if (src->sink->syslog) {
+                // Timestamp should be off for syslog.
+                is_sink_syslog = true;
+                src->includeTimestamp = 0;
+            }
+        }
+
+        if (has_enable) {
+            int mask = enable_mask(enable);
+
+            if (mask < -1) {
+                error_in_enable = true;
+                sys_mutex_unlock(log_source_lock);
+                break;
+            }
+            else {
+                src->mask = mask;
+            }
 
             if (qd_log_enabled(src, QD_LOG_TRACE)) {
                 trace_enabled = true;
             }
         }
-        QD_ERROR_BREAK();
 
-        if (qd_entity_has(entity, "includeTimestamp"))
-            src->includeTimestamp = qd_entity_get_bool(entity, "includeTimestamp");
-        QD_ERROR_BREAK();
+        if (has_include_timestamp && !is_sink_syslog) {
+            // Timestamp should be off for syslog.
+            src->includeTimestamp = include_timestamp;
+        }
 
-        if (qd_entity_has(entity, "includeSource"))
-            src->includeSource = qd_entity_get_bool(entity, "includeSource");
-        QD_ERROR_BREAK();
+        if (has_include_source) {
+            src->includeSource = include_source;
+        }
+
+        sys_mutex_unlock(log_source_lock);
+
     } while(0);
+
+    if (error_in_output) {
+        char msg[TEXT_MAX];
+        snprintf(msg, sizeof(msg), "Failed to open log file '%s'", outputFile);
+        qd_error(QD_ERROR_CONFIG, msg);
+    }
+    if (error_in_enable) {
+        qd_error(QD_ERROR_CONFIG, "'%s' is not a valid log level. Should be one of {%s}.",  enable, level_names);
+    }
 
     if (module)
         free(module);
-    if (output)
-        free(output);
+    if (outputFile)
+        free(outputFile);
     if (enable)
         free(enable);
-
-    sys_mutex_unlock(log_source_lock);
 
     //
     // If trace logging is enabled, loop thru all connections in the router and call the pn_transport_set_tracer callback
