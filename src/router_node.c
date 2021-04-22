@@ -2062,22 +2062,20 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     else
         return;
 
-    // update if the disposition has changed or is non-terminal (may have multiple
-    // non-terminal updates link PN_RECEIVED). Once a terminal state is set
-    // it cannot be changed
-    //
-    if (disp && !pn_delivery_settled(pnd) && (disp != pn_delivery_local_state(pnd)
-                                              || !qd_delivery_state_is_terminal(disp))) {
-        if (disp == PN_MODIFIED)
-            pn_disposition_set_failed(pn_delivery_local(pnd), true);
-
-        // handle propagation of delivery state from qdr_delivery_t to proton:
-        uint64_t ignore = 0;  // expect same value as 'disp'
+    if (disp && !pn_delivery_settled(pnd)) {
+        uint64_t ignore = 0;
         qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
-        assert(ignore == disp);
-        qd_delivery_write_local_state(pnd, disp, dstate);
-        pn_delivery_update(pnd, disp);
-        qd_delivery_state_free(dstate);
+        assert(ignore == disp); // expected: since both are from the same dlv
+
+        // update if the disposition has changed or there is new state associated with it
+        if (disp != pn_delivery_local_state(pnd) || dstate) {
+            // handle propagation of delivery state from qdr_delivery_t to proton:
+            qd_delivery_write_local_state(pnd, disp, dstate);
+            pn_delivery_update(pnd, disp);
+            qd_delivery_state_free(dstate);
+            if (disp == PN_MODIFIED)  // @TODO(kgiusti) why do we need this???
+                pn_disposition_set_failed(pn_delivery_local(pnd), true);
+        }
     }
 
     if (settled) {

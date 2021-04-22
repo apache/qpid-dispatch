@@ -109,8 +109,7 @@ qdr_link_t *qdr_delivery_link(const qdr_delivery_t *delivery);
 bool qdr_delivery_presettled(const qdr_delivery_t *delivery);
 
 void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label);
-
-void qdr_delivery_move_delivery_state_CT(qdr_delivery_t *from, qdr_delivery_t *to);
+bool qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer);
 
 //
 // I/O thread only functions

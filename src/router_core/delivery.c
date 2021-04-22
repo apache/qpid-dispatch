@@ -30,6 +30,8 @@ static void qdr_delivery_continue_CT(qdr_core_t *core, qdr_action_t *action, boo
 static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
                                            qdr_delivery_t *peer, bool settled);
+static bool qdr_delivery_set_remote_delivery_state_CT(qdr_delivery_t *dlv, uint64_t dispo,
+                                                      qd_delivery_state_t *dstate);
 
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
@@ -661,7 +663,6 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         qdr_delivery_decref_CT(core, action->args.delivery.delivery,
                                "qdr_update_delivery_CT - remove from action on discard");
         qd_delivery_state_free(dstate);
-        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
         return;
     }
 
@@ -672,7 +673,6 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         //
         qdr_delivery_mcast_inbound_update_CT(core, dlv, new_disp, settled);
         qd_delivery_state_free(dstate);  // kgiusti(TODO): handle propagation!
-        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
 
     } else if (peer && peer->multicast) {
         //
@@ -682,13 +682,12 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         // coverity[swapped_arguments]
         qdr_delivery_mcast_outbound_update_CT(core, peer, dlv, new_disp, settled);
         qd_delivery_state_free(dstate);  // kgiusti(TODO): handle propagation!
-        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
 
     } else {
         //
-        // Anycast forwarding - note: peer _may_ be freed by this call
+        // Anycast forwarding - note: peer _may_ be freed after this!
         //
-        qdr_delivery_set_remote_delivery_state(dlv, new_disp, dstate);
+        qdr_delivery_set_remote_delivery_state_CT(dlv, new_disp, dstate);
         qdr_delivery_anycast_update_CT(core, dlv, peer, settled);
     }
 
@@ -728,20 +727,8 @@ static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv
     // unlinked.  It shall not be freed until the connection-side thread
     // settles the PN delivery.
     //
-    //if (new_disp != dlv->remote_disposition || new_disp == PN_RECEIVED) {
-    if (true) {
-        //
-        // Remote disposition has changed, propagate the change to the peer
-        // delivery local disposition.
-        //
-        //dlv->remote_disposition = new_disp;
-        if (peer) {
-            push = true;
-            //<LOCK>
-            //peer->disposition = new_disp;
-            qdr_delivery_move_delivery_state_CT(dlv, peer);
-            //<UNLOCK>
-        }
+    if (peer) {
+        push = qdr_delivery_move_delivery_state_CT(dlv, peer);
     }
 
     if (settled) {
@@ -934,11 +921,6 @@ static bool qdr_delivery_mcast_outbound_settled_CT(qdr_core_t *core, qdr_deliver
 }
 
 
-// true if delivery state d is a terminal state as defined by AMQP 1.0
-//
-#define IS_TERMINAL(d) (PN_ACCEPTED <= (d) && (d) <= PN_MODIFIED)
-
-
 // an outbound mcast delivery has changed its remote state (disposition)
 // propagate the change back "upstream" to the inbound delivery
 //
@@ -978,7 +960,7 @@ static bool qdr_delivery_mcast_outbound_disposition_CT(qdr_core_t *core, qdr_del
 
     out_dlv->remote_disposition = new_disp;
 
-    if (IS_TERMINAL(new_disp)) {
+    if (qd_delivery_state_is_terminal(new_disp)) {
         // our mcast impl ignores non-terminal outcomes
 
         qd_log(core->log, QD_LOG_TRACE,
@@ -999,7 +981,7 @@ static bool qdr_delivery_mcast_outbound_disposition_CT(qdr_core_t *core, qdr_del
         //
         qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
         while (peer) {
-            if (!IS_TERMINAL(peer->remote_disposition)) {
+            if (!qd_delivery_state_is_terminal(peer->remote_disposition)) {
                 break;
             }
             peer = qdr_delivery_next_peer_CT(in_dlv);
@@ -1227,53 +1209,37 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 }
 
 
-// Set remote delivery state. Ownership of *remote_state is passed to the delivery.
-// Called on I/O thread that reads the delivery state from proton.
-bool qdr_delivery_set_remote_delivery_state(qdr_delivery_t *dlv, uint64_t remote_dispo, qd_delivery_state_t *remote_state)
+// Set remote delivery state when proton indicates that the remote updated
+// delivery. Ownership of *remote_state is passed to the delivery.
+//
+static bool qdr_delivery_set_remote_delivery_state_CT(qdr_delivery_t *dlv, uint64_t remote_dispo, qd_delivery_state_t *remote_state)
 {
-    qdr_link_t *link = qdr_delivery_link(dlv);
-
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "SET REMOTE: dlv="DLV_FMT" dstate=%p",
-           DLV_ARGS(dlv), (void*)remote_state);
-
-    //if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
-    sys_mutex_lock(link->conn->work_lock);
+    // old state, has not been transfered to peer?
     if (dlv->remote_state) {
-        qd_log(qd_message_log_source(), QD_LOG_INFO, "SET REMOTE: dlv="DLV_FMT" FREEING OLD DSTATE: %p", DLV_ARGS(dlv),
-               (void*)dlv->remote_state);
         qd_delivery_state_free(dlv->remote_state);
     }
     dlv->remote_state = remote_state;
     dlv->remote_disposition = remote_dispo;
-    //if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
-    sys_mutex_unlock(link->conn->work_lock);
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "SET REMOTE: dlv="DLV_FMT" dstate=%p DONE!",
-           DLV_ARGS(dlv), (void*)remote_state);
     return true;
 }
 
 
-// Take local delivery state from the delivery.  Caller assumes ownership of state object.
-// Called on the I/O thread that writes the delivery state to proton
+// Called on the I/O thread: take local delivery state from the delivery for writing to proton.
+// Caller assumes ownership of state object.
 //
 qd_delivery_state_t *qdr_delivery_take_local_delivery_state(qdr_delivery_t *dlv, uint64_t *dispo)
 {
-    qdr_link_t *link = qdr_delivery_link(dlv);
+    sys_mutex_lock(dlv->dispo_lock);
 
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "TAKE: dlv="DLV_FMT, DLV_ARGS(dlv));
-
-    //if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
-    sys_mutex_lock(link->conn->work_lock);
-    /// atomic
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "TAKE: LOCK dlv="DLV_FMT" lock=%p dlv=%p link=%p conn=%p", DLV_ARGS(dlv), link->conn->work_lock,
-           (void*)dlv, (void*)link, (void*)link->conn);
     qd_delivery_state_t *dstate = dlv->local_state;
     dlv->local_state = 0;
     *dispo = dlv->disposition;
-    //if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "TAKE: UNLOCK dlv="DLV_FMT" lock=%p", DLV_ARGS(dlv), link->conn->work_lock);
-    sys_mutex_unlock(link->conn->work_lock);
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "TAKE: TAKEN dlv="DLV_FMT" dstate=%p", DLV_ARGS(dlv), (void*)dstate);
+    // if the disposition is not terminal, clear the state to allow another
+    // disposition update.  Terminal dispositions are final and never update.
+    if (!qd_delivery_state_is_terminal(dlv->disposition))
+        dlv->disposition = 0;
+
+    sys_mutex_unlock(dlv->dispo_lock);
 
     return dstate;
 }
@@ -1283,43 +1249,29 @@ qd_delivery_state_t *qdr_delivery_take_local_delivery_state(qdr_delivery_t *dlv,
 // of its peer delivery.  This causes the delivery state data to propagate
 // from one delivery to another.
 //
-void qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer)
+// returns true if the state has changed and peer needs to be written to
+// proton.
+//
+bool qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer)
 {
-    /// kag: crap, this may be an issue: possible drop of seq updates!
-
-    // if state is already present do not overwrite it as the outgoing
-    // I/O thread may be in the process of writing it to proton
-
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: src="DLV_FMT" dest="DLV_FMT, DLV_ARGS(dlv), DLV_ARGS(peer));
-
-    qdr_link_t *link = qdr_delivery_link(dlv);
-    qdr_link_t *peer_link = qdr_delivery_link(dlv);
-
-    qd_delivery_state_t *dstate = 0;
-    uint64_t dispo = 0;
-
-    //if (link && link->conn) sys_mutex_lock(link->conn->work_lock);
-    sys_mutex_lock(link->conn->work_lock);
-    dstate = dlv->remote_state;
-    dispo = dlv->remote_disposition;
+    qd_delivery_state_t *dstate = dlv->remote_state;
+    uint64_t dispo = dlv->remote_disposition;
     dlv->remote_state = 0;
-    //if (link && link->conn) sys_mutex_unlock(link->conn->work_lock);
-    sys_mutex_unlock(link->conn->work_lock);
 
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: removed remote_state src="DLV_FMT" dstate=%p", DLV_ARGS(dlv), (void*)dstate);
+    if (dispo) {
+        // must lock peer when modifying local state since I/O thread may be reading
+        // it at the same time
+        sys_mutex_lock(peer->dispo_lock);
 
-    //if (peer_link && peer_link->conn) sys_mutex_lock(peer_link->conn->work_lock);
-    sys_mutex_lock(peer_link->conn->work_lock);
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: LOCK dest="DLV_FMT" lock=%p dlv=%p link=%p conn=%p", DLV_ARGS(peer), peer_link->conn->work_lock, (void*)peer, (void*)peer_link, (void*)peer_link->conn);
-    if (peer->local_state) {
-        assert(peer->local_state != dstate);
-        qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: free old dest state dest="DLV_FMT" old=%p", DLV_ARGS(peer), (void*)peer->local_state);
-        qd_delivery_state_free(peer->local_state);
+        peer->disposition = dispo;
+        if (peer->local_state) {
+            // old state not consumed by I/O thread?
+            qd_delivery_state_free(peer->local_state);
+        }
+        peer->local_state = dstate;
+
+        sys_mutex_unlock(peer->dispo_lock);
     }
-    peer->local_state = dstate;
-    peer->disposition = dispo;
-    //if (peer_link && peer_link->conn) sys_mutex_unlock(peer_link->conn->work_lock);
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: done dest="DLV_FMT" new=%p", DLV_ARGS(peer), (void*)peer->local_state);
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "MOVE: UNLOCK dest="DLV_FMT" lock=%p", DLV_ARGS(peer), peer_link->conn->work_lock);
-    sys_mutex_unlock(peer_link->conn->work_lock);
+
+    return !!dispo;
 }
