@@ -73,6 +73,11 @@ jobs:
 
       - uses: actions/checkout@v2
         with:
+          repository: 'cyrusimap/cyrus-sasl'
+          path: 'cyrus-sasl'
+
+      - uses: actions/checkout@v2
+        with:
           path: 'qpid-dispatch'
 
       # https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
@@ -107,10 +112,19 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz
+          sudo apt install -y libgdbm-dev swig libpython3-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz
 
       - name: Zero ccache stats
         run: ccache -z
+
+      - name: Install Cyrus SASL from sources
+        working-directory: ${{github.workspace}}/cyrus-sasl
+        run: |
+          ./autogen.sh --prefix=/usr
+          sudo make install
+
+      - name: Display ccache stats
+        run: ccache -s
 
       - name: qpid-proton cmake configure
         working-directory: ${{env.ProtonBuildDir}}
@@ -137,7 +151,9 @@ jobs:
             ${DispatchCMakeExtraArgs}
 
       - name: qpid-dispatch cmake build/install
-        run: cmake --build "${DispatchBuildDir}" --config ${BuildType} -t install
+        run: |
+          source ${ProtonBuildDir}/config.sh
+          cmake --build "${DispatchBuildDir}" --config ${BuildType} -t install
 
       - name: Display ccache stats
         run: ccache -s
@@ -155,7 +171,8 @@ jobs:
             --exclude='qpid-dispatch/build/console' \
             qpid-dispatch \
             install \
-            qpid-proton/build/python/pkgs
+            qpid-proton/build \
+            cyrus-sasl
 
       - name: Upload archive
         uses: actions/upload-artifact@v2
@@ -173,14 +190,14 @@ jobs:
         os: [ubuntu-20.04]
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan]
-        shard: [1, 2]
-        shards: [2]
+        shard: [1]
+        shards: [1]
     env:
       BuildType: ${{matrix.buildType}}
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
-      LD_LIBRARY_PATH: ${{github.workspace}}/install/lib
+      LD_LIBRARY_PATH: "${{github.workspace}}/install/lib"
     steps:
 
       - name: Show environment (Linux)
@@ -204,19 +221,24 @@ jobs:
       - name: Install Linux runtime/test dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 pixz bubblewrap curl
+          sudo apt install -y libgdbm-dev libjsoncpp1 libwebsockets15 pixz bubblewrap curl
 
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
 
-      - name: install qpid-proton python wheel
+      - name: Install qpid-proton python wheel
         run: python -m pip install ${ProtonBuildDir}/python/pkgs/python_qpid_proton*.whl
+
+      - name: Install Cyrus SASL from unpacked directory
+        working-directory: ${{github.workspace}}/cyrus-sasl
+        run: |
+          sudo make install
 
       - name: CTest
         working-directory: ${{env.DispatchBuildDir}}
         run: |
           ulimit -c unlimited
-          ctest -C ${BuildType} -V -T Test --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2
+          ctest -C ${BuildType} -V -T Test --no-compress-output
 
       - name: Upload test results
         uses: actions/upload-artifact@v2
@@ -224,6 +246,14 @@ jobs:
         with:
           name: Test_Results_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
           path: ${{env.DispatchBuildDir}}/Testing/**/*.xml
+
+      - name: Upload log files (if any tests failed)
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: testLogs_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          path: |
+            qpid-dispatch/build/tests
 
       - name: Upload core files (if any)
         uses: actions/upload-artifact@v2
