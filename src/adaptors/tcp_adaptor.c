@@ -388,15 +388,6 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
             conn->conn_id, conn->incoming_id);
         qd_message_set_receive_complete(qdr_delivery_message(conn->instream));
         qdr_delivery_continue(tcp_adaptor->core, conn->instream, true);
-        qdr_delivery_decref(tcp_adaptor->core, conn->instream, "tcp-adaptor.pn_raw_connection_closed_read - instream");
-        conn->instream = 0;
-        if (conn->incoming) {
-            qd_log(log, QD_LOG_DEBUG,
-                    "[C%"PRIu64"][L%"PRIu64"] pn_raw_connection_closed_read - detach incoming link",
-                    conn->conn_id, conn->incoming_id);
-            qdr_link_detach(conn->incoming, QD_LOST, 0);
-            conn->incoming = 0;
-        }
         conn->raw_read_shutdown = true;
     }
 
@@ -1447,20 +1438,15 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
                DLV_ARGS(dlv), disp, settled ? "true" : "false");
 
         if (settled) {
-            if (dlv == tc->instream) {
-                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
-                       DLV_FMT" qdr_tcp_delivery_update: instream is settled: call pn_raw_connection_read_close()",
-                       DLV_ARGS(dlv));
-                pn_raw_connection_read_close(tc->pn_raw_conn);
-            } else if (dlv == tc->outstream) {
-                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
-                       DLV_FMT" qdr_tcp_delivery_update: outstream is settled: call pn_raw_connection_write_close()",
-                       DLV_ARGS(dlv));
-                pn_raw_connection_write_close(tc->pn_raw_conn);
-            } else {
-                qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "Unexpected delivery settled");
-                assert(false);
-            }
+            // the only settlement occurs when the initial delivery is
+            // settled, which occurs when the connector is unable to
+            // connect to the configured tcp endpoint, so in this case
+            // we can just close the connection
+            // (The end of the message is used to convey half closed status)
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+                   DLV_FMT" qdr_tcp_delivery_update: call pn_raw_connection_close()",
+                   DLV_ARGS(dlv));
+            pn_raw_connection_close(tc->pn_raw_conn);
         }
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_delivery_update: no link context");
