@@ -48,15 +48,18 @@ jobs:
   - name: "qdrouterd:Debug (gcc on xenial)"
     os: linux
     env:
+    - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=Debug
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
   - name: "qdrouterd:Coverage"
     os: linux
     env:
+    - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0 BUILD_TYPE=Coverage
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on xenial)"
     os: linux
     env:
+    - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0 BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
@@ -76,6 +79,7 @@ jobs:
     # Install grpcio and protobuf to run the grpc tests.
     - python -m pip install --user grpcio protobuf
     env:
+    - QPID_SYSTEM_TEST_TIMEOUT=300
     - CC=clang-11
     - CXX=clang++-11
     - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
@@ -105,6 +109,7 @@ jobs:
       - python3 -m pip install --user protobuf
       - sudo apt install python3-grpcio
     env:
+      - QPID_SYSTEM_TEST_TIMEOUT=300
       - CC=clang-11
       - CXX=clang++-11
       - PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
@@ -112,6 +117,7 @@ jobs:
   - name: "qdrouterd:Default Build"
     os: linux
     env:
+    - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
   - name: "qdrouterd:TSAN"
     os: linux
@@ -128,12 +134,14 @@ jobs:
       # Install grpcio and protobuf to run the grpc tests.
       - python -m pip install --user grpcio protobuf
     env:
+    - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on macOS)"
     os: osx
     osx_image: xcode11
     env:
+    - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=main
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
     # exclude tests that require raw_connection functionality; not available in libuv proactor
@@ -204,7 +212,7 @@ script:
 - popd
 # Workaround on macOS for PROTON-808 Binaries have their library locations stripped
 - if [[ "${OSTYPE}" == "darwin"* ]]; then install_name_tool -add_rpath $PREFIX/lib/. $PREFIX/lib/proton/bindings/python/_cproton.so; fi
-- ctest -V ${DISPATCH_CTEST_EXTRA} && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
+- ctest --timeout 1200 -V ${DISPATCH_CTEST_EXTRA} && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
 
 after_success:
 - cd ${TRAVIS_BUILD_DIR}/build
