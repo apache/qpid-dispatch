@@ -1961,7 +1961,6 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
             pn_delivery_update(pdlv, disposition);
         }
         qd_delivery_state_free(dstate);
-        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
 
         //
         // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
@@ -2063,19 +2062,12 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     else
         return;
 
-    qd_message_t *msg = qdr_delivery_message(dlv);
-
+    // update if the disposition has changed or is non-terminal (may have multiple
+    // non-terminal updates link PN_RECEIVED). Once a terminal state is set
+    // it cannot be changed
     //
-    // DISPATCH-2040: For link routed links, it does not matter if the passed in disp matches the pn_delivery_remote_state(pnd), we will still
-    // call qd_delivery_write_local_state and send out the disposition if the delivery is not already settled.
-    //
-        //
-        // If the delivery is still arriving, don't push out the disposition change yet.
-        //
-    //if ((disp == PN_RECEIVED || disp != pn_delivery_remote_state(pnd)) && ) {
-    // should be: (disp is non-terminal || qd_message_receive_complete(msg)) - kag
-    if (!pn_delivery_settled(pnd) && (disp == PN_RECEIVED || qd_message_receive_complete(msg))) {
-
+    if (disp && !pn_delivery_settled(pnd) && (disp != pn_delivery_local_state(pnd)
+                                              || !qd_delivery_state_is_terminal(disp))) {
         if (disp == PN_MODIFIED)
             pn_disposition_set_failed(pn_delivery_local(pnd), true);
 
@@ -2083,15 +2075,9 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         uint64_t ignore = 0;  // expect same value as 'disp'
         qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
         assert(ignore == disp);
-        qd_log(qd_message_log_source(), QD_LOG_INFO, "WRITING DSTATE: %p", (void*)dstate);
         qd_delivery_write_local_state(pnd, disp, dstate);
-        qd_delivery_state_free(dstate);
-        qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)dstate);
-
-        //assert(qdr_delivery_disposition(dlv) == disp) ;
-        //if ( || disp == PN_RECEIVED) {
-        //if (true || disp != pn_delivery_local_state(pnd)) {
         pn_delivery_update(pnd, disp);
+        qd_delivery_state_free(dstate);
     }
 
     if (settled) {

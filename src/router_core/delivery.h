@@ -42,7 +42,7 @@ struct qdr_delivery_t {
     qd_message_t           *msg;
     qd_iterator_t          *to_addr;
     qd_iterator_t          *origin;
-    sys_mutex_t           *dispo_lock;
+    sys_mutex_t            *dispo_lock;
     uint64_t                disposition;         ///< local disposition, will be pushed to remote endpoint
     uint64_t                remote_disposition;  ///< disposition as set by remote endpoint
     uint64_t                mcast_disposition;   ///< temporary terminal disposition while multicast fwding
