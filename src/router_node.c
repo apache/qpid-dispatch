@@ -133,63 +133,66 @@ static qd_delivery_state_t *qd_delivery_read_remote_state(pn_delivery_t *pnd)
 {
     qd_delivery_state_t *dstate = 0;
     uint64_t            outcome = pn_delivery_remote_state(pnd);
-    if (pnd) {
-        switch (outcome) {
-        case PN_RECEIVED: {
-            pn_disposition_t *disp = pn_delivery_remote(pnd);
-            dstate = qd_delivery_state();
-            dstate->section_number = pn_disposition_get_section_number(disp);
-            dstate->section_offset = pn_disposition_get_section_offset(disp);
-            break;
-        }
-        case PN_ACCEPTED:
-        case PN_RELEASED:
-            // no associated state (that we care about)
-            break;
-        case PN_REJECTED: {
-            // See AMQP 1.0 section 3.4.4 Rejected
-            pn_condition_t *cond = pn_disposition_condition(pn_delivery_remote(pnd));
-            dstate = qd_delivery_state();
-            dstate->error = qdr_error_from_pn(cond);
-            break;
-        }
-        case PN_MODIFIED: {
-            // See AMQP 1.0 section 3.4.5 Modified
-            pn_disposition_t *disp = pn_delivery_remote(pnd);
-            bool failed = pn_disposition_is_failed(disp);
-            bool undeliverable = pn_disposition_is_undeliverable(disp);
-            pn_data_t *anno = pn_disposition_annotations(disp);
 
-            // avoid expensive alloc if only default values found
-            const bool need_anno = (anno && pn_data_size(anno) > 0);
-            if (failed || undeliverable || need_anno) {
-                dstate = qd_delivery_state();
-                dstate->delivery_failed = failed;
-                dstate->undeliverable_here = undeliverable;
-                if (need_anno) {
-                    dstate->annotations = pn_data(0);
-                    pn_data_copy(dstate->annotations, anno);
-                }
-            }
-            break;
-        }
-        default: {
-            // Check for custom state data. Custom outcomes and AMQP 1.0
-            // Transaction defined outcomes will all be numerically >
-            // PN_MODIFIED. See Part 4: Transactions and section 1.5 Descriptor
-            // Values in the AMQP 1.0 spec.
-            if (outcome > PN_MODIFIED) {
-                pn_data_t *data = pn_disposition_data(pn_delivery_remote(pnd));
-                if (data && pn_data_size(data) > 0) {
-                    dstate = qd_delivery_state();
-                    dstate->extension = pn_data(0);
-                    pn_data_copy(dstate->extension, data);
-                }
-            }
+    switch (outcome) {
+    case 0:
+        // not set - no delivery-state
         break;
-        }
-        } // end switch
+    case PN_RECEIVED: {
+        pn_disposition_t *disp = pn_delivery_remote(pnd);
+        dstate = qd_delivery_state();
+        dstate->section_number = pn_disposition_get_section_number(disp);
+        dstate->section_offset = pn_disposition_get_section_offset(disp);
+        break;
     }
+    case PN_ACCEPTED:
+    case PN_RELEASED:
+        // no associated state (that we care about)
+        break;
+    case PN_REJECTED: {
+        // See AMQP 1.0 section 3.4.4 Rejected
+        pn_condition_t *cond = pn_disposition_condition(pn_delivery_remote(pnd));
+        dstate = qd_delivery_state();
+        dstate->error = qdr_error_from_pn(cond);
+        break;
+    }
+    case PN_MODIFIED: {
+        // See AMQP 1.0 section 3.4.5 Modified
+        pn_disposition_t *disp = pn_delivery_remote(pnd);
+        bool failed = pn_disposition_is_failed(disp);
+        bool undeliverable = pn_disposition_is_undeliverable(disp);
+        pn_data_t *anno = pn_disposition_annotations(disp);
+
+        // avoid expensive alloc if only default values found
+        const bool need_anno = (anno && pn_data_size(anno) > 0);
+        if (failed || undeliverable || need_anno) {
+            dstate = qd_delivery_state();
+            dstate->delivery_failed = failed;
+            dstate->undeliverable_here = undeliverable;
+            if (need_anno) {
+                dstate->annotations = pn_data(0);
+                pn_data_copy(dstate->annotations, anno);
+            }
+        }
+        break;
+    }
+    default: {
+        // Check for custom state data. Custom outcomes and AMQP 1.0
+        // Transaction defined outcomes will all be numerically >
+        // PN_MODIFIED. See Part 4: Transactions and section 1.5 Descriptor
+        // Values in the AMQP 1.0 spec.
+        if (outcome > PN_MODIFIED) {
+            pn_data_t *data = pn_disposition_data(pn_delivery_remote(pnd));
+            if (data && pn_data_size(data) > 0) {
+                dstate = qd_delivery_state();
+                dstate->extension = pn_data(0);
+                pn_data_copy(dstate->extension, data);
+            }
+        }
+        break;
+    }
+    } // end switch
+
     return dstate;
 }
 
@@ -926,33 +929,38 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
     qdr_delivery_t *delivery = qdr_node_delivery_qdr_from_pn(pnd);
 
     //
-    // It's important to not do any processing without a qdr_delivery.  When pre-settled
-    // multi-frame deliveries arrive, it's possible for the settlement to register before
-    // the whole message arrives.  Such premature settlement indications must be ignored.
-    //
+    // It's important to not do any processing without a qdr_delivery.
     if (!delivery)
         return;
 
     uint64_t dstate = pn_delivery_remote_state(pnd);
-
-    if (!qdr_delivery_receive_complete(delivery) && dstate != PN_RECEIVED)
-        return;
+    bool settled = pn_delivery_settled(pnd);
 
     //
-    // Update the disposition of the delivery
+    // When pre-settled multi-frame deliveries arrive, it's possible for the
+    // settlement to register before the whole message arrives.  Such premature
+    // settlement indications must be ignored.
     //
-    qdr_delivery_remote_state_updated(router->router_core, delivery,
-                                      pn_delivery_remote_state(pnd),
-                                      pn_delivery_settled(pnd),
-                                      qd_delivery_read_remote_state(pnd),
-                                      false);
+    if (settled && !qdr_delivery_receive_complete(delivery))
+        settled = false;
 
-    //
-    // If settled, close out the delivery
-    //
-    if (pn_delivery_settled(pnd)) {
-        qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
-        pn_delivery_settle(pnd);
+    if (dstate || settled) {
+        //
+        // Update the disposition of the delivery
+        //
+        qdr_delivery_remote_state_updated(router->router_core, delivery,
+                                          dstate,
+                                          settled,
+                                          qd_delivery_read_remote_state(pnd),
+                                          false);
+
+        //
+        // If settled, close out the delivery
+        //
+        if (settled) {
+            qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
+            pn_delivery_settle(pnd);
+        }
     }
 }
 
