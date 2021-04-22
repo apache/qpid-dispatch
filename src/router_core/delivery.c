@@ -483,10 +483,8 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     qdr_link_work_release(delivery->link_work);
     qd_bitmask_free(delivery->link_exclusion);
     qd_delivery_state_free(delivery->local_state);
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)delivery->local_state);
-
     qd_delivery_state_free(delivery->remote_state);
-    qd_log(qd_message_log_source(), QD_LOG_INFO, "DSTATE FREED: %p", (void*)delivery->remote_state);
+    sys_mutex_free(delivery->dispo_lock);
 
     free_qdr_delivery_t(delivery);
 }
