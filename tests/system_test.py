@@ -1014,6 +1014,7 @@ class AsyncTestReceiver(MessagingHandler):
                                                   **kwargs)
 
     def on_message(self, event):
+        print("AsyncTestReceiver on_message")
         self.queue.put(event.message)
 
     def on_disconnected(self, event):
