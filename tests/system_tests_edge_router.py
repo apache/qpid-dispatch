@@ -2500,7 +2500,7 @@ class MobileAddressMulticastTest(MessagingHandler):
         self.receiver3 = None
         self.sender = None
 
-        self.count = 200
+        self.count = 100
         self.n_rcvd1 = 0
         self.n_rcvd2 = 0
         self.n_rcvd3 = 0
