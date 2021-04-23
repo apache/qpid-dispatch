@@ -22,9 +22,9 @@ cache: ccache
 jobs:
   fast_finish: true
   allow_failures:
-    - os: osx
+    - os: linux
     - name: "qdrouterd:TSAN"
-    - arch: arm64
+    - arch: s390x
   include:
   - name: "apache-rat:check"
     os: linux
@@ -67,17 +67,17 @@ jobs:
     dist: focal
     compiler: clang
     before_install:
-    - sudo apt-get install clang-11 llvm-11-dev
+    #- sudo apt-get install clang-11 llvm-11-dev
     # https://github.com/pypa/virtualenv/issues/1740
     # https://github.com/pypa/virtualenv/issues/1873
-    - python -m pip install --user --upgrade pip
-    - python -m pip install --user --upgrade tox virtualenv==20.0.23
+    #- python -m pip install --user --upgrade pip
+    #- python -m pip install --user --upgrade tox virtualenv==20.0.23
     # Install quart to run the http2 tests.
-    - python -m pip install --user quart
+    #- python -m pip install --user quart
     # DISPATCH-1883: Install selectors to run tcp echo server/client tools
-    - python -m pip install --user selectors
+    #- python -m pip install --user selectors
     # Install grpcio and protobuf to run the grpc tests.
-    - python -m pip install --user grpcio protobuf
+    #- python -m pip install --user grpcio protobuf
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - CC=clang-11
@@ -180,6 +180,7 @@ addons:
     - tox
     # code coverage
     - lcov
+    - maven
 
 before_install:
 # Install and use the latest Node.js LTS version
