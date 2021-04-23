@@ -338,7 +338,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
         conn->instream = qdr_link_deliver(conn->incoming, msg, 0, false, 0, 0, 0, 0);
 
         qd_log(log, QD_LOG_DEBUG,
-               "[C%"PRIu64"][L%"PRIu64"][D%"PRIu64"] Initiating ingress stream message with 0 bytes",
+               "[C%"PRIu64"][L%"PRIu64"][D%"PRIu32"] Initiating ingress stream message with 0 bytes",
                conn->conn_id, conn->incoming_id, conn->instream->delivery_id);
 
         conn->incoming_started = true;
