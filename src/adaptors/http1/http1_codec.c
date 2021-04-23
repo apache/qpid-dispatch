@@ -1460,7 +1460,7 @@ h1_codec_request_state_t *h1_codec_tx_request(h1_codec_connection_t *conn, const
     write_string(encoder, " ");
     {
         char version[64];
-        snprintf(version, 64, "HTTP/%" PRIu32 ".%" PRIu32 , version_major, version_minor);
+        snprintf(version, 64, "HTTP/%"PRIu32".%"PRIu32, version_major, version_minor);
         write_string(encoder, version);
     }
     write_string(encoder, CRLF);
@@ -1492,7 +1492,7 @@ int h1_codec_tx_response(h1_codec_request_state_t *hrs, int status_code, const c
 
     {
         char version[64];
-        snprintf(version, 64, "HTTP/%" PRIu32 ".%" PRIu32 , version_major, version_minor);
+        snprintf(version, 64, "HTTP/%"PRIu32".%"PRIu32, version_major, version_minor);
         write_string(encoder, version);
     }
 

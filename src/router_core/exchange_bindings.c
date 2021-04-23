@@ -524,7 +524,7 @@ void qdra_config_exchange_create_CT(qdr_core_t         *core,
 
     if (query->status.status == QD_AMQP_CREATED.status) {
         qd_log(core->agent_log, QD_LOG_DEBUG,
-               "Exchange %s CREATED (id=%" PRIu64 ")", ex->name, ex->identity);
+               "Exchange %s CREATED (id=%"PRIu64")", ex->name, ex->identity);
 
     } else {
         qd_log(core->agent_log, QD_LOG_ERROR,
@@ -560,7 +560,7 @@ void qdra_config_exchange_delete_CT(qdr_core_t    *core,
         ex = find_exchange(core, identity, name);
         if (ex) {
             qd_log(core->agent_log, QD_LOG_DEBUG,
-                   "Exchange %s DELETED (id=%" PRIu64 ")", ex->name, ex->identity);
+                   "Exchange %s DELETED (id=%"PRIu64")", ex->name, ex->identity);
             qdr_exchange_free(ex);
             query->status = QD_AMQP_NO_CONTENT;
         } else
@@ -764,7 +764,7 @@ void qdra_config_binding_create_CT(qdr_core_t         *core,
 
     if (query->status.status == QD_AMQP_CREATED.status) {
         qd_log(core->agent_log, QD_LOG_DEBUG,
-               "Exchange %s Binding %s -> %s CREATED (id=%" PRIu64 ")", ex->name,
+               "Exchange %s Binding %s -> %s CREATED (id=%"PRIu64")", ex->name,
                binding->key, binding->next_hop->next_hop, binding->identity);
     } else {
         qd_log(core->agent_log, QD_LOG_ERROR,
@@ -804,7 +804,7 @@ void qdra_config_binding_delete_CT(qdr_core_t    *core,
             query->status = QD_AMQP_NOT_FOUND;
         } else {
             qd_log(core->agent_log, QD_LOG_DEBUG,
-                   "Binding %s -> %s on exchange %s DELETED (id=%" PRIu64 ")",
+                   "Binding %s -> %s on exchange %s DELETED (id=%"PRIu64")",
                    binding->key,
                    binding->next_hop->next_hop,
                    binding->exchange->name,
@@ -1215,7 +1215,7 @@ static void binding_insert_column(qdr_binding_t *b, int col, qd_composed_field_t
 
     case QDR_CONFIG_BINDING_IDENTITY: {
         char id_str[100];
-        snprintf(id_str, 100, "%" PRIu64 , b->identity);
+        snprintf(id_str, 100, "%"PRIu64, b->identity);
         qd_compose_insert_string(body, id_str);
         break;
     }

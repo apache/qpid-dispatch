@@ -419,7 +419,7 @@ static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_messa
         const char *src = pn_terminus_get_address(pn_link_source(pn_link));
         const char *tgt = pn_terminus_get_address(pn_link_target(pn_link));
         qd_log(qd_message_log_source(), QD_LOG_TRACE,
-               "[C%" PRIu64 "]: %s %s on link '%s' (%s -> %s)",
+               "[C%"PRIu64"]: %s %s on link '%s' (%s -> %s)",
                qd_connection_connection_id(conn),
                pn_link_is_sender(pn_link) ? "Sent" : "Received",
                msg_str,
@@ -747,7 +747,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     if (!receive_complete) {
         if (qd_message_is_streaming(msg) || qd_message_is_Q2_blocked(msg)) {
             qd_log(router->log_source, QD_LOG_DEBUG,
-                   "[C%" PRIu64 "][L%" PRIu64 "] Incoming message classified as streaming. User:%s",
+                   "[C%"PRIu64"][L%"PRIu64"] Incoming message classified as streaming. User:%s",
                    conn->connection_id,
                    qd_link_link_id(link),
                    conn->user_id);
@@ -1400,7 +1400,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     if (conn->connector) {
         char conn_msg[300];
-        qd_format_string(conn_msg, 300, "[C%" PRIu64 "] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
+        qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
                 " auth=%s user=%s container_id=%s",
                 connection_id, inbound ? "in" : "out", host, vhost ? vhost : "", encrypted ? proto : "no",
                         authenticated ? mech : "no", (char*) user, container);
@@ -2217,6 +2217,6 @@ void qd_connection_log_policy_denial(qd_link_t *link, const char *text)
             c_id = rlink->conn->identity;
         }
     }    
-    qd_log(qd_policy_log_source(), QD_LOG_WARNING, "[C%" PRIu64 "][L%" PRIu64 "] %s",
+    qd_log(qd_policy_log_source(), QD_LOG_WARNING, "[C%"PRIu64"][L%"PRIu64"] %s",
            c_id, l_id, text);
 }

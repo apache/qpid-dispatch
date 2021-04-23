@@ -347,7 +347,7 @@ static void usage(void)
 {
   printf("Usage: sender <options>\n");
   printf("-a      \tThe address:port of the server [%s]\n", host_address);
-  printf("-c      \t# of messages to send, 0 == nonstop [%" PRIu64 "]\n", limit);
+  printf("-c      \t# of messages to send, 0 == nonstop [%"PRIu64"]\n", limit);
   printf("-i      \tContainer name [%s]\n", container_name);
   printf("-n      \tUse an anonymous link [%s]\n", BOOL2STR(use_anonymous));
   printf("-s      \tBody size in bytes ('s'=%ld 'm'=%ld 'l'=%ld 'x'=%ld) [%ld]\n",
@@ -372,7 +372,7 @@ int main(int argc, char** argv)
         case 'h': usage(); break;
         case 'a': host_address = optarg; break;
         case 'c':
-            if (sscanf(optarg, "%" PRIu64 , &limit) != 1)
+            if (sscanf(optarg, "%"PRIu64, &limit) != 1)
                 usage();
             break;
         case 'i': container_name = optarg; break;
@@ -440,8 +440,8 @@ int main(int argc, char** argv)
         if (stop) {
             if (drop_connection) {  // hard stop
                 fprintf(stdout,
-                        "Sent:%" PRIu64 " Accepted:%" PRIu64 " Rejected:%" PRIu64
-                        " Released:%" PRIu64 " Modified:%" PRIu64 "\n",
+                        "Sent:%"PRIu64" Accepted:%"PRIu64" Rejected:%"PRIu64
+                        " Released:%"PRIu64" Modified:%"PRIu64"\n",
                         count, accepted, rejected, released, modified);
                 exit(0);
             }
@@ -456,8 +456,8 @@ int main(int argc, char** argv)
             time_t now = time(NULL);
             if ((now - last_log) >= 10) {
                     fprintf(stdout,
-                            "Sent:%" PRIu64 " Accepted:%" PRIu64 " Rejected:%" PRIu64
-                            " Released:%" PRIu64 " Modified:%" PRIu64" Limit:%"PRIu64 "\n",
+                            "Sent:%"PRIu64" Accepted:%"PRIu64" Rejected:%"PRIu64
+                            " Released:%"PRIu64" Modified:%"PRIu64" Limit:%"PRIu64 "\n",
                             count, accepted, rejected, released, modified, limit);
                 fflush(stdout);
                 last_log = now;

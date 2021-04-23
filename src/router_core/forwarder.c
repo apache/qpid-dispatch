@@ -80,7 +80,7 @@ static inline qdr_link_t *get_outgoing_streaming_link(qdr_core_t *core, qdr_conn
         // no free links - create a new one
         out_link = qdr_connection_new_streaming_link_CT(core, conn);
         if (!out_link) {
-            qd_log(core->log, QD_LOG_WARNING, "[C%" PRIu64 "] Unable to setup new outgoing streaming message link", conn->identity);
+            qd_log(core->log, QD_LOG_WARNING, "[C%"PRIu64"] Unable to setup new outgoing streaming message link", conn->identity);
             return 0;
         }
     }

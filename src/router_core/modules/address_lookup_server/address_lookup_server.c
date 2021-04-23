@@ -227,7 +227,7 @@ void _on_transfer(void           *link_context,
     if (version != PROTOCOL_VERSION) {
         qd_log(_server_state.core->log, QD_LOG_ERROR,
                "Invalid address lookup request - unknown version"
-               " (container=%s, endpoint=%p, version=%" PRIu32 ")",
+               " (container=%s, endpoint=%p, version=%"PRIu32")",
                epr->container_id, (void *)epr->endpoint, version);
         disposition = PN_REJECTED;
         goto exit;

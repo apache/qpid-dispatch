@@ -407,7 +407,7 @@ static void qcm_mobile_sync_on_timer_CT(qdr_core_t *core, void *context)
     //
     // Trace log the activity of this sequence update.
     //
-    qd_log(msync->log, QD_LOG_DEBUG, "New mobile sequence: mobile_seq=%" PRIu64 ", addrs_added=%ld, addrs_deleted=%ld, fanout=%d",
+    qd_log(msync->log, QD_LOG_DEBUG, "New mobile sequence: mobile_seq=%"PRIu64", addrs_added=%ld, addrs_deleted=%ld, fanout=%d",
            msync->mobile_seq, added_count, deleted_count, fanout);
 }
 
@@ -434,13 +434,13 @@ static void qcm_mobile_sync_on_mar_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
             if (version > PROTOCOL_VERSION) {
                 if (!BIT_IS_SET(router->sync_mask, ADDR_SYNC_ROUTER_VERSION_LOGGED)) {
                     BIT_SET(router->sync_mask, ADDR_SYNC_ROUTER_VERSION_LOGGED);
-                    qd_log(msync->log, QD_LOG_WARNING, "Received MAR at protocol version %" PRIu32 " from %s.  Ignoring.",
+                    qd_log(msync->log, QD_LOG_WARNING, "Received MAR at protocol version %"PRIu32" from %s.  Ignoring.",
                            version, (const char*) qd_hash_key_by_handle(router->owning_addr->hash_handle) + 1);
                 }
                 return;
             }
 
-            qd_log(msync->log, QD_LOG_DEBUG, "Received MAR from %s, have_seq=%" PRIu64 ,
+            qd_log(msync->log, QD_LOG_DEBUG, "Received MAR from %s, have_seq=%"PRIu64,
                    (const char*) qd_hash_key_by_handle(router->owning_addr->hash_handle) + 1, have_seq);
 
             if (have_seq < msync->mobile_seq) {
@@ -455,7 +455,7 @@ static void qcm_mobile_sync_on_mar_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                 //
                 // Trace log the activity of this sequence update.
                 //
-                qd_log(msync->log, QD_LOG_DEBUG, "Sent MAU to requestor: mobile_seq=%" PRIu64 , msync->mobile_seq);
+                qd_log(msync->log, QD_LOG_DEBUG, "Sent MAU to requestor: mobile_seq=%"PRIu64, msync->mobile_seq);
             }
         } else
             qd_log(msync->log, QD_LOG_ERROR, "Received MAR from an unknown router");
@@ -483,7 +483,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
             if (version > PROTOCOL_VERSION) {
                 if (!BIT_IS_SET(router->sync_mask, ADDR_SYNC_ROUTER_VERSION_LOGGED)) {
                     BIT_SET(router->sync_mask, ADDR_SYNC_ROUTER_VERSION_LOGGED);
-                    qd_log(msync->log, QD_LOG_WARNING, "Received MAU at protocol version %" PRIu32 " from %s.  Ignoring.",
+                    qd_log(msync->log, QD_LOG_WARNING, "Received MAU at protocol version %"PRIu32" from %s.  Ignoring.",
                            version, router_id);
                 }
                 return;
@@ -544,7 +544,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                     hints_count = 0;
             }
 
-            qd_log(msync->log, QD_LOG_DEBUG, "Received MAU (%s) from %s, mobile_seq=%" PRIu64 ,
+            qd_log(msync->log, QD_LOG_DEBUG, "Received MAU (%s) from %s, mobile_seq=%"PRIu64,
                    !!exist_field ? "absolute" : "differential", router_id, mobile_seq);
 
             //
@@ -827,7 +827,7 @@ static void qcm_mobile_sync_on_router_advanced_CT(qdrm_mobile_sync_t *msync, qdr
     //
     // Trace log the activity of this sequence update.
     //
-    qd_log(msync->log, QD_LOG_DEBUG, "Send MAR request to router %s, have_seq=%" PRIu64 ", fanout=%d",
+    qd_log(msync->log, QD_LOG_DEBUG, "Send MAR request to router %s, have_seq=%"PRIu64", fanout=%d",
            (const char*) qd_hash_key_by_handle(router->owning_addr->hash_handle) + 1, router->mobile_seq, fanout);
 }
 

@@ -132,7 +132,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
 
     pn_data_format(connection_info->connection_properties, props_str, &props_len);
 
-    qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
            " auth=%s user=%s container_id=%s props=%s",
            management_id, incoming ? "in" : "out",
            connection_info->host, vhost ? vhost : "", connection_info->is_encrypted ? connection_info->ssl_proto : "no",
@@ -1079,8 +1079,8 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     // Log the link closure
     //
-    qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "][L%" PRIu64 "] %s: del=%" PRIu64 " presett=%" PRIu64 " psdrop=%" PRIu64
-           " acc=%" PRIu64 " rej=%" PRIu64 " rel=%" PRIu64 " mod=%" PRIu64 " delay1=%" PRIu64 " delay10=%" PRIu64 " blocked=%s",
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] %s: del=%"PRIu64" presett=%"PRIu64" psdrop=%"PRIu64
+           " acc=%"PRIu64" rej=%"PRIu64" rel=%"PRIu64" mod=%"PRIu64" delay1=%"PRIu64" delay10=%"PRIu64" blocked=%s",
            conn->identity, link->identity, log_text, link->total_deliveries, link->presettled_deliveries,
            link->dropped_presettled_deliveries, link->accepted_deliveries, link->rejected_deliveries,
            link->released_deliveries, link->modified_deliveries, link->deliveries_delayed_1sec,
@@ -1178,7 +1178,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
         qdr_terminus_format(target, target_str, &target_len);
     }
 
-    qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "][L%" PRIu64 "] Link attached: dir=%s source=%s target=%s",
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] Link attached: dir=%s source=%s target=%s",
                conn->identity, link->identity, dir == QD_INCOMING ? "in" : "out", source_str, target_str);
 
     qdr_connection_enqueue_work_CT(core, conn, work);
@@ -1562,7 +1562,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 
     qdrc_event_conn_raise(core, QDRC_EVENT_CONN_CLOSED, conn);
 
-    qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "] Connection Closed", conn->identity);
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Connection Closed", conn->identity);
 
     DEQ_REMOVE(core->open_connections, conn);
     qdr_connection_free(conn);
@@ -1729,7 +1729,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
-        qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "] Router attach forbidden on non-inter-router connection", conn->identity);
+        qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Router attach forbidden on non-inter-router connection", conn->identity);
         return;
     }
 
@@ -1743,7 +1743,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_WRONG_ROLE, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
-        qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "] Endpoint attach forbidden on inter-router connection", conn->identity);
+        qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Endpoint attach forbidden on inter-router connection", conn->identity);
         return;
     }
 
@@ -1785,7 +1785,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
-                    qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "] Endpoint attach failed - no address lookup handler", conn->identity);
+                    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Endpoint attach failed - no address lookup handler", conn->identity);
                     return;
                 }
             }
@@ -1820,7 +1820,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                 qdr_terminus_free(source);
                 qdr_terminus_free(target);
-                    qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "] Endpoint attach failed - no address lookup handler", conn->identity);
+                    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Endpoint attach failed - no address lookup handler", conn->identity);
                 return;
             }
             break;
@@ -1843,7 +1843,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         }
     }
 
-    qd_log(core->log, QD_LOG_INFO, "[C%" PRIu64 "][L%" PRIu64 "] Link attached: dir=%s source=%s target=%s",
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] Link attached: dir=%s source=%s target=%s",
            conn->identity, link->identity, dir == QD_INCOMING ? "in" : "out", source_str, target_str);
 }
 

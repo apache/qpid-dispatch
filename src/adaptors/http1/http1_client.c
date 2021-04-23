@@ -318,7 +318,7 @@ static void _setup_client_connection(qdr_http1_connection_t *hconn)
                                             0);     // bind token
     qdr_connection_set_context(hconn->qdr_conn, hconn);
 
-    qd_log(hconn->adaptor->log, QD_LOG_DEBUG, "[C%" PRIu64 "] HTTP connection to client created", hconn->conn_id);
+    qd_log(hconn->adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP connection to client created", hconn->conn_id);
 
     // simulate a client subscription for reply-to
     qdr_terminus_t *dynamic_source = qdr_terminus(0);
@@ -335,7 +335,7 @@ static void _setup_client_connection(qdr_http1_connection_t *hconn)
     qdr_link_set_context(hconn->out_link, hconn);
 
     qd_log(hconn->adaptor->log, QD_LOG_DEBUG,
-           "[C%" PRIu64 "][L%" PRIu64 "] HTTP client response link created",
+           "[C%"PRIu64"][L%"PRIu64"] HTTP client response link created",
            hconn->conn_id, hconn->out_link_id);
 
     // simulate a client publisher link to the HTTP server:
@@ -360,7 +360,7 @@ static void _setup_client_connection(qdr_http1_connection_t *hconn)
     qdr_link_set_context(hconn->in_link, hconn);
 
     qd_log(hconn->adaptor->log, QD_LOG_DEBUG,
-           "[C%" PRIu64 "][L%" PRIu64 "] HTTP client request link created",
+           "[C%"PRIu64"][L%"PRIu64"] HTTP client request link created",
            hconn->conn_id, hconn->in_link_id);
 
     // wait until the dynamic reply-to address is returned in the second attach
@@ -390,7 +390,7 @@ static int _handle_conn_read_event(qdr_http1_connection_t *hconn)
     if (length) {
 
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-               "[C%" PRIu64 "][L%" PRIu64 "] Read %"PRIuMAX" bytes from client (%zu buffers)",
+               "[C%"PRIu64"][L%"PRIu64"] Read %"PRIuMAX" bytes from client (%zu buffers)",
                hconn->conn_id, hconn->in_link_id, length, DEQ_SIZE(blist));
 
         if (HTTP1_DUMP_BUFFERS) {
@@ -416,7 +416,7 @@ static void _handle_conn_need_read_buffers(qdr_http1_connection_t *hconn)
     // @TODO(kgiusti): backpressure if no credit
     if (hconn->client.reply_to_addr || hconn->cfg.event_channel /* && hconn->in_link_credit > 0 */) {
         int granted = qdr_http1_grant_read_buffers(hconn);
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%" PRIu64 "] %d read buffers granted",
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %d read buffers granted",
                hconn->conn_id, granted);
     }
 }
@@ -431,7 +431,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
 
     if (!hconn) return;
 
-    qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] HTTP client proactor event %s", hconn->conn_id, pn_event_type_name(pn_event_type(e)));
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] HTTP client proactor event %s", hconn->conn_id, pn_event_type_name(pn_event_type(e)));
 
     switch (pn_event_type(e)) {
 
@@ -450,7 +450,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
-        qd_log(log, QD_LOG_INFO, "[C%" PRIu64 "] Disconnected", hconn->conn_id);
+        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Disconnected", hconn->conn_id);
         pn_raw_connection_set_context(hconn->raw_conn, 0);
 
         // prevent core from waking this connection
@@ -480,7 +480,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         return;  // hconn no longer valid
     }
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
-        qd_log(log, QD_LOG_DEBUG, "[C%" PRIu64 "] Need write buffers", hconn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need write buffers", hconn->conn_id);
         _write_pending_response((_client_request_t*) DEQ_HEAD(hconn->requests));
         break;
     }
@@ -489,7 +489,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
-        qd_log(log, QD_LOG_DEBUG, "[C%" PRIu64 "] Need read buffers", hconn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need read buffers", hconn->conn_id);
         _handle_conn_need_read_buffers(hconn);
         break;
     }
@@ -506,11 +506,11 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     }
     case PN_RAW_CONNECTION_WAKE: {
         int error = 0;
-        qd_log(log, QD_LOG_DEBUG, "[C%" PRIu64 "] Wake-up", hconn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Wake-up", hconn->conn_id);
 
         if (sys_atomic_set(&hconn->q2_restart, 0)) {
             // note: unit tests grep for this log!
-            qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] client link unblocked from Q2 limit", hconn->conn_id);
+            qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] client link unblocked from Q2 limit", hconn->conn_id);
             hconn->q2_blocked = false;
             error = _handle_conn_read_event(hconn);  // restart receiving
             if (!error)
@@ -523,7 +523,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         if (error)
             qdr_http1_close_connection(hconn, "Incoming request message failed to parse");
 
-        qd_log(log, QD_LOG_DEBUG, "[C%" PRIu64 "] Processing done", hconn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Processing done", hconn->conn_id);
         break;
     }
     default:
@@ -537,7 +537,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     if (hconn) {
         _client_request_t *hreq = (_client_request_t*) DEQ_HEAD(hconn->requests);
         if (hreq) {
-            qd_log(log, QD_LOG_DEBUG, "[C%" PRIu64 "] HTTP is client request msg-id=%" PRIu64 " complete????",
+            qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP is client request msg-id=%"PRIu64" complete????",
                    hconn->conn_id, hreq->base.msg_id);
             qd_log(log, QD_LOG_DEBUG, "   codec=%s req-dlv=%p resp-dlv=%d req_msg=%p %s",
                    hreq->codec_completed ? "Done" : "Not Done",
@@ -555,12 +555,12 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     if (hreq) {
         if (hreq->cancelled) {
             qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-                   "[C%" PRIu64 "][L%" PRIu64 "] HTTP client request msg-id=%" PRIu64 " cancelled",
+                   "[C%"PRIu64"][L%"PRIu64"] HTTP client request msg-id=%"PRIu64" cancelled",
                        hconn->conn_id, hconn->out_link_id, hreq->base.msg_id);
             need_close = true;
         } else {
             if (hreq->error_code) {
-                qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, "[C%" PRIu64 "][L%" PRIu64 "] Responding with %i %s", hconn->conn_id,
+                qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"][L%"PRIu64"] Responding with %i %s", hconn->conn_id,
                        hconn->out_link_id, hreq->error_code, hreq->error_text);
                 _client_response_msg_t *rmsg = new__client_response_msg_t();
                 ZERO(rmsg);
@@ -579,7 +579,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 // response message fully received and forwarded to client
                 if (rmsg->dlv) {
                     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-                           "[C%" PRIu64 "][L%" PRIu64 "] HTTP client request msg-id=%" PRIu64 " settling response, dispo=0x%"PRIx64,
+                           "[C%"PRIu64"][L%"PRIu64"] HTTP client request msg-id=%"PRIu64" settling response, dispo=0x%"PRIx64,
                            hconn->conn_id, hconn->out_link_id, hreq->base.msg_id, rmsg->dispo);
                     qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
                                                       rmsg->dlv,
@@ -597,7 +597,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 DEQ_IS_EMPTY(hreq->responses) &&
                 hreq->request_settled) {
 
-                qd_log(log, QD_LOG_DEBUG, "[C%" PRIu64 "] HTTP request msg-id=%" PRIu64 " completed!",
+                qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP request msg-id=%"PRIu64" completed!",
                        hconn->conn_id, hreq->base.msg_id);
 
                 need_close = hreq->close_on_complete;
@@ -615,7 +615,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             if (hreq->request_msg && hconn->in_link_credit > 0) {
 
                 qd_log(hconn->adaptor->log, QD_LOG_TRACE,
-                       "[C%" PRIu64 "][L%" PRIu64 "] Delivering next request msg-id=%" PRIu64 " to router",
+                       "[C%"PRIu64"][L%"PRIu64"] Delivering next request msg-id=%"PRIu64" to router",
                        hconn->conn_id, hconn->in_link_id, hreq->base.msg_id);
 
                 hconn->in_link_credit -= 1;
@@ -645,13 +645,13 @@ static void _client_tx_buffers_cb(h1_codec_request_state_t *hrs, qd_buffer_list_
     if (!hconn->raw_conn) {
         // client connection has been lost
         qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-               "[C%" PRIu64 "] Discarding outgoing data - client connection closed", hconn->conn_id);
+               "[C%"PRIu64"] Discarding outgoing data - client connection closed", hconn->conn_id);
         qd_buffer_list_free_buffers(blist);
         return;
     }
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%" PRIu64 "][L%" PRIu64 "] %u response octets encoded",
+           "[C%"PRIu64"][L%"PRIu64"] %u response octets encoded",
            hconn->conn_id, hconn->out_link_id, len);
 
 
@@ -688,13 +688,13 @@ static void _client_tx_stream_data_cb(h1_codec_request_state_t *hrs, qd_message_
     if (!hconn->raw_conn) {
         // client connection has been lost
         qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-               "[C%" PRIu64 "] Discarding outgoing data - client connection closed", hconn->conn_id);
+               "[C%"PRIu64"] Discarding outgoing data - client connection closed", hconn->conn_id);
         qd_message_stream_data_release(stream_data);
         return;
     }
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%" PRIu64 "][L%" PRIu64 "] Sending body data to client",
+           "[C%"PRIu64"][L%"PRIu64"] Sending body data to client",
            hconn->conn_id, hconn->out_link_id);
 
 
@@ -745,17 +745,17 @@ static int _client_rx_request_cb(h1_codec_request_state_t *hrs,
     DEQ_INIT(creq->responses);
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%" PRIu64 "] HTTP request received: msg-id=%" PRIu64 " method=%s target=%s version=%"PRIi32".%"PRIi32,
+           "[C%"PRIu64"] HTTP request received: msg-id=%"PRIu64" method=%s target=%s version=%"PRIi32".%"PRIi32,
            hconn->conn_id, creq->base.msg_id, method, target, version_major, version_minor);
     if (hconn->cfg.event_channel) {
         if (strcasecmp(method, POST_METHOD) == 0) {
             creq->error_code = 204;
             creq->error_text = "Event posted.";
-            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%" PRIu64 "] Event posted", hconn->conn_id);
+            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] Event posted", hconn->conn_id);
         } else {
             creq->error_code = 405;
             creq->error_text = "Invalid method for event channel, only POST is allowed.";
-            qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING, "[C%" PRIu64 "] HTTP %s request not allowed for event channel", hconn->conn_id, method);
+            qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING, "[C%"PRIu64"] HTTP %s request not allowed for event channel", hconn->conn_id, method);
         }
     }
 
@@ -789,7 +789,7 @@ static int _client_rx_response_cb(h1_codec_request_state_t *hrs,
     qdr_http1_connection_t *hconn = hreq->base.hconn;
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_ERROR,
-           "[C%" PRIu64 "][L%" PRIu64 "] Spurious HTTP response received from client",
+           "[C%"PRIu64"][L%"PRIu64"] Spurious HTTP response received from client",
            hconn->conn_id, hconn->in_link_id);
     return HTTP1_STATUS_BAD_REQ;
 }
@@ -803,7 +803,7 @@ static int _client_rx_header_cb(h1_codec_request_state_t *hrs, const char *key, 
     qdr_http1_connection_t *hconn = hreq->base.hconn;
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%" PRIu64 "][L%" PRIu64 "] HTTP request header received: key='%s' value='%s'",
+           "[C%"PRIu64"][L%"PRIu64"] HTTP request header received: key='%s' value='%s'",
            hconn->conn_id, hconn->in_link_id, key, value);
 
     if (strcasecmp(key, "Connection") == 0) {
@@ -847,7 +847,7 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     }
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%" PRIu64 "][L%" PRIu64 "] HTTP request headers done.",
+           "[C%"PRIu64"][L%"PRIu64"] HTTP request headers done.",
            hconn->conn_id, hconn->in_link_id);
 
     // now that all the headers have been received we can construct
@@ -909,7 +909,7 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
         hconn->in_link_credit -= 1;
 
         qd_log(hconn->adaptor->log, QD_LOG_TRACE,
-               "[C%" PRIu64 "][L%" PRIu64 "] Delivering request msg-id=%" PRIu64 " to router",
+               "[C%"PRIu64"][L%"PRIu64"] Delivering request msg-id=%"PRIu64" to router",
                hconn->conn_id, hconn->in_link_id, hreq->base.msg_id);
 
         _deliver_request(hconn, hreq);
@@ -935,14 +935,14 @@ static int _client_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
     qd_message_t             *msg = hreq->request_msg ? hreq->request_msg : qdr_delivery_message(hreq->request_dlv);
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%" PRIu64 "][L%" PRIu64 "] HTTP request body received len=%zu.",
+           "[C%"PRIu64"][L%"PRIu64"] HTTP request body received len=%zu.",
            hconn->conn_id, hconn->in_link_id, len);
 
     qd_message_stream_data_append(msg, body, &q2_blocked);
     hconn->q2_blocked = hconn->q2_blocked || q2_blocked;
     if (q2_blocked) {
         // note: unit tests grep for this log!
-        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, "[C%" PRIu64 "] client link blocked on Q2 limit", hconn->conn_id);
+        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] client link blocked on Q2 limit", hconn->conn_id);
     }
 
     //
@@ -967,7 +967,7 @@ static void _client_rx_done_cb(h1_codec_request_state_t *hrs)
     qd_message_t             *msg = hreq->request_msg ? hreq->request_msg : qdr_delivery_message(hreq->request_dlv);
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%" PRIu64 "][L%" PRIu64 "] HTTP request msg-id=%" PRIu64 " receive complete.",
+           "[C%"PRIu64"][L%"PRIu64"] HTTP request msg-id=%"PRIu64" receive complete.",
            hconn->conn_id, hconn->in_link_id, hreq->base.msg_id);
 
     if (!qd_message_receive_complete(msg)) {
@@ -994,7 +994,7 @@ static void _client_request_complete_cb(h1_codec_request_state_t *lib_rs, bool c
         uint64_t in_octets, out_octets;
         h1_codec_request_state_counters(lib_rs, &in_octets, &out_octets);
         qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-               "[C%" PRIu64 "] HTTP request msg-id=%" PRIu64 " %s. Octets read: %" PRIu64 " written: %" PRIu64 ,
+               "[C%"PRIu64"] HTTP request msg-id=%"PRIu64" %s. Octets read: %"PRIu64" written: %"PRIu64,
                hreq->base.hconn->conn_id,
                hreq->base.msg_id,
                cancelled ? "cancelled" : "codec done",
@@ -1033,7 +1033,7 @@ void qdr_http1_client_core_link_flow(qdr_http1_adaptor_t    *adaptor,
                                      int                     credit)
 {
     qd_log(adaptor->log, QD_LOG_DEBUG,
-           "[C%" PRIu64 "][L%" PRIu64 "] Credit granted on request link %d",
+           "[C%"PRIu64"][L%"PRIu64"] Credit granted on request link %d",
            hconn->conn_id, hconn->in_link_id, credit);
 
     assert(link == hconn->in_link);   // router only grants flow on incoming link
@@ -1051,7 +1051,7 @@ void qdr_http1_client_core_link_flow(qdr_http1_adaptor_t    *adaptor,
             hconn->in_link_credit -= 1;
 
             qd_log(hconn->adaptor->log, QD_LOG_TRACE,
-                   "[C%" PRIu64 "][L%" PRIu64 "] Delivering next request msg-id=%" PRIu64 " to router",
+                   "[C%"PRIu64"][L%"PRIu64"] Delivering next request msg-id=%"PRIu64" to router",
                    hconn->conn_id, hconn->in_link_id, hreq->base.msg_id);
 
             _deliver_request(hconn, hreq);
@@ -1120,10 +1120,10 @@ static bool _get_multipart_content_length(_client_request_t *hreq, char *value)
 static void _encode_json_response(_client_request_t *hreq)
 {
     qdr_http1_connection_t *hconn = hreq->base.hconn;
-    qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%" PRIu64 "] encoding json response", hconn->conn_id);
+    qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] encoding json response", hconn->conn_id);
     bool ok = !h1_codec_tx_response(hreq->base.lib_rs, 200, NULL, hreq->version_major, hreq->version_minor);
     if (!ok) {
-        qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%" PRIu64 "] Could not encode response", hconn->conn_id);
+        qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] Could not encode response", hconn->conn_id);
         return;
     }
     PyObject* msgs = 0;
@@ -1143,7 +1143,7 @@ static void _encode_json_response(_client_request_t *hreq)
         h1_codec_tx_body_str(hreq->base.lib_rs, body);
         free(body);
     } else {
-        qd_log(hconn->adaptor->log, QD_LOG_ERROR, "[C%" PRIu64 "] No aggregated json response returned", hconn->conn_id);
+        qd_log(hconn->adaptor->log, QD_LOG_ERROR, "[C%"PRIu64"] No aggregated json response returned", hconn->conn_id);
     }
     bool need_close;
     h1_codec_tx_done(hreq->base.lib_rs, &need_close);
@@ -1154,7 +1154,7 @@ static void _encode_json_response(_client_request_t *hreq)
 static void _encode_multipart_response(_client_request_t *hreq)
 {
     qdr_http1_connection_t *hconn = hreq->base.hconn;
-    qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%" PRIu64 "] encoding multipart response", hconn->conn_id);
+    qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] encoding multipart response", hconn->conn_id);
     bool ok = !h1_codec_tx_response(hreq->base.lib_rs, 200, NULL, hreq->version_major, hreq->version_minor);
     char content_length[25];
     if (_get_multipart_content_length(hreq, content_length)) {
@@ -1210,12 +1210,12 @@ static void _encode_multipart_response(_client_request_t *hreq)
             case QD_MESSAGE_STREAM_DATA_BODY_OK:
 
                 qd_log(hconn->adaptor->log, QD_LOG_TRACE,
-                       "[C%" PRIu64 "][L%" PRIu64 "] Encoding response body data",
+                       "[C%"PRIu64"][L%"PRIu64"] Encoding response body data",
                        hconn->conn_id, hconn->out_link_id);
 
                 if (h1_codec_tx_body(hreq->base.lib_rs, body_data)) {
                     qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                           "[C%" PRIu64 "][L%" PRIu64 "] body data encode failed",
+                           "[C%"PRIu64"][L%"PRIu64"] body data encode failed",
                            hconn->conn_id, hconn->out_link_id);
                     ok = false;
                 }
@@ -1224,28 +1224,28 @@ static void _encode_multipart_response(_client_request_t *hreq)
             case QD_MESSAGE_STREAM_DATA_NO_MORE:
                 // indicate this message is complete
                 qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-                       "[C%" PRIu64 "][L%" PRIu64 "] response message encoding completed",
+                       "[C%"PRIu64"][L%"PRIu64"] response message encoding completed",
                        hconn->conn_id, hconn->out_link_id);
                 done = true;
                 break;
 
             case QD_MESSAGE_STREAM_DATA_INCOMPLETE:
                 qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                       "[C%" PRIu64 "][L%" PRIu64 "] Ignoring incomplete body data in aggregated response.",
+                       "[C%"PRIu64"][L%"PRIu64"] Ignoring incomplete body data in aggregated response.",
                        hconn->conn_id, hconn->out_link_id);
                 done = true;
                 break;  // wait for more
 
             case QD_MESSAGE_STREAM_DATA_INVALID:
                 qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                       "[C%" PRIu64 "][L%" PRIu64 "] Ignoring corrupted body data in aggregated response.",
+                       "[C%"PRIu64"][L%"PRIu64"] Ignoring corrupted body data in aggregated response.",
                        hconn->conn_id, hconn->out_link_id);
                 done = true;
                 break;
 
             case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
                 qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                       "[C%" PRIu64 "][L%" PRIu64 "] Ignoring footer in aggregated response.",
+                       "[C%"PRIu64"][L%"PRIu64"] Ignoring footer in aggregated response.",
                        hconn->conn_id, hconn->out_link_id);
                 done = true;
                 break;
@@ -1272,7 +1272,7 @@ static void _encode_aggregated_response(qdr_http1_connection_t *hconn, _client_r
 
 static void _encode_empty_response(qdr_http1_connection_t *hconn, _client_request_t *hreq)
 {
-    qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%" PRIu64 "] encoding empty response", hconn->conn_id);
+    qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] encoding empty response", hconn->conn_id);
     h1_codec_tx_response(hreq->base.lib_rs, 204, NULL, hreq->version_major, hreq->version_minor);
     bool need_close;
     h1_codec_tx_done(hreq->base.lib_rs, &need_close);
@@ -1293,7 +1293,7 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
     assert(dlv == hreq->request_dlv);
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%" PRIu64 "][L%" PRIu64 "] HTTP request msg-id=%" PRIu64 " delivery update, outcome=0x%"PRIx64"%s",
+           "[C%"PRIu64"][L%"PRIu64"] HTTP request msg-id=%"PRIu64" delivery update, outcome=0x%"PRIx64"%s",
            hconn->conn_id, hconn->in_link_id, hreq->base.msg_id, disp, settled ? " settled" : "");
 
     if (disp && disp != PN_RECEIVED && hreq->request_dispo == 0) {
@@ -1306,7 +1306,7 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
             if (settled) {
                 if (DEQ_IS_EMPTY(hreq->responses)) {
                     qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-                           "[C%" PRIu64 "][L%" PRIu64 "] Aggregation request settled but no responses received.", hconn->conn_id, hconn->in_link_id);
+                           "[C%"PRIu64"][L%"PRIu64"] Aggregation request settled but no responses received.", hconn->conn_id, hconn->in_link_id);
                     _encode_empty_response(hconn, hreq);
                 } else {
                     _encode_aggregated_response(hconn, hreq);
@@ -1318,11 +1318,11 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
             // a response from the server by using the codec to write an error
             // response on the behalf of the server.
             qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                   "[C%" PRIu64 "][L%" PRIu64 "] HTTP request failure, outcome=0x%"PRIx64,
+                   "[C%"PRIu64"][L%"PRIu64"] HTTP request failure, outcome=0x%"PRIx64,
                    hconn->conn_id, hconn->in_link_id, disp);
 
             qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                   "[C%" PRIu64 "][L%" PRIu64 "] HTTP request msg-id=%" PRIu64 " failure, outcome=0x%"PRIx64,
+                   "[C%"PRIu64"][L%"PRIu64"] HTTP request msg-id=%"PRIu64" failure, outcome=0x%"PRIx64,
                    hconn->conn_id, hconn->in_link_id, hreq->base.msg_id, disp);
 
             if (hreq->base.out_http1_octets == 0) {
@@ -1433,7 +1433,7 @@ static bool _encode_response_headers(_client_request_t *hreq,
                     }
 
                     qd_log(hreq->base.hconn->adaptor->log, QD_LOG_TRACE,
-                           "[C%" PRIu64 "][L%" PRIu64 "] Encoding response %d %s",
+                           "[C%"PRIu64"][L%"PRIu64"] Encoding response %d %s",
                            hreq->base.hconn->conn_id, hreq->base.hconn->out_link_id, (int)status_code,
                            reason_str ? reason_str : "");
 
@@ -1462,7 +1462,7 @@ static bool _encode_response_headers(_client_request_t *hreq,
 
                             // @TODO(kgiusti): remove me (sensitive content)
                             qd_log(hreq->base.hconn->adaptor->log, QD_LOG_TRACE,
-                                   "[C%" PRIu64 "][L%" PRIu64 "] Encoding response header %s:%s",
+                                   "[C%"PRIu64"][L%"PRIu64"] Encoding response header %s:%s",
                                    hreq->base.hconn->conn_id, hreq->base.hconn->out_link_id,
                                    header_key, header_value);
 
@@ -1505,7 +1505,7 @@ static uint64_t _encode_response_message(_client_request_t *hreq,
         rmsg->headers_encoded = true;
         if (!_encode_response_headers(hreq, rmsg)) {
             qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                   "[C%" PRIu64 "][L%" PRIu64 "] message headers malformed - discarding.",
+                   "[C%"PRIu64"][L%"PRIu64"] message headers malformed - discarding.",
                    hconn->conn_id, hconn->out_link_id);
             return PN_REJECTED;
         }
@@ -1519,12 +1519,12 @@ static uint64_t _encode_response_message(_client_request_t *hreq,
         case QD_MESSAGE_STREAM_DATA_BODY_OK:
 
             qd_log(hconn->adaptor->log, QD_LOG_TRACE,
-                   "[C%" PRIu64 "][L%" PRIu64 "] Encoding response body data",
+                   "[C%"PRIu64"][L%"PRIu64"] Encoding response body data",
                    hconn->conn_id, hconn->out_link_id);
 
             if (h1_codec_tx_body(hreq->base.lib_rs, stream_data)) {
                 qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                       "[C%" PRIu64 "][L%" PRIu64 "] body data encode failed",
+                       "[C%"PRIu64"][L%"PRIu64"] body data encode failed",
                        hconn->conn_id, hconn->out_link_id);
                 return PN_REJECTED;
             }
@@ -1538,19 +1538,19 @@ static uint64_t _encode_response_message(_client_request_t *hreq,
         case QD_MESSAGE_STREAM_DATA_NO_MORE:
             // indicate this message is complete
             qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-                   "[C%" PRIu64 "][L%" PRIu64 "] response message encoding completed",
+                   "[C%"PRIu64"][L%"PRIu64"] response message encoding completed",
                    hconn->conn_id, hconn->out_link_id);
             return PN_ACCEPTED;
 
         case QD_MESSAGE_STREAM_DATA_INCOMPLETE:
             qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-                   "[C%" PRIu64 "][L%" PRIu64 "] body data need more",
+                   "[C%"PRIu64"][L%"PRIu64"] body data need more",
                    hconn->conn_id, hconn->out_link_id);
             return 0;  // wait for more
 
         case QD_MESSAGE_STREAM_DATA_INVALID:
             qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                   "[C%" PRIu64 "][L%" PRIu64 "] Rejecting corrupted body data.",
+                   "[C%"PRIu64"][L%"PRIu64"] Rejecting corrupted body data.",
                    hconn->conn_id, hconn->out_link_id);
             return PN_REJECTED;
         }
@@ -1581,7 +1581,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
 
         case QD_MESSAGE_DEPTH_INVALID:
             qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                   "[C%" PRIu64 "][L%" PRIu64 "] Malformed HTTP/1.x message",
+                   "[C%"PRIu64"][L%"PRIu64"] Malformed HTTP/1.x message",
                    hconn->conn_id, link->identity);
             qd_message_set_send_complete(msg);
             qdr_http1_close_connection(hconn, "Malformed response message");
@@ -1593,7 +1593,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                 // No corresponding request found
                 // @TODO(kgiusti) how to handle this?  - simply discard?
                 qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                       "[C%" PRIu64 "][L%" PRIu64 "] Discarding malformed message.", hconn->conn_id, link->identity);
+                       "[C%"PRIu64"][L%"PRIu64"] Discarding malformed message.", hconn->conn_id, link->identity);
                 qd_message_set_send_complete(msg);
                 qdr_http1_close_connection(hconn, "Cannot correlate response message");
                 return PN_REJECTED;
@@ -1608,7 +1608,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
             qdr_delivery_incref(delivery, "HTTP1 client referencing response delivery");
             DEQ_INSERT_TAIL(hreq->responses, rmsg);
             qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-                   "[C%" PRIu64 "][L%" PRIu64 "] HTTP received response for msg-id=%" PRIu64 ,
+                   "[C%"PRIu64"][L%"PRIu64"] HTTP received response for msg-id=%"PRIu64,
                    hconn->conn_id, hconn->out_link_id, hreq->base.msg_id);
             break;
         }
@@ -1623,10 +1623,10 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
     // aggregation format
     if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
         if (!qd_message_receive_complete(msg)) {
-            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%" PRIu64 "][L%" PRIu64 "] Response incomplete (%zu responses received)", hconn->conn_id, link->identity, DEQ_SIZE(hreq->responses));
+            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Response incomplete (%zu responses received)", hconn->conn_id, link->identity, DEQ_SIZE(hreq->responses));
             return 0;
         }
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%" PRIu64 "][L%" PRIu64 "] Received response (%zu responses received), settling", hconn->conn_id, link->identity, DEQ_SIZE(hreq->responses));
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Received response (%zu responses received), settling", hconn->conn_id, link->identity, DEQ_SIZE(hreq->responses));
         rmsg->dispo = PN_ACCEPTED;
         qd_message_set_send_complete(msg);
         qdr_link_flow(qdr_http1_adaptor->core, link, 1, false);
@@ -1649,7 +1649,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                 hreq->close_on_complete = need_close || hreq->close_on_complete;
 
                 qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-                       "[C%" PRIu64 "][L%" PRIu64 "] HTTP response message msg-id=%" PRIu64 " encoding complete",
+                       "[C%"PRIu64"][L%"PRIu64"] HTTP response message msg-id=%"PRIu64" encoding complete",
                        hconn->conn_id, link->identity, hreq->base.msg_id);
 
             } else {
@@ -1720,7 +1720,7 @@ static void _write_pending_response(_client_request_t *hreq)
         if (rmsg && DEQ_HEAD(rmsg->out_data)) {
             uint64_t written = qdr_http1_write_out_data(hreq->base.hconn, &rmsg->out_data);
             hreq->base.out_http1_octets += written;
-            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%" PRIu64 "] %" PRIu64 " octets written",
+            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %"PRIu64" octets written",
                    hreq->base.hconn->conn_id, written);
         }
     }

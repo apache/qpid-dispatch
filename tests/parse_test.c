@@ -311,7 +311,7 @@ static char *test_map(void *context)
 
     uint32_t count = qd_parse_sub_count(field);
     if (count != 3) {
-        snprintf(error, 1000, "Expected sub-count==3, got %" PRIu32 , count);
+        snprintf(error, 1000, "Expected sub-count==3, got %"PRIu32, count);
         qd_iterator_free(data_iter);
         qd_parse_free(field);
         return error;
@@ -356,7 +356,7 @@ static char *test_map(void *context)
 
     val_field = qd_parse_sub_value(field, 1);
     if (qd_parse_as_uint(val_field) != 32) {
-        snprintf(error, 1000, "Second value: expected 32, got %" PRIu32 , qd_parse_as_uint(val_field));
+        snprintf(error, 1000, "Second value: expected 32, got %"PRIu32, qd_parse_as_uint(val_field));
         return error;
     }
 
