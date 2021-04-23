@@ -119,12 +119,6 @@ static inline uint64_t qdr_tcp_conn_linkid(const qdr_tcp_connection_t *conn)
     return conn->instream ? conn->incoming_id : conn->outgoing_id;
 }
 
-static inline const char * qdr_link_direction_name(const qdr_link_t *link)
-{
-    assert(link);
-    return qdr_link_direction(link) == QD_OUTGOING ? "outgoing" : "incoming";
-}
-
 static inline const char * qdr_tcp_connection_role_name(const qdr_tcp_connection_t *tc)
 {
     assert(tc);
