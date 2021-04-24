@@ -85,7 +85,7 @@ jobs:
     - CXX=clang++-11
     - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
-  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (asan on focal)"
+  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on focal)"
     arch: s390x
     os: linux
     dist: focal
