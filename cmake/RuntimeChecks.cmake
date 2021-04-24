@@ -135,14 +135,9 @@ elseif(RUNTIME_CHECK STREQUAL "asan" OR RUNTIME_CHECK STREQUAL "hwasan")
         DEPENDS ${CMAKE_BINARY_DIR}/tests/lsan.supp)
   # force QD_MEMORY_DEBUG else lsan will catch alloc_pool suppressed leaks (ok to remove this once leaks are fixed)
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=${ASAN_VARIANTS} -DQD_MEMORY_DEBUG=1")
-  # Clang shipping with XCode does not include leak sanitizer feature
-  if (APPLE)
-    set(DETECT_LEAKS false)
-  else (APPLE)
-    set(DETECT_LEAKS true)
-  endif()
+  # `detect_leaks=1` is set by default where it is available; better not to set it conditionally ourselves
   # https://github.com/openSUSE/systemd/blob/1270e56526cd5a3f485ae2aba975345c38860d37/docs/TESTING_WITH_SANITIZERS.md
-  set(RUNTIME_ASAN_ENV_OPTIONS "strict_string_checks=1 detect_stack_use_after_return=1 check_initialization_order=1 strict_init_order=1 detect_invalid_pointer_pairs=2 detect_leaks=${DETECT_LEAKS} suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
+  set(RUNTIME_ASAN_ENV_OPTIONS "strict_string_checks=1 detect_stack_use_after_return=1 check_initialization_order=1 strict_init_order=1 detect_invalid_pointer_pairs=2 suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
   set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_BINARY_DIR}/tests/lsan.supp")
   set(RUNTIME_UBSAN_ENV_OPTIONS "print_stacktrace=1 print_summary=1")
 
