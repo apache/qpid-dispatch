@@ -109,7 +109,7 @@ jobs:
       - sudo apt install python3-grpcio
     env:
       - PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
-      - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=OFF -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
+      - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     arch: arm64
     os: linux
