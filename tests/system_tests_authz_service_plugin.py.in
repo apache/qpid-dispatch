@@ -23,6 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import socket
 from subprocess import PIPE, Popen
 from system_test import TestCase, Qdrouterd, main_module, DIR, Process, SkipIfNeeded
 from system_test import unittest
@@ -34,8 +35,9 @@ from proton.reactor import Container
 class AuthServicePluginAuthzTest(TestCase):
     @classmethod
     def addUser(cls, user, password):
+        fqdn = socket.getfqdn()
         # Create a sasl database.
-        p = Popen(['saslpasswd2', '-c', '-p', '-f', 'users.sasldb', user],
+        p = Popen(['saslpasswd2', '-c', '-p', '-u', fqdn, '-f', 'users.sasldb', user],
                   stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         result = p.communicate(password)
         assert p.returncode == 0, "saslpasswd2 exit status %s, output:\n%s" % (p.returncode, result)
