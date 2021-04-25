@@ -190,8 +190,8 @@ jobs:
         os: [ubuntu-20.04]
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan]
-        shard: [1]
-        shards: [1]
+        shard: [1, 2]
+        shards: [2]
     env:
       BuildType: ${{matrix.buildType}}
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
@@ -238,7 +238,7 @@ jobs:
         working-directory: ${{env.DispatchBuildDir}}
         run: |
           ulimit -c unlimited
-          ctest -C ${BuildType} -V -T Test --no-compress-output
+          ctest -C ${BuildType} -V -T Test --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2
 
       - name: Upload test results
         uses: actions/upload-artifact@v2
