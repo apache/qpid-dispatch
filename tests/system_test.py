@@ -262,8 +262,8 @@ class Process(subprocess.Popen):
         Takes same arguments as subprocess.Popen. Some additional/special args:
         @param expect: Raise error if process staus not as expected at end of test:
             L{RUNNING} - expect still running.
-            L{EXIT_OK} - expect proces to have terminated with 0 exit status.
-            L{EXIT_FAIL} - expect proces to have terminated with exit status 1.
+            L{EXIT_OK} - expect process to have terminated with 0 exit status.
+            L{EXIT_FAIL} - expect process to have terminated with exit status 1.
             integer    - expected return code
         @keyword stdout: Defaults to the file name+".out"
         @keyword stderr: Defaults to be the same as stdout
@@ -360,10 +360,10 @@ class HttpServer(Process):
     def __init__(self, args, name=None, expect=Process.RUNNING):
         super(HttpServer, self).__init__(args, name=name, expect=expect)
 
-# A HTTP2 Server that will respond to requests made via the router
-
 
 class Http2Server(HttpServer):
+    """A HTTP2 Server that will respond to requests made via the router."""
+
     def __init__(self, name=None, listen_port=None, wait=True,
                  py_string='python3', perform_teardown=True, cl_args=None,
                  server_file=None,
