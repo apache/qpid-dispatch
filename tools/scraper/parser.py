@@ -762,7 +762,7 @@ class ParsedLogLine(object):
                 self.highlighted("more", res.transfer_more, common.color_of("more")),
                 self.highlighted("resume", res.transfer_resume, common.color_of("aborted")),
                 self.highlighted("aborted", res.transfer_aborted, common.color_of("aborted")),
-                showdat, spl[-SEQUENCE_TRANSFER_SIZE:],
+                showdat, common.html_escape(spl[-SEQUENCE_TRANSFER_SIZE:]),
                 res.transfer_size)
             res.sdorg_str = "%s %s (%s) %s (%s%s%s%s)\\n%s" % (
                 res.name, res.channel_handle, res.delivery_id, res.transfer_size,
