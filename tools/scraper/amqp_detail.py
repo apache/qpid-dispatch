@@ -449,6 +449,9 @@ class AllDetails():
         :param t0:
         :return:
         """
+        if ttest < t0:
+            # Never return negative deltas
+            return "0.000000"
         delta = ttest - t0
         t = float(delta.seconds) + float(delta.microseconds) / 1000000.0
         return "%0.06f" % t
@@ -681,8 +684,18 @@ class AllDetails():
                         for sdid in range(int(splf.data.first), (int(splf.data.last) + 1)):
                             did = str(sdid)
                             if did in sdispmap:
-                                sys.stderr.write("ERROR: Delivery ID collision in disposition map. connid:%s, \n" %
-                                                 (splf.data.conn_id))
+                                old_splf = sdispmap[did]
+                                if "state=@received" in old_splf.line:
+                                    # Existing disposition is non-terminal.
+                                    # Don't complain when it is overwritten by another non-terminal
+                                    # or by a terminal disposition.
+                                    pass
+                                else:
+                                    # Current state is terminal disposition. Complain when overwritten.
+                                    sys.stderr.write("ERROR: Delivery ID collision in disposition map. connid:%s, \n" %
+                                                     (splf.data.conn_id))
+                                    sys.stderr.write("  old: %s, %s\n" % (old_splf.fid, old_splf.line))
+                                    sys.stderr.write("  new: %s, %s\n" % (splf.fid, splf.line))
                             sdispmap[did] = splf
 
     def rollup_disposition_counts(self, state, conn, sess, link):
