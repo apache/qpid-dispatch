@@ -108,6 +108,7 @@ jobs:
       - python3 -m pip install --user protobuf
       - sudo apt install python3-grpcio
     env:
+      - QPID_SYSTEM_TEST_TIMEOUT=300
       - PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
       - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
