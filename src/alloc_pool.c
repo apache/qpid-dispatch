@@ -99,6 +99,7 @@ static const char *leaking_types[] = {
     "qd_message_t",
     "qd_message_content_t",
     "qdr_delivery_t",
+    "qd_delivery_state_t", // DISPATCH-2082: See comments in JIRA
     "qd_link_ref_t",
 
     // system_tests_priority (centos7)
