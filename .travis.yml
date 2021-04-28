@@ -121,9 +121,6 @@ jobs:
     python:
       - "3.9"
     before_install:
-      - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key 2>/dev/null | sudo apt-key add -
-      - sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main' -y
-      - sudo apt-get update -q
       - sudo apt-get install clang-11 llvm-11-dev
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
