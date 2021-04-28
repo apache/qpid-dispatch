@@ -831,8 +831,11 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                    "[C%"PRIu64"] %s client link unblocked from Q2 limit",
                    conn->conn_id, qdr_tcp_connection_role_name(conn));
             handle_incoming(conn, "PNRC_WAKE after Q2 unblock");
+        } else {
+            handle_incoming(conn, "PNRC_WAKE");
         }
         while (qdr_connection_process(conn->qdr_conn)) {}
+        handle_outgoing(conn);
         break;
     }
     case PN_RAW_CONNECTION_READ: {
@@ -1284,7 +1287,7 @@ static void qdr_tcp_second_attach(void *context, qdr_link_t *link,
                 // for ingress, can start reading from socket once we have
                 // a reply to address, as that is when we are able to send
                 // out a message
-                handle_incoming(tc, "qdr_tcp_second_attach");
+                pn_raw_connection_wake(tc->pn_raw_conn);
             }
             qdr_link_flow(tcp_adaptor->core, link, 10, false);
         } else if (!tc->ingress) {
@@ -1317,7 +1320,7 @@ static void qdr_tcp_flow(void *context, qdr_link_t *link, int credit)
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                    "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_flow: Flow enabled, credit=%d",
                    conn->conn_id, conn->outgoing_id, credit);
-            handle_incoming(conn, "qdr_tcp_flow");
+            pn_raw_connection_wake(conn->pn_raw_conn);
         } else {
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                    "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_flow: No action. enabled:%s, credit:%d",
@@ -1442,11 +1445,9 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 qdr_action_t *action = qdr_action(qdr_add_tcp_connection_CT, "add_tcp_connection");
                 action->args.general.context_1 = tc;
                 qdr_action_enqueue(tcp_adaptor->core, action);
-
-                handle_incoming(tc, "qdr_tcp_deliver");
             }
         }
-        handle_outgoing(tc);
+        pn_raw_connection_wake(tc->pn_raw_conn); // schedule handle_incoming and handle_outgoing
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_deliver: no link context");
         assert(false);
