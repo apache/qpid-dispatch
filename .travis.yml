@@ -66,7 +66,7 @@ jobs:
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang-12 on focal)"
     os: linux
     dist: focal
-    compiler: clang
+    language: shell
     before_install:
     - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key 2>/dev/null | sudo apt-key add -
     - sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main' -y
