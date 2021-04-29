@@ -231,7 +231,7 @@ static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t
     int free_count = 0;
     const bool was_open = conn->bytes_unacked < TCP_MAX_CAPACITY;
 
-    while ((count + conn->bytes_unacked < TCP_MAX_CAPACITY)
+    while ((conn->raw_closed_write || count + conn->bytes_unacked < TCP_MAX_CAPACITY)
            && (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
 
         for (size_t i = 0; i < n && raw_buffers[i].bytes; ++i) {
