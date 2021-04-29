@@ -78,6 +78,7 @@ struct qdr_tcp_connection_t {
     bool                  raw_closed_write;  // proton event seen or write_close called
     bool                  raw_read_shutdown; // stream closed
     bool                  read_eos_seen;
+    bool                  backpressure_disabled;  // ignore bytes_unacked window
     qdr_delivery_t       *initial_delivery;
     qd_timer_t           *activate_timer;
     qd_bridge_config_t    config;
@@ -231,7 +232,7 @@ static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t
     int free_count = 0;
     const bool was_open = conn->bytes_unacked < TCP_MAX_CAPACITY;
 
-    while ((count + conn->bytes_unacked < TCP_MAX_CAPACITY)
+    while ((conn->backpressure_disabled || (count + conn->bytes_unacked < TCP_MAX_CAPACITY))
            && (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
 
         for (size_t i = 0; i < n && raw_buffers[i].bytes; ++i) {
@@ -472,6 +473,12 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - close outstream",
                conn->conn_id, conn->outgoing_id);
+        qdr_delivery_remote_state_updated(tcp_adaptor->core,
+                                          conn->outstream,
+                                          PN_ACCEPTED,
+                                          true,   // settled,
+                                          0,      // delivery state
+                                          false);
         qdr_delivery_decref(tcp_adaptor->core, conn->outstream, "tcp-adaptor.handle_disconnected - outstream");
     }
     if (conn->incoming) {
@@ -1480,6 +1487,8 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
                DLV_FMT" qdr_tcp_delivery_update: disp: %"PRIu64", settled: %s",
                DLV_ARGS(dlv), disp, settled ? "true" : "false");
 
+        bool window_opened = false;
+
         if (settled) {
             // the only settlement occurs when the initial delivery is
             // settled, which occurs when the connector is unable to
@@ -1490,13 +1499,14 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
                    DLV_FMT" qdr_tcp_delivery_update: call pn_raw_connection_close()",
                    DLV_ARGS(dlv));
             pn_raw_connection_close(tc->pn_raw_conn);
+            tc->backpressure_disabled = true;
+            window_opened = true;
         }
 
         if (disp == PN_RECEIVED) {
             //
             // the consumer of this TCP flow has updated its tx_sequence:
             //
-            bool window_opened = false;
             uint64_t ignore;
             qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
 
@@ -1522,11 +1532,19 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
 
             qd_delivery_state_free(dstate);
 
-            if (window_opened) {
-                // now that the window has opened fetch any outstanding read data
-                handle_incoming(tc, "TCP RX window refresh");
-            }
+        } else if (qd_delivery_state_is_terminal(disp)) {
+            //
+            // no further PN_RECEIVED updates allowed so we must turn off
+            // backpressure
+            tc->backpressure_disabled = true;
+            window_opened = true;
         }
+
+        if (window_opened) {
+            // now that the window has opened fetch any outstanding read data
+            handle_incoming(tc, "TCP RX window refresh");
+        }
+
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_delivery_update: no link context");
         assert(false);
