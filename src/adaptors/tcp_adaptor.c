@@ -452,7 +452,6 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
     if (tc->activate_timer) {
         qd_timer_free(tc->activate_timer);
     }
-    flush_outgoing_buffs(tc);
     sys_mutex_free(tc->activation_lock);
     //proactor will free the socket
     free_qdr_tcp_connection_t(tc);
@@ -495,6 +494,8 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         qdr_delivery_decref(tcp_adaptor->core, conn->initial_delivery, "tcp-adaptor.handle_disconnected - initial_delivery");
         conn->initial_delivery = 0;
     }
+    flush_outgoing_buffs(conn);
+
 
     //need to free on core thread to avoid deleting while in use by management agent
     qdr_action_t *action = qdr_action(qdr_del_tcp_connection_CT, "delete_tcp_connection");
