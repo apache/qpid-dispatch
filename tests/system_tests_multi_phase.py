@@ -252,7 +252,6 @@ class WaypointTest(MessagingHandler):
         self.waypoint_host = waypoint_host
         self.addr          = addr
         self.count         = 300
-
         self.sender_conn   = None
         self.receiver_conn = None
         self.waypoint_conn = None
@@ -260,12 +259,16 @@ class WaypointTest(MessagingHandler):
         self.n_tx          = 0
         self.n_rx          = 0
         self.n_thru        = 0
+        self.n_released    = 0
 
     def timeout(self):
-        self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_thru=%d" % (self.n_tx, self.n_rx, self.n_thru)
+        self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_thru=%d, self.n_released=%d" % (self.n_tx, self.n_rx, self.n_thru, self.n_released)
         self.sender_conn.close()
         self.receiver_conn.close()
         self.waypoint_conn.close()
+
+    def on_released(self, event):
+        self.n_released += 1
 
     def fail(self, error):
         self.error = error
