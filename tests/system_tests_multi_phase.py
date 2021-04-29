@@ -322,10 +322,11 @@ class MultiPhaseTest(MessagingHandler):
         self.error          = None
         self.n_tx           = 0
         self.n_rx           = 0
+        self.n_released     = 0
         self.n_thru         = [0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     def timeout(self):
-        self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_thru=%r" % (self.n_tx, self.n_rx, self.n_thru)
+        self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_thru=%r, self.n_released=%r" % (self.n_tx, self.n_rx, self.n_thru, self.n_released)
         self.sender_conn.close()
         self.receiver_conn.close()
         for c in self.waypoint_conns:
@@ -360,6 +361,9 @@ class MultiPhaseTest(MessagingHandler):
             self.wp_receivers.append(receiver)
             ordinal += 1
 
+    def on_released(self, event):
+        self.n_released += 1
+
     def on_sendable(self, event):
         if event.sender == self.sender:
             while self.sender.credit > 0 and self.n_tx < self.count:
@@ -376,9 +380,9 @@ class MultiPhaseTest(MessagingHandler):
             for receiver in self.wp_receivers:
                 if event.receiver == receiver:
                     self.n_thru[idx] += 1
-                    self.wp_senders[idx].send(Message(event.message.body))
-                    return
-                idx += 1
+                    self.wp_senders[idx].send(Message("on_message " + event.message.body))
+                else:
+                    idx += 1
 
     def run(self):
         Container(self).run()
