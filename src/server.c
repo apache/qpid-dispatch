@@ -1663,19 +1663,21 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
     sys_atomic_init(&connector->ref_count, 1);
     DEQ_INIT(connector->conn_info_list);
 
-    connector->server  = server;
-    connector->conn_index = 1;
-    connector->state = CXTR_STATE_INIT;
     connector->lock = sys_mutex();
     if (!connector->lock)
         goto error;
-    connector->timer = qd_timer(connector->server->qd, try_open_cb, connector);
+    connector->timer = qd_timer(server->qd, try_open_cb, connector);
     if (!connector->timer)
         goto error;
     connector->conn_msg = (char*) malloc(300);
     if (!connector->conn_msg)
         goto error;
     memset(connector->conn_msg, 0, 300);
+
+    connector->server     = server;
+    connector->conn_index = 1;
+    connector->state      = CXTR_STATE_INIT;
+
     return connector;
 
 error:

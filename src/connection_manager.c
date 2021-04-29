@@ -783,16 +783,16 @@ static int get_failover_info_length(qd_failover_item_list_t   conn_info_list)
  */
 qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 {
-    qd_connector_t *ct = (qd_connector_t*) impl;
+    qd_connector_t *connector = (qd_connector_t*) impl;
 
-    int conn_index = ct->conn_index;
+    int conn_index = connector->conn_index;
 
     int i = 1;
     int num_items = 0;
 
-    sys_mutex_lock(ct->lock);
+    sys_mutex_lock(connector->lock);
 
-    qd_failover_item_list_t   conn_info_list = ct->conn_info_list;
+    qd_failover_item_list_t   conn_info_list = connector->conn_info_list;
 
     int conn_info_len = DEQ_SIZE(conn_info_list);
 
@@ -848,7 +848,7 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
     }
 
     const char *state_info = 0;
-    switch (ct->state) {
+    switch (connector->state) {
     case CXTR_STATE_CONNECTING:
       state_info = "CONNECTING";
       break;
@@ -862,7 +862,8 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
       state_info = "INITIALIZING";
       break;
     case CXTR_STATE_DELETED:
-      state_info = "DELETED";
+      // deleted by management, waiting for connection to close
+      state_info = "CLOSING";
       break;
     default:
       state_info = "UNKNOWN";
@@ -871,13 +872,13 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 
     if (qd_entity_set_string(entity, "failoverUrls", failover_info) == 0
         && qd_entity_set_string(entity, "connectionStatus", state_info) == 0
-        && qd_entity_set_string(entity, "connectionMsg", ct->conn_msg) == 0) {
+        && qd_entity_set_string(entity, "connectionMsg", connector->conn_msg) == 0) {
 
-        sys_mutex_unlock(ct->lock);
+        sys_mutex_unlock(connector->lock);
         return QD_ERROR_NONE;
     }
 
-    sys_mutex_unlock(ct->lock);
+    sys_mutex_unlock(connector->lock);
     return qd_error_code();
 }
 
