@@ -1487,7 +1487,9 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
                DLV_FMT" qdr_tcp_delivery_update: disp: %"PRIu64", settled: %s",
                DLV_ARGS(dlv), disp, settled ? "true" : "false");
 
-        bool window_opened = false;
+        const bool was_closed     = !tc->backpressure_disabled && tc->bytes_unacked >= TCP_MAX_CAPACITY;
+        bool       window_opened  = false;
+        uint64_t   section_offset = 0;
 
         if (settled) {
             // the only settlement occurs when the initial delivery is
@@ -1518,16 +1520,9 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
                 // adaptor, for simplicity we ignore the section_number since
                 // all we really need is a byte offset:
                 //
-                const bool was_closed = tc->bytes_unacked >= TCP_MAX_CAPACITY;
-                tc->bytes_unacked = tc->bytes_in - dstate->section_offset;
+                section_offset = dstate->section_offset;
+                tc->bytes_unacked = tc->bytes_in - section_offset;
                 window_opened = tc->bytes_unacked < TCP_MAX_CAPACITY;
-                if (was_closed && window_opened) {
-                    qd_log(tcp_adaptor->log_source, QD_LOG_TRACE,
-                           "[C%"PRIu64"] TCP RX window OPEN: bytes in=%"PRIu64
-                           " unacked=%"PRIu64" remote bytes out=%"PRIu64,
-                           tc->conn_id, tc->bytes_in, tc->bytes_unacked,
-                           dstate->section_offset);
-                }
             }
 
             qd_delivery_state_free(dstate);
@@ -1541,6 +1536,13 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
         }
 
         if (window_opened) {
+            if (was_closed) {
+                qd_log(tcp_adaptor->log_source, QD_LOG_TRACE,
+                       "[C%"PRIu64"] TCP RX window OPEN: bytes in=%"PRIu64
+                       " unacked=%"PRIu64" remote bytes out=%"PRIu64,
+                       tc->conn_id, tc->bytes_in, tc->bytes_unacked,
+                       section_offset);
+            }
             // now that the window has opened fetch any outstanding read data
             handle_incoming(tc, "TCP RX window refresh");
         }
