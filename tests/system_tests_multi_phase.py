@@ -29,6 +29,7 @@ from proton.reactor import Container
 
 from qpid_dispatch.management.client import Node
 
+
 class AddrTimer(object):
     def __init__(self, parent):
         self.parent = parent
@@ -365,7 +366,7 @@ class MultiPhaseTest(MessagingHandler):
         print("create_sndr")
         # DISPATCH-2049: Create the senders after the receiving addresses
         # have propagated over the router network.
-        self.sender = self.container.create_sender(self.sender_conn,self.addr)
+        self.sender = self.container.create_sender(self.sender_conn, self.addr)
         ordinal = 1
         for conn in self.waypoint_conns:
             sender = self.container.create_sender(conn, self.addr)
@@ -383,10 +384,10 @@ class MultiPhaseTest(MessagingHandler):
             self.addr_check_timer = self.reactor.schedule(1.0, AddrTimer(self))
 
     def check_address(self):
-        print ("check_address")
+        print("check_address")
         i = 0
         for host in self.waypoint_hosts:
-            print ("host=", host)
+            print("host=", host)
 
             # Don't check already checked hosts
             if self.check_addr_hosts[i] != 0:
@@ -402,10 +403,10 @@ class MultiPhaseTest(MessagingHandler):
             self.num_attempts += 1
             for result in outs.results:
                 if self.addr in result[0]:
-                    print (result)
+                    print(result)
                     # We are good if the sum of subscriberCount and remoteCount
                     # equals the total subscriber_count
-                    print ("result[subscriber_count_index]=", result[subscriber_count_index])
+                    print("result[subscriber_count_index]=", result[subscriber_count_index])
                     print("result[remote_count_index]=", result[remote_count_index])
 
                     if result[subscriber_count_index] + result[remote_count_index] >= self.min_subscriber_count:
@@ -415,7 +416,7 @@ class MultiPhaseTest(MessagingHandler):
                         # If this has not happened yet, we will try again.
                         self.check_addr_hosts[i] = self.waypoint_hosts[i]
                         found = True
-                        print ("found = True")
+                        print("found = True")
                         local_node.close()
                         if self.addr_check_timer:
                             self.addr_check_timer.cancel()
@@ -439,7 +440,6 @@ class MultiPhaseTest(MessagingHandler):
             # The addresses have propagated over the router network.
             # Now, we are able to create the senders.
             self.create_sndr()
-
 
     def on_start(self, event):
         self.reactor        = event.reactor
