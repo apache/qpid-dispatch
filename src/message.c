@@ -2578,6 +2578,20 @@ int qd_message_stream_data_buffers(qd_message_stream_data_t *stream_data, pn_raw
     return idx;
 }
 
+void qd_message_stream_data_release_up_to(qd_message_stream_data_t *stream_data)
+{
+    if (!stream_data)
+        return;
+
+    qd_message_pvt_t         *msg     = stream_data->owning_message;
+    qd_message_stream_data_t *next    = DEQ_HEAD(msg->stream_data_list);
+    qd_message_stream_data_t *current = NULL;
+    while (next && current != stream_data) {
+        current = next;
+        next = DEQ_NEXT(next);
+        qd_message_stream_data_release(current);
+    }
+}
 
 /**
  * qd_message_stream_data_release

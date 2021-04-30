@@ -383,6 +383,16 @@ size_t qd_message_stream_data_payload_length(const qd_message_stream_data_t *str
 void qd_message_stream_data_release(qd_message_stream_data_t *stream_data);
 
 
+/**
+ * qd_message_stream_data_release_up_to
+ *
+ * Release this stream data and all the previous ones also.
+ *
+ * @param stream_data Pointer to a body data object returned by qd_message_next_stream_data
+ */
+void qd_message_stream_data_release_up_to(qd_message_stream_data_t *stream_data);
+
+
 typedef enum {
     QD_MESSAGE_STREAM_DATA_BODY_OK,      // A valid body data object has been returned
     QD_MESSAGE_STREAM_DATA_FOOTER_OK,    // A valid footer has been returned
