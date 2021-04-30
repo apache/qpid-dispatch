@@ -14,7 +14,8 @@ race:qd_entity_refresh_allocator
 
 mutex:qd_router_timer_handler
 race:qdr_process_tick_CT
-deadlock:qd_timer
+deadlock:qd_timer_schedule
+deadlock:qd_timer_visit
 
 race:qdr_connection_process
 
