@@ -19,10 +19,7 @@
  * under the License.
  */
 
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/threading.h"
 #include "qpid/dispatch/timer.h"
-#include "qpid/dispatch/atomic.h"
 #include "qpid/dispatch/threading.h"
 
 void qd_timer_initialize(sys_mutex_t *server_lock);

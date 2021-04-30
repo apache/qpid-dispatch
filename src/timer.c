@@ -25,7 +25,7 @@
 
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/atomic.h"
 
 #include <assert.h>
 #include <stdio.h>
