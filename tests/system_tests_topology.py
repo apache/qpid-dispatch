@@ -274,14 +274,14 @@ class TopologyTests (TestCase):
 
     def test_01_topology_failover(self):
         name = 'test_01'
-        if self.skip[name] :
+        if self.skip[name]:
             self.skipTest("Test skipped during development.")
         test = TopologyFailover(name,
                                 self.client_addrs,
                                 "closest/01"
                                 )
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
 
 # ================================================================
@@ -534,7 +534,7 @@ class TopologyFailover (MessagingHandler):
                     self.state_transition("expected trace %d observed successfully %s" % (self.trace_count, expected), 'kill_connector')
                     self.kill_a_connector(self.kill_list[self.trace_count])
                     self.trace_count += 1
-                else :
+                else:
                     self.state_transition("expected trace %s but got %s" % (expected, trace), 'bailing')
                     self.bail("expected trace %s but got %s" % (expected, trace))
 
@@ -741,7 +741,7 @@ class RouterFluxTest(TestCase):
 
         # bit of a hack but ensure that the flush did not take an unreasonably
         # long time with respect to the ra_stale value (3x is a guess btw)
-        self.assertTrue(time.time() - start <= (3.0 * max_age))
+        self.assertLessEqual(time.time() - start, 3.0 * max_age)
 
 
 if __name__ == '__main__':

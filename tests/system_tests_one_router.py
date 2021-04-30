@@ -371,14 +371,14 @@ class OneRouterTest(TestCase):
         OneRouterTest.closest_count += 1
         test = PreSettled(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03_multicast_unsettled(self) :
         n_receivers = 5
         addr = self.address + '/multicast/1'
         test = MulticastUnsettled(addr, n_messages=10, n_receivers=5)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # DISPATCH-1277. This test will fail with a policy but without the fix in policy_local.py
     # In other words, if the max-frame-size was 2147483647 and not 16384, this
@@ -388,42 +388,42 @@ class OneRouterTest(TestCase):
         OneRouterTest.closest_count += 1
         test = DispositionReturnsToClosedConnection(addr, n_messages=100)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_05_sender_settles_first(self) :
         addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
         OneRouterTest.closest_count += 1
         test = SenderSettlesFirst(addr, n_messages=100)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_06_propagated_disposition(self) :
         addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
         OneRouterTest.closest_count += 1
         test = PropagatedDisposition(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_07_unsettled_undeliverable(self) :
         addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
         OneRouterTest.closest_count += 1
         test = UsettledUndeliverable(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_08_three_ack(self) :
         addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
         OneRouterTest.closest_count += 1
         test = ThreeAck(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_09_message_annotations(self) :
         addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
         OneRouterTest.closest_count += 1
         test = MessageAnnotations(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Tests stripping of ingress and egress annotations.
     # There is a property in qdrouter.json called stripAnnotations with possible values of ["in", "out", "both", "no"]
@@ -436,7 +436,7 @@ class OneRouterTest(TestCase):
         OneRouterTest.closest_count += 1
         test = StripMessageAnnotationsCustom(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # stripAnnotations property is set to "no"
 
@@ -444,7 +444,7 @@ class OneRouterTest(TestCase):
         addr = self.no_strip_addr + "/strip_message_annotations_no/1"
         test = StripMessageAnnotationsNo(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # stripAnnotations property is set to "no"
 
@@ -452,7 +452,7 @@ class OneRouterTest(TestCase):
         addr = self.no_strip_addr + "/strip_message_annotations_no_add_trace/1"
         test = StripMessageAnnotationsNoAddTrace(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Dont send any pre-existing ingress or trace annotations. Make sure that there
     # are no outgoing message annotations stripAnnotations property is set to "both".
@@ -462,7 +462,7 @@ class OneRouterTest(TestCase):
         addr = self.both_strip_addr + "/strip_message_annotations_both/1"
         test = StripMessageAnnotationsBoth(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Dont send any pre-existing ingress or trace annotations. Make sure that there
     # are no outgoing message annotations
@@ -472,7 +472,7 @@ class OneRouterTest(TestCase):
         addr = self.out_strip_addr + "/strip_message_annotations_out/1"
         test = StripMessageAnnotationsOut(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Send in pre-existing trace and ingress and annotations and make sure
     # that they are not in the outgoing annotations.
@@ -482,37 +482,37 @@ class OneRouterTest(TestCase):
         addr = self.in_strip_addr + "/strip_message_annotations_in/1"
         test = StripMessageAnnotationsIn(addr, n_messages=10)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_16_management(self):
         test = ManagementTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_17_management_get_operations(self):
         test = ManagementGetOperationsTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_18_management_not_implemented(self):
         test = ManagementNotImplemented(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_19_semantics_multicast(self):
         test = SemanticsMulticast(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_20_semantics_closest(self):
         test = SemanticsClosest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_21_semantics_balanced(self):
         test = SemanticsBalanced(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_22_to_override(self):
         test = MessageAnnotaionsPreExistingOverride(self.address)
@@ -535,38 +535,38 @@ class OneRouterTest(TestCase):
         """
         test = ExcessDeliveriesReleasedTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_25_multicast_unsettled(self):
         test = MulticastUnsettledTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_17_multiframe_presettled(self):
         test = MultiframePresettledTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_27_released_vs_modified(self):
         test = ReleasedVsModifiedTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_28_appearance_of_balance(self):
         test = AppearanceOfBalanceTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_29_batched_settlement(self):
         test = BatchedSettlementTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
         self.assertTrue(test.accepted_count_match)
 
     def test_30_presettled_overflow(self):
         test = PresettledOverflowTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_31_create_unavailable_sender(self):
         test = UnavailableSender(self.address)
@@ -581,7 +581,7 @@ class OneRouterTest(TestCase):
     def test_33_large_streaming_test(self):
         test = LargeMessageStreamTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_34_reject_coordinator(self):
         test = RejectCoordinatorTest(self.address)
@@ -644,17 +644,17 @@ class OneRouterTest(TestCase):
     def test_40_anonymous_sender_no_receiver(self):
         test = AnonymousSenderNoRecvLargeMessagedTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_41_large_streaming_close_conn_test(self):
         test = LargeMessageStreamCloseConnTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_42_unsettled_large_message_test(self):
         test = UnsettledLargeMessageTest(self.address, 250)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_43_dropped_presettled_receiver_stops(self):
         local_node = Node.connect(self.address, timeout=TIMEOUT)
@@ -664,7 +664,7 @@ class OneRouterTest(TestCase):
         ingress_delivery_count = res.results[0][deliveries_ingress]
         test = DroppedPresettledTest(self.address, 200, ingress_delivery_count, presettled_dropped_count)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_44_delete_connection_fail(self):
         """
@@ -708,12 +708,12 @@ class OneRouterTest(TestCase):
         """
         test = Q2HoldoffDropTest(self.router)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_48_connection_uptime_last_dlv(self):
         test = ConnectionUptimeLastDlvTest(self.address, "test_48")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_49_unexpected_release_test(self):
         """
@@ -724,7 +724,7 @@ class OneRouterTest(TestCase):
         """
         test = UnexpectedReleaseTest(self.address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_50_extension_capabilities(self):
         """
@@ -740,7 +740,7 @@ class OneRouterTest(TestCase):
         for cc in client_caps:
             test = ExtensionCapabilitiesTest(self.address, cc)
             test.run()
-            self.assertEqual(None, test.error)
+            self.assertIsNone(test.error, msg=test.error)
 
             # check the caps sent by router.
             self.assertTrue(test.remote_offered is not None)

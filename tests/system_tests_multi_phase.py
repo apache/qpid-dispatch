@@ -83,7 +83,7 @@ class RouterTest(TestCase):
                             self.routers[0].addresses[0],
                             'queue.01')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_02_waypoint_same_edge(self):
         test = WaypointTest(self.routers[2].addresses[0],
@@ -91,7 +91,7 @@ class RouterTest(TestCase):
                             self.routers[2].addresses[0],
                             'queue.02')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03_waypoint_edge_interior(self):
         test = WaypointTest(self.routers[2].addresses[0],
@@ -99,7 +99,7 @@ class RouterTest(TestCase):
                             self.routers[0].addresses[0],
                             'queue.03')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_04_waypoint_interior_edge(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -107,7 +107,7 @@ class RouterTest(TestCase):
                             self.routers[2].addresses[0],
                             'queue.04')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_05_waypoint_interior_interior(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -115,7 +115,7 @@ class RouterTest(TestCase):
                             self.routers[1].addresses[0],
                             'queue.05')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_06_waypoint_edge_edge(self):
         test = WaypointTest(self.routers[2].addresses[0],
@@ -123,7 +123,7 @@ class RouterTest(TestCase):
                             self.routers[0].addresses[0],
                             'queue.06')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_07_waypoint_edge_endpoints_int_1(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -131,7 +131,7 @@ class RouterTest(TestCase):
                             self.routers[2].addresses[0],
                             'queue.07')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_08_waypoint_edge_endpoints_int_2(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -139,7 +139,7 @@ class RouterTest(TestCase):
                             self.routers[5].addresses[0],
                             'queue.08')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_09_waypoint_int_endpoints_edge_1(self):
         test = WaypointTest(self.routers[2].addresses[0],
@@ -147,7 +147,7 @@ class RouterTest(TestCase):
                             self.routers[0].addresses[0],
                             'queue.09')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_10_waypoint_int_endpoints_edge_2(self):
         test = WaypointTest(self.routers[2].addresses[0],
@@ -155,7 +155,7 @@ class RouterTest(TestCase):
                             self.routers[1].addresses[0],
                             'queue.10')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_11_waypoint_int_endpoints_int_1(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -163,7 +163,7 @@ class RouterTest(TestCase):
                             self.routers[0].addresses[0],
                             'queue.11')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_12_waypoint_int_endpoints_int_2(self):
         test = WaypointTest(self.routers[0].addresses[0],
@@ -171,7 +171,7 @@ class RouterTest(TestCase):
                             self.routers[1].addresses[0],
                             'queue.12')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_13_waypoint_edge_endpoints_edge_1(self):
         test = WaypointTest(self.routers[2].addresses[0],
@@ -179,7 +179,7 @@ class RouterTest(TestCase):
                             self.routers[3].addresses[0],
                             'queue.13')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_14_waypoint_edge_endpoints_edge_2(self):
         test = WaypointTest(self.routers[2].addresses[0],
@@ -187,7 +187,7 @@ class RouterTest(TestCase):
                             self.routers[4].addresses[0],
                             'queue.14')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_15_multiphase_1(self):
         test = MultiPhaseTest(self.routers[2].addresses[0],
@@ -205,7 +205,7 @@ class RouterTest(TestCase):
         ],
             'multi.15')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_16_multiphase_2(self):
         test = MultiPhaseTest(self.routers[2].addresses[0],
@@ -223,7 +223,7 @@ class RouterTest(TestCase):
         ],
             'multi.16')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_17_multiphase_3(self):
         test = MultiPhaseTest(self.routers[1].addresses[0],
@@ -241,7 +241,7 @@ class RouterTest(TestCase):
         ],
             'multi.17')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
 
 class WaypointTest(MessagingHandler):

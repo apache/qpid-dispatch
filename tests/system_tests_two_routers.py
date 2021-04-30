@@ -124,7 +124,7 @@ class TwoRouterTest(TestCase):
     def test_01_pre_settled(self):
         test = DeliveriesInTransit(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
         local_node = Node.connect(self.routers[0].addresses[0], timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router')
@@ -137,22 +137,22 @@ class TwoRouterTest(TestCase):
     def test_02a_multicast_unsettled(self):
         test = MulticastUnsettled(self.routers[0].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_02c_sender_settles_first(self):
         test = SenderSettlesFirst(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03_message_annotations(self):
         test = MessageAnnotationsTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03a_test_strip_message_annotations_no(self):
         test = MessageAnnotationsStripTest(self.routers[0].addresses[1], self.routers[1].addresses[1])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03a_test_strip_message_annotations_no_add_trace(self):
         test = MessageAnnotationsStripAddTraceTest(self.routers[0].addresses[1], self.routers[1].addresses[1])
@@ -160,48 +160,48 @@ class TwoRouterTest(TestCase):
         # Dump the logger output only if there is a test error, otherwise dont bother
         if test.error:
             test.logger.dump()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03a_test_strip_message_annotations_both_add_ingress_trace(self):
         test = MessageAnnotationsStripBothAddIngressTrace(self.routers[0].addresses[2], self.routers[1].addresses[2])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03a_test_strip_message_annotations_out(self):
         test = MessageAnnotationsStripMessageAnnotationsOut(self.routers[0].addresses[3], self.routers[1].addresses[3])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03a_test_strip_message_annotations_in(self):
         test = MessageAnnotationStripMessageAnnotationsIn(self.routers[0].addresses[4], self.routers[1].addresses[4])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_04_management(self):
         test = ManagementTest(self.routers[0].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_06_semantics_closest_is_local(self):
         test = SemanticsClosestIsLocal(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_07_semantics_closest_is_remote(self):
         test = SemanticsClosestIsRemote(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_08_semantics_balanced(self):
         test = SemanticsBalanced(self.routers[0].addresses[0], self.routers[0].addresses[1],
                                  self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_09_to_override(self):
         test = MessageAnnotaionsPreExistingOverride(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_10_propagated_disposition(self):
         test = PropagatedDisposition(self, self.routers[0].addresses[0], self.routers[1].addresses[0])
@@ -224,12 +224,12 @@ class TwoRouterTest(TestCase):
         """
         test = ExcessDeliveriesReleasedTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_15_attach_on_inter_router(self):
         test = AttachOnInterRouterTest(self.routers[0].addresses[5])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_17_address_wildcard(self):
         # verify proper distribution is selected by wildcard
@@ -290,12 +290,12 @@ class TwoRouterTest(TestCase):
     def test_17_large_streaming_test(self):
         test = LargeMessageStreamTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_18_single_char_dest_test(self):
         test = SingleCharacterDestinationTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_19_delete_inter_router_connection(self):
         """
@@ -1879,7 +1879,7 @@ class PropagationTest(TestCase):
     def test_propagation_of_locally_undefined_address(self):
         test = MulticastTestClient(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
         self.assertEqual(test.received, 2)
 
 
@@ -2133,7 +2133,7 @@ class TwoRouterExtensionStateTest(TestCase):
                                     self.RouterB.addresses[0],
                                     "closest/fleabag")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03_multicast(self):
         """

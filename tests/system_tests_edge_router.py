@@ -374,7 +374,7 @@ class RouterTest(TestCase):
                                 self.routers[2].addresses[0],
                                 'EA1')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_02_connectivity_INTA_EA2(self):
         if self.skip['test_02'] :
@@ -384,7 +384,7 @@ class RouterTest(TestCase):
                                 self.routers[3].addresses[0],
                                 'EA2')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_03_connectivity_INTB_EB1(self):
         if self.skip['test_03'] :
@@ -394,7 +394,7 @@ class RouterTest(TestCase):
                                 self.routers[4].addresses[0],
                                 'EB1')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_04_connectivity_INTB_EB2(self):
         if self.skip['test_04'] :
@@ -404,7 +404,7 @@ class RouterTest(TestCase):
                                 self.routers[5].addresses[0],
                                 'EB2')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_05_dynamic_address_same_edge(self):
         if self.skip['test_05'] :
@@ -413,7 +413,7 @@ class RouterTest(TestCase):
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[2].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_06_dynamic_address_interior_to_edge(self):
         if self.skip['test_06'] :
@@ -422,7 +422,7 @@ class RouterTest(TestCase):
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[0].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_07_dynamic_address_edge_to_interior(self):
         if self.skip['test_07'] :
@@ -431,7 +431,7 @@ class RouterTest(TestCase):
         test = DynamicAddressTest(self.routers[0].addresses[0],
                                   self.routers[2].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_08_dynamic_address_edge_to_edge_one_interior(self):
         if self.skip['test_08'] :
@@ -440,7 +440,7 @@ class RouterTest(TestCase):
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[3].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_09_dynamic_address_edge_to_edge_two_interior(self):
         if self.skip['test_09'] :
@@ -449,7 +449,7 @@ class RouterTest(TestCase):
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[4].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_10_mobile_address_same_edge(self):
         if self.skip['test_10'] :
@@ -459,7 +459,7 @@ class RouterTest(TestCase):
                                  self.routers[2].addresses[0],
                                  "test_10")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_11_mobile_address_interior_to_edge(self):
         if self.skip['test_11'] :
@@ -469,7 +469,7 @@ class RouterTest(TestCase):
                                  self.routers[0].addresses[0],
                                  "test_11")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_12_mobile_address_edge_to_interior(self):
         if self.skip['test_12'] :
@@ -481,7 +481,7 @@ class RouterTest(TestCase):
         test.run()
         if test.error is not None:
             test.logger.dump()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_13_mobile_address_edge_to_edge_one_interior(self):
         if self.skip['test_13'] :
@@ -491,7 +491,7 @@ class RouterTest(TestCase):
                                  self.routers[3].addresses[0],
                                  "test_13")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_14_mobile_address_edge_to_edge_two_interior(self):
         if self.skip['test_14'] :
@@ -501,7 +501,7 @@ class RouterTest(TestCase):
                                  self.routers[4].addresses[0],
                                  "test_14")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # One sender two receiver tests.
     # One sender and two receivers on the same edge
@@ -514,7 +514,7 @@ class RouterTest(TestCase):
                                                       self.routers[2].addresses[0],
                                                       "test_15")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # One sender and two receivers on the different edges. The edges are
     #  hanging off the  same interior router.
@@ -527,7 +527,7 @@ class RouterTest(TestCase):
                                                       self.routers[3].addresses[0],
                                                       "test_16")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers on the interior and sender on the edge
     def test_17_mobile_address_edge_to_interior(self):
@@ -539,7 +539,7 @@ class RouterTest(TestCase):
                                                       self.routers[2].addresses[0],
                                                       "test_17")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers on the edge and the sender on the interior
     def test_18_mobile_address_interior_to_edge(self):
@@ -551,7 +551,7 @@ class RouterTest(TestCase):
                                                       self.routers[0].addresses[0],
                                                       "test_18")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers on the edge and the sender on the 'other' interior
     def test_19_mobile_address_other_interior_to_edge(self):
@@ -563,7 +563,7 @@ class RouterTest(TestCase):
                                                       self.routers[1].addresses[0],
                                                       "test_19")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers on the edge and the sender on the edge of
     # the 'other' interior
@@ -576,7 +576,7 @@ class RouterTest(TestCase):
                                                       self.routers[5].addresses[0],
                                                       "test_20")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # One receiver in an edge, another one in interior and the sender
     # is on the edge of another interior
@@ -589,7 +589,7 @@ class RouterTest(TestCase):
                                                       self.routers[2].addresses[0],
                                                       "test_21")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers one on each interior router and and an edge sender
     # connectoed to the first interior
@@ -602,7 +602,7 @@ class RouterTest(TestCase):
                                                       self.routers[3].addresses[0],
                                                       "test_22")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_23_mobile_address_edge_sender_two_edge_receivers(self):
         if self.skip['test_23'] :
@@ -613,7 +613,7 @@ class RouterTest(TestCase):
                                                       self.routers[2].addresses[0],
                                                       "test_23")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # 1 Sender and 3 receivers all on the same edge
     def test_24_multicast_mobile_address_same_edge(self):
@@ -628,7 +628,7 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # 1 Sender and receiver on one edge and 2 receivers on another edge
     # all in the same  interior
@@ -644,7 +644,7 @@ class RouterTest(TestCase):
                                           self.routers[0].addresses[0],
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers on each edge, one receiver on interior and sender
     # on the edge
@@ -660,7 +660,7 @@ class RouterTest(TestCase):
                                           self.routers[0].addresses[0],
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Receivers on the edge and sender on the interior
     def test_27_multicast_mobile_address_interior_to_edge(self):
@@ -675,7 +675,7 @@ class RouterTest(TestCase):
                                           self.routers[0].addresses[0],
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Receivers on the edge and sender on an interior that is not connected
     # to the edges.
@@ -691,7 +691,7 @@ class RouterTest(TestCase):
                                           self.routers[0].addresses[0],
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Sender on an interior and 3 receivers connected to three different edges
     def test_29_multicast_mobile_address_edge_to_edge_two_interiors(self):
@@ -706,7 +706,7 @@ class RouterTest(TestCase):
                                           self.routers[0].addresses[0],
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_30_multicast_mobile_address_all_edges(self):
         if self.skip['test_30'] :
@@ -720,7 +720,7 @@ class RouterTest(TestCase):
                                           self.routers[0].addresses[0],
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     ######### Multicast Large message tests ######################
 
@@ -739,7 +739,7 @@ class RouterTest(TestCase):
                                           large_msg=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # 1 Sender on one edge and 3 receivers on another edge all in the same
     # interior
@@ -756,7 +756,7 @@ class RouterTest(TestCase):
                                           large_msg=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers on each edge, one receiver on interior and sender
     # on the edge
@@ -773,7 +773,7 @@ class RouterTest(TestCase):
                                           large_msg=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Receivers on the edge and sender on the interior
     def test_34_multicast_mobile_address_interior_to_edge(self):
@@ -789,7 +789,7 @@ class RouterTest(TestCase):
                                           large_msg=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Receivers on the edge and sender on an interior that is not connected
     # to the edges.
@@ -806,7 +806,7 @@ class RouterTest(TestCase):
                                           large_msg=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Sender on an interior and 3 receivers connected to three different edges
     def test_36_multicast_mobile_address_edge_to_edge_two_interiors(self):
@@ -822,7 +822,7 @@ class RouterTest(TestCase):
                                           large_msg=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_37_multicast_mobile_address_all_edges(self):
         if self.skip['test_37'] :
@@ -837,7 +837,7 @@ class RouterTest(TestCase):
                                           large_msg=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_38_mobile_addr_event_three_receivers_same_interior(self):
         if self.skip['test_38'] :
@@ -851,7 +851,7 @@ class RouterTest(TestCase):
                                       "test_38")
 
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_39_mobile_addr_event_three_receivers_diff_interior(self):
         if self.skip['test_39'] :
@@ -866,7 +866,7 @@ class RouterTest(TestCase):
                                       "test_39", check_remote=True)
 
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_40_drop_rx_client_multicast_large_message(self):
         if self.skip['test_40'] :
@@ -880,7 +880,7 @@ class RouterTest(TestCase):
                                             self.routers[2].addresses[0],
                                             "multicast.40")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_41_drop_rx_client_multicast_small_message(self):
         if self.skip['test_41'] :
@@ -894,7 +894,7 @@ class RouterTest(TestCase):
                                             self.routers[2].addresses[0],
                                             "multicast.40", large_msg=False)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_42_anon_sender_mobile_address_same_edge(self):
         if self.skip['test_42'] :
@@ -904,7 +904,7 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           "test_42")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_43_anon_sender_mobile_address_interior_to_edge(self):
         if self.skip['test_43'] :
@@ -914,7 +914,7 @@ class RouterTest(TestCase):
                                           self.routers[0].addresses[0],
                                           "test_43")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_44_anon_sender_mobile_address_edge_to_interior(self):
         if self.skip['test_44'] :
@@ -924,7 +924,7 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           "test_44")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_45_anon_sender_mobile_address_edge_to_edge_one_interior(self):
         if self.skip['test_45'] :
@@ -934,7 +934,7 @@ class RouterTest(TestCase):
                                           self.routers[3].addresses[0],
                                           "test_45")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_46_anon_sender_mobile_address_edge_to_edge_two_interior(self):
         if self.skip['test_46'] :
@@ -944,7 +944,7 @@ class RouterTest(TestCase):
                                           self.routers[4].addresses[0],
                                           "test_46")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_47_anon_sender_mobile_address_large_msg_same_edge(self):
         if self.skip['test_47'] :
@@ -954,7 +954,7 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           "test_47", True)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_48_anon_sender_mobile_address_large_msg_interior_to_edge(self):
         if self.skip['test_48'] :
@@ -964,7 +964,7 @@ class RouterTest(TestCase):
                                           self.routers[0].addresses[0],
                                           "test_48", True)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_49_anon_sender_mobile_address_large_msg_edge_to_interior(self):
         if self.skip['test_49'] :
@@ -974,7 +974,7 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           "test_49", True)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_50_anon_sender_mobile_address_large_msg_edge_to_edge_one_interior(self):
         if self.skip['test_50'] :
@@ -984,7 +984,7 @@ class RouterTest(TestCase):
                                           self.routers[3].addresses[0],
                                           "test_50", True)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_51_anon_sender_mobile_address_large_msg_edge_to_edge_two_interior(self):
         if self.skip['test_51'] :
@@ -994,7 +994,7 @@ class RouterTest(TestCase):
                                           self.routers[4].addresses[0],
                                           "test_51", True)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # 1 Sender and 3 receivers all on the same edge
     def test_52_anon_sender_multicast_mobile_address_same_edge(self):
@@ -1010,7 +1010,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # 1 Sender and receiver on one edge and 2 receivers on another edge
     # all in the same  interior
@@ -1027,7 +1027,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers on each edge, one receiver on interior and sender
     # on the edge
@@ -1044,7 +1044,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Receivers on the edge and sender on the interior
     def test_55_anon_sender_multicast_mobile_address_interior_to_edge(self):
@@ -1060,7 +1060,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Receivers on the edge and sender on an interior that is not connected
     # to the edges.
@@ -1077,7 +1077,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Sender on an interior and 3 receivers connected to three different edges
     def test_57_anon_sender_multicast_mobile_address_edge_to_edge_two_interiors(self):
@@ -1093,7 +1093,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_58_anon_sender_multicast_mobile_address_all_edges(self):
         if self.skip['test_58'] :
@@ -1108,7 +1108,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     ######### Multicast Large message anon sender tests ####################
 
@@ -1128,7 +1128,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # 1 Sender on one edge and 3 receivers on another edge all in the same
     # interior
@@ -1146,7 +1146,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Two receivers on each edge, one receiver on interior and sender
     # on the edge
@@ -1164,7 +1164,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Receivers on the edge and sender on the interior
     def test_62_anon_sender_multicast_mobile_address_interior_to_edge(self):
@@ -1181,7 +1181,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Receivers on the edge and sender on an interior that is not connected
     # to the edges.
@@ -1199,7 +1199,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=2)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     # Sender on an interior and 3 receivers connected to three different edges
     def test_64_anon_sender_multicast_mobile_address_edge_to_edge_two_interiors(self):
@@ -1216,7 +1216,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_65_anon_sender_multicast_mobile_address_all_edges(self):
         if self.skip['test_65'] :
@@ -1232,7 +1232,7 @@ class RouterTest(TestCase):
                                           anon_sender=True,
                                           subscriber_count=3)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_66_anon_sender_drop_rx_client_multicast_large_message(self):
         # test what happens if some multicast receivers close in the middle of
@@ -1246,7 +1246,7 @@ class RouterTest(TestCase):
                                                       self.routers[2].addresses[0],
                                                       "multicast.66")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def test_67_drop_rx_client_multicast_small_message(self):
         # test what happens if some multicast receivers close in the middle of
@@ -1261,7 +1261,7 @@ class RouterTest(TestCase):
                                                       "multicast.67",
                                                       large_msg=False)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error, msg=test.error)
 
     def run_qdstat(self, args, regexp=None, address=None):
         if args:
