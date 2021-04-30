@@ -27,6 +27,7 @@ from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, Tes
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+from qpid_dispatch.management.client import Node
 
 class AddrTimer(object):
     def __init__(self, parent):
@@ -260,12 +261,23 @@ class WaypointTest(MessagingHandler):
         self.n_rx          = 0
         self.n_thru        = 0
         self.n_released    = 0
+        self.num_attaches  = 0
+        self.wp_sender     = None
+        self.sender        = None
+        self.receiver      = None
+        self.wp_receiver   = None
 
     def timeout(self):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_thru=%d, self.n_released=%d" % (self.n_tx, self.n_rx, self.n_thru, self.n_released)
         self.sender_conn.close()
         self.receiver_conn.close()
         self.waypoint_conn.close()
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.sender = event.container.create_sender(self.sender_conn, self.addr)
+            self.wp_sender = event.container.create_sender(self.waypoint_conn, self.addr)
+            self.wp_sender.target.capabilities.put_object(symbol("qd.waypoint"))
 
     def on_released(self, event):
         self.n_released += 1
@@ -282,11 +294,8 @@ class WaypointTest(MessagingHandler):
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
         self.waypoint_conn  = event.container.connect(self.waypoint_host)
-        self.sender         = event.container.create_sender(self.sender_conn, self.addr)
         self.receiver       = event.container.create_receiver(self.receiver_conn, self.addr)
-        self.wp_sender      = event.container.create_sender(self.waypoint_conn, self.addr)
         self.wp_receiver    = event.container.create_receiver(self.waypoint_conn, self.addr)
-        self.wp_sender.target.capabilities.put_object(symbol("qd.waypoint"))
         self.wp_receiver.source.capabilities.put_object(symbol("qd.waypoint"))
 
     def on_sendable(self, event):
@@ -316,7 +325,7 @@ class MultiPhaseTest(MessagingHandler):
         self.waypoint_hosts = waypoint_hosts
         self.addr           = addr
         self.count          = 300
-
+        self.sender         = None
         self.sender_conn    = None
         self.receiver_conn  = None
         self.waypoint_conns = []
@@ -327,6 +336,15 @@ class MultiPhaseTest(MessagingHandler):
         self.n_rx           = 0
         self.n_released     = 0
         self.n_thru         = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.addr_check_timer = None
+        self.min_subscriber_count = 1
+        self.container = None
+        self.reactor = None
+        self.num_attempts = 0
+        self.max_attempts = 3
+        self.check_addr_hosts = []
+        for waypoint_host in self.waypoint_hosts:
+            self.check_addr_hosts.append(0)
 
     def timeout(self):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_thru=%r, self.n_released=%r" % (self.n_tx, self.n_rx, self.n_thru, self.n_released)
@@ -343,28 +361,108 @@ class MultiPhaseTest(MessagingHandler):
             c.close()
         self.timer.cancel()
 
+    def create_sndr(self):
+        print("create_sndr")
+        # DISPATCH-2049: Create the senders after the receiving addresses
+        # have propagated over the router network.
+        self.sender = self.container.create_sender(self.sender_conn,self.addr)
+        ordinal = 1
+        for conn in self.waypoint_conns:
+            sender = self.container.create_sender(conn, self.addr)
+            self.wp_senders.append(sender)
+            sender.target.capabilities.put_object(symbol("qd.waypoint.%d" % ordinal))
+            ordinal += 1
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            # This timer will make sure that the receiver addresses
+            # have propagated to the other routers.
+            # When we are sure that the addresses have propagated to the
+            # desired routers, we will create the sender to start sending
+            # messages.
+            self.addr_check_timer = self.reactor.schedule(1.0, AddrTimer(self))
+
+    def check_address(self):
+        print ("check_address")
+        i = 0
+        for host in self.waypoint_hosts:
+            print ("host=", host)
+
+            # Don't check already checked hosts
+            if self.check_addr_hosts[i] != 0:
+                continue
+
+            local_node = Node.connect(host, timeout=TIMEOUT)
+            outs = local_node.query(type='org.apache.qpid.dispatch.router.address')
+            found = False
+
+            subscriber_count_index = outs.attribute_names.index("subscriberCount")
+            remote_count_index = outs.attribute_names.index("remoteCount")
+
+            self.num_attempts += 1
+            for result in outs.results:
+                if self.addr in result[0]:
+                    print (result)
+                    # We are good if the sum of subscriberCount and remoteCount
+                    # equals the total subscriber_count
+                    print ("result[subscriber_count_index]=", result[subscriber_count_index])
+                    print("result[remote_count_index]=", result[remote_count_index])
+
+                    if result[subscriber_count_index] + result[remote_count_index] >= self.min_subscriber_count:
+                        # The address is in the address table and the subscriber count is as expected.
+                        # subscriberCount match means that both edge routers have
+                        # told the interior router about the existence of the address
+                        # If this has not happened yet, we will try again.
+                        self.check_addr_hosts[i] = self.waypoint_hosts[i]
+                        found = True
+                        print ("found = True")
+                        local_node.close()
+                        if self.addr_check_timer:
+                            self.addr_check_timer.cancel()
+                        self.num_attempts = 0
+                    else:
+                        found = False
+                        break
+            i += 1
+
+            if not found:
+                if self.num_attempts < self.max_attempts:
+                    self.addr_check_timer = self.reactor.schedule(1.0, AddrTimer(self))
+                else:
+                    self.error = "Unable to create sender because of " \
+                                 "absence of address %s in the address table" % self.addr
+                    self.timeout()
+                    local_node.close()
+                break
+
+        if self.waypoint_hosts == self.check_addr_hosts:
+            # The addresses have propagated over the router network.
+            # Now, we are able to create the senders.
+            self.create_sndr()
+
+
     def on_start(self, event):
+        self.reactor        = event.reactor
         self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
-        self.sender         = event.container.create_sender(self.sender_conn, self.addr)
         self.receiver       = event.container.create_receiver(self.receiver_conn, self.addr)
+        self.container      = event.container
+
+        # Create connection on each waypoint host.
         for host in self.waypoint_hosts:
             self.waypoint_conns.append(event.container.connect(host))
 
         ordinal = 1
         for conn in self.waypoint_conns:
-            sender   = event.container.create_sender(conn, self.addr)
             receiver = event.container.create_receiver(conn, self.addr)
-
-            sender.target.capabilities.put_object(symbol("qd.waypoint.%d" % ordinal))
             receiver.source.capabilities.put_object(symbol("qd.waypoint.%d" % ordinal))
-
-            self.wp_senders.append(sender)
             self.wp_receivers.append(receiver)
             ordinal += 1
 
     def on_released(self, event):
+        # This is for debugging purposes. self.n_released should remain zero
+        # for this test to pass.
         self.n_released += 1
 
     def on_sendable(self, event):
