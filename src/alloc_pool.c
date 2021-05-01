@@ -674,6 +674,7 @@ void qd_alloc_finalize(void)
     if (debug_dump) {
         fclose(dump_file);
         free(debug_dump);
+        debug_dump = 0;
     }
 
 #ifdef QD_MEMORY_DEBUG

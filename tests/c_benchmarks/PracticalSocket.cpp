@@ -5,13 +5,13 @@
   typedef int socklen_t;
   typedef char raw_type;       // Type used for raw data on this platform
 #else
-#include <sys/types.h>       // For data types
 #include <sys/socket.h>      // For socket(), connect(), send(), and recv()
 #include <netdb.h>           // For gethostbyname()
 #include <arpa/inet.h>       // For inet_addr()
 #include <unistd.h>          // For close()
 #include <netinet/in.h>      // For sockaddr_in
 #include <cstring> // memset
+#include <utility>
 typedef void raw_type;       // Type used for raw data on this platform
 #endif
 
@@ -25,18 +25,17 @@ static bool initialized = false;
 
 // SocketException Code
 
-SocketException::SocketException(const string &message, bool inclSysMsg)
-throw() : userMessage(message) {
+SocketException::SocketException(string message, bool inclSysMsg)
+noexcept : userMessage(std::move(message)) {
     if (inclSysMsg) {
         userMessage.append(": ");
         userMessage.append(strerror(errno));
     }
 }
 
-SocketException::~SocketException() throw() {
-}
+SocketException::~SocketException() throw() = default;
 
-const char *SocketException::what() const throw() {
+const char *SocketException::what() const noexcept {
     return userMessage.c_str();
 }
 
@@ -47,7 +46,7 @@ static void fillAddr(const string &address, unsigned short port,
     addr.sin_family = AF_INET;       // Internet address
 
     hostent *host;  // Resolve name
-    if ((host = gethostbyname(address.c_str())) == NULL) {
+    if ((host = gethostbyname(address.c_str())) == nullptr) {
         // strerror() will not work for gethostbyname() and hstrerror()
         // is supposedly obsolete
         throw SocketException("Failed to resolve name (gethostbyname())");
@@ -148,7 +147,7 @@ unsigned short Socket::resolveService(const string &service,
                                       const string &protocol) {
     struct servent *serv;        /* Structure containing service information */
 
-    if ((serv = getservbyname(service.c_str(), protocol.c_str())) == NULL)
+    if ((serv = getservbyname(service.c_str(), protocol.c_str())) == nullptr)
         return atoi(service.c_str());  /* Service is port number */
     else
         return ntohs(serv->s_port);    /* Found port (network byte order) by name */
@@ -245,7 +244,7 @@ TCPServerSocket::TCPServerSocket(const string &localAddress,
 
 TCPSocket *TCPServerSocket::accept() {
     int newConnSD;
-    if ((newConnSD = ::accept(sockDesc, NULL, 0)) < 0) {
+    if ((newConnSD = ::accept(sockDesc, nullptr, 0)) < 0) {
         throw SocketException("Accept failed (accept())", true);
     }
 

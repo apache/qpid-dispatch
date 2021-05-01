@@ -184,9 +184,8 @@ static qd_message_t *create_request(const std::map<std::string, std::string>& ma
 
 TEST_CASE("waypoint_undeliverable" * doctest::skip(false)) {
     std::thread([]() {
-        WithNoMemoryLeaks leaks{};
         QDR qdr{};
-        qdr.start();
+        qdr.initialize();
         qdr.wait();
 
         // huh? TODO, need this to see error from CREATE
@@ -383,7 +382,7 @@ TEST_CASE("waypoint_undeliverable" * doctest::skip(false)) {
 //            qdr_protocol_adaptor_free(qdr.qd->router->router_core, adaptor);
           link.release();
         }
-        qdr.stop();
+        qdr.deinitialize();
 
 
 
@@ -411,15 +410,14 @@ std::mutex RouterStartupLatch::mut {};
 
 TEST_CASE("qdr_action_enqueue" * doctest::skip(false)) {
     std::thread([]() {
-        WithNoMemoryLeaks leaks{};
         QDR qdr{};
-        qdr.start();
-        BetterRouterStartupLatch{}.wait_for_qdr(qdr.qd);
+        qdr.initialize();
+        RouterStartupLatch{}.wait_for_qdr(qdr.qd);
 
         // huh? TODO, need this to see error from CREATE
         qdr.qd->router->router_core->agent_log = qdr.qd->router->log_source;
 
 
-        qdr.stop();
+        qdr.deinitialize();
      }).join();
 }

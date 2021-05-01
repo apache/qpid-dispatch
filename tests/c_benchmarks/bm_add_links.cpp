@@ -19,62 +19,83 @@
  *
  */
 
-#include <benchmark/benchmark.h>
-#include <cstdio>
-#include <cstring>
-#include <thread>
-#include <condition_variable>
-#include "./helpers.hpp"
-
-#include "echo_server.h"
+#include "../c_unittests/helpers.hpp"
 
 #include "PracticalSocket.h"  // For Socket and SocketException
-#include <iostream>           // For cerr and cout
-#include <cstdlib>            // For atoi()
-#include <unistd.h>
-#include <csignal>
+#include "echo_server.h"
+
+#include <benchmark/benchmark.h>
 #include <sys/wait.h>
+#include <unistd.h>
+
+#include <condition_variable>
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>  // For atoi()
+#include <cstring>
+#include <iostream>  // For cerr and cout
+#include <thread>
 
 using namespace std;
 
 extern "C" {
-#include <qpid/dispatch.h>
+#include "qpid/dispatch.h"
+#include "log_private.h"
 #include "parse_tree.h"
 #include "entity_cache.h"
+
+// declarations that don't have .h file
+void qd_error_initialize();
 }
 
-static void BM_AddRemovePattern(benchmark::State &state) {
-    qd_iterator_t *  piter = qd_iterator_string("I.am.Sam", ITER_VIEW_ALL);
-    qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
-    void *           payload;
-
-    for (auto _ : state) {
-        return;
-        qd_parse_tree_add_pattern(node, piter, &payload);
-        qd_parse_tree_remove_pattern(node, piter);
+class QDRMinimalEnv {
+   public:
+    QDRMinimalEnv() {
+        qd_alloc_initialize();
+        qd_log_initialize();
+        qd_error_initialize();
     }
 
-    qd_parse_tree_free(node);
-    qd_iterator_free(piter);
+    ~QDRMinimalEnv() {
+        qd_log_finalize();
+        qd_alloc_finalize();
+    }
+};
+
+static void BM_AddRemovePattern(benchmark::State &state) {
+    std::thread([&state]{
+        QDRMinimalEnv env{};
+
+        qd_iterator_t *piter  = qd_iterator_string("I.am.Sam", ITER_VIEW_ALL);
+        qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+        void *payload;
+
+        for (auto _ : state) {
+            qd_parse_tree_add_pattern(node, piter, &payload);
+            qd_parse_tree_remove_pattern(node, piter);
+        }
+
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+    }).join();
 }
 
 BENCHMARK(BM_AddRemovePattern)->Unit(benchmark::kMicrosecond);
 
 
 // https://github.com/apache/qpid-dispatch/pull/732/files
-static void BM_AddAutolink(benchmark::State &state) {
+static void BM_RouterInitializeMinimalConfig(benchmark::State &state) {
     for(auto _: state) {
-        // TODO
         std::thread([]() {
             QDR qdr{};
-            qdr.start();
+            qdr.initialize("minimal_silent.conf");
             qdr.wait();
-            qdr.stop();
+            qdr.deinitialize();
         }).join();
     }
 }
 
-BENCHMARK(BM_AddAutolink)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_RouterInitializeMinimalConfig)->Unit(benchmark::kMillisecond);
 
 static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
 //    std::condition_variable cv;
@@ -85,13 +106,13 @@ static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
     nx.lock();
     QDR qdr{};
     auto t = std::thread([&mx, &qdr]() {
-        qdr.start();
+        qdr.initialize("tcp_benchmarks.conf");
         qdr.wait();
 
         mx.unlock();
         qdr.run();
 
-        qdr.stop();
+        qdr.deinitialize();
     });
 
 //    run_echo_server();
@@ -139,7 +160,7 @@ static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
     stop_echo_server();
     u.join();
 
-    qdr.stop_run();
+    qdr.stop();
     t.join();
 }
 
@@ -151,7 +172,8 @@ BENCHMARK(BM_TCPEchoServerLatency1QDR)->Unit(benchmark::kMillisecond);
  *  c++, need some fancy lib to manage subprocesses
  *  try figure out threads, asan?
  */
-
+//
+//
 static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
 //    std::condition_variable cv;
 //    std::unique_lock<std::mutex> lk(cv);
@@ -167,7 +189,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
 //        std::mutex mx;
 //        mx.lock();
         QDR qdr1{};
-            qdr1.start("./l1.conf");
+            qdr1.initialize("./l1.conf");
             qdr1.wait();
 
 //            mx.unlock();
@@ -185,7 +207,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     int pid2 = fork();
     if (pid2 == 0) {
 //    auto t2 = std::thread([&my, &qdr2]() {
-        qdr2.start("./l2.conf");
+        qdr2.initialize("./l2.conf");
         qdr2.wait();
 
 //        my.unlock();
@@ -193,7 +215,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
         printf("calling exit(0) on l2\n");
         exit(0);
 
-        qdr2.stop();
+        qdr2.deinitialize();
 //    });
 //    my.lock();
     }
@@ -271,7 +293,7 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
 }
 
 BENCHMARK(BM_TCPEchoServerLatency2QDR)->Unit(benchmark::kMillisecond)->MinTime(2);
-//->Iterations(2000);
+////->Iterations(2000);
 
 static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state) {
 //    std::condition_variable cv;

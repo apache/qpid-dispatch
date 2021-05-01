@@ -34,32 +34,36 @@ extern "C" {
 
 #include <memory>
 
-// https://stackoverflow.com/questions/65290961/can-i-succintly-declare-stdunique-ptr-with-custom-deleter
-template <typename T, typename Deleter>
-std::unique_ptr<T, Deleter> qd_make_unique(T* raw, Deleter deleter)
-{
-    return std::unique_ptr<T, Deleter>(raw, deleter);
-}
-
-//std::unique_ptr<qdr_link_t, decltype(&free_qdr_link_t)> link{new_qdr_link_t(), free_qdr_link_t};
-//auto link = qd_make_unique(new_qdr_link_t(), free_qdr_link_t);
-
 TEST_CASE("Start and shutdown router twice" * doctest::skip(false)) {
-    std::thread([]() {
-        WithNoMemoryLeaks leaks{};
-        QDR qdr{};
-        qdr.start();
-        qdr.wait();
-        qdr.stop();
+//    WithNoMemoryLeaks leaks{};
+    std::unique_ptr<QDR> qdr1;
+    std::unique_ptr<QDR> qdr2;
+    auto t1 = std::thread([&qdr1]() {
+        qdr1 = std::unique_ptr<QDR>(new QDR());
+        qdr1->initialize();
+        qdr1->run();
+        qdr1->wait();
+        qdr1->deinitialize();
         // todo check for more errors, maybe in logging calls?
-    }).join();
-    std::thread([]() {
-        WithNoMemoryLeaks leaks{};
-        QDR qdr{};
-        qdr.start();
-        qdr.wait();
-        qdr.stop();
-    }).join();
+    });
+
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    qdr1->stop();
+
+    t1.join();
+
+    auto t2 = std::thread([&qdr2]() {
+      qdr2 = std::unique_ptr<QDR>(new QDR());
+      qdr2->initialize();
+      qdr2->wait();
+      qdr2->run();
+      qdr2->deinitialize();
+    });
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    qdr2->stop();
+
+    t2.join();
 }
 
 // from message_test.c
@@ -84,9 +88,8 @@ void set_content(qd_message_content_t *content, unsigned char *buffer, size_t le
 
 TEST_CASE("Add autoLink to running router through qdra_config_auto_link_create_CT()" * doctest::skip(false)) {
     std::thread([]() {
-        WithNoMemoryLeaks leaks{};
         QDR qdr{};
-        qdr.start();
+        qdr.initialize();
         qdr.wait();
 
         qdr_core_t *core = qdr.qd->router->router_core;
@@ -175,6 +178,6 @@ TEST_CASE("Add autoLink to running router through qdra_config_auto_link_create_C
         qdr_query_free(query);  // actually, set query->body to non-null, and then it won't be auto-freed!
         qd_iterator_free(name);
 
-        qdr.stop();
+        qdr.deinitialize();
     }).join();
 }

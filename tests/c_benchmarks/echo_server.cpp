@@ -1,6 +1,5 @@
-#include "PracticalSocket.h"  // For Socket, ServerSocket, and SocketException
-#include <iostream>           // For cerr and cout
-#include <cstdlib>            // For atoi()
+#include "PracticalSocket.h"
+#include <iostream>
 
 #include "echo_server.h"
 

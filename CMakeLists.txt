@@ -53,8 +53,8 @@ if (NOT HAVE_STDATOMIC_H)
 endif()
 
 # Set warning compile flags
-set(C_WARNING_GNU -Wall -Wextra -Werror -Wpedantic -pedantic-errors -Wno-empty-body -Wno-implicit-fallthrough -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wno-sign-compare -Wno-literal-suffix -Wno-type-limits)
-set(C_WARNING_Clang -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wno-sign-compare -Wno-error=reserved-user-defined-literal -Wno-gnu-statement-expression)
+set(C_WARNING_GNU -Wall -Wextra -Werror -Wpedantic -pedantic-errors -Wno-empty-body -Wno-implicit-fallthrough -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wno-sign-compare -Wno-type-limits)
+set(C_WARNING_Clang -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wno-sign-compare -Wno-gnu-statement-expression)
 set(C_WARNING_SunPro -errwarn=%all)
 
 set(C_WARNING_FLAGS ${C_WARNING_${CMAKE_C_COMPILER_ID}})

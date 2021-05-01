@@ -41,7 +41,7 @@ TEST_CASE("policy" * doctest::skip()) {
     std::thread([]() {
         WithNoMemoryLeaks leaks{};
         QDR               qdr;
-        qdr.start();
+        qdr.initialize();
         qdr.wait();
 
         {
@@ -82,15 +82,14 @@ fake_policy = {
             CHECK(err == QD_ERROR_PYTHON);
             qd_python_unlock(lock_state);
         }
-        qdr.stop();
+        qdr.deinitialize();
     }).join();
 }
 
 TEST_CASE("qd_hash_retrieve_prefix") {
     std::thread([]() {
-        WithNoMemoryLeaks leaks{};
         QDR               qdr;
-        qdr.start();
+        qdr.initialize();
         qdr.wait();
 
       qd_hash_t *hash = qd_hash(10, 32, 0);
@@ -117,6 +116,6 @@ TEST_CASE("qd_hash_retrieve_prefix") {
       qd_iterator_free(query_iter);
       qd_hash_free(hash);
 
-        qdr.stop();
+        qdr.deinitialize();
       }).join();
 }

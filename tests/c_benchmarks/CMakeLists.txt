@@ -23,11 +23,24 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(benchmark REQUIRED)
 
+# need -Wno-pedantic, for two reasons:
 # incompatibility in older libbenchmark, https://github.com/google/benchmark/issues/494#issuecomment-502444478
-get_source_file_property(COMPILE_FLAGS benchmarks_main.cpp current_compile_flags)
-set_source_files_properties(benchmarks_main.cpp PROPERTIES COMPILE_FLAGS "${current_compile_flags} -Wno-pedantic")
+# PRIu64 macros without spaces around are invalid C++ (c.f. the C++11 suffixes feature)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD_FLAGS} ${SANITIZE_FLAGS} -Wno-pedantic")
 
-add_executable(c-benchmarks benchmarks_main.cpp bm_add_links.cpp echo_server.cpp PracticalSocket.cpp PracticalSocket.h echo_server.h)
-target_link_libraries(c-benchmarks benchmark pthread qpid-dispatch)
+add_executable(c-benchmarks
+        ../c_unittests/helpers.cpp
+        benchmarks_main.cpp
+        bm_add_links.cpp
+        echo_server.cpp
+        PracticalSocket.cpp
+        PracticalSocket.h
+        echo_server.h)
+target_link_libraries(c-benchmarks qpid-dispatch benchmark pthread qpid-dispatch)
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/minimal_silent.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tcp_benchmarks.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/l1.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/l2.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 add_test(NAME c-benchmarks COMMAND ${TEST_WRAP} $<TARGET_FILE:c-benchmarks>)

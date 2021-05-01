@@ -24,8 +24,28 @@
 #include <memory>
 #include <fstream>
 #include <sstream>
+#include <cassert>
 
-#include "./qdr_doctest.h"
+// assertions without stack traces when running outside doctest
+#ifndef QDR_DOCTEST
+#include <iostream>
+#define REQUIRE(condition) assert(condition)
+#define REQUIRE_MESSAGE(condition, message) \
+    do { \
+        if (! (condition)) { \
+            std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
+                      << " line " << __LINE__ << ": " << (message) << std::endl; \
+            std::terminate(); \
+        } \
+    } while (false)
+#define CHECK_MESSAGE(condition, message) \
+    do { \
+        if (! (condition)) { \
+            std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
+                      << " line " << __LINE__ << ": " << (message) << std::endl; \
+        } \
+    } while (false)
+#endif
 
 extern "C" {
 #include "../../src/router_core/agent_config_auto_link.h"
@@ -50,22 +70,31 @@ using unique_C_ptr=std::unique_ptr<T,free_deleter>;
 static_assert(sizeof(char *)==
               sizeof(unique_C_ptr<char>),""); // ensure no overhead
 
-void set_content(qd_message_content_t *content, unsigned char *buffer, size_t len);
+// https://stackoverflow.com/questions/65290961/can-i-succintly-declare-stdunique-ptr-with-custom-deleter
+template <typename T, typename Deleter>
+std::unique_ptr<T, Deleter> qd_make_unique(T* raw, Deleter deleter)
+{
+    return std::unique_ptr<T, Deleter>(raw, deleter);
+}
 
-// This could be a viable path to address some sanitizer issues. Decide
-// that unittested code is not allowed to leak, under unittests, and
-// enforce it. As the amount of unittested code increases, the leaks
-// will get squeezed out, maybe.
+/* the above allows replacing the first declaration with the second, shorter, one:
+std::unique_ptr<qdr_link_t, decltype(&free_qdr_link_t)> link{new_qdr_link_t(), free_qdr_link_t};
+auto link = qd_make_unique(new_qdr_link_t(), free_qdr_link_t);
+*/
+
+void set_content(qd_message_content_t *content, unsigned char *buffer, size_t len);
 
 /// Redirects leak reports to a file, and fails the test if
 /// anything is reported (even suppressed leaks).
 class WithNoMemoryLeaks {
+   bool fail;
    public:
     unique_C_ptr<char> path_ptr {strdup("unittests_memory_debug_logs_XXXXXX")};
-    WithNoMemoryLeaks() {
+    explicit WithNoMemoryLeaks(bool fail = true) {
+        this->fail = fail;
 #if QD_MEMORY_DEBUG
         int fd = mkstemp(path_ptr.get());
-            REQUIRE(fd != -1);
+        REQUIRE(fd != -1);
         qd_alloc_debug_dump(path_ptr.get());
 #endif  // QD_MEMORY_DEBUG
     }
@@ -76,24 +105,30 @@ class WithNoMemoryLeaks {
         std::stringstream buffer;
         buffer << f.rdbuf();
         std::string leak_reports = buffer.str();
-        REQUIRE_MESSAGE(leak_reports.length() == 0, leak_reports);
+        if (fail) {
+            REQUIRE_MESSAGE(leak_reports.length() == 0, leak_reports);
+        } else {
+            CHECK_MESSAGE(leak_reports.length() == 0, leak_reports);
+        }
         qd_alloc_debug_dump(nullptr);
+        f.close();
 #endif  // QD_MEMORY_DEBUG
-
-        // TODO close that fd?
     }
 };
 
-class BetterRouterStartupLatch {
+/// Submits an action to the router's action list. When action runs, we know router finished all previous actions.
+///
+/// This can be used to detect the router finished starting (i.e., performing all previously scheduled actions).
+class RouterStartupLatch {
    public:
     std::mutex mut;
     void wait_for_qdr(qd_dispatch_t *qd) {
         mut.lock();
 
         qdr_action_handler_t handler = [](qdr_core_t *core, qdr_action_t *action, bool discard) {
-          static_cast<BetterRouterStartupLatch *>(action->args.general.context_1)->mut.unlock();
+          static_cast<RouterStartupLatch *>(action->args.general.context_1)->mut.unlock();
         };
-        qdr_action_t *action = qdr_action(handler, "my_action");
+        qdr_action_t *action = qdr_action(handler, "RouterStartupLatch action");
         action->args.general.context_1 = this;
         qdr_action_enqueue(qd->router->router_core, action);
 
@@ -101,40 +136,32 @@ class BetterRouterStartupLatch {
     }
 };
 
-// It is not possible to initialize the router multiple times in the same thread, due to
-// alloc pools declared as `extern __thread qd_alloc_pool_t *`. These will have wrong values
-// the second time around, and there is no good way to hunt them all down and NULL them.
+inline std::string get_env(std::string const & key) {
+    char * val = std::getenv(key.c_str());
+    return val == nullptr ? std::string("") : std::string(val);
+}
 
-// This also prevents me from doing a startup time benchmark. I can't run multiple startups
-// in a loop to average them easily. There will be a way, but not with `for (auto _ : state)`.
-
-//static std::string get_env(std::string const & key)
-//{
-//    char * val = std::getenv(key.c_str());
-//    return val == NULL ? std::string("") : std::string(val);
-//}
-
-/// Initializes and deinitializes the router
+/// Manages the router lifecycle
 class QDR {
+   // protects global variables around router startup and pool leak dumping
+   static std::mutex startup_shutdown_lock;
    public:
     qd_dispatch_t *qd;
-    void start() {
-        // prepare the smallest amount of things that qd_dispatch_free needs to be present
+    /// prepare the smallest amount of things that qd_dispatch_free needs to be present
+    void initialize(const std::string& config_path="") {
+        const std::lock_guard<std::mutex> lock(QDR::startup_shutdown_lock);
+
         qd = qd_dispatch(nullptr, false);
         REQUIRE(qd != nullptr);
 
-        const bool load_config = true;
-        if (load_config) {
-            // call qd_dispatch_load_config to get management agent; so far, I never needed it for anything
-//            const std::string &source_dir = get_env("CMAKE_CURRENT_SOURCE_DIR");
-            std::string config_path = "./threads4.conf";
-            qd_dispatch_validate_config(config_path.c_str());
-            qd_dispatch_load_config(qd, config_path.c_str());
+        // qd can be configured at this point, e.g. qd->thread_count
+        if (!config_path.empty()) {
+            // call qd_dispatch_load_config to get management agent initialized
+            // const std::string &source_dir = get_env("CMAKE_CURRENT_SOURCE_DIR");
+            REQUIRE(qd_dispatch_validate_config(config_path.c_str()) == QD_ERROR_NONE);
+            REQUIRE(qd_dispatch_load_config(qd, config_path.c_str()) == QD_ERROR_NONE);
         } else {
-            // this is what load_config calls from Python, so don't run both, or there be leaks
-
-            // qd can be configured at this point, e.g. qd->thread_count
-
+            // this is the abbreviated setup load_config() calls from Python, this way we can skip loading a config file
             REQUIRE(qd_dispatch_prepare(qd) == QD_ERROR_NONE);
             qd_router_setup_late(qd);  // sets up e.g. qd->router->router_core
         }
@@ -144,12 +171,28 @@ class QDR {
     /// unpleasantries (I observed some invalid pointer accesses)
     void wait() const {
         // give the router core thread an action; when that executes, we're done starting up
-        BetterRouterStartupLatch{}.wait_for_qdr(qd);
+        RouterStartupLatch{}.wait_for_qdr(qd);
+    }
+
+    /// Runs the router in the current thread (+ any new threads router decides to spawn).
+    ///
+    /// This method blocks until stop() is called.
+    void run() const {
+        qd_server_run(qd);
     }
 
     void stop() const {
+        qd_server_stop(qd);
+    }
+
+    /// Frees the router and checks for leaks.
+    void deinitialize(bool check_leaks = true) const {
+        const std::lock_guard<std::mutex> lock(QDR::startup_shutdown_lock);
+        const WithNoMemoryLeaks wnml{check_leaks};
+
         qd_dispatch_free(qd);
-        qd_entity_cache_free_entries(); // cache is a global var, redeclaring it without freeing what becomes unreachable creates leak
+        // cache is a global var, redeclaring it without freeing what becomes unreachable creates leak
+        qd_entity_cache_free_entries();
     };
 };
 #endif  // QPID_DISPATCH_HELPERS_HPP
