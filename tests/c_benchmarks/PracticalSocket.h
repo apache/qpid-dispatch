@@ -124,6 +124,9 @@ public:
     static unsigned short resolveService(const string &service,
                                          const string &protocol = "tcp");
 
+    // allow a move
+    Socket(const Socket &&sock): sockDesc(sock.sockDesc) {
+    }
 private:
     // Prevent the user from trying to use value semantics on this object
     Socket(const Socket &sock);
@@ -185,7 +188,7 @@ public:
 
 protected:
     CommunicatingSocket(int type, int protocol);
-    CommunicatingSocket(int newConnSD);
+    explicit CommunicatingSocket(int newConnSD);
 };
 
 /**
@@ -208,10 +211,15 @@ public:
      */
     TCPSocket(const string &foreignAddress, unsigned short foreignPort);
 
-private:
+    TCPSocket(TCPSocket&& socket)  noexcept : TCPSocket(socket.sockDesc){
+        printf("move construction");
+              socket.sockDesc = -1;  // destructor still runs
+  };
+
+   private:
     // Access for TCPServerSocket::accept() connection creation
     friend class TCPServerSocket;
-    TCPSocket(int newConnSD);
+    explicit TCPSocket(int newConnSD);
 };
 
 /**

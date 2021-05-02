@@ -83,6 +83,9 @@ Socket::Socket(int sockDesc) {
 }
 
 Socket::~Socket() {
+    if (sockDesc < 0) {
+        return; // socket was moved out before
+    }
 #ifdef WIN32
     ::closesocket(sockDesc);
 #else

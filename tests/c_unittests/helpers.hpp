@@ -28,6 +28,7 @@
 
 // assertions without stack traces when running outside doctest
 #ifndef QDR_DOCTEST
+// https://stackoverflow.com/questions/3767869/adding-message-to-assert
 #include <iostream>
 #define REQUIRE(condition) assert(condition)
 #define REQUIRE_MESSAGE(condition, message) \
