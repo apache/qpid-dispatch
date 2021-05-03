@@ -365,7 +365,6 @@ class MultiPhaseTest(MessagingHandler):
         self.timer.cancel()
 
     def create_sndr(self):
-        print("create_sndr")
         # DISPATCH-2049: Create the senders after the receiving addresses
         # have propagated over the router network.
         self.sender = self.container.create_sender(self.sender_conn, self.addr)
@@ -386,7 +385,6 @@ class MultiPhaseTest(MessagingHandler):
             self.addr_check_timer = self.reactor.schedule(1.0, AddrTimer(self))
 
     def check_address(self):
-        print("check_address")
         for router in self.all_routers:
             if self.prev_addr:
                 router  .wait_address_unsubscribed(self.prev_addr)
@@ -394,8 +392,6 @@ class MultiPhaseTest(MessagingHandler):
         i = 0
 
         for host in self.waypoint_hosts:
-            print("host=", host)
-
             # Don't check already checked hosts
             if self.check_addr_hosts[i] != 0:
                 continue
@@ -410,12 +406,8 @@ class MultiPhaseTest(MessagingHandler):
             self.num_attempts += 1
             for result in outs.results:
                 if self.addr in result[0]:
-                    print(result)
                     # We are good if the sum of subscriberCount and remoteCount
                     # equals the total subscriber_count
-                    print("result[subscriber_count_index]=", result[subscriber_count_index])
-                    print("result[remote_count_index]=", result[remote_count_index])
-
                     if result[subscriber_count_index] + result[remote_count_index] >= self.min_subscriber_count:
                         # The address is in the address table and the subscriber count is as expected.
                         # subscriberCount match means that both edge routers have
@@ -423,7 +415,6 @@ class MultiPhaseTest(MessagingHandler):
                         # If this has not happened yet, we will try again.
                         self.check_addr_hosts[i] = self.waypoint_hosts[i]
                         found = True
-                        print("found = True")
                         local_node.close()
                         if self.addr_check_timer:
                             self.addr_check_timer.cancel()
