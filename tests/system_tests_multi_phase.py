@@ -205,7 +205,7 @@ class RouterTest(TestCase):
                                   self.routers[1].addresses[0],
                                   self.routers[2].addresses[0]
         ],
-            'multi.15')
+            'multi.15', self.routers)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -223,7 +223,7 @@ class RouterTest(TestCase):
                                   self.routers[3].addresses[0],
                                   self.routers[1].addresses[0]
         ],
-            'multi.16')
+            'multi.16', self.routers, 'multi.15')
         test.run()
         self.assertEqual(None, test.error)
 
@@ -241,7 +241,7 @@ class RouterTest(TestCase):
                                   self.routers[1].addresses[0],
                                   self.routers[2].addresses[0]
         ],
-            'multi.17')
+            'multi.17', self.routers, 'multi.16')
         test.run()
         self.assertEqual(None, test.error)
 
@@ -319,7 +319,7 @@ class WaypointTest(MessagingHandler):
 
 
 class MultiPhaseTest(MessagingHandler):
-    def __init__(self, sender_host, receiver_host, waypoint_hosts, addr):
+    def __init__(self, sender_host, receiver_host, waypoint_hosts, addr, all_routers=None, prev_addr=None):
         super(MultiPhaseTest, self).__init__()
         self.sender_host    = sender_host
         self.receiver_host  = receiver_host
@@ -343,6 +343,8 @@ class MultiPhaseTest(MessagingHandler):
         self.reactor = None
         self.num_attempts = 0
         self.max_attempts = 3
+        self.prev_addr = prev_addr
+        self.all_routers = all_routers
         self.check_addr_hosts = []
         for waypoint_host in self.waypoint_hosts:
             self.check_addr_hosts.append(0)
@@ -385,7 +387,12 @@ class MultiPhaseTest(MessagingHandler):
 
     def check_address(self):
         print("check_address")
+        for router in self.all_routers:
+            if self.prev_addr:
+                router  .wait_address_unsubscribed(self.prev_addr)
+
         i = 0
+
         for host in self.waypoint_hosts:
             print("host=", host)
 
