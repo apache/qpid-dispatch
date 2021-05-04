@@ -32,6 +32,7 @@ extern "C" {
 #include <router_core/agent_config_auto_link.h>
 }
 
+#include <fstream>
 #include <memory>
 
 // It is not possible to initialize the router multiple times in the same thread, due to
@@ -55,22 +56,43 @@ TEST_CASE("Initialize and deinitialize router twice" * doctest::skip(false)) {
     }).join();
 }
 
-// from message_test.c
-void set_content(qd_message_content_t *content, unsigned char *buffer, size_t len)
-{
-    unsigned char        *cursor = buffer;
-    qd_buffer_t *buf;
+TEST_CASE("Shut down router while websocket is connected") {
+    std::string config = R"END(
+listener {
+    host: 0.0.0.0
+    port: 0
+    authenticatePeer: no
+    saslMechanisms: ANONYMOUS
+    http: yes
+}
 
-    while (len > (size_t) (cursor - buffer)) {
-        buf = qd_buffer();
-        size_t segment   = qd_buffer_capacity(buf);
-        size_t remaining = len - (size_t) (cursor - buffer);
-        if (segment > remaining)
-            segment = remaining;
-        memcpy(qd_buffer_base(buf), cursor, segment);
-        cursor += segment;
-        qd_buffer_insert(buf, segment);
-        DEQ_INSERT_TAIL(content->buffers, buf);
-    }
-    content->receive_complete = true;
+log {
+    module: DEFAULT
+    enable: warn+
+}
+)END";
+
+    std::fstream f("config.conf", std::ios::out);
+    f << config;
+    f.close();
+
+    std::thread([]() {
+      QDR qdr{};
+      qdr.initialize("./config.conf");
+      qdr.wait();
+
+      qdr_action_handler_t handler = [](qdr_core_t *core, qdr_action_t *action, bool discard) {
+        static_cast<RouterStartupLatch *>(action->args.general.context_1)->mut.unlock();
+          printf("listeners: \n");
+        qd_connection_manager_t *connection_manager = core->qd->connection_manager;
+//        connection_manager->
+        core->qd->container
+      };
+      qdr_action_t *action = qdr_action(handler, "RouterStartupLatch action");
+      action->args.general.context_1 = nullptr;
+      qdr_action_enqueue(qdr.qd->router->router_core, action);
+
+      qdr.run();
+      qdr.deinitialize();
+    }).join();
 }
