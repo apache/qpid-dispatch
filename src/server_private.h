@@ -92,6 +92,8 @@ DEQ_DECLARE(qd_pn_free_link_session_t, qd_pn_free_link_session_list_t);
 
 pn_proactor_t* qd_server_proactor(qd_server_t *s);
 
+qd_http_server_t *qd_server_http(qd_server_t *server);
+
 typedef void (*qd_server_event_handler_t) (pn_event_t *e, qd_server_t *qd_server, void *context);
 
 typedef struct qd_handler_context_t {
