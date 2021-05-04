@@ -437,7 +437,7 @@ static void flush_outgoing_buffs(qdr_tcp_connection_t *conn)
 
     // Flush in-progress stream data object
     if (conn->outgoing_stream_data) {
-        free_qd_message_stream_data_t(conn->outgoing_stream_data);
+        qd_message_stream_data_release(conn->outgoing_stream_data);
         conn->outgoing_stream_data = 0;
     }
 }
@@ -459,6 +459,10 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
 
 static void handle_disconnected(qdr_tcp_connection_t* conn)
 {
+    // release all message buffers since the deliveries will free the message
+    // once we decref them.
+    flush_outgoing_buffs(conn);
+
     if (conn->instream) {
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - close instream",
@@ -494,8 +498,6 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         qdr_delivery_decref(tcp_adaptor->core, conn->initial_delivery, "tcp-adaptor.handle_disconnected - initial_delivery");
         conn->initial_delivery = 0;
     }
-    flush_outgoing_buffs(conn);
-
 
     //need to free on core thread to avoid deleting while in use by management agent
     qdr_action_t *action = qdr_action(qdr_del_tcp_connection_CT, "delete_tcp_connection");
