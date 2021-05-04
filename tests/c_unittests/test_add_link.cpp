@@ -34,38 +34,6 @@ extern "C" {
 
 #include <memory>
 
-TEST_CASE("Start and shutdown router twice" * doctest::skip(false)) {
-//    WithNoMemoryLeaks leaks{};
-    std::unique_ptr<QDR> qdr1;
-    std::unique_ptr<QDR> qdr2;
-    auto t1 = std::thread([&qdr1]() {
-        qdr1 = std::unique_ptr<QDR>(new QDR());
-        qdr1->initialize();
-        qdr1->run();
-        qdr1->wait();
-        qdr1->deinitialize();
-        // todo check for more errors, maybe in logging calls?
-    });
-
-
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    qdr1->stop();
-
-    t1.join();
-
-    auto t2 = std::thread([&qdr2]() {
-      qdr2 = std::unique_ptr<QDR>(new QDR());
-      qdr2->initialize();
-      qdr2->wait();
-      qdr2->run();
-      qdr2->deinitialize();
-    });
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    qdr2->stop();
-
-    t2.join();
-}
-
 // from message_test.c
 void set_content(qd_message_content_t *content, unsigned char *buffer, size_t len)
 {
