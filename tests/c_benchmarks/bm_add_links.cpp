@@ -125,7 +125,7 @@ static void BM_RouterInitializeMinimalConfig(benchmark::State &state) {
 
 BENCHMARK(BM_RouterInitializeMinimalConfig)->Unit(benchmark::kMillisecond);
 
-static void BM_TCPEchoServerLatency1QDR(benchmark::State &state) {
+static void BM_ZZZTCPEchoServerLatency1QDR(benchmark::State &state) {
 //    std::condition_variable cv;
 //    std::unique_lock<std::mutex> lk(cv);
     std::mutex mx;
@@ -282,7 +282,6 @@ static void BM_TCPEchoServerLatency1QDRSubprocess(benchmark::State &state) {
     }
 }
 
-BENCHMARK(BM_TCPEchoServerLatency1QDR)->Unit(benchmark::kMillisecond);
 BENCHMARK(BM_TCPEchoServerLatency1QDRSubprocess)->Unit(benchmark::kMillisecond);
 
 /*
@@ -490,3 +489,6 @@ static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state) {
 }
 
 BENCHMARK(BM_TCPEchoServerLatencyWithoutQDR)->Unit(benchmark::kMillisecond);
+
+// breaks the two-router test if it runs before
+BENCHMARK(BM_ZZZTCPEchoServerLatency1QDR)->Unit(benchmark::kMillisecond);
