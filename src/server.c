@@ -1375,12 +1375,13 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     return qd_server;
 }
 
+qd_http_server_t *qd_server_http(qd_server_t *qd_server) {
+    return qd_server->http;
+}
 
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
-
-    qd_http_server_free(qd_server->http);
 
     qd_connection_t *ctx = DEQ_HEAD(qd_server->conn_list);
     while (ctx) {

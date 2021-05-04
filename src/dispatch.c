@@ -363,6 +363,10 @@ static void qd_dispatch_set_router_area(qd_dispatch_t *qd, char *_area) {
 void qd_dispatch_free(qd_dispatch_t *qd)
 {
     if (!qd) return;
+
+    /* Stop HTTP threads immediately */
+    qd_http_server_free(qd_server_http(qd->server));
+
     free(qd->sasl_config_path);
     free(qd->sasl_config_name);
     qd_connection_manager_free(qd->connection_manager);
