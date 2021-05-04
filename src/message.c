@@ -1041,6 +1041,11 @@ void qd_message_free(qd_message_t *in_msg)
         //
         LOCK(content->lock);
 
+        // DISPATCH-2099: ensure all outstanding stream_data items associated
+        // with this message have been returned since the underlying buffers
+        // may be released
+        assert(DEQ_IS_EMPTY(msg->stream_data_list));
+
         const bool was_blocked = !qd_message_Q2_holdoff_should_unblock(in_msg);
         qd_buffer_t *buf = msg->cursor.buffer;
         while (buf) {
