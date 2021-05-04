@@ -1504,6 +1504,7 @@ void qd_server_run(qd_dispatch_t *qd)
         sys_thread_free(threads[i]);
     }
     free(threads);
+    qd_http_server_stop(qd_server->http); /* Stop HTTP threads immediately */
 
     qd_log(qd_server->log_source, QD_LOG_NOTICE, "Shut Down");
 }
