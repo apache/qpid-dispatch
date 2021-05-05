@@ -77,6 +77,7 @@ class QdmanageTest(TestCase):
         cls.router_2 = cls.tester.qdrouterd('test_router_2', config_2, wait=True)
         cls.router_1 = cls.tester.qdrouterd('test_router_1', config_1, wait=True)
         cls.router_1.wait_router_connected('R2')
+        cls.router_2.wait_router_connected('R1')
 
     def address(self):
         return self.router_1.addresses[0]
