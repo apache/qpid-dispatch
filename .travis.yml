@@ -20,97 +20,7 @@
 language: c
 cache: ccache
 jobs:
-  fast_finish: true
-  allow_failures:
-    - os: osx
-    - name: "qdrouterd:TSAN"
-    - arch: arm64
-    - arch: s390x
   include:
-  - name: "apache-rat:check"
-    os: linux
-    env: []
-    language: java
-    addons:
-      apt:
-        packages: []
-    install: []
-    before_script: []
-    script:
-    - mvn apache-rat:check
-    before_cache:
-    - rm -rf $HOME/.m2/repository/org/apache/qpid/*
-    cache:
-      directories:
-      - $HOME/.m2/repository
-    after_script:
-    - cat target/rat.txt || true
-  # prepending /usr/bin to PATH to avoid mismatched python interpreters in /opt
-  - name: "qdrouterd:Debug (gcc on xenial)"
-    os: linux
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=Debug
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
-  - name: "qdrouterd:Coverage"
-    os: linux
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0 BUILD_TYPE=Coverage
-  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on xenial)"
-    os: linux
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0 BUILD_TYPE=RelWithDebInfo
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
-  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
-    os: linux
-    dist: focal
-    compiler: clang
-    before_install:
-    - sudo apt-get install clang-11 llvm-11-dev
-    # https://github.com/pypa/virtualenv/issues/1740
-    # https://github.com/pypa/virtualenv/issues/1873
-    - python -m pip install --user --upgrade pip
-    - python -m pip install --user --upgrade tox virtualenv==20.0.23
-    # Install quart to run the http2 tests.
-    - python -m pip install --user quart
-    # DISPATCH-1883: Install selectors to run tcp echo server/client tools
-    - python -m pip install --user selectors
-    # Install grpcio and protobuf to run the grpc tests.
-    - python -m pip install --user grpcio protobuf
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - CC=clang-11
-    - CXX=clang++-11
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
-  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on focal)"
-    arch: s390x
-    os: linux
-    dist: focal
-    python:
-      - "3.9"
-    before_install:
-      # Install and use the latest Node.js LTS version
-      - nvm install "lts/*"
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
-      - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv==20.0.23
-      # Install quart to run the http2 tests.
-      - python3 -m pip install --user quart
-      # DISPATCH-1883: Install selectors to run tcp echo server/client tools
-      - python3 -m pip install --user selectors
-      # Install grpcio and protobuf to run the grpc tests.
-      #  Installation on s390x currently broken https://github.com/grpc/grpc/pull/25363
-      #  Binary wheel is not available in PyPI for s390x and source install requires fetching git submodules first
-      - python3 -m pip install --user protobuf
-      - sudo apt install python3-grpcio
-    env:
-      - QPID_SYSTEM_TEST_TIMEOUT=300
-      - PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
-      - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     arch: arm64
     os: linux
@@ -119,7 +29,7 @@ jobs:
     python:
       - "3.9"
     before_install:
-      - sudo apt-get install clang-11 llvm-11-dev
+      - sudo aptitude install -y clang-11 llvm-11-dev
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
       # https://github.com/pypa/virtualenv/issues/1740
@@ -138,51 +48,6 @@ jobs:
       - CXX=clang++-11
       - PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
       - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
-  - name: "qdrouterd:Default Build"
-    os: linux
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
-  - name: "qdrouterd:TSAN"
-    os: linux
-    dist: focal
-    before_install:
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
-      - python -m pip install --user --upgrade pip
-      - python -m pip install --user --upgrade tox virtualenv==20.0.23
-      # Install quart to run the http2 tests.
-      - python -m pip install --user quart
-      # DISPATCH-1883: Install selectors to run tcp echo server/client tools
-      - python -m pip install --user selectors
-      # Install grpcio and protobuf to run the grpc tests.
-      - python -m pip install --user grpcio protobuf
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
-  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on macOS)"
-    os: osx
-    osx_image: xcode11
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=main
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
-    # exclude tests that require raw_connection functionality; not available in libuv proactor
-    - DISPATCH_CTEST_EXTRA='-E system_tests_tcp_adaptor|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc|system_tests_http1_over_tcp'
-    before_install:
-    - bash ./macports.sh
-    - export COLUMNS=80
-    - yes | sudo port install cmake swig swig-python jsoncpp libwebsockets nghttp2 cyrus-sasl2 pkgconfig python37 py37-pip
-    # PROTON-2351: install libuv @1.40 because proton is broken with 1.41
-    #  https://trac.macports.org/wiki/howto/InstallingOlderPort
-    - git clone --single-branch https://github.com/macports/macports-ports.git
-    - pushd macports-ports/devel/libuv; git checkout 425dd6e31f6c31886fabd1f911b5f2aa96c4f27d; yes | sudo port install; popd
-    # set aliases for CMake's PythonInterp and PythonLibs to find MacPort's `python` on the path first
-    - sudo port select --set python python37
-    - sudo port select --set python3 python37
-    - python -m venv p3venv
-    - source p3venv/bin/activate
 
 addons:
   apt:
@@ -196,10 +61,6 @@ addons:
     - sasl2-bin
     - swig
     - libnghttp2-dev
-    # documentation
-    - asciidoc
-    - asciidoctor
-    - dblatex
     # unit test requirement
     - tox
     # code coverage
