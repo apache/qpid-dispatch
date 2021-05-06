@@ -97,7 +97,7 @@ sql_select: dummy select
         test = SimpleConnect("127.0.0.1:%d" % self.router_port, 'test@domain.com', 'password')
         test.run()
         self.assertEqual(True, test.connected)
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_invalid_credentials(self):

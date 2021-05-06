@@ -71,14 +71,14 @@ class RouterTest(TestCase):
                                         self.routers[0].addresses[0],
                                         "addr_01")
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_02_message_route_truncated_two_routers(self):
         test = MessageRouteTruncateTest(self.routers[0].addresses[0],
                                         self.routers[1].addresses[0],
                                         "addr_02")
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_03_link_route_truncated_one_router(self):
         test = LinkRouteTruncateTest(self.routers[0].addresses[0],
@@ -86,7 +86,7 @@ class RouterTest(TestCase):
                                      "link.addr_03",
                                      self.routers[0].addresses[0])
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_04_link_route_truncated_two_routers(self):
         test = LinkRouteTruncateTest(self.routers[1].addresses[0],
@@ -94,7 +94,7 @@ class RouterTest(TestCase):
                                      "link.addr_04",
                                      self.routers[1].addresses[0])
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_05_message_route_abort_one_router(self):
         test = MessageRouteAbortTest(self.routers[0].addresses[0],
@@ -103,7 +103,7 @@ class RouterTest(TestCase):
         test.run()
         if test.error:
             test.logger.dump()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_06_message_route_abort_two_routers(self):
         test = MessageRouteAbortTest(self.routers[0].addresses[0],
@@ -112,7 +112,7 @@ class RouterTest(TestCase):
         test.run()
         if test.error:
             test.logger.dump()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_07_multicast_truncate_one_router(self):
         test = MulticastTruncateTest(self.routers[0].addresses[0],
@@ -120,7 +120,7 @@ class RouterTest(TestCase):
                                      self.routers[0].addresses[0],
                                      "multicast.addr_07")
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
 
 class Entity(object):

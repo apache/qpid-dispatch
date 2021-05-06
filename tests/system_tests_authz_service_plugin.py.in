@@ -138,7 +138,7 @@ mech_list: SCRAM-SHA-1 PLAIN
         container.run()
         self.assertEqual(0, client.accepted)
         self.assertEqual(1, client.rejected)
-        self.assertIsNone(client.message, msg=client.message)
+        self.assertIsNone(client.message)
 
 
 class AuthServicePluginAuthzDeprecatedTest(AuthServicePluginAuthzTest):

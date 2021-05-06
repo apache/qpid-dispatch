@@ -77,7 +77,7 @@ class RouterTest(TestCase):
     def test_interior_sync_up(self):
         test = InteriorSyncUpTest(self.routers[0].addresses[0], self.routers[1].addresses[0], self.routers[1].ports[1])
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
 
 class DelayTimeout(object):

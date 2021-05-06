@@ -129,7 +129,7 @@ class ReceiverDropsOffDrainTest(TestCase):
     def test_receiver_drops_off_sender_receives_drain(self):
         test = ReceiverDropsOffSenderDrain(self.address, "examples")
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
 
 class ReceiverDropsOffSenderDrain(MessagingHandler):

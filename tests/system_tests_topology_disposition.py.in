@@ -364,7 +364,7 @@ class TopologyDispositionTests (TestCase):
                                        self.client_addrs['D']
                                        )
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_02_topology_disposition(self):
         name = 'test_02'
@@ -375,7 +375,7 @@ class TopologyDispositionTests (TestCase):
                                    "closest/02"
                                    )
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_03_connection_id_propagation(self):
         name = 'test_03'
@@ -408,8 +408,8 @@ class TopologyDispositionTests (TestCase):
                         qci += 1
                     if error is None and oopen[qci].isdigit():
                         error = "log %s, line '%s' published conn-id is too big" % (log_name, oopen)
-                self.assertIsNone(error, msg=error)
-            self.assertIsNone(error, msg=error)
+                self.assertIsNone(error)
+            self.assertIsNone(error)
 
     def test_04_scraper_tool(self):
         name = 'test_04'

@@ -281,7 +281,7 @@ class TopologyTests (TestCase):
                                 "closest/01"
                                 )
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
 
 # ================================================================

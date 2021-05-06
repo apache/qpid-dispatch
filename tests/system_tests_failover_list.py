@@ -57,18 +57,18 @@ class RouterTest(TestCase):
     def test_01_no_failover_list(self):
         test = FailoverTest(self.routers[0].addresses[0], 0)
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_02_single_failover_host(self):
         test = FailoverTest(self.routers[0].addresses[1], 1, [{'network-host': 'other-host', 'port': '25000'}])
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
     def test_03_double_failover_host(self):
         test = FailoverTest(self.routers[0].addresses[2], 2,
                             [{'network-host': 'second-host', 'port': '25000'}, {'scheme': 'amqps', 'network-host': 'third-host', 'port': '5671'}])
         test.run()
-        self.assertIsNone(test.error, msg=test.error)
+        self.assertIsNone(test.error)
 
 
 class FailoverTest(MessagingHandler):
