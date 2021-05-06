@@ -56,6 +56,7 @@ leak:^PyThread_allocate_lock$
 #  https://pythonextensionpatterns.readthedocs.io/en/latest/debugging/debug_python.html#debug-version-of-python-memory-alloc-label
 leak:^PyMem_Malloc$
 leak:^PyMem_Calloc$
+leak:^PyMem_Realloc$
 leak:^_PyObject_GC_Resize$
 # Python uses these alloc functions if you define PYTHONDEVMODE=1
 leak:^_PyMem_DebugRawAlloc$
