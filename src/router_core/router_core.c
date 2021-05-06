@@ -152,32 +152,9 @@ void qdr_core_free(qdr_core_t *core)
     core->router_id = 0;
     core->router_area = 0;
 
-    // discard any left over actions
-
-    qdr_action_list_t  action_list;
-    DEQ_MOVE(core->action_list, action_list);
-    DEQ_APPEND(action_list, core->action_list_background);
-    qdr_action_t *action = DEQ_HEAD(action_list);
-    while (action) {
-        DEQ_REMOVE_HEAD(action_list);
-        action->action_handler(core, action, true);
-        free_qdr_action_t(action);
-        action = DEQ_HEAD(action_list);
-    }
-
-    // Drain the general work lists
-    qdr_general_handler(core);
-
     //
     // Free the core resources
     //
-    sys_thread_free(core->thread);
-    sys_cond_free(core->action_cond);
-    sys_mutex_free(core->action_lock);
-    sys_mutex_free(core->work_lock);
-    sys_mutex_free(core->id_lock);
-    qd_timer_free(core->work_timer);
-
     for (int i = 0; i <= QD_TREATMENT_LINK_BALANCED; ++i) {
         if (core->forwarders[i]) {
             free(core->forwarders[i]);
@@ -307,7 +284,24 @@ void qdr_core_free(qdr_core_t *core)
     // at this point all the conn identifiers have been freed
     qd_hash_free(core->conn_id_hash);
 
+    // finalize modules while we can still submit new actions
     qdr_modules_finalize(core);
+
+    // discard any left over actions
+
+    qdr_action_list_t  action_list;
+    DEQ_MOVE(core->action_list, action_list);
+    DEQ_APPEND(action_list, core->action_list_background);
+    qdr_action_t *action = DEQ_HEAD(action_list);
+    while (action) {
+        DEQ_REMOVE_HEAD(action_list);
+        action->action_handler(core, action, true);
+        free_qdr_action_t(action);
+        action = DEQ_HEAD(action_list);
+    }
+
+    // Drain the general work lists
+    qdr_general_handler(core);
 
     qdr_agent_free(core->mgmt_agent);
 
@@ -316,6 +310,13 @@ void qdr_core_free(qdr_core_t *core)
     if (core->data_links_by_mask_bit)    free(core->data_links_by_mask_bit);
     if (core->neighbor_free_mask)        qd_bitmask_free(core->neighbor_free_mask);
     if (core->rnode_conns_by_mask_bit)   free(core->rnode_conns_by_mask_bit);
+
+    sys_thread_free(core->thread);
+    sys_cond_free(core->action_cond);
+    sys_mutex_free(core->action_lock);
+    sys_mutex_free(core->work_lock);
+    sys_mutex_free(core->id_lock);
+    qd_timer_free(core->work_timer);
 
     free(core);
 }
