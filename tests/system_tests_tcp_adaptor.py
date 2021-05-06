@@ -92,6 +92,20 @@ Q2_TEST_MESSAGE_SIZE = 10000000
 echo_timeout = 30
 
 
+def ncat_available():
+    popen_args = ['ncat', '--version']
+    try:
+        process = Process(popen_args,
+                          name='ncat_check',
+                          stdout=PIPE,
+                          expect=None,
+                          universal_newlines=True)
+        out = process.communicate()[0]
+        return True
+    except:
+        return False
+
+
 #
 # Test concurrent clients
 #
@@ -874,6 +888,45 @@ class TcpAdaptor(TestCase):
         self.assertEqual(block_ct, unblock_ct)
 
         # Declare success
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    def run_ncat(self, port, logger, expect=Process.EXIT_OK, timeout=2, data=b'abcd'):
+        ncat_cmd = ['ncat', '127.0.0.1', str(port)]
+        logger.log("Starting ncat '%s' and input '%s'" % (ncat_cmd, str(data)))
+        p = self.popen(
+            ncat_cmd,
+            stdin=PIPE, stdout=PIPE, stderr=PIPE, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input='abcd', timeout=timeout)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception(out if out else str(e))
+        return out
+
+    def ncat_runner(self, tname, client, server, logger):
+        name = "%s_%s_%s" % (tname, client, server)
+        logger.log(name + " Start")
+        out = self.run_ncat(TcpAdaptor.tcp_client_listener_ports[client][server], logger, data=b'abcd')
+        logger.log("run_ncat returns: '%s'" % out)
+        assert(len(out) > 0)
+        assert("abcd" in out)
+        logger.log(tname + " Stop")
+
+    # half-closed handling
+    def test_70_half_closed(self):
+        if DISABLE_SELECTOR_TESTS:
+            self.skipTest(DISABLE_SELECTOR_REASON)
+        if not ncat_available():
+            self.skipTest("Ncat utility is not available")
+        name = "test_70_half_closed"
+        self.logger.log("TCP_TEST Start %s" % name)
+        self.ncat_runner(name, "INTA", "INTA", self.logger)
+        self.ncat_runner(name, "INTA", "INTB", self.logger)
+        self.ncat_runner(name, "INTA", "INTC", self.logger)
+        self.ncat_runner(name, "EA1",  "EA1", self.logger)
+        self.ncat_runner(name, "EA1",  "EB1", self.logger)
+        self.ncat_runner(name, "EA1",  "EC2", self.logger)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
 
