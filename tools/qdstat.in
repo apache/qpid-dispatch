@@ -652,7 +652,7 @@ class BusManager(object):
             row = []
             row.append(al.address)
             row.append(al.direction)
-            row.append(al.phase)
+            row.append(PlainNum(al.phase))
             row.append(al.externalAddress)
             row.append(al.linkRef)
             row.append(al.operStatus)
