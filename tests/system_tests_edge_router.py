@@ -253,7 +253,7 @@ class RouterTest(TestCase):
 
         def router(name, mode, connection, extra=None):
             config = [
-                ('router', {'mode': mode, 'id': name}),
+                ('router', {'mode': mode, 'id': name, "helloMaxAgeSeconds": '10'}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no', 'multiTenant': 'yes'}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no', 'role': 'route-container'}),
@@ -848,7 +848,7 @@ class RouterTest(TestCase):
                                       self.routers[3].addresses[0],
                                       self.routers[2].addresses[0],
                                       self.routers[0].addresses[0],
-                                      "test_38")
+                                      "test_38", check_remote=False, subscriber_count=2)
 
         test.run()
         self.assertIsNone(test.error)
@@ -863,7 +863,7 @@ class RouterTest(TestCase):
                                       self.routers[5].addresses[0],
                                       self.routers[2].addresses[0],
                                       self.routers[0].addresses[0],
-                                      "test_39", check_remote=True)
+                                      "test_39", check_remote=True, subscriber_count=1)
 
         test.run()
         self.assertIsNone(test.error)
@@ -1114,7 +1114,7 @@ class RouterTest(TestCase):
 
     # 1 Sender and 3 receivers all on the same edge
 
-    def test_59_anon_sender__multicast_mobile_address_same_edge(self):
+    def test_59_anon_sender_multicast_mobile_address_same_edge(self):
         if self.skip['test_59'] :
             self.skipTest("Test skipped during development.")
 
@@ -1592,7 +1592,7 @@ class LinkRouteProxyTest(TestCase):
 
         def router(name, mode, extra):
             config = [
-                ('router', {'mode': mode, 'id': name}),
+                ('router', {'mode': mode, 'id': name, "helloMaxAgeSeconds": '10'}),
                 ('listener', {'role': 'normal', 'port': cls.tester.get_port()})
             ]
 
@@ -2147,19 +2147,19 @@ class MobileAddressAnonymousTest(MessagingHandler):
         self.address = address
         self.ready = False
         self.custom_timer = None
-        self.num_msgs = 300
+        self.num_msgs = 100
         self.extra_msgs = 50
         self.n_accepted = 0
         self.n_modified = 0
         self.n_released = 0
         self.error = None
-        self.max_attempts = 3
+        self.max_attempts = 10
         self.num_attempts = 0
         self.test_started = False
         self.large_msg = large_msg
         if self.large_msg:
-            self.body = "0123456789101112131415" * 10000
-            self.properties = {'big field': 'X' * 32000}
+            self.body = "0123456789101112131415" * 5000
+            self.properties = {'big field': 'X' * 3200}
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
@@ -2183,7 +2183,7 @@ class MobileAddressAnonymousTest(MessagingHandler):
         self.sender_conn.close()
 
     def on_sendable(self, event):
-        if not self.test_started:
+        if not self.test_started and event.sender == self.sender:
             message = Message(body="Test Message")
             message.address = self.address
             self.sender.send(message)
@@ -2521,7 +2521,7 @@ class MobileAddressMulticastTest(MessagingHandler):
         self.r_attaches = 0
         self.reactor = None
         self.addr_timer = None
-
+        self.n_released = 0
         # The maximum number of times we are going to try to check if the
         # address  has propagated.
         self.max_attempts = 5
@@ -2533,8 +2533,11 @@ class MobileAddressMulticastTest(MessagingHandler):
             self.check_addr_host = self.sender_host
 
         if self.large_msg:
-            self.body = "0123456789101112131415" * 10000
-            self.properties = {'big field': 'X' * 32000}
+            self.body = "0123456789101112131415" * 5000
+            self.properties = {'big field': 'X' * 3200}
+
+    def on_released(self, event):
+        self.n_released += 1
 
     def timeout(self):
         if self.dup_msg:
@@ -2542,10 +2545,10 @@ class MobileAddressMulticastTest(MessagingHandler):
                          (self.receiver_name, self.dup_msg)
         else:
             if not self.error:
-                self.error = "Timeout Expired - n_sent=%d n_rcvd1=%d " \
-                             "n_rcvd2=%d n_rcvd3=%d addr=%s" % \
+                self.error = "Timeout Expired - n_sent=%d n_rcvd1=%d, " \
+                             "n_rcvd2=%d, n_rcvd3=%d, n_released=%d, addr=%s" % \
                              (self.n_sent, self.n_rcvd1, self.n_rcvd2,
-                              self.n_rcvd3, self.address)
+                              self.n_rcvd3, self.n_released, self.address)
         self.receiver1_conn.close()
         self.receiver2_conn.close()
         self.receiver3_conn.close()
@@ -2757,13 +2760,14 @@ class MobileAddrMcastAnonSenderDroppedRxTest(MobileAddressMulticastTest):
 
 class MobileAddressEventTest(MessagingHandler):
     def __init__(self, receiver1_host, receiver2_host, receiver3_host,
-                 sender_host, interior_host, address, check_remote=False):
+                 sender_host, interior_host, address, check_remote=False, subscriber_count=0):
         super(MobileAddressEventTest, self).__init__(auto_accept=False)
         self.receiver1_host = receiver1_host
         self.receiver2_host = receiver2_host
         self.receiver3_host = receiver3_host
         self.sender_host = sender_host
         self.address = address
+        self.subscriber_count = subscriber_count
         self.receiver1_conn = None
         self.receiver2_conn = None
         self.receiver3_conn = None
@@ -2802,34 +2806,56 @@ class MobileAddressEventTest(MessagingHandler):
                          (self.receiver_name, self.dup_msg)
         else:
             if not self.error:
-                self.error = "Timeout Expired - n_sent=%d n_rcvd1=%d " \
-                             "n_rcvd2=%d n_rcvd3=%d addr=%s" % \
+                self.error = "Timeout Expired - n_sent=%d, n_rcvd1=%d, " \
+                             "n_rcvd2=%d, n_rcvd3=%d, n_released=%d, addr=%s" % \
                              (self.n_sent, self.n_rcvd1, self.n_rcvd2,
-                              self.n_rcvd3, self.address)
+                              self.n_rcvd3, self.n_released, self.address)
         self.receiver1_conn.close()
         self.receiver2_conn.close()
         self.receiver3_conn.close()
         if self.sender_conn:
             self.sender_conn.close()
 
+    def on_link_opened(self, event):
+        if self.r_attaches == 3:
+            return
+        if event.receiver == self.receiver1 or event.receiver == self.receiver2 or event.receiver == self.receiver3:
+            self.r_attaches += 1
+
+        if self.r_attaches == 3:
+            self.addr_timer = event.reactor.schedule(1.0, AddrTimer(self))
+
     def check_address(self):
         local_node = Node.connect(self.interior_host, timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router.address')
         remote_count = outs.attribute_names.index("remoteCount")
+        subs_count = outs.attribute_names.index("subscriberCount")
         found = False
         self.num_attempts += 1
+        remote_count_good = False
+        subscriber_count_good = False
+
         for result in outs.results:
             if self.address in result[0]:
                 if self.check_remote:
                     if result[remote_count] > 0:
-                        found = True
+                        remote_count_good = True
                 else:
+                    remote_count_good = True
+                if self.subscriber_count > 0:
+                    if self.subscriber_count == result[subs_count]:
+                        subscriber_count_good = True
+                else:
+                    subscriber_count_good = True
+
+                if remote_count_good and subscriber_count_good:
                     found = True
-                self.sender_conn = self.container.connect(self.sender_host)
-                self.sender = self.container.create_sender(self.sender_conn,
-                                                           self.address)
-                local_node.close()
-                break
+
+                if found:
+                    self.sender_conn = self.container.connect(self.sender_host)
+                    self.sender = self.container.create_sender(self.sender_conn, self.address)
+                    local_node.close()
+                    break
 
         if not found:
             if self.num_attempts < self.max_attempts:
@@ -2852,15 +2878,10 @@ class MobileAddressEventTest(MessagingHandler):
         self.receiver3_conn = event.container.connect(self.receiver3_host)
 
         # Create all 3 receivers first.
-        self.receiver1 = event.container.create_receiver(self.receiver1_conn,
-                                                         self.address)
-        self.receiver2 = event.container.create_receiver(self.receiver2_conn,
-                                                         self.address)
-        self.receiver3 = event.container.create_receiver(self.receiver3_conn,
-                                                         self.address)
+        self.receiver1 = event.container.create_receiver(self.receiver1_conn, self.address)
+        self.receiver2 = event.container.create_receiver(self.receiver2_conn, self.address)
+        self.receiver3 = event.container.create_receiver(self.receiver3_conn, self.address)
         self.container = event.container
-
-        self.addr_timer = event.reactor.schedule(1.0, AddrTimer(self))
 
     def on_sendable(self, event):
         if self.n_sent < self.count:
@@ -2968,7 +2989,7 @@ class StreamingMessageTest(TestCase):
 
         def router(name, mode, extra):
             config = [
-                ('router', {'mode': mode, 'id': name}),
+                ('router', {'mode': mode, 'id': name, "helloMaxAgeSeconds": '10'}),
                 ('listener', {'role': 'normal',
                               'port': cls.tester.get_port(),
                               'maxFrameSize': 65535}),
