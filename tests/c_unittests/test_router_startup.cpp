@@ -121,6 +121,8 @@ log {
       qdr_thread.join();
 
       qdr.deinitialize();
+
+      wsc.interrupt = true;
       lws_thread.join();
     }).join();
 }

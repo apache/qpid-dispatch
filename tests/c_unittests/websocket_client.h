@@ -19,10 +19,10 @@
  * under the License.
  */
 
+#include "libwebsockets.h"
 #include "qdr_doctest.h"
 
-#include "libwebsockets.h"
-
+#include <atomic>
 #include <condition_variable>
 #include <string>
 #include <utility>
@@ -48,6 +48,7 @@ class websocket_client
     std::mutex mutex {};
     std::condition_variable cv {};
     bool is_connected = false;
+    std::atomic<bool> interrupt {false};
 
     websocket_client(std::string host, int port):
     host(std::move(host)), port(port)
@@ -69,8 +70,8 @@ class websocket_client
         lws_context_destroy(context);
     }
 
-    [[noreturn]] void loop() {
-        while(true)
+    void loop() {
+        while(!interrupt)
         {
             /* Connect if we are not connected to the server. */
             if(!web_socket)
