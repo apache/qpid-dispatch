@@ -600,18 +600,14 @@ class MulticastBase(MessagingHandler):
         self.n_outcomes[Delivery.ACCEPTED] = 1 + self.n_outcomes.get(Delivery.ACCEPTED, 0)
 
     def on_released(self, event):
-        # for some reason Proton 'helpfully' calls on_released even though the
-        # delivery state is actually MODIFIED
         if event.delivery.remote_state == Delivery.MODIFIED:
-            return self.on_modified(event)
-        self.n_released += 1
-        name = event.link.name
-        self.n_outcomes[Delivery.RELEASED] = 1 + self.n_outcomes.get(Delivery.RELEASED, 0)
-
-    def on_modified(self, event):
-        self.n_modified += 1
-        name = event.link.name
-        self.n_outcomes[Delivery.MODIFIED] = 1 + self.n_outcomes.get(Delivery.MODIFIED, 0)
+            self.n_modified += 1
+            name = event.link.name
+            self.n_outcomes[Delivery.MODIFIED] = 1 + self.n_outcomes.get(Delivery.MODIFIED, 0)
+        else:
+            self.n_released += 1
+            name = event.link.name
+            self.n_outcomes[Delivery.RELEASED] = 1 + self.n_outcomes.get(Delivery.RELEASED, 0)
 
     def on_rejected(self, event):
         self.n_rejected += 1
@@ -806,11 +802,6 @@ class MulticastUnsettled3Ack(MulticastBase):
 
     def on_released(self, event):
         super(MulticastUnsettled3Ack, self).on_released(event)
-        event.delivery.settle()
-        self.check_if_done()
-
-    def on_modified(self, event):
-        super(MulticastUnsettled3Ack, self).on_modified(event)
         event.delivery.settle()
         self.check_if_done()
 

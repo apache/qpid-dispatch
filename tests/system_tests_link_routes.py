@@ -2543,10 +2543,6 @@ class DispositionSniffer(MessagingHandler):
         self.delivery = event.delivery
         self.close()
 
-    def on_modified(self, event):
-        self.delivery = event.delivery
-        self.close()
-
     def on_rejected(self, event):
         self.delivery = event.delivery
         self.close()

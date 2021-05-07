@@ -1107,15 +1107,10 @@ class AsyncTestSender(MessagingHandler):
         event.delivery.settle()
 
     def on_released(self, event):
-        # for some reason Proton 'helpfully' calls on_released even though the
-        # delivery state is actually MODIFIED
         if event.delivery.remote_state == Delivery.MODIFIED:
-            return self.on_modified(event)
-        self.released += 1
-        event.delivery.settle()
-
-    def on_modified(self, event):
-        self.modified += 1
+            self.modified += 1
+        else:
+            self.released += 1
         event.delivery.settle()
 
     def on_rejected(self, event):
