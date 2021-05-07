@@ -134,6 +134,13 @@ option.  Example:
 
 ctest --timeout 1500 -VV
 
+The Dispatch test suite has a number of tests. To shorten execution time of the test suite, use the -j2 flag. Example:
+
+ctest -j2 -VV
+
+The integer following the -j specifies the maximum number of concurrent jobs that are used to execute the tests.
+Higher numbers could lead to unexpected test failures.
+
 The Qpid Dispatch Router test suite supports the following run time
 validation tools:
 
