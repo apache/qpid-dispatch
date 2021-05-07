@@ -276,6 +276,10 @@ void qd_lws_listener_free(qd_lws_listener_t *hl) {
     free(hl);
 }
 
+int qd_lws_qd_listener(qd_lws_listener_t *hl) {
+    return lws_get_vhost_port(hl->vhost);
+}
+
 static qd_lws_listener_t *qd_lws_listener(qd_http_server_t *hs, qd_listener_t *li) {
     qd_lws_listener_t *hl = calloc(1, sizeof(*hl));
     if (hl) {

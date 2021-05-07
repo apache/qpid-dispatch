@@ -19,6 +19,7 @@
 
 file(GLOB unittest_SOURCES
     helpers.cpp
+    websocket_client.cpp
     c_unittests_main.cpp
     test_router_startup.cpp
 )

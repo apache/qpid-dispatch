@@ -45,4 +45,6 @@ qd_lws_listener_t *qd_http_server_listen(qd_http_server_t *s, struct qd_listener
  */
 void qd_lws_listener_close(qd_lws_listener_t *hl);
 
+int qd_lws_qd_listener(qd_lws_listener_t *hl);
+
 #endif // QD_HTTP_H
