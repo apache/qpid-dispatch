@@ -131,6 +131,19 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     return core;
 }
 
+static void discard_left_over_actions(qdr_core_t *core)
+{
+    qdr_action_list_t  action_list;
+    DEQ_MOVE(core->action_list, action_list);
+    DEQ_APPEND(action_list, core->action_list_background);
+    qdr_action_t *action = DEQ_HEAD(action_list);
+    while (action) {
+        DEQ_REMOVE_HEAD(action_list);
+        action->action_handler(core, action, true);
+        free_qdr_action_t(action);
+        action = DEQ_HEAD(action_list);
+    }
+}
 
 void qdr_core_free(qdr_core_t *core)
 {
@@ -151,6 +164,14 @@ void qdr_core_free(qdr_core_t *core)
     //
     core->router_id = 0;
     core->router_area = 0;
+
+    //
+    // discard any left over actions
+    //
+
+    discard_left_over_actions(core);
+    // Drain the general work lists
+    qdr_general_handler(core);
 
     //
     // Free the core resources
@@ -253,19 +274,11 @@ void qdr_core_free(qdr_core_t *core)
     // this must happen after qdrc_endpoint_do_cleanup_CT calls
     qdr_modules_finalize(core);
 
-    // discard any left over actions
+    //
+    // discard any left over actions (again)
+    //
 
-    qdr_action_list_t  action_list;
-    DEQ_MOVE(core->action_list, action_list);
-    DEQ_APPEND(action_list, core->action_list_background);
-    qdr_action_t *action = DEQ_HEAD(action_list);
-    while (action) {
-        DEQ_REMOVE_HEAD(action_list);
-        action->action_handler(core, action, true);
-        free_qdr_action_t(action);
-        action = DEQ_HEAD(action_list);
-    }
-
+    discard_left_over_actions(core);
     // Drain the general work lists
     qdr_general_handler(core);
 
