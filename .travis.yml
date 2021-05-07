@@ -26,7 +26,6 @@ jobs:
     - name: "qdrouterd:TSAN"
     - arch: arm64
     - arch: s390x
-    - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
   include:
   - name: "apache-rat:check"
     os: linux
