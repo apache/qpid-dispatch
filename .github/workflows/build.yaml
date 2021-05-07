@@ -228,6 +228,14 @@ jobs:
           name: Test_Results_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
           path: ${{env.DispatchBuildDir}}/Testing/**/*.xml
 
+      - name: Upload log files (if any tests failed)
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: testLogs_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          path: |
+            qpid-dispatch/build/tests
+
       - name: Upload core files (if any)
         uses: actions/upload-artifact@v2
         if: failure()
