@@ -77,8 +77,10 @@ jobs:
     - sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main' -y
     - sudo apt-get update -q
     - sudo apt-get install -y clang-12 llvm-12-dev -o Debug::pkgProblemResolver=yes
+    # https://github.com/pypa/virtualenv/issues/1740
+    # https://github.com/pypa/virtualenv/issues/1873
     - python -m pip install --user --upgrade pip
-    - python -m pip install --user --upgrade tox virtualenv
+    - python -m pip install --user --upgrade tox virtualenv==20.0.23
     # Install quart to run the http2 tests.
     - python -m pip install --user quart
     # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -99,8 +101,10 @@ jobs:
     before_install:
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
+      # https://github.com/pypa/virtualenv/issues/1740
+      # https://github.com/pypa/virtualenv/issues/1873
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv
+      - python3 -m pip install --user --upgrade tox virtualenv==20.0.23
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -126,8 +130,10 @@ jobs:
       - sudo apt-get install clang-11 llvm-11-dev
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
+      # https://github.com/pypa/virtualenv/issues/1740
+      # https://github.com/pypa/virtualenv/issues/1873
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv
+      - python3 -m pip install --user --upgrade tox virtualenv==20.0.23
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -150,8 +156,10 @@ jobs:
     os: linux
     dist: focal
     before_install:
+      # https://github.com/pypa/virtualenv/issues/1740
+      # https://github.com/pypa/virtualenv/issues/1873
       - python -m pip install --user --upgrade pip
-      - python -m pip install --user --upgrade tox virtualenv
+      - python -m pip install --user --upgrade tox virtualenv==20.0.23
       # Install quart to run the http2 tests.
       - python -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
