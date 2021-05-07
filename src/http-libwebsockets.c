@@ -695,7 +695,7 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
         int alloc_cur = 0;
         while (alloc_cur < allocator_metrics_length) {
             if (write_allocator_metric(&position, end, &allocator_metrics[alloc_cur])) {
-                qd_log(hs->log, QD_LOG_DEBUG, "wrote allocator metric %lu of %lu", alloc_cur, allocator_metrics_length);
+                qd_log(hs->log, QD_LOG_DEBUG, "wrote allocator metric %i of %lu", alloc_cur, allocator_metrics_length);
                 alloc_cur++;
             } else {
                 qd_log(hs->log, QD_LOG_WARNING, "insufficient space in buffer");

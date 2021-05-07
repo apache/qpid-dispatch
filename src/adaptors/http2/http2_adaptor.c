@@ -280,7 +280,7 @@ static size_t write_buffers(qdr_http2_connection_t *conn)
 
     if (i >0) {
         size_t num_buffers_written = pn_raw_connection_write_buffers(session_data->conn->pn_raw_conn, raw_buffers, num_buffs);
-        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Written %i buffer(s) and %i bytes in write_buffers() using pn_raw_connection_write_buffers()", conn->conn_id, num_buffers_written, total_bytes);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Written %zu buffer(s) and %i bytes in write_buffers() using pn_raw_connection_write_buffers()", conn->conn_id, num_buffers_written, total_bytes);
         if (num_buffs != num_buffers_written) {
             //TODO - This is not good.
         }
@@ -557,7 +557,7 @@ static int snd_data_callback(nghttp2_session *session,
                     memcpy(qd_http2_buffer_cursor(http2_buff), pn_raw_buffs[idx].bytes, pn_raw_buffs[idx].size);
                     qd_http2_buffer_insert(http2_buff, pn_raw_buffs[idx].size);
                     bytes_sent += pn_raw_buffs[idx].size;
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback memcpy pn_raw_buffs[%i].size=%zu", conn->conn_id, stream_data->stream_id, idx, pn_raw_buffs[idx].size);
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback memcpy pn_raw_buffs[%i].size=%u", conn->conn_id, stream_data->stream_id, idx, pn_raw_buffs[idx].size);
 //                }
 //                else {
 //                    memcpy(qd_http2_buffer_cursor(http2_buff), pn_raw_buffs[idx].bytes, bytes_remaining);
@@ -1924,22 +1924,21 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
         qdr_link_set_context(stream_data->in_link, stream_data);
         return QD_DELIVERY_MOVED_TO_NEW_LINK;
     }
-    else if (stream_data) {
-        if (conn->ingress) {
-            if (!stream_data->out_dlv) {
-                stream_data->out_dlv = delivery;
-                qdr_delivery_incref(delivery, "ingress out_dlv referenced by HTTP2 adaptor");
-            }
-        }
-        qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][S%"PRId32"] qdr_http_deliver - call handle_outgoing_http", conn->conn_id, stream_data->stream_id);
-        uint64_t disp = handle_outgoing_http(stream_data);
-        if (stream_data->status == QD_STREAM_FULLY_CLOSED && disp == PN_ACCEPTED) {
-            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] qdr_http_deliver - calling free_http2_stream_data", conn->conn_id, stream_data->stream_id);
-            free_http2_stream_data(stream_data, false);
-        }
-        return disp;
-    }
-    return 0;
+
+	if (conn->ingress) {
+		if (!stream_data->out_dlv) {
+			stream_data->out_dlv = delivery;
+			qdr_delivery_incref(delivery, "ingress out_dlv referenced by HTTP2 adaptor");
+		}
+	}
+	qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][S%"PRId32"] qdr_http_deliver - call handle_outgoing_http", conn->conn_id, stream_data->stream_id);
+	uint64_t disp = handle_outgoing_http(stream_data);
+	if (stream_data->status == QD_STREAM_FULLY_CLOSED && disp == PN_ACCEPTED) {
+		qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] qdr_http_deliver - calling free_http2_stream_data", conn->conn_id, stream_data->stream_id);
+		free_http2_stream_data(stream_data, false);
+	}
+	return disp;
+
 }
 
 
@@ -2393,7 +2392,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             conn->connection_established = true;
             create_stream_dispatcher_link(conn);
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Created stream_dispatcher_link in PN_RAW_CONNECTION_CONNECTED", conn->conn_id);
-            qdr_connection_process(conn->qdr_conn);
+            while (qdr_connection_process(conn->qdr_conn)) {}
         }
         break;
     }
@@ -2455,7 +2454,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         size_t n;
         size_t written = 0;
         if (conn->pn_raw_conn == 0) {
-            qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN, No pn_raw_conn", conn->conn_id, written);
+            qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN, No pn_raw_conn", conn->conn_id);
             break;
         }
         while ( (n = pn_raw_connection_take_written_buffers(conn->pn_raw_conn, buffs, WRITE_BUFFERS)) ) {
@@ -2478,7 +2477,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             conn->first_pinged = true;
         }
 
-        qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %i bytes, DEQ_SIZE(session_data->buffs) = %zu", conn->conn_id, written, DEQ_SIZE(conn->session_data->buffs));
+        qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %zu bytes, DEQ_SIZE(session_data->buffs) = %zu", conn->conn_id, written, DEQ_SIZE(conn->session_data->buffs));
         restart_streams(conn);
         break;
     }
