@@ -73,7 +73,7 @@ listener {
 
 log {
     module: DEFAULT
-    enable: debug+
+    enable: warn+
 }
 )END";
 
