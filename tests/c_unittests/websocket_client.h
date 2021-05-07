@@ -54,7 +54,7 @@ class websocket_client
     host(std::move(host)), port(port)
     {
         struct lws_context_creation_info info{};
-        info.options = LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT | LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER;
+        info.options = LWS_SERVER_OPTION_DISABLE_OS_CA_CERTS; /* save time by skipping file i/o */
         info.port = CONTEXT_PORT_NO_LISTEN; /* we do not run any server */
         info.protocols = protocols;
         info.gid = -1;

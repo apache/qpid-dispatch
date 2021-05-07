@@ -82,10 +82,12 @@ log {
     f.close();
 
     std::thread([]() {
+        test_data_t action_data{};
+
         QDR qdr{};
         qdr.initialize("./config.conf");
 
-        test_data_t action_data{};
+        qdr.wait(); // is this necessary?
 
         qdr_action_handler_t handler = [](qdr_core_t *core, qdr_action_t *action, bool discard) {
             auto action_data = static_cast<test_data_t *>(action->args.general.context_1);
