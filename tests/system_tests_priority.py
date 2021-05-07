@@ -215,7 +215,7 @@ class PriorityTests (TestCase):
                         self.magic_address_priority
                         )
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
 
 # ================================================================

@@ -65,12 +65,12 @@ class RouterTest(TestCase):
     def test_01_reject_higher_version_hello(self):
         test = RejectHigherVersionHelloTest(self.routers[0].addresses[3])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_02_reject_higher_version_mar(self):
         test = RejectHigherVersionMARTest(self.routers[0].addresses[3], self.routers[0].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
 
 class RejectHigherVersionHelloTest(MessagingHandler):

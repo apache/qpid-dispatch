@@ -237,7 +237,7 @@ class TopologyAdditionTests (TestCase):
                          released_ok
                          )
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_02_new_route_high_cost(self):
         # During the test, test code will add a new router D,
@@ -265,7 +265,7 @@ class TopologyAdditionTests (TestCase):
                          released_ok
                          )
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
 
 # ================================================================

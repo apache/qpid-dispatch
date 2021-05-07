@@ -236,7 +236,7 @@ class DetachAfterAttachTest(TestCase):
     def test_auto_link_attach_detach_reattch(self):
         test = AutoLinkDetachAfterAttachTest(self.route_address, 'myListener.1')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
 
 class AutoLinkRetryTest(TestCase):
@@ -410,7 +410,7 @@ class WaypointReceiverPhaseTest(TestCase):
         """
         test = WaypointTest(self.routers[0].addresses[0], self.routers[1].addresses[0], "0.0.0.0/queue.ext")
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
 
 class WaypointTest(MessagingHandler):
@@ -567,7 +567,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkAttachTest('container.1', self.route_address, 'node.1')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_02_autolink_credit(self):
         """
@@ -576,7 +576,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkCreditTest(self.normal_address, self.route_address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
         self.assertTrue(test.autolink_count_ok)
 
     def test_03_autolink_sender(self):
@@ -586,7 +586,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkSenderTest('container.1', self.normal_address, self.route_address, 'node.1', 'node.1')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
         long_type = 'org.apache.qpid.dispatch.router'
         query_command = 'QUERY --type=' + long_type
@@ -605,7 +605,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkReceiverTest('container.1', self.normal_address, self.route_address, 'node.1', 'node.1')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
         long_type = 'org.apache.qpid.dispatch.router'
         query_command = 'QUERY --type=' + long_type
@@ -624,7 +624,7 @@ class AutolinkTest(TestCase):
         """
         test = InterContainerTransferTest(self.normal_address, self.route_address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_06_manage_autolinks(self):
         """
@@ -634,7 +634,7 @@ class AutolinkTest(TestCase):
         """
         test = ManageAutolinksTest(self.normal_address, self.route_address)
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_07_autolink_attach_with_ext_addr(self):
         """
@@ -644,7 +644,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkAttachTest('container.4', self.route_address, 'ext.2')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_08_autolink_sender_with_ext_addr(self):
         """
@@ -653,7 +653,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkSenderTest('container.4', self.normal_address, self.route_address, 'node.2', 'ext.2')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_09_autolink_receiver_with_ext_addr(self):
         """
@@ -662,7 +662,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkReceiverTest('container.4', self.normal_address, self.route_address, 'node.2', 'ext.2')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_10_autolink_attach_to_listener(self):
         """
@@ -671,7 +671,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkAttachTestWithListenerName(self.ls_route_address, 'myListener.1')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_11_autolink_multiple_receivers_on_listener(self):
         """
@@ -681,7 +681,7 @@ class AutolinkTest(TestCase):
         """
         test = AutolinkMultipleReceiverUsingMyListenerTest(self.normal_address, self.ls_route_address, 'myListener.1')
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
 
 class AutolinkAttachTestWithListenerName(MessagingHandler):

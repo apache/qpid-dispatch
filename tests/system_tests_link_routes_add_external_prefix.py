@@ -181,42 +181,42 @@ class LinkRouteTest(TestCase):
     def test_route_sender_add_prefix_on_B(self):
         test = SendReceive("%s/foo" % self.routers[1].addresses[0], "%s/bar.foo" % self.routers[0].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_route_receiver_add_prefix_on_B(self):
         test = SendReceive("%s/bar.foo" % self.routers[0].addresses[0], "%s/foo" % self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_route_sender_add_prefix_on_C(self):
         test = SendReceive("%s/foo" % self.routers[2].addresses[0], "%s/bar.foo" % self.routers[0].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_route_receiver_add_prefix_on_C(self):
         test = SendReceive("%s/bar.foo" % self.routers[0].addresses[0], "%s/foo" % self.routers[2].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_route_sender_del_prefix_on_B(self):
         test = SendReceive("%s/qdr-a.baz" % self.routers[1].addresses[0], "%s/baz" % self.routers[0].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_route_receiver_del_prefix_on_B(self):
         test = SendReceive("%s/baz" % self.routers[0].addresses[0], "%s/qdr-a.baz" % self.routers[1].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_route_sender_del_prefix_on_C(self):
         test = SendReceive("%s/qdr-a.baz" % self.routers[2].addresses[0], "%s/baz" % self.routers[0].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
     def test_route_receiver_del_prefix_on_C(self):
         test = SendReceive("%s/baz" % self.routers[0].addresses[0], "%s/qdr-a.baz" % self.routers[2].addresses[0])
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertIsNone(test.error)
 
 
 class SendReceive(MessagingHandler):
