@@ -154,8 +154,9 @@ static void on_activate(void *context)
     qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] on_activate", conn->conn_id);
     while (qdr_connection_process(conn->qdr_conn)) {}
     if (conn->egress_dispatcher && conn->connector_closed) {
-        qdr_connection_closed(conn->qdr_conn);
         qdr_connection_set_context(conn->qdr_conn, 0);
+        qdr_connection_closed(conn->qdr_conn);
+        conn->qdr_conn = 0;
         free_qdr_tcp_connection(conn);
     }
 }
