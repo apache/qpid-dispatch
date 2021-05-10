@@ -541,7 +541,11 @@ class BusManager(object):
 
             if self.opts.verbose:
                 row.append(PlainNum(get(node, 'protocolVersion')))
-                row.append(PlainNum(get(node, 'cost')))
+                cost = get(node, 'cost')
+                if cost:
+                    row.append(PlainNum(get(node, 'cost')))
+                else:
+                    row.append(get(node, 'cost'))
                 row.append('%r' % self._list_clean(node.linkState))
                 row.append('%r' % self._list_clean(node.validOrigins))
             rows.append(row)
