@@ -540,8 +540,8 @@ class BusManager(object):
                 row.append(PlainNum(node.routerLink))
 
             if self.opts.verbose:
-                row.append(get(node, 'protocolVersion'))
-                row.append(get(node, 'cost'))
+                row.append(PlainNum(get(node, 'protocolVersion')))
+                row.append(PlainNum(get(node, 'cost')))
                 row.append('%r' % self._list_clean(node.linkState))
                 row.append('%r' % self._list_clean(node.validOrigins))
             rows.append(row)
@@ -606,7 +606,7 @@ class BusManager(object):
             if has_priority:
                 row.append(addr.priority if addr.priority >= 0 else "-")
             if self.opts.verbose:
-                row.append(addr.inProcess)
+                row.append(PlainNum(addr.inProcess))
             row.append(PlainNum(addr.containerCount) if addr.name[0] in 'CDEF' else PlainNum(addr.subscriberCount))
             row.append(PlainNum(addr.remoteCount))
             row.append(PlainNum(addr.deliveriesIngress))

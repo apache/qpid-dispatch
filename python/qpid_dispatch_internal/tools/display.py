@@ -160,6 +160,8 @@ class Header:
 
 
 def PlainNum(value):
+    if not value:
+        return ""
     try:
         ret_val = "%d" % value
         return ret_val
