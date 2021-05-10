@@ -608,7 +608,7 @@ class BusManager(object):
             row.append(self._addr_phase(addr.name))
             row.append(addr.distribution)
             if has_priority:
-                row.append(addr.priority if addr.priority >= 0 else "-")
+                row.append(PlainNum(addr.priority) if addr.priority >= 0 else "-")
             if self.opts.verbose:
                 row.append(PlainNum(addr.inProcess))
             row.append(PlainNum(addr.containerCount) if addr.name[0] in 'CDEF' else PlainNum(addr.subscriberCount))
