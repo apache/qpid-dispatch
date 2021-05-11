@@ -70,8 +70,8 @@ class RouterTestBadConfiguration(TestCase):
     def __init__(self, test_method):
         TestCase.__init__(self, test_method)
         self.error_caught = False
-        self.timer_delay = 1
-        self.max_attempts = 20
+        self.timer_delay = 0.2
+        self.max_attempts = 100
         self.attempts_made = 0
         self.schedule_timer()
 
@@ -109,15 +109,24 @@ class RouterTestBadConfiguration(TestCase):
         then it stops scheduling new attempts.
         :return:
         """
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            expected_log_snip = "Connection to %s" % self.unresolvable_host_name
-            errors_caught = [line for line in log_lines if expected_log_snip in line and "failed" in line]
+        try:
+            # mode 'r' and 't' are defaults
+            with open(self.router.logfile_path) as router_log:
+                log_lines = router_log.read().split("\n")
+                expected_log_snip = "Connection to %s" % self.unresolvable_host_name
+                errors_caught = [line for line in log_lines if expected_log_snip in line and "failed" in line]
 
-            self.error_caught = any(errors_caught)
+                self.error_caught = any(errors_caught)
 
-            # If condition not yet satisfied and not exhausted max attempts,
-            # re-schedule the verification.
+                # If condition not yet satisfied and not exhausted max attempts,
+                # re-schedule the verification.
+                if self.waiting_for_error():
+                    self.attempts_made += 1
+                    self.schedule_timer()
+        except IOError:
+            # DISPATCH-1930: The log file might not have been created yet.
+            # When we try to open a non-existent log file, we run into an exception.
+            # We will keep trying until the log file is in place.
             if self.waiting_for_error():
                 self.attempts_made += 1
                 self.schedule_timer()

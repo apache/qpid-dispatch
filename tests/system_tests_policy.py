@@ -340,7 +340,9 @@ class SenderReceiverLimits(TestCase):
         # In some emulated environments the router log file writes may lag test execution.
         # To accomodate the file lag this test may retry reading the log file.
         verified = False
-        for tries in range(5):
+
+        # We will wait a total of 5 seconds for the log files to appear.
+        for tries in range(25):
             with open(self.router.logfile_path, 'r') as router_log:
                 log_lines = router_log.read().split("\n")
                 close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
@@ -349,7 +351,8 @@ class SenderReceiverLimits(TestCase):
                 break
             print("system_tests_policy, SenderReceiverLimits, test_verify_z_connection_stats: delay to wait for log to be written")
             sys.stdout.flush()
-            time.sleep(1)
+            # Sleep for 0.2 seconds before trying again.
+            time.sleep(0.2)
         if not verified:
             deny_lines = [s for s in log_lines if "DENY" in s]
             resources_lines = [s for s in log_lines if "closed with resources" in s]
