@@ -23,7 +23,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import sys
-import os
 from system_test import TestCase, Qdrouterd, main_module
 from system_test import unittest
 from proton.utils import BlockingConnection
