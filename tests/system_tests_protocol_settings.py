@@ -84,8 +84,7 @@ class MaxSessionsTest(TestCase):
         bc = BlockingConnection(self.router.addresses[0])
         bc.create_receiver("xxx")
         bc.close()
-        logfile = os.path.join(self.router.outdir, self.router.logfile)
-        with open(logfile, 'r') as router_log:
+        with open(self.router.logfile_path, 'r') as router_log:
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # channel-max is 9
