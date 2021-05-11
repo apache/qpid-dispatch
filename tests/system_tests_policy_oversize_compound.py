@@ -762,13 +762,13 @@ class MaxMessageSizeBlockOversize(TestCase):
             raise Exception("%s\n%s" % (e, out))
         return out
 
-    def sense_n_closed_lines(self, routername, pattern=OVERSIZE_CONDITION_NAME):
+    def sense_n_closed_lines(self, router, pattern=OVERSIZE_CONDITION_NAME):
         """
         Read a router's log file and count how many size-exceeded lines are in it.
         :param routername:
         :return: (int, int) tuple with counts of lines in and lines out
         """
-        with open("../setUpClass/%s.log" % routername, 'r') as router_log:
+        with open(router.logfile_path, 'r') as router_log:
             log_lines = router_log.read().split("\n")
         i_closed_lines = [s for s in log_lines if pattern in s and "<-" in s]
         o_closed_lines = [s for s in log_lines if pattern in s and "->" in s]
@@ -789,7 +789,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #
 
     def test_60_block_oversize_EB1_INTB_at_INTB(self):
-        ibefore, obefore = self.sense_n_closed_lines("EB1")
+        ibefore, obefore = self.sense_n_closed_lines(self.EB1)
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize,
                                            MaxMessageSizeBlockOversize.EB1,
                                            MaxMessageSizeBlockOversize.INT_B,
@@ -803,7 +803,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         self.assertTrue(test.error is None)
 
         # Verify that interrouter link was shut down
-        iafter, oafter = self.sense_n_closed_lines("EB1")
+        iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 0 and idelta == 1
@@ -814,7 +814,7 @@ class MaxMessageSizeBlockOversize(TestCase):
             self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
         # Verfiy that a link was closed with the expected pattern(s)
-        ilink1, olink1 = self.sense_n_closed_lines("EB1", pattern=OVERSIZE_LINK_CONDITION_NAME)
+        ilink1, olink1 = self.sense_n_closed_lines(self.EB1, pattern=OVERSIZE_LINK_CONDITION_NAME)
         success = olink1 > 0
         if (not success):
             test.logger.log("FAIL: Did not see link close in log file. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
@@ -837,7 +837,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #
 
     def test_61_block_oversize_EB1_EA1_at_INTB(self):
-        ibefore, obefore = self.sense_n_closed_lines("EB1")
+        ibefore, obefore = self.sense_n_closed_lines(self.EB1)
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize,
                                            MaxMessageSizeBlockOversize.EB1,
                                            MaxMessageSizeBlockOversize.EA1,
@@ -851,7 +851,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         self.assertTrue(test.error is None)
 
         # Verify that interrouter link was shut down
-        iafter, oafter = self.sense_n_closed_lines("EB1")
+        iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 0 and idelta == 1
@@ -876,7 +876,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #
 
     def test_70_block_oversize_EB1_INTB_at_both(self):
-        ibefore, obefore = self.sense_n_closed_lines("EB1")
+        ibefore, obefore = self.sense_n_closed_lines(self.EB1)
         test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize,
                                            MaxMessageSizeBlockOversize.EB1,
                                            MaxMessageSizeBlockOversize.INT_B,
@@ -896,7 +896,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         # oversize condition before it has forwarded too many bytes of the first message
         # to INT.B. Then EB1 aborts the first message to INT.B and INT.B never
         # detects an oversize condition.
-        iafter, oafter = self.sense_n_closed_lines("EB1")
+        iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 1 and (idelta == 0 or idelta == 1)
@@ -927,7 +927,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #
 
     def test_80_block_multicast_EB1_INTB_at_INTB(self):
-        ibefore, obefore = self.sense_n_closed_lines("EB1")
+        ibefore, obefore = self.sense_n_closed_lines(self.EB1)
         count = 10
         test = OversizeMulticastTransferTest(MaxMessageSizeBlockOversize,
                                              MaxMessageSizeBlockOversize.EB1,
@@ -946,7 +946,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         self.assertTrue(test.error is None)
 
         # Verify that interrouter link was shut down
-        iafter, oafter = self.sense_n_closed_lines("EB1")
+        iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 0 and idelta == 1
@@ -977,7 +977,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #
 
     def test_81_block_multicast_EA1(self):
-        ibefore, obefore = self.sense_n_closed_lines("EA1")
+        ibefore, obefore = self.sense_n_closed_lines(self.EA1)
         count = 10
         test = OversizeMulticastTransferTest(MaxMessageSizeBlockOversize,
                                              MaxMessageSizeBlockOversize.EA1,
@@ -996,7 +996,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         self.assertTrue(test.error is None)
 
         # Verify that interrouter link was shut down
-        iafter, oafter = self.sense_n_closed_lines("EA1")
+        iafter, oafter = self.sense_n_closed_lines(self.EA1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 1 and idelta == 0
@@ -1027,7 +1027,7 @@ class MaxMessageSizeBlockOversize(TestCase):
     #
 
     def test_82_block_multicast_INTA(self):
-        ibefore, obefore = self.sense_n_closed_lines("INT.A")
+        ibefore, obefore = self.sense_n_closed_lines(self.INT_A)
         count = 10
         test = OversizeMulticastTransferTest(MaxMessageSizeBlockOversize,
                                              MaxMessageSizeBlockOversize.INT_A,
@@ -1046,7 +1046,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         self.assertTrue(test.error is None)
 
         # Verify that interrouter link was shut down
-        iafter, oafter = self.sense_n_closed_lines("INT.A")
+        iafter, oafter = self.sense_n_closed_lines(self.INT_A)
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 1 and idelta == 0
@@ -1213,13 +1213,13 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
         cls.EA1.wait_connectors()
         cls.EB1.wait_connectors()
 
-    def sense_n_closed_lines(self, routername):
+    def sense_n_closed_lines(self, router):
         """
         Read a router's log file and count how many size-exceeded lines are in it.
         :param routername:
         :return: (int, int) tuple with counts of lines in and lines out
         """
-        with open("../setUpClass/%s.log" % routername, 'r') as router_log:
+        with open(router.logfile_path, 'r') as router_log:
             log_lines = router_log.read().split("\n")
         i_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_NAME in s and "<-" in s]
         o_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_NAME in s and "->" in s]
@@ -1240,7 +1240,7 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
     #
 
     def test_90_block_link_route_EB1_INTB(self):
-        ibefore, obefore = self.sense_n_closed_lines("EB1")
+        ibefore, obefore = self.sense_n_closed_lines(self.EB1)
         test = OversizeMessageTransferTest(MaxMessageSizeLinkRouteOversize,
                                            MaxMessageSizeLinkRouteOversize.EB1,
                                            None,
@@ -1255,7 +1255,7 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
         self.assertTrue(test.error is None)
 
         # Verify that interrouter link was shut down
-        iafter, oafter = self.sense_n_closed_lines("EB1")
+        iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 1 and (idelta == 0 or idelta == 1)

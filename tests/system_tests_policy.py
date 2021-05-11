@@ -341,7 +341,7 @@ class SenderReceiverLimits(TestCase):
         # To accomodate the file lag this test may retry reading the log file.
         verified = False
         for tries in range(5):
-            with open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
+            with open(self.router.logfile_path, 'r') as router_log:
                 log_lines = router_log.read().split("\n")
                 close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
                 verified = len(close_lines) == 1
