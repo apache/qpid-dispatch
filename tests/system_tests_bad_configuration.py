@@ -223,7 +223,6 @@ class RouterTestIdFailWhiteSpace(TestCase):
         Writes illegal config, runs router, examines console output
         """
         parent_path = os.path.dirname(os.getcwd())
-        os.path.join(parent_path, "setUpClass/test-router-whitespace.conf")
         conf_path = os.path.join(parent_path, "setUpClass/test-router-whitespace.conf")
         with open(conf_path, 'w') as router_conf:
             router_conf.write("router { \n")
