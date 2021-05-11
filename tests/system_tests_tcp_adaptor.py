@@ -137,10 +137,12 @@ class EchoClientRunner():
         self.name = "%s_%s_%s_%s" % \
                     (self.test_name, self.client_n, self.size, self.count)
         self.client_prefix = "ECHO_CLIENT %s" % self.name
+
+        parent_path = os.path.dirname(os.getcwd())
         self.client_logger = Logger(title=self.client_prefix,
                                     print_to_console=self.print_client_logs,
                                     save_for_dump=False,
-                                    ofilename="../setUpClass/TcpAdaptor_echo_client_%s.log" % self.name)
+                                    ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor_echo_client_%s.log" % self.name))
 
         try:
             self.e_client = TcpEchoClient(prefix=self.client_prefix,
@@ -311,10 +313,11 @@ class TcpAdaptor(TestCase):
         # define logging levels
         cls.print_logs_server = False
         cls.print_logs_client = True
+        parent_path = os.path.dirname(os.getcwd())
         cls.logger = Logger(title="TcpAdaptor-testClass",
                             print_to_console=True,
                             save_for_dump=False,
-                            ofilename='../setUpClass/TcpAdaptor.log')
+                            ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor.log"))
         # Write a dummy log line for scraper.
         cls.logger.log("SERVER (info) Container Name: TCP_TEST")
 
@@ -324,13 +327,14 @@ class TcpAdaptor(TestCase):
 
         # start echo servers immediately after the echo server
         # ports are assigned.
+        parent_path = os.path.dirname(os.getcwd())
         for rtr in cls.router_order:
             test_name = "TcpAdaptor"
             server_prefix = "ECHO_SERVER %s ES_%s" % (test_name, rtr)
             server_logger = Logger(title=test_name,
                                    print_to_console=cls.print_logs_server,
                                    save_for_dump=False,
-                                   ofilename="../setUpClass/TcpAdaptor_echo_server_%s.log" % rtr)
+                                   ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor_echo_server_%s.log" % rtr))
             cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
             server = TcpEchoServer(prefix=server_prefix,
                                    port=cls.tcp_server_listener_ports[rtr],
@@ -344,7 +348,7 @@ class TcpAdaptor(TestCase):
         server_logger = Logger(title="TcpAdaptor",
                                print_to_console=cls.print_logs_server,
                                save_for_dump=False,
-                               ofilename="../setUpClass/TcpAdaptor_echo_server_NS_CONN_STALL.log")
+                               ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor_echo_server_NS_CONN_STALL.log"))
         cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
         server = TcpEchoServer(prefix=server_prefix,
                                port=cls.EC2_conn_stall_connector_port,
@@ -460,13 +464,15 @@ class TcpAdaptor(TestCase):
             cls.logger.log("TCP_TEST %s" % line)
 
         # write to shell script
-        with open("../setUpClass/TcpAdaptor-ports.sh", 'w') as o_file:
+        parent_path = os.path.dirname(os.getcwd())
+        file_name = os.path.join(parent_path, "setUpClass/TcpAdaptor-ports.sh")
+        with open(file_name, 'w') as o_file:
             for line in p_out:
                 o_file.write("set %s\n" % line)
 
         # Write a script to run scraper on this test's log files
         scraper_abspath = os.path.join(os.environ.get('BUILD_DIR'), 'tests', 'scraper', 'scraper.py')
-        logs_dir     = os.path.abspath("../setUpClass")
+        logs_dir     = os.path.join(parent_path, "setUpClass")
         main_log     = "TcpAdaptor.log"
         echo_logs    = "TcpAdaptor_echo*"
         big_test_log = "TcpAdaptor_all.log"
@@ -474,8 +480,7 @@ class TcpAdaptor(TestCase):
         edge_logs    = "E*.log"
         log_modules_spec = "--log-modules TCP_ADAPTOR,TCP_TEST,ECHO_SERVER,ECHO_CLIENT"
         html_output  = "TcpAdaptor.html"
-
-        with open("../setUpClass/TcpAdaptor-run-scraper.sh", 'w') as o_file:
+        with open(os.path.join(parent_path, "setUpClass/TcpAdaptor-run-scraper.sh"), 'w') as o_file:
             o_file.write("#!/bin/bash\n\n")
             o_file.write("# Script to run scraper on test class TcpAdaptor test result\n")
             o_file.write("# cd into logs directory\n")
@@ -905,10 +910,11 @@ class TcpAdaptorManagementTest(TestCase):
         # Start the echo server. This is the server that the tcpConnector
         # will be connecting to.
         server_prefix = "ECHO_SERVER ES_%s" % cls.test_name
+        parent_path = os.path.dirname(os.getcwd())
         cls.logger = Logger(title="TcpAdaptor",
                             print_to_console=True,
                             save_for_dump=False,
-                            ofilename="../setUpClass/TcpAdaptor_echo_server.log")
+                            ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor_echo_server.log"))
         cls.echo_server = TcpEchoServer(prefix=server_prefix,
                                         port=cls.tcp_server_port,
                                         logger=cls.logger)

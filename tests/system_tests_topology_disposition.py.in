@@ -332,20 +332,20 @@ class TopologyDispositionTests (TestCase):
                ]
                )
 
-        router_A = cls.routers[0]
-        router_B = cls.routers[1]
-        router_C = cls.routers[2]
-        router_D = cls.routers[3]
+        cls.router_A = cls.routers[0]
+        cls.router_B = cls.routers[1]
+        cls.router_C = cls.routers[2]
+        cls.router_D = cls.routers[3]
 
-        router_A.wait_router_connected('B')
-        router_A.wait_router_connected('C')
-        router_A.wait_router_connected('D')
+        cls.router_A.wait_router_connected('B')
+        cls.router_A.wait_router_connected('C')
+        cls.router_A.wait_router_connected('D')
 
         cls.client_addrs = dict()
-        cls.client_addrs['A'] = router_A.addresses[0]
-        cls.client_addrs['B'] = router_B.addresses[0]
-        cls.client_addrs['C'] = router_C.addresses[0]
-        cls.client_addrs['D'] = router_D.addresses[0]
+        cls.client_addrs['A'] = cls.router_A.addresses[0]
+        cls.client_addrs['B'] = cls.router_B.addresses[0]
+        cls.client_addrs['C'] = cls.router_C.addresses[0]
+        cls.client_addrs['D'] = cls.router_D.addresses[0]
 
         # 1 means skip that test.
         cls.skip = {'test_01' : 0,
@@ -384,30 +384,29 @@ class TopologyDispositionTests (TestCase):
             self.skipTest("Test skipped during development.")
         st_key = "PROTOCOL (trace) [C"
         qc_key = "qd.conn-id\"="
-        for letter in ['A', 'B', 'C', 'D']:
-            log_name = ('../setUpClass/%s.log' % letter)
-            with open(log_name, 'r') as router_log:
+        for router in [self.router_A, self.router_B, self.router_C, self.router_D]:
+            with open(router.logfile_path, 'r') as router_log:
                 log_lines = router_log.read().split("\n")
                 outbound_opens = [s for s in log_lines if "-> @open" in s]
                 for oopen in outbound_opens:
                     sti = oopen.find(st_key)
                     if sti < 0:
-                        error = "Log %s, line '%s' has no SERVER key" % (log_name, oopen)
+                        error = "Log %s, line '%s' has no SERVER key" % (router.logfile_path, oopen)
                         break
                     qci = oopen.find(qc_key)
                     if qci < 0:
-                        error = "Log %s, line '%s' has no qd.conn-id key" % (log_name, oopen)
+                        error = "Log %s, line '%s' has no qd.conn-id key" % (router.logfile_path, oopen)
                         break
                     sti += len(st_key)
                     qci += len(qc_key)
                     while not oopen[sti] == "]":
                         if not oopen[sti] == oopen[qci]:
-                            error = "log %s, line '%s' server conn_id != published conn-id" % (log_name, oopen)
+                            error = "log %s, line '%s' server conn_id != published conn-id" % (router.logfile_path, oopen)
                             break
                         sti += 1
                         qci += 1
                     if error is None and oopen[qci].isdigit():
-                        error = "log %s, line '%s' published conn-id is too big" % (log_name, oopen)
+                        error = "log %s, line '%s' published conn-id is too big" % (router.logfile_path, oopen)
                 self.assertIsNone(error)
             self.assertIsNone(error)
 
@@ -421,8 +420,8 @@ class TopologyDispositionTests (TestCase):
 
         # aggregate all the log files
         files = []
-        for letter in ['A', 'B', 'C', 'D']:
-            files.append('../setUpClass/%s.log' % letter)
+        for router in [self.router_A, self.router_B, self.router_C, self.router_D]:
+            files.append(router.logfile_path)
         p = self.popen(['/usr/bin/env', '${PY_STRING}', scraper_path, '-f'] + files,
                        stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                        universal_newlines=True)
@@ -439,7 +438,7 @@ class TopologyDispositionTests (TestCase):
         self.assertIn('</body>', out)
 
         # split A.log
-        p = self.popen(['/usr/bin/env', '${PY_STRING}', scraper_path, '--split', '-f', '../setUpClass/A.log'],
+        p = self.popen(['/usr/bin/env', '${PY_STRING}', scraper_path, '--split', '-f', self.router_A.logfile_path],
                        stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                        universal_newlines=True)
         out = p.communicate(None)[0]

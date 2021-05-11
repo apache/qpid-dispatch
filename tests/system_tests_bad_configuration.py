@@ -109,7 +109,7 @@ class RouterTestBadConfiguration(TestCase):
         then it stops scheduling new attempts.
         :return:
         """
-        with open('../setUpClass/test-router.log', 'r') as router_log:
+        with open(self.router.logfile_path, 'r') as router_log:
             log_lines = router_log.read().split("\n")
             expected_log_snip = "Connection to %s" % self.unresolvable_host_name
             errors_caught = [line for line in log_lines if expected_log_snip in line and "failed" in line]
@@ -180,7 +180,8 @@ class RouterTestIdFailCtrlChar(TestCase):
         """
         Writes illegal config, runs router, examines console output
         """
-        conf_path = "../setUpClass/test-router-ctrl-char.conf"
+        parent_path = os.path.dirname(os.getcwd())
+        conf_path = os.path.join(parent_path, "setUpClass/test-router-ctrl-char.conf")
         with open(conf_path, 'w') as router_conf:
             router_conf.write("router { \n")
             router_conf.write("    id: abc\\bdef \n")
@@ -221,7 +222,8 @@ class RouterTestIdFailWhiteSpace(TestCase):
         """
         Writes illegal config, runs router, examines console output
         """
-        conf_path = "../setUpClass/test-router-whitespace.conf"
+        parent_path = os.path.dirname(os.getcwd())
+        conf_path = os.path.join(parent_path, "setUpClass/test-router-whitespace.conf")
         with open(conf_path, 'w') as router_conf:
             router_conf.write("router { \n")
             router_conf.write("    id: abc def \n")
