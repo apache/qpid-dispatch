@@ -17,17 +17,17 @@
  * under the License.
  */
 
-#include <stdio.h>
-#include <limits.h>
-#include <sys/select.h>
-#include <qpid/dispatch/timer.h>
 #include "dispatch_private.h"
-#include <qpid/dispatch/alloc.h>
-#include "timer_private.h"
 #include "test_case.h"
-#include <qpid/dispatch/atomic.h>
-#include <qpid/dispatch/threading.h>
+#include "timer_private.h"
 
+#include "qpid/dispatch/alloc.h"
+#include "qpid/dispatch/atomic.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/timer.h"
+
+#include <stdio.h>
+#include <sys/select.h>
 
 // test the interaction of threads and timers
 //
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
     }
 
     ticker_lock = sys_mutex();
-    
+
     sys_thread_t *ticker = sys_thread(ticker_thread, 0);
 
     result = test_simple(argv[0]);

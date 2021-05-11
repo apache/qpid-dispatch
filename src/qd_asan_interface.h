@@ -25,6 +25,8 @@
  * See #include <sanitizer/asan_interface.h> in Clang for the source.
  */
 
+#include <stddef.h>
+
 #if defined(__clang__)
 # define QD_HAS_ADDRESS_SANITIZER __has_feature(address_sanitizer)
 #elif defined (__GNUC__) && defined(__SANITIZE_ADDRESS__)

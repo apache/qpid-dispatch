@@ -1,5 +1,3 @@
-#ifndef __policy_spec_h__
-#define __policy_spec_h__
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,24 +17,4 @@
  * under the License.
  */
 
-#include <stdbool.h>
-#include <stdint.h>
-
-typedef struct {
-    int       maxFrameSize;
-    int       maxSessionWindow;
-    int       maxSessions;
-    int       maxSenders;
-    int       maxReceivers;
-    uint64_t  maxMessageSize;
-    bool      allowDynamicSource;
-    bool      allowAnonymousSender;
-    bool      allowUserIdProxy;
-    bool      allowWaypointLinks;
-    bool      allowFallbackLinks;
-    bool      allowDynamicLinkRoutes;
-    bool      allowAdminStatusUpdate;
-    bool      outgoingConnection;
-} qd_policy_spec_t;
-
-#endif
+#include "qpid/dispatch/protocol_adaptor.h"

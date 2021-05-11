@@ -23,7 +23,6 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
 const char * const QD_MA_PREFIX  = "x-opt-qd.";
 const char * const QD_MA_INGRESS = "x-opt-qd.ingress";
