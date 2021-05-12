@@ -67,7 +67,7 @@ help2txt (${tools}/qdstat)
 
 add_custom_target (doc_gen DEPENDS ${generated_txt})
 
-execute_process (COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin})  
+execute_process (COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin})
 
 find_program (ASCIIDOC_EXE asciidoc DOC "Generate HTML documentation")
 

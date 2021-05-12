@@ -255,6 +255,7 @@ jobs:
       DispatchBuildDir: ${{github.workspace}}/build
       InstallPrefix: ${{github.workspace}}/install
       DispatchCMakeExtraArgs: >
+        -GNinja
         -DCONSOLE_INSTALL=OFF
     steps:
 
@@ -272,7 +273,7 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y libqpid-proton-proactor1-dev python3-qpid-proton libpython3-dev libwebsockets-dev libnghttp2-dev
+          sudo apt install -y libqpid-proton-proactor1-dev python3-qpid-proton libpython3-dev libwebsockets-dev libnghttp2-dev ninja-build
 
       - name: Install Linux docs dependencies
         if: ${{ runner.os == 'Linux' }}

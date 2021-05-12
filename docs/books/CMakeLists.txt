@@ -17,6 +17,11 @@
 ## under the License.
 ##
 
+if (POLICY CMP0009)
+  # FILE GLOB_RECURSE calls should not follow symlinks by default.
+  cmake_policy (SET CMP0009 NEW)
+endif ()
+
 find_program (ASCIIDOCTOR_EXE asciidoctor DOC "Generate books")
 
 set (
@@ -25,8 +30,7 @@ set (
   )
 
 if (ASCIIDOCTOR_EXE)
-  # Don't follow symlinks and don't warn about it
-  cmake_policy (SET CMP0009 NEW)
+  file (GLOB_RECURSE adoc_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.adoc)
   file (GLOB_RECURSE png_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.png)
 
   foreach (file ${png_files})
@@ -40,7 +44,7 @@ if (ASCIIDOCTOR_EXE)
   add_custom_command (
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/user-guide/index.html
     COMMAND ${ASCIIDOCTOR_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/book.adoc -o user-guide/index.html
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/*.adoc
+    DEPENDS ${adoc_files}
     )
 
   add_custom_target (books DEPENDS ${books})
