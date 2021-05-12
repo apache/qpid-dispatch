@@ -256,6 +256,7 @@ jobs:
       InstallPrefix: ${{github.workspace}}/install
       DispatchCMakeExtraArgs: >
         -GNinja
+        -DDOC_XMLLINT=ON
         -DCONSOLE_INSTALL=OFF
     steps:
 
@@ -278,7 +279,7 @@ jobs:
       - name: Install Linux docs dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y asciidoc asciidoctor ruby-asciidoctor-pdf dblatex
+          sudo apt install -y asciidoc asciidoctor ruby-asciidoctor-pdf dblatex libxml2-utils
 
       - name: qpid-dispatch cmake configure
         working-directory: ${{env.DispatchBuildDir}}
