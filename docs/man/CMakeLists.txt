@@ -67,8 +67,6 @@ help2txt (${tools}/qdstat)
 
 add_custom_target (doc_gen DEPENDS ${generated_txt})
 
-execute_process (COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin})
-
 find_program (ASCIIDOC_EXE asciidoc DOC "Generate HTML documentation")
 
 if (ASCIIDOC_EXE)
@@ -76,7 +74,7 @@ if (ASCIIDOC_EXE)
 
   # Generate HTML
   file (GLOB_RECURSE adoc_files *.adoc)
-  foreach (source qdmanage.8 qdrouterd.8 qdstat.8 qdrouterd.conf.5)
+  foreach (source ${src}/qdmanage.8 ${src}/qdrouterd.8 ${src}/qdstat.8 ${bin}/qdrouterd.conf.5)
     get_filename_component (name ${source} NAME)
     get_filename_component (dir ${source} PATH)
     string(FIND ${name} "." dot)
@@ -101,7 +99,7 @@ if (ASCIIDOC_EXE)
   find_program(A2X_EXE a2x DOC DOC "Generate Unix man pages")
   if (A2X_EXE)
     # Generate man pages.
-    foreach (source ${bin}/qdmanage.8 ${bin}/qdrouterd.8 ${bin}/qdstat.8 ${bin}/qdrouterd.conf.5)
+    foreach (source ${src}/qdmanage.8 ${src}/qdrouterd.8 ${src}/qdstat.8 ${bin}/qdrouterd.conf.5)
       get_filename_component (name ${source} NAME)
       get_filename_component (dir ${source} PATH)
       string(REGEX REPLACE ".*\\.([0-9])$" "\\1" section ${source}) # Man section number
