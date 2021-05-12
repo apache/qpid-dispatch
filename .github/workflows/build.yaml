@@ -65,13 +65,13 @@ jobs:
         if: ${{ always() && runner.os == 'Linux' }}
         run: env -0 | sort -z | tr '\0' '\n'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           repository: 'apache/qpid-proton'
           ref: 'main'
           path: 'qpid-proton'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
           path: 'qpid-dispatch'
 
@@ -258,7 +258,7 @@ jobs:
         -DCONSOLE_INSTALL=OFF
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
 
       - name: Create Build and Install directories
         run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
@@ -314,7 +314,7 @@ jobs:
     name: Console Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
 
       - name: Install Dependencies
         run: cd console/react && npm ci
@@ -326,7 +326,7 @@ jobs:
     name: Console ESLint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
 
       - name: Install Dependencies
         run: cd console/react && npm ci
@@ -338,7 +338,7 @@ jobs:
     name: RAT Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
       - uses: actions/cache@v2.1.5
         with:
           path: ~/.m2/repository
