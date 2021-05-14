@@ -545,7 +545,7 @@ class BusManager(object):
                 if cost:
                     row.append(PlainNum(cost))
                 else:
-                    row.append(cost)
+                    row.append("")
                 row.append('%r' % self._list_clean(node.linkState))
                 row.append('%r' % self._list_clean(node.validOrigins))
             rows.append(row)
