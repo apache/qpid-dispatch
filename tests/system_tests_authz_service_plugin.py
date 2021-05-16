@@ -26,7 +26,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
 import system_test
-from system_test import TestCase, Qdrouterd, main_module, DIR, Process, SkipIfNeeded
+from system_test import TestCase, Qdrouterd, main_module, DIR, Process
 from system_test import unittest
 
 
@@ -91,7 +91,7 @@ mech_list: SCRAM-SHA-1 PLAIN
                         'saslConfigPath': os.getcwd()})
         ])).wait_ready()
 
-    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_authorized(self):
         container = Container()
         client = ConnectionHandler('foo', 1)
@@ -101,7 +101,7 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual(1, client.received)
         self.assertEqual(0, len(client.errors))
 
-    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_unauthorized(self):
         container = Container()
         client = ConnectionHandler('bar', 1)
@@ -113,7 +113,7 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual('amqp:unauthorized-access', client.errors[0])
         self.assertEqual('amqp:unauthorized-access', client.errors[1])
 
-    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_wildcard(self):
         container = Container()
         client = ConnectionHandler('whatever', 1)
@@ -123,7 +123,7 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual(1, client.received)
         self.assertEqual(0, len(client.errors))
 
-    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_dynamic_source_anonymous_sender(self):
         container = Container()
         client = DynamicSourceAnonymousSender()
@@ -133,7 +133,7 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual('hello', client.message)
         self.assertEqual(0, len(client.errors))
 
-    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_unauthorized_anonymous_sender_target(self):
         container = Container()
         client = DynamicSourceAnonymousSender()
