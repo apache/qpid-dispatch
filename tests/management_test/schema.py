@@ -22,17 +22,7 @@
 
 import unittest
 import json
-from collections import OrderedDict
 from qpid_dispatch_internal.management.schema import Schema, BooleanType, EnumType, AttributeType, ValidationError, EnumValue, EntityType
-
-
-def replace_od(thing):
-    """Replace OrderedDict with dict"""
-    if isinstance(thing, OrderedDict):
-        return dict((k, replace_od(v)) for k, v in thing.items())
-    if isinstance(thing, list):
-        return [replace_od(t) for t in thing]
-    return thing
 
 
 SCHEMA_1 = {
