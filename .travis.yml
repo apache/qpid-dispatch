@@ -17,7 +17,8 @@
 # under the License
 #
 
-language: c
+language: python
+python: 3.6.8
 cache: ccache
 jobs:
   fast_finish: true
@@ -200,8 +201,6 @@ addons:
     - cmake
     - libsasl2-dev
     - libssl-dev
-    - python2.7
-    - python2.7-dev
     - sasl2-bin
     - swig
     - libnghttp2-dev
