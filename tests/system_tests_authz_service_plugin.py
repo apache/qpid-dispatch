@@ -17,18 +17,16 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import os
+import sys
 from subprocess import PIPE, Popen
-from system_test import TestCase, Qdrouterd, main_module, DIR, Process, SkipIfNeeded
-from system_test import unittest
+
 from proton import Message, SASL
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
+from system_test import TestCase, Qdrouterd, main_module, DIR, Process, SkipIfNeeded
+from system_test import unittest
 
 
 class AuthServicePluginAuthzTest(TestCase):
@@ -70,7 +68,7 @@ mech_list: SCRAM-SHA-1 PLAIN
         cls.createSaslFiles()
 
         cls.auth_service_port = cls.tester.get_port()
-        cls.tester.popen(['/usr/bin/env', '${PY_STRING}', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'),
+        cls.tester.popen([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'),
                           '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
         policy_config_path = os.path.join(DIR, 'policy-authz')
@@ -155,7 +153,7 @@ class AuthServicePluginAuthzDeprecatedTest(AuthServicePluginAuthzTest):
         cls.createSaslFiles()
 
         cls.auth_service_port = cls.tester.get_port()
-        cls.tester.popen(['/usr/bin/env', '${PY_STRING}', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'),
+        cls.tester.popen([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'),
                           '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
         cls.router_port = cls.tester.get_port()

@@ -1,4 +1,4 @@
-#!/usr/bin/env ${PY_STRING}
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,18 +18,14 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-import sys
-import signal
 import optparse
+import signal
+import sys
+
+from cproton import pn_sasl_config_path
+from proton import Array, Data, symbol, UNDESCRIBED
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
-from proton import Array, Data, symbol, UNDESCRIBED
-from cproton import pn_sasl_config_path
 
 
 class AuthService(MessagingHandler):
