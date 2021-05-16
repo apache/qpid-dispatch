@@ -18,7 +18,7 @@
 #
 
 [tox]
-envlist = py27,py36,py37,py38,py39
+envlist = py36,py37,py38,py39
 skipsdist = True
 minversion = ${TOX_VERSION}
 skip_missing_interpreters = True
@@ -34,9 +34,6 @@ commands = flake8 --count --show-source \
   ${CMAKE_SOURCE_DIR}/tools/qdstat \
   ${CMAKE_SOURCE_DIR}/tools/qdmanage
 deps = hacking>=1.1.0
-
-[testenv:py27]
-basepython = python2.7
 
 [testenv:py36]
 basepython = python3.6
