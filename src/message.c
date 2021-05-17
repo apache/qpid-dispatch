@@ -214,19 +214,8 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
            break;
        }
        case QD_AMQP_TIMESTAMP: {
-           char timestamp_bytes[8];
-           memset(timestamp_bytes, 0, sizeof(timestamp_bytes));
            char creation_time[100]; //string representation of creation time.
-           // 64-bit two’s-complement integer representing milliseconds since the unix epoch
-           int timestamp_length = 8;
-           pn_timestamp_t creation_timestamp = 0;
-
-           //qd_iterator_t* iter = qd_message_field_iterator(msg, field);
-           qd_iterator_t *iter = qd_parse_raw(parsed_field);
-           while (!qd_iterator_end(iter) && timestamp_length > 0) {
-               timestamp_bytes[--timestamp_length] = qd_iterator_octet(iter);
-           }
-           memcpy(&creation_timestamp, timestamp_bytes, 8);
+           pn_timestamp_t creation_timestamp = qd_parse_as_ulong(parsed_field);
            if (creation_timestamp > 0) {
                format_time(creation_timestamp, "%Y-%m-%d %H:%M:%S.%%03lu %z", creation_time, 100);
                aprintf(begin, end, "\"%s\"", creation_time);
