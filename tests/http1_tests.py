@@ -30,6 +30,7 @@ except ImportError:
     from httplib import HTTPConnection, HTTPException
 
 from system_test import TestCase, TIMEOUT, Logger, Qdrouterd
+TEST_SERVER_ERROR = "TestServer failed to start due to port %s already in use issue"
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -212,6 +213,27 @@ class TestServer(object):
     A HTTPServer running in a separate thread
     """
 
+    @classmethod
+    def new_server(cls, server_port, client_port, tests, handler_cls=None):
+        num_attempts = 0
+        max_attempts = 4
+        while num_attempts < max_attempts:
+            try:
+                # Create an instance of TestServer. This might fail because the port has
+                # not been relinquished yet. Try for a max of 4 seconds before giving up.
+                server11 = TestServer(server_port=server_port,
+                                      client_port=client_port,
+                                      tests=tests,
+                                      handler_cls=handler_cls)
+                # Return the successfully created server.
+                return server11
+            except OSError:
+                # TestServer creation failed. Try again in one second, for a max of 4 seconds.
+                num_attempts += 1
+                sleep(1)
+
+        return None
+
     def __init__(self, server_port, client_port, tests, handler_cls=None):
         self._logger = Logger(title="TestServer", print_to_console=False)
         self._client_port = client_port
@@ -272,13 +294,11 @@ def http1_ping(sport, cport):
         ]
     }
 
-    server = TestServer(server_port=sport,
-                        client_port=cport,
-                        tests=TEST)
+    server = TestServer.new_server(sport, cport, TEST)
     client = ThreadedTestClient(tests=TEST, port=cport)
     client.wait()
     server.wait()
-    return (client.count, client.error)
+    return client.count, client.error
 
 
 class ResponseMsg(object):
@@ -457,14 +477,12 @@ class CommonHttp1Edge2EdgeTest(object):
                  ResponseValidator(status=200)
                  )],
         }
-        server11 = TestServer(server_port=self.http_server11_port,
-                              client_port=self.http_listener11_port,
-                              tests=TESTS_11)
-        server10 = TestServer(server_port=self.http_server10_port,
-                              client_port=self.http_listener10_port,
-                              tests=TESTS_10,
-                              handler_cls=RequestHandler10)
 
+        server11 = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS_11)
+        self.assertIsNotNone(server11, TEST_SERVER_ERROR % self.http_server11_port)
+        server10 = TestServer.new_server(self.http_server10_port, self.http_listener10_port, TESTS_10,
+                                         handler_cls=RequestHandler10)
+        self.assertIsNotNone(server10, TEST_SERVER_ERROR % self.http_server10_port)
         self.EA2.wait_connectors()
 
         repeat_ct = 10
@@ -511,9 +529,9 @@ class CommonHttp1Edge2EdgeTest(object):
                  ),
             ]
         }
-        server = TestServer(server_port=self.http_server11_port,
-                            client_port=self.http_listener11_port,
-                            tests=TESTS)
+        server = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS)
+        self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
+
         self.EA2.wait_connectors()
 
         client = ThreadedTestClient(TESTS,
@@ -543,9 +561,8 @@ class CommonHttp1Edge2EdgeTest(object):
 
         # bring up the server and send some requests. This will cause the
         # router to grant credit for clients
-        server = TestServer(server_port=self.http_server11_port,
-                            client_port=self.http_listener11_port,
-                            tests=TESTS)
+        server = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS)
+        self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
         self.EA2.wait_connectors()
 
         client = ThreadedTestClient(TESTS,
@@ -567,9 +584,9 @@ class CommonHttp1Edge2EdgeTest(object):
         # cannot be reestablished after 2.5 seconds.  Restart the server before
         # that occurrs to prevent client messages from being released with 503
         # status.
-        server = TestServer(server_port=self.http_server11_port,
-                            client_port=self.http_listener11_port,
-                            tests=TESTS)
+        server = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS)
+        self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
+
         client.wait()
         self.assertIsNone(client.error)
         self.assertEqual(2, client.count)
@@ -594,9 +611,9 @@ class CommonHttp1Edge2EdgeTest(object):
 
         # bring up the server and send some requests. This will cause the
         # router to grant credit for clients
-        server = TestServer(server_port=self.http_server11_port,
-                            client_port=self.http_listener11_port,
-                            tests=TESTS)
+        server = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS)
+        self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
+
         self.EA2.wait_connectors()
 
         client = ThreadedTestClient(TESTS, self.http_listener11_port)
@@ -627,9 +644,9 @@ class CommonHttp1Edge2EdgeTest(object):
         self.assertEqual(1, client.count)
 
         # ensure links recover once the server re-appears
-        server = TestServer(server_port=self.http_server11_port,
-                            client_port=self.http_listener11_port,
-                            tests=TESTS)
+        server = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS)
+        self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
+
         self.EA2.wait_connectors()
 
         client = ThreadedTestClient(TESTS, self.http_listener11_port)
@@ -701,13 +718,11 @@ class CommonHttp1Edge2EdgeTest(object):
                  ResponseValidator(status=200))
             ],
         }
-        server11 = TestServer(server_port=self.http_server11_port,
-                              client_port=self.http_listener11_port,
-                              tests=TESTS_11)
-        server10 = TestServer(server_port=self.http_server10_port,
-                              client_port=self.http_listener10_port,
-                              tests=TESTS_10,
-                              handler_cls=RequestHandler10)
+        server11 = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS_11)
+        self.assertIsNotNone(server11, TEST_SERVER_ERROR % self.http_server11_port)
+        server10 = TestServer.new_server(self.http_server10_port, self.http_listener10_port, TESTS_10,
+                                         handler_cls=RequestHandler10)
+        self.assertIsNotNone(server10, TEST_SERVER_ERROR % self.http_server10_port)
 
         self.EA2.wait_connectors()
 

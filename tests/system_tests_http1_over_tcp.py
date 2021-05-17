@@ -65,13 +65,9 @@ class Http1OverTcpOneRouterTest(Http1OneRouterTestBase,
         cls.INT_A = cls.routers[0]
         cls.INT_A.listener = cls.INT_A.addresses[0]
 
-        cls.http11_server = TestServer(server_port=cls.http_server11_port,
-                                       client_port=cls.http_listener11_port,
-                                       tests=cls.TESTS_11)
-        cls.http10_server = TestServer(server_port=cls.http_server10_port,
-                                       client_port=cls.http_listener10_port,
-                                       tests=cls.TESTS_10,
-                                       handler_cls=RequestHandler10)
+        cls.http11_server = TestServer.new_server(cls.http_server11_port, cls.http_listener11_port, cls.TESTS_11)
+        cls.http10_server = TestServer.new_server(cls.http_server10_port, cls.http_listener10_port, cls.TESTS_10,
+                                                  handler_cls=RequestHandler10)
         cls.INT_A.wait_connectors()
 
 
