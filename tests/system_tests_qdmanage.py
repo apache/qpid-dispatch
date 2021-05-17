@@ -582,6 +582,8 @@ class QdmanageTest(TestCase):
                 self.logger.log("out_links=%s, in_links=%s" % (str(out_links), str(in_links)))
                 sleep(2)
                 outs = json.loads(self.run_qdmanage(query_command))
+                out_links = 0
+                in_links = 0
             else:
                 self.logger.log("Test success!")
                 success = True
