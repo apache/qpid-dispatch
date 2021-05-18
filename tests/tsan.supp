@@ -1,51 +1,89 @@
 # ThreadSanitizer (tsan) suppression file
 #
-race:libqpid-proton-proactor
-deadlock:libpython
+# NOTE WELL: When adding a new suppression to this file,
+# please create a JIRA for tracking purposes and include
+# the JIRA key in a comment.  This should be done
+# regardless of whether or not the error turns out to be
+# a false-positive: having a JIRA, even if closed/not-a-bug,
+# provides a record of the analysis of the error.
+#
 
+# DISPATCH-1956
+deadlock:push_event
+
+# DISPATCH-2070,
 race:qd_vlog_impl
-deadlock:qd_vlog_impl
-race:qd_log_entity
 
-race:qdr_core_free
+# DISPATCH-2122
+race:qd_alloc_init
 
-race:qd_alloc
+# DISPATCH-2123
 race:qd_entity_refresh_allocator
 
-mutex:qd_router_timer_handler
-race:qdr_process_tick_CT
-deadlock:qd_timer_schedule
-deadlock:qd_timer_visit
-
-race:qdr_connection_process
-
+# DISPATCH-2124
 race:qdr_link_flow
-race:qdr_link_flow_CT
-race:qdr_link_process_deliveries
-race:qdr_link_stalled_outbound
-race:qdr_link_first_attach
 
-race:qdr_delivery_link_peers_CT
-race:qdr_delivery_push_CT
-race:qdr_delivery_disposition
+# DISPATCH-2125
+race:qdr_link_stalled_outbound
+
+# DISPATCH-2126
+race:qdr_delivery_mcast_inbound_update_CT
 race:qdr_delivery_anycast_update_CT
 
-race:qdr_connection_set_context
-race:qdr_connection_get_context
+# DISPATCH-2127
+race:qd_message_receive
 
+# DISPATCH-2128
+race:process_link_CT
+
+# DISPATCH-2129: shutdown race
+race:qdr_core_free
+
+# DISPATCH-2130
+deadlock:qd_policy_socket_close
+
+# DISPATCH-2131
+race:qdr_record_link_credit
+
+# DISPATCH-2132
+race:qdr_process_tick_CT
+
+# DISPATCH-2133 (harmless)
+race:qd_log_enabled
+
+# DISPATCH-2134
+race:qdr_link_process_initial_delivery_CT
+race:tsan_reset_delivery_ids
+
+# DISPATCH-2135
+race:qd_message_Q2_holdoff_disable
+
+# DISPATCH-2136
+race:qd_message_set_aborted
+
+# DISPATCH-2137
+race:remote_sasl_process_init
+race:remote_sasl_prepare
 race:notify_downstream
-race:notify_upstream
 
-race:qdr_delivery_mcast_inbound_update_CT
-race:qdr_delivery_mcast_outbound_update_CT
-race:qdr_delivery_mcast_outbound_settled_CT
+# DISPATCH-2138
+race:qdr_link_inbound_detach_CT
+
+# DISPATCH-2140
+race:qdr_connection_set_context
+
+# DISPATCH-2141
+race:qdr_delivery_move_delivery_state_CT
+
+# DISPATCH-2143
 race:qdr_delivery_mcast_outbound_disposition_CT
 
-race:qd_message_receive
-race:qd_message_receive_complete
+#
+# External libraries
+#
 
-mutex:qdr_forward_on_message
+# proton false positive?
+# TBD: discuss with proton devs, JIRA if necessary
+deadlock:pni_timer_set
 
-mutex:qd_policy_amqp_open
-mutex:qd_policy_amqp_open_connector
 
