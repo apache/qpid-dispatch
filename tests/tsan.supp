@@ -27,6 +27,7 @@ race:qdr_link_stalled_outbound
 
 # DISPATCH-2126
 race:qdr_delivery_mcast_inbound_update_CT
+race:qdr_delivery_anycast_update_CT
 
 # DISPATCH-2127
 race:qd_message_receive
@@ -67,28 +68,9 @@ race:notify_downstream
 # DISPATCH-2138
 race:qdr_link_inbound_detach_CT
 
-# OLD, possibly obsolete?
-#
-#mutex:qd_router_timer_handler
-#deadlock:qd_timer_schedule
-#deadlock:qd_timer_visit
-#race:qdr_connection_process
-#race:qdr_link_flow_CT
-#race:qdr_link_process_deliveries
-#race:qdr_link_first_attach
-#race:qdr_delivery_link_peers_CT
-#race:qdr_delivery_push_CT
-#race:qdr_delivery_disposition
-#race:qdr_delivery_anycast_update_CT
-#race:qdr_connection_set_context
-#race:qdr_connection_get_context
-#race:notify_downstream
-#race:notify_upstream
-#race:qdr_delivery_mcast_outbound_update_CT
-#race:qdr_delivery_mcast_outbound_settled_CT
-#race:qdr_delivery_mcast_outbound_disposition_CT
-#race:qd_message_receive_complete
-#mutex:qdr_forward_on_message
-#mutex:qd_policy_amqp_open
-#mutex:qd_policy_amqp_open_connector
+# DISPATCH-2140
+race:qdr_connection_set_context
+
+# DISPATCH-2141
+race:qdr_delivery_move_delivery_state_CT
 
