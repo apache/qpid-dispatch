@@ -215,9 +215,7 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
        }
        case QD_AMQP_TIMESTAMP: {
            char creation_time[100]; //string representation of creation time.
-           pn_timestamp_t creation_timestamp = 0;
-           uint64_t value = qd_parse_as_ulong(parsed_field);
-           memcpy(&creation_timestamp, &value, 8);
+           pn_timestamp_t creation_timestamp = qd_parse_as_ulong(parsed_field);
            if (creation_timestamp > 0) {
                format_time(creation_timestamp, "%Y-%m-%d %H:%M:%S.%%03lu %z", creation_time, 100);
                aprintf(begin, end, "\"%s\"", creation_time);
