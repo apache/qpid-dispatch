@@ -565,17 +565,21 @@ static bool copy_outgoing_buffs(qdr_tcp_connection_t *conn)
     } else {
         //copy small buffers into large one
         size_t used = conn->outgoing_buff_idx;
-        while (used < conn->outgoing_buff_count && ((conn->write_buffer.size + conn->outgoing_buffs[used].size) < conn->write_buffer.capacity)) {
+        while (used < conn->outgoing_buff_count && ((conn->write_buffer.size + conn->outgoing_buffs[used].size) <= conn->write_buffer.capacity)) {
             memcpy(conn->write_buffer.bytes + conn->write_buffer.size, conn->outgoing_buffs[used].bytes, conn->outgoing_buffs[used].size);
             conn->write_buffer.size += conn->outgoing_buffs[used].size;
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                    "[C%"PRIu64"] Copying buffer %i of %i with %i bytes (total=%i)", conn->conn_id, used+1, conn->outgoing_buff_count - conn->outgoing_buff_idx, conn->outgoing_buffs[used].size, conn->write_buffer.size);
             used++;
         }
-        conn->write_buffer.context = (uintptr_t) conn->previous_stream_data;
-        conn->previous_stream_data = 0;
 
         result = used == conn->outgoing_buff_count;
+
+        if (result) {
+            // set context only when stream data has just been consumed
+            conn->write_buffer.context = (uintptr_t) conn->previous_stream_data;
+            conn->previous_stream_data = 0;
+        }
 
         conn->outgoing_buff_idx   += used;
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
