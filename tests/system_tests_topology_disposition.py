@@ -17,22 +17,18 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-import unittest
 import os
+import sys
+import time
+import unittest
 from subprocess import PIPE, STDOUT
+
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from qpid_dispatch_internal.compat import UNICODE
 
-import time
-import sys
+from system_test import TestCase, Qdrouterd, main_module
 
 
 # ================================================
@@ -422,7 +418,7 @@ class TopologyDispositionTests (TestCase):
         files = []
         for router in [self.router_A, self.router_B, self.router_C, self.router_D]:
             files.append(router.logfile_path)
-        p = self.popen(['/usr/bin/env', '${PY_STRING}', scraper_path, '-f'] + files,
+        p = self.popen([sys.executable, scraper_path, '-f'] + files,
                        stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                        universal_newlines=True)
         out = p.communicate(None)[0]
@@ -438,7 +434,7 @@ class TopologyDispositionTests (TestCase):
         self.assertIn('</body>', out)
 
         # split A.log
-        p = self.popen(['/usr/bin/env', '${PY_STRING}', scraper_path, '--split', '-f', self.router_A.logfile_path],
+        p = self.popen([sys.executable, scraper_path, '--split', '-f', self.router_A.logfile_path],
                        stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                        universal_newlines=True)
         out = p.communicate(None)[0]

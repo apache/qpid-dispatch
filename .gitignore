@@ -7,11 +7,6 @@ install
 .pydevproject
 tests/system_test.dir/
 tests/policy-1/policy-*.json
-tests/authservice.py
-tests/failoverserver.py
-tests/system_tests_authz_service_plugin.py
-tests/system_tests_handle_failover.py
-tests/system_tests_topology_disposition.py
 tests/system_tests_http.py
 python/qpid_dispatch_internal/management/agent.py
 *.iml
@@ -21,8 +16,6 @@ python/qpid_dispatch_internal/management/agent.py
 .history/
 .tox
 .vscode
-tools/qdmanage
-tools/qdstat
 console/react/node_modules/
 console/react/build/
 console/react/coverage/
