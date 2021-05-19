@@ -170,28 +170,6 @@ jobs:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
     - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
-  - name: "qdrouterd:TSAN on arm64"
-    arch: arm64
-    os: linux
-    dist: focal
-    python:
-      - "3.9"
-    before_install:
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
-      - python -m pip install --user --upgrade pip
-      - python -m pip install --user --upgrade tox virtualenv==20.0.23
-      # Install quart to run the http2 tests.
-      - python -m pip install --user quart
-      # DISPATCH-1883: Install selectors to run tcp echo server/client tools
-      - python -m pip install --user selectors
-      # Install grpcio and protobuf to run the grpc tests.
-      - python -m pip install --user grpcio protobuf
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan -DDISPATCH_TEST_TIMEOUT=500'
-    - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on macOS)"
     os: osx
     osx_image: xcode11
