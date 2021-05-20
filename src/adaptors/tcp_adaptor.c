@@ -430,6 +430,8 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
         qd_timer_free(tc->activate_timer);
     }
     sys_mutex_free(tc->activation_lock);
+    free(tc->write_buffer.bytes);
+    free(tc->read_buffer.bytes);
     //proactor will free the socket
     free_qdr_tcp_connection_t(tc);
 }
@@ -477,7 +479,9 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         conn->qdr_conn = 0;
     }
     free(conn->write_buffer.bytes);
+    conn->write_buffer.bytes = 0;
     free(conn->read_buffer.bytes);
+    conn->read_buffer.bytes = 0;
 
     //need to free on core thread to avoid deleting while in use by management agent
     qdr_action_t *action = qdr_action(qdr_del_tcp_connection_CT, "delete_tcp_connection");
