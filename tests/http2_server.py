@@ -19,8 +19,16 @@
 import system_test
 import os
 from quart import Quart, request
-from quart.static import send_file
-from quart.exceptions import HTTPStatusException
+try:
+    from quart.static import send_file
+except ImportError:
+    from quart.helpers import send_file
+
+try:
+    from quart.exceptions import HTTPStatusException
+except ImportError:
+    from werkzeug.exceptions import InternalServerError as HTTPStatusException
+
 import json
 app = Quart(__name__)
 
