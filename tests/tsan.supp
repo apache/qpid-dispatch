@@ -78,6 +78,9 @@ race:qdr_delivery_move_delivery_state_CT
 # DISPATCH-2143
 race:qdr_delivery_mcast_outbound_disposition_CT
 
+# DISPATCH-2152
+race:^new_qdr_connection_info_t$
+
 #
 # External libraries
 #
@@ -86,4 +89,13 @@ race:qdr_delivery_mcast_outbound_disposition_CT
 # TBD: discuss with proton devs, JIRA if necessary
 deadlock:pni_timer_set
 
+# DISPATCH-2150, PROTON-2133
+race:^check_earmark_override$
+
+# DISPATCH-2153
+race:^pn_logger_reset_mask$
+race:^pni_logger_log$
+
+# DISPATCH-2151
+race:^_lws_logv.part.0$
 

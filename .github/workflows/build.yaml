@@ -244,6 +244,202 @@ jobs:
           path: |
             **/core
 
+  compile_and_test:
+    name: "Compile and Test (${{matrix.container}}, ${{matrix.runtimeCheck}}, shard ${{matrix.shard}} of ${{matrix.shards}})"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04]
+        container: ['library/fedora:34']
+        buildType: [RelWithDebInfo]
+        runtimeCheck: [asan, tsan]
+        shard: [ 1, 2 ]
+        shards: [ 2 ]
+        include:
+          - os: ubuntu-20.04
+            container: 'library/centos:7'
+            runtimeCheck: OFF
+            shard: 1
+            shards: 2
+          - os: ubuntu-20.04
+            container: 'library/centos:7'
+            runtimeCheck: OFF
+            shard: 2
+            shards: 2
+
+    container:
+      image: '${{ matrix.container }}'
+      volumes:
+        - ${{github.workspace}}:${{github.workspace}}
+
+    env:
+      BuildType: ${{matrix.buildType}}
+      ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
+      DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
+      InstallPrefix: ${{github.workspace}}/install
+      # TODO(DISPATCH-2078) re-enable system_tests_authz_service_plugin when the GHA failure is understood and fixed
+      DispatchCTestExtraArgs: "-E 'system_tests_authz_service_plugin|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'"
+
+      # TODO(DISPATCH-2144) use -DPython_EXECUTABLE=/usr/bin/python3-debug when issue is fixed,
+      #  as that allows for -DSANITIZE_3RD_PARTY=ON on Fedora
+      # TODO(https://github.com/google/sanitizers/issues/1385) some targeted asan suppressions don't work on Fedora
+      ProtonCMakeExtraArgs: >
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        -DBUILD_BINDINGS=python
+        -DPython_EXECUTABLE=/usr/bin/python3
+        -DBUILD_EXAMPLES=OFF
+        -DBUILD_TESTING=OFF
+        -DENABLE_FUZZ_TESTING=OFF
+        -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
+      DispatchCMakeExtraArgs: >
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        -DPython_EXECUTABLE=/usr/bin/python3
+        -DQD_ENABLE_ASSERTIONS=ON
+        -DCONSOLE_INSTALL=OFF
+        -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
+
+      CCACHE_BASEDIR: ${{github.workspace}}
+      CCACHE_DIR: ${{github.workspace}}/.ccache
+      CCACHE_COMPRESS: 'true'
+      CCACHE_MAXSIZE: '400MB'
+
+    steps:
+
+      - name: Show environment (Linux)
+        if: ${{ always() && runner.os == 'Linux' }}
+        run: env -0 | sort -z | tr '\0' '\n'
+
+      - uses: actions/checkout@v2
+        with:
+          repository: 'apache/qpid-proton'
+          ref: 'main'
+          path: 'qpid-proton'
+
+      - uses: actions/checkout@v2
+        with:
+          path: 'qpid-dispatch'
+
+      - name: Install EPEL (on CentOS 7)
+        if: ${{ matrix.container == 'library/centos:7' }}
+        run: |
+          yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
+      - name: Install Linux build dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          yum install -y gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain swig python3-devel make libwebsockets-devel ccache libasan libubsan libtsan
+
+      - name: Install Python build dependencies
+        run: python3 -m pip install setuptools wheel tox
+
+      # https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
+      - name: Prepare ccache timestamp
+        id: ccache_cache_timestamp
+        shell: cmake -P {0}
+        run: |
+          string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+          message("::set-output name=timestamp::${current_date}")
+
+      - uses: actions/cache@v2.1.5
+        env:
+          cache-name: cache-ccache
+        with:
+          path: .ccache
+          key: ${{ matrix.container }}-${{ matrix.runtimeCheck }}-${{ env.cache-name }}-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ matrix.container }}-${{ matrix.runtimeCheck }}-${{ env.cache-name }}
+
+      - name: Create Build and Install directories
+        run: mkdir -p "${ProtonBuildDir}" "${DispatchBuildDir}" "{InstallPrefix}"
+
+      - name: Zero ccache stats
+        run: ccache -z
+
+      - name: qpid-proton cmake configure
+        working-directory: ${{env.ProtonBuildDir}}
+        run: >
+          cmake "${{github.workspace}}/qpid-proton" \
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
+            "-DCMAKE_BUILD_TYPE=${BuildType}" \
+            ${ProtonCMakeExtraArgs}
+
+      - name: qpid-proton cmake build/install
+        run: cmake --build "${ProtonBuildDir}" --config ${BuildType} --target install
+
+      - name: Display ccache stats
+        run: ccache -s
+
+      - name: qpid-dispatch cmake configure
+        working-directory: ${{env.DispatchBuildDir}}
+        run: >
+          cmake "${{github.workspace}}/qpid-dispatch" \
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
+            "-DCMAKE_BUILD_TYPE=${BuildType}" \
+            "-DPYTHON_TEST_COMMAND='-m;pytest;-vs;--junit-prefix=pytest.\${py_test_module};--junit-xml=junitxmls/\${py_test_module}.xml;--pyargs;\${py_test_module}'" \
+            ${DispatchCMakeExtraArgs}
+
+      - name: qpid-dispatch cmake build/install
+        run: cmake --build "${DispatchBuildDir}" --config ${BuildType} --target install
+
+      - name: Display ccache stats
+        run: ccache -s
+
+      - name: Show environment (Linux)
+        if: ${{ always() && runner.os == 'Linux' }}
+        run: env -0 | sort -z | tr '\0' '\n'
+
+      - name: Install Python runtime/test dependencies
+        run: python3 -m pip install tox quart selectors protobuf pytest
+
+      - name: Install Python runtime/test dependencies (Fedora)
+        if: ${{ matrix.container == 'library/fedora:34' }}
+        run: python3 -m pip install grpcio
+
+      - name: Install Linux runtime/test dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          yum install -y curl
+
+      - name: Install Linux runtime/test dependencies (for sanitizers)
+        if: ${{ matrix.runtimeCheck != 'OFF' }}
+        run: |
+          dnf install -y binutils
+
+      - name: install qpid-proton python wheel
+        run: python3 -m pip install ${ProtonBuildDir}/python/pkgs/python_qpid_proton*.whl
+
+      - name: CTest
+        working-directory: ${{env.DispatchBuildDir}}
+        run: |
+          ulimit -c unlimited
+          ctest -C ${BuildType} -V -T Test --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2 ${{env.DispatchCTestExtraArgs}}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v2
+        if: ${{ ! cancelled() }}
+        with:
+          name: Test_Results_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          path: ${{env.DispatchBuildDir}}/Testing/**/*.xml
+
+      - name: Upload log files (if any tests failed)
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: testLogs_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          path: |
+            qpid-dispatch/build/tests
+
+      - name: Upload core files (if any)
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: cores_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          path: |
+            **/core
+
   docs:
     name: 'Docs (${{ matrix.os }})'
     runs-on: ${{ matrix.os }}

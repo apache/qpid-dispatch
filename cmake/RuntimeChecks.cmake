@@ -137,7 +137,8 @@ elseif(RUNTIME_CHECK STREQUAL "asan" OR RUNTIME_CHECK STREQUAL "hwasan")
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=${ASAN_VARIANTS} -DQD_MEMORY_DEBUG=1")
   # `detect_leaks=1` is set by default where it is available; better not to set it conditionally ourselves
   # https://github.com/openSUSE/systemd/blob/1270e56526cd5a3f485ae2aba975345c38860d37/docs/TESTING_WITH_SANITIZERS.md
-  set(RUNTIME_ASAN_ENV_OPTIONS "strict_string_checks=1 detect_stack_use_after_return=1 check_initialization_order=1 strict_init_order=1 detect_invalid_pointer_pairs=2 suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
+  # TODO(DISPATCH-2148) re-enable odr violation detection when Proton linking issue in test-sender is fixed
+  set(RUNTIME_ASAN_ENV_OPTIONS "detect_odr_violation=0 strict_string_checks=1 detect_stack_use_after_return=1 check_initialization_order=1 strict_init_order=1 detect_invalid_pointer_pairs=2 suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
   set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_BINARY_DIR}/tests/lsan.supp")
   set(RUNTIME_UBSAN_ENV_OPTIONS "print_stacktrace=1 print_summary=1")
 
