@@ -1685,8 +1685,13 @@ class LinkRouteProxyTest(TestCase):
         ts = AsyncTestSender(sender, address, count)
         ts.wait()  # wait until all sent
         for i in range(count):
-            tr.queue.get(timeout=TIMEOUT)
+            try:
+                tr.queue.get()
+            except AsyncTestReceiver.Empty:
+                return "Sender Stats=" + ts.get_msg_stats() + " Receiver Queue Stats=" + tr.get_queue_stats()
+
         tr.stop()
+        return None
 
     def test_01_immedate_detach_reattach(self):
         if self.skip['test_01'] :
@@ -1735,7 +1740,7 @@ class LinkRouteProxyTest(TestCase):
                              message=Message(body="HEY HO LET'S GO!"))
         tx.wait()
 
-        msg = rx.queue.get(timeout=TIMEOUT)
+        msg = rx.queue.get()
         self.assertTrue(msg.body == "HEY HO LET'S GO!")
         rx.stop()
         fs.join()
@@ -1847,10 +1852,11 @@ class LinkRouteProxyTest(TestCase):
                               attributes={'role': 'edge',
                                           'port': self.INTA_edge_port})
         self.INT_B.wait_address("Edge1/*", count=2)
-        self._test_traffic(self.INT_B.listener,
-                           self.INT_B.listener,
-                           "Edge1/One",
-                           count=5)
+        out = self._test_traffic(self.INT_B.listener,
+                                 self.INT_B.listener,
+                                 "Edge1/One",
+                                 count=5)
+        self.assertIsNone(out, out)
         fs.join()
         self.assertEqual(5, fs.in_count)
         self.assertEqual(5, fs.out_count)
@@ -1937,11 +1943,11 @@ class LinkRouteProxyTest(TestCase):
         fs = FakeService(self.EA1.route_container)
         self.INT_B.wait_address("CfgLinkRoute1", count=2)
 
-        self._test_traffic(self.INT_B.listener,
-                           self.INT_B.listener,
-                           "CfgLinkRoute1/hi",
-                           count=5)
-
+        out = self._test_traffic(self.INT_B.listener,
+                                 self.INT_B.listener,
+                                 "CfgLinkRoute1/hi",
+                                 count=5)
+        self.assertIsNone(out, out)
         fs.join()
         self.assertEqual(5, fs.in_count)
         self.assertEqual(5, fs.out_count)
@@ -1955,10 +1961,11 @@ class LinkRouteProxyTest(TestCase):
         fs = FakeService(self.EB1.route_container)
         self.INT_A.wait_address("*.cfg.pattern.#", count=2)
 
-        self._test_traffic(self.INT_A.listener,
-                           self.INT_A.listener,
-                           "MATCH.cfg.pattern",
-                           count=5)
+        out = self._test_traffic(self.INT_A.listener,
+                                 self.INT_A.listener,
+                                 "MATCH.cfg.pattern",
+                                 count=5)
+        self.assertIsNone(out, out)
 
         fs.join()
         self.assertEqual(5, fs.in_count)
@@ -1989,16 +1996,18 @@ class LinkRouteProxyTest(TestCase):
         self.assertEqual(2, len(self._get_address(self.INT_A, "Conn/*/One")))
 
         # between interiors
-        self._test_traffic(self.INT_B.listener,
-                           self.INT_A.listener,
-                           "Conn/BLAB/One",
-                           count=5)
+        out = self._test_traffic(self.INT_B.listener,
+                                 self.INT_A.listener,
+                                 "Conn/BLAB/One",
+                                 count=5)
+        self.assertIsNone(out, out)
 
         # edge to edge
-        self._test_traffic(self.EB1.listener,
-                           self.EA1.listener,
-                           "Conn/BLECH/One",
-                           count=5)
+        out = self._test_traffic(self.EB1.listener,
+                                 self.EA1.listener,
+                                 "Conn/BLECH/One",
+                                 count=5)
+        self.assertIsNone(out, out)
         fs.join()
         self.assertEqual(10, fs.in_count)
         self.assertEqual(10, fs.out_count)

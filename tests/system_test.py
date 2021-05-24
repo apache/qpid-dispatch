@@ -947,6 +947,20 @@ class AsyncTestReceiver(MessagingHandler):
     """
     Empty = Queue.Empty
 
+    class MyQueue(Queue.Queue):
+        def __init__(self, receiver):
+            self._async_receiver = receiver
+            super(AsyncTestReceiver.MyQueue, self).__init__()
+
+        def get(self, timeout=TIMEOUT):
+            self._async_receiver.num_queue_gets += 1
+            msg = super(AsyncTestReceiver.MyQueue, self).get(timeout=timeout)
+            return msg
+
+        def put(self, msg):
+            self._async_receiver.num_queue_puts += 1
+            super(AsyncTestReceiver.MyQueue, self).put(msg)
+
     def __init__(self, address, source, conn_args=None, container_id=None,
                  wait=True, recover_link=False, msg_args=None):
         if msg_args is None:
@@ -955,7 +969,7 @@ class AsyncTestReceiver(MessagingHandler):
         self.address = address
         self.source = source
         self.conn_args = conn_args
-        self.queue = Queue.Queue()
+        self.queue = AsyncTestReceiver.MyQueue(self)
         self._conn = None
         self._container = Container(self)
         cid = container_id or "ATR-%s:%s" % (source, uuid.uuid4())
@@ -967,8 +981,14 @@ class AsyncTestReceiver(MessagingHandler):
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
         self._thread.start()
+        self.num_queue_puts = 0
+        self.num_queue_gets = 0
         if wait and self._ready.wait(timeout=TIMEOUT) is False:
             raise Exception("Timed out waiting for receiver start")
+        self.queue_stats = "self.num_queue_puts=%d, self.num_queue_gets=%d"
+
+    def get_queue_stats(self):
+        return self.queue_stats % (self.num_queue_puts, self.num_queue_gets)
 
     def _main(self):
         self._container.timeout = 0.5
@@ -996,8 +1016,7 @@ class AsyncTestReceiver(MessagingHandler):
 
     def on_connection_opened(self, event):
         kwargs = {'source': self.source}
-        rcv = event.container.create_receiver(event.connection,
-                                              **kwargs)
+        event.container.create_receiver(event.connection, **kwargs)
 
     def on_link_opened(self, event):
         self._ready.set()
@@ -1059,12 +1078,16 @@ class AsyncTestSender(MessagingHandler):
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
         self._thread.start()
+        self.msg_stats = "self.sent=%d, self.accepted=%d, self.released=%d, self.modified=%d, self.rejected=%d"
 
     def _main(self):
         self._container.timeout = 0.5
         self._container.start()
         while self._container.process():
             self._check_if_done()
+
+    def get_msg_stats(self):
+        return self.msg_stats % (self.sent, self.accepted, self.released, self.modified, self.rejected)
 
     def wait(self):
         # don't stop it - wait until everything is sent
