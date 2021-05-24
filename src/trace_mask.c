@@ -43,7 +43,7 @@ struct qd_tracemask_t {
 qd_tracemask_t *qd_tracemask(void)
 {
     qd_tracemask_t *tm = NEW(qd_tracemask_t);
-    tm->lock               = sys_rwlock();
+    tm->lock               = sys_rwlock("TRACE_MASK");
     tm->hash               = qd_hash(8, 1, 0);
     tm->router_by_mask_bit = NEW_PTR_ARRAY(qdtm_router_t, qd_bitmask_width());
 

@@ -285,7 +285,7 @@ void qd_timer_cancel(qd_timer_t *timer)
 
 void qd_timer_initialize()
 {
-    lock = sys_mutex();
+    lock = sys_mutex("QD_TIMER");
     DEQ_INIT(scheduled_timers);
     time_base = 0;
 }

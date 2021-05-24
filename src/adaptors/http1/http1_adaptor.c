@@ -642,7 +642,7 @@ static void qd_http1_adaptor_init(qdr_core_t *core, void **adaptor_context)
     ZERO(adaptor);
     adaptor->core    = core;
     adaptor->log = qd_log_source(QD_HTTP_LOG_SOURCE);
-    adaptor->lock = sys_mutex();
+    adaptor->lock = sys_mutex("HTTP1_ADAPTOR");
     DEQ_INIT(adaptor->listeners);
     DEQ_INIT(adaptor->connectors);
     DEQ_INIT(adaptor->connections);

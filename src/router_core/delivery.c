@@ -1261,15 +1261,13 @@ bool qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *pe
         sys_mutex_lock(peer->dispo_lock);
 
         peer->disposition = dispo;
-        qd_delivery_state_t *old = peer->local_state;
+        if (peer->local_state) {
+            // old state not consumed by I/O thread?
+            qd_delivery_state_free(peer->local_state);
+        }
         peer->local_state = dstate;
 
         sys_mutex_unlock(peer->dispo_lock);
-
-        if (old) {
-            // old state not consumed by I/O thread?
-            qd_delivery_state_free(old);
-        }
     }
 
     return !!dispo;

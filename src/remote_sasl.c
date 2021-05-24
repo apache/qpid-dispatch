@@ -138,7 +138,7 @@ static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* h
     }
     instance->proactor = proactor;
     init_permissions(&instance->permissions);
-    instance->lock = sys_mutex();
+    instance->lock = sys_mutex("SASL_RELAY");
     return instance;
 }
 

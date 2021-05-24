@@ -570,7 +570,7 @@ qd_connection_t *qd_server_connection_impl(qd_server_t *server, qd_server_config
     assert(ctx);
     ZERO(ctx);
     ctx->pn_conn       = pn_connection();
-    ctx->deferred_call_lock = sys_mutex();
+    ctx->deferred_call_lock = sys_mutex("CONN_DEFERRED_CALL");
     ctx->role = strdup(config->role);
     if (!ctx->pn_conn || !ctx->deferred_call_lock || !ctx->role) {
         if (ctx->pn_conn) pn_connection_free(ctx->pn_conn);
@@ -1380,8 +1380,8 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->proactor         = pn_proactor();
     qd_server->container        = 0;
     qd_server->start_context    = 0;
-    qd_server->lock             = sys_mutex();
-    qd_server->conn_activation_lock = sys_mutex();
+    qd_server->lock             = sys_mutex("SERVER");
+    qd_server->conn_activation_lock = sys_mutex("CONN_ACTIVATION");
     qd_server->cond             = sys_cond();
     DEQ_INIT(qd_server->conn_list);
 
@@ -1711,7 +1711,7 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
     sys_atomic_init(&connector->ref_count, 1);
     DEQ_INIT(connector->conn_info_list);
 
-    connector->lock = sys_mutex();
+    connector->lock = sys_mutex("CONNECTOR");
     if (!connector->lock)
         goto error;
     connector->timer = qd_timer(server->qd, try_open_cb, connector);

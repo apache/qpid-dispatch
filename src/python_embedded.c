@@ -53,7 +53,11 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
 {
     log_source = qd_log_source("PYTHON");
     dispatch = qd;
-    ilock = sys_mutex();
+    // the python lock must be held for the entire time the thread is running
+    // the python interpreter. Since the python interpreter can call back into
+    // C code that takes other locks, no other locks can be held when taking
+    // the python lock.
+    ilock = sys_mutex("PYTHON");
     if (python_pkgdir)
         dispatch_python_pkgdir = PyUnicode_FromString(python_pkgdir);
 

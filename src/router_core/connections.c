@@ -108,7 +108,11 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
     DEQ_INIT(conn->work_list);
     DEQ_INIT(conn->streaming_link_pool);
     conn->connection_info->role = conn->role;
-    conn->work_lock = sys_mutex();
+    {
+        char mname[64];
+        snprintf(mname, sizeof(mname), "CONN_WORK-%"PRIu64, conn->identity);
+        conn->work_lock = sys_mutex(mname);
+    }
     conn->conn_uptime = core->uptime_ticks;
 
     if (vhost) {
