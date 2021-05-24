@@ -131,7 +131,7 @@ qdr_agent_t *qdr_agent(qdr_core_t *core)
     ZERO(agent);
 
     DEQ_INIT(agent->outgoing_query_list);
-    agent->query_lock  = sys_mutex();
+    agent->query_lock  = sys_mutex("QUERY_LOCK");
     agent->timer = qd_timer(core->qd, qdr_agent_response_handler, core);
     agent->log_source = qd_log_source("AGENT");
     return agent;

@@ -288,7 +288,7 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
         desc->global_pool = NEW(qd_alloc_pool_t);
         DEQ_ITEM_INIT(desc->global_pool);
         init_stack(&desc->global_pool->free_list);
-        desc->lock = sys_mutex();
+        desc->lock = sys_mutex(desc->type_name);
         DEQ_INIT(desc->tpool_list);
 #if QD_MEMORY_STATS
         desc->stats = NEW(qd_alloc_stats_t);
@@ -528,7 +528,7 @@ uint32_t qd_alloc_sequence(void *p)
 
 void qd_alloc_initialize(void)
 {
-    init_lock = sys_mutex();
+    init_lock = sys_mutex("ALLOC_INIT");
     DEQ_INIT(type_list);
 }
 

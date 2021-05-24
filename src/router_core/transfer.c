@@ -59,7 +59,9 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     dlv->delivery_id        = next_delivery_id();
     dlv->link_id            = link->identity;
     dlv->conn_id            = link->conn_id;
-    dlv->dispo_lock         = sys_mutex();
+    char name[64];
+    snprintf(name, sizeof(name), "delivery-%"PRIu32, dlv->delivery_id);
+    dlv->dispo_lock         = sys_mutex(name);
     qd_log(link->core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_link_deliver", DLV_ARGS(dlv));
 
     qdr_delivery_incref(dlv, "qdr_link_deliver - newly created delivery, add to action list");
@@ -95,7 +97,9 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->delivery_id        = next_delivery_id();
     dlv->link_id            = link->identity;
     dlv->conn_id            = link->conn_id;
-    dlv->dispo_lock         = sys_mutex();
+    char name[64];
+    snprintf(name, sizeof(name), "delivery-%"PRIu32, dlv->delivery_id);
+    dlv->dispo_lock         = sys_mutex(name);
     qd_log(link->core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_link_deliver_to", DLV_ARGS(dlv));
 
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - newly created delivery, add to action list");
@@ -126,7 +130,9 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     dlv->delivery_id        = next_delivery_id();
     dlv->link_id            = link->identity;
     dlv->conn_id            = link->conn_id;
-    dlv->dispo_lock         = sys_mutex();
+    char name[64];
+    snprintf(name, sizeof(name), "delivery-%"PRIu32, dlv->delivery_id);
+    dlv->dispo_lock         = sys_mutex(name);
     qd_log(link->core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_link_deliver_to_routed_link", DLV_ARGS(dlv));
 
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");

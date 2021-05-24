@@ -23,9 +23,13 @@
  * Portable threading and locking API.
  */
 
+#if !defined(NDEBUG)
+#define QD_THREAD_DEBUG 1
+#endif
+
 typedef struct sys_mutex_t sys_mutex_t;
 
-sys_mutex_t *sys_mutex(void);
+sys_mutex_t *sys_mutex(const char *name);
 void         sys_mutex_free(sys_mutex_t *mutex);
 void         sys_mutex_lock(sys_mutex_t *mutex);
 void         sys_mutex_unlock(sys_mutex_t *mutex);
@@ -42,7 +46,7 @@ void        sys_cond_signal_all(sys_cond_t *cond);
 
 typedef struct sys_rwlock_t sys_rwlock_t;
 
-sys_rwlock_t *sys_rwlock(void);
+sys_rwlock_t *sys_rwlock(const char *name);
 void          sys_rwlock_free(sys_rwlock_t *lock);
 void          sys_rwlock_wrlock(sys_rwlock_t *lock);
 void          sys_rwlock_rdlock(sys_rwlock_t *lock);

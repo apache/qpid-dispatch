@@ -936,7 +936,7 @@ static qdr_tcp_connection_t *qdr_tcp_connection_ingress(qd_tcp_listener_t* liste
 {
     qdr_tcp_connection_t* tc = new_qdr_tcp_connection_t();
     ZERO(tc);
-    tc->activation_lock = sys_mutex();
+    tc->activation_lock = sys_mutex("TCP_ACTIVATION");
     tc->ingress = true;
     tc->context.context = tc;
     tc->context.handler = &handle_connection_event;
@@ -1045,7 +1045,7 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_tcp_bridge_t *config, 
 {
     qdr_tcp_connection_t* tc = new_qdr_tcp_connection_t();
     ZERO(tc);
-    tc->activation_lock = sys_mutex();
+    tc->activation_lock = sys_mutex("TCP_ACTIVATION");
     if (initial_delivery) {
         tc->egress_dispatcher = false;
         tc->initial_delivery  = initial_delivery;

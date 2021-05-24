@@ -51,7 +51,7 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
 {
     log_source = qd_log_source("PYTHON");
     dispatch = qd;
-    ilock = sys_mutex();
+    ilock = sys_mutex("PYTHON");
     if (python_pkgdir)
         dispatch_python_pkgdir = PyUnicode_FromString(python_pkgdir);
 

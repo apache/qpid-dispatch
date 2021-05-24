@@ -92,12 +92,12 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     // Set up the threading support
     //
     core->action_cond = sys_cond();
-    core->action_lock = sys_mutex();
+    core->action_lock = sys_mutex("CORE_ACTION");
     core->running     = true;
     DEQ_INIT(core->action_list);
     DEQ_INIT(core->action_list_background);
 
-    core->work_lock = sys_mutex();
+    core->work_lock = sys_mutex("CORE_WORK");
     DEQ_INIT(core->work_list);
     core->work_timer = qd_timer(core->qd, qdr_general_handler, core);
 
@@ -105,7 +105,7 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     // Set up the unique identifier generator
     //
     core->next_identifier = 1;
-    core->id_lock = sys_mutex();
+    core->id_lock = sys_mutex("CORE_ID");
 
     //
     // Initialize the management agent

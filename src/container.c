@@ -767,7 +767,7 @@ qd_container_t *qd_container(qd_dispatch_t *qd)
     container->server        = qd->server;
     container->node_type_map = qd_hash(6,  4, 1);  // 64 buckets, item batches of 4
     container->node_map      = qd_hash(10, 32, 0); // 1K buckets, item batches of 32
-    container->lock          = sys_mutex();
+    container->lock          = sys_mutex("CONTAINER");
     container->default_node  = 0;
     DEQ_INIT(container->nodes);
     DEQ_INIT(container->node_type_list);

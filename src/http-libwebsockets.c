@@ -224,7 +224,7 @@ static void work_queue_destroy(work_queue_t *wq) {
 }
 
 static void work_queue_init(work_queue_t *wq) {
-    wq->lock = sys_mutex();
+    wq->lock = sys_mutex("LWS_WORK_QUEUE");
     wq->cond = sys_cond();
 }
 

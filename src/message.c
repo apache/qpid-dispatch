@@ -1002,7 +1002,7 @@ qd_message_t *qd_message()
     }
 
     ZERO(msg->content);
-    msg->content->lock = sys_mutex();
+    msg->content->lock = sys_mutex("MSG_CONTENT");
     sys_atomic_init(&msg->content->ref_count, 1);
     sys_atomic_init(&msg->content->aborted, 0);
     msg->content->parse_depth = QD_DEPTH_NONE;

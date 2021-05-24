@@ -154,7 +154,9 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     out_dlv->delivery_id = next_delivery_id();
     out_dlv->link_id     = out_link->identity;
     out_dlv->conn_id     = out_link->conn_id;
-    out_dlv->dispo_lock  = sys_mutex();
+    char name[64];
+    snprintf(name, sizeof(name), "delivery-%"PRIu32, out_dlv->delivery_id);
+    out_dlv->dispo_lock  = sys_mutex(name);
     qd_log(core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_forward_new_delivery_CT", DLV_ARGS(out_dlv));
 
     if (in_dlv) {

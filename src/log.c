@@ -512,7 +512,7 @@ void qd_log_initialize(void)
     for (level_index_t i = NONE + 1; i < N_LEVELS; ++i)
         aprintf(&begin, end, ", %s", levels[i].name);
 
-    log_source_lock = sys_mutex();
+    log_source_lock = sys_mutex("LOG");
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
     default_log_source->mask = levels[INFO].mask;

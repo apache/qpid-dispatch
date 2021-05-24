@@ -75,7 +75,7 @@ static struct event_t {
 
 static void test_setup()
 {
-    event.m = sys_mutex();
+    event.m = sys_mutex("TEST_EVENT");
     event.c = sys_cond();
 }
 
@@ -447,7 +447,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    ticker_lock = sys_mutex();
+    ticker_lock = sys_mutex("TEST_TICKER");
     
     sys_thread_t *ticker = sys_thread(ticker_thread, 0);
 
