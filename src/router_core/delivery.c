@@ -117,10 +117,10 @@ void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label)
 }
 
 
-void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted)
+void qdr_delivery_set_aborted(const qdr_delivery_t *delivery)
 {
     assert(delivery);
-    qd_message_set_aborted(delivery->msg, aborted);
+    qd_message_set_aborted(delivery->msg);
 }
 
 bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)

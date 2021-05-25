@@ -893,7 +893,7 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         }
 
         if (!qdr_delivery_receive_complete(dlv)) {
-            qdr_delivery_set_aborted(dlv, true);
+            qdr_delivery_set_aborted(dlv);
             qdr_delivery_continue_peers_CT(core, dlv, false);
         }
 
@@ -942,7 +942,7 @@ void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         DEQ_REMOVE_HEAD(settled);
 
         if (!qdr_delivery_receive_complete(dlv)) {
-            qdr_delivery_set_aborted(dlv, true);
+            qdr_delivery_set_aborted(dlv);
             qdr_delivery_continue_peers_CT(core, dlv, false);
         }
 
@@ -977,7 +977,7 @@ static void qdr_link_abort_undelivered_CT(qdr_core_t *core, qdr_link_t *link)
     qdr_delivery_t *dlv = DEQ_HEAD(link->undelivered);
     while (dlv) {
         if (!qdr_delivery_receive_complete(dlv))
-            qdr_delivery_set_aborted(dlv, true);
+            qdr_delivery_set_aborted(dlv);
         dlv = DEQ_NEXT(dlv);
     }
     sys_mutex_unlock(conn->work_lock);

@@ -101,7 +101,7 @@ void qdr_delivery_set_tag_sent(const qdr_delivery_t *delivery, bool tag_sent);
 uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery);
 void qdr_delivery_set_disposition(qdr_delivery_t *delivery, uint64_t disposition);
 
-void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted);
+void qdr_delivery_set_aborted(const qdr_delivery_t *delivery);
 bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery);
 
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
