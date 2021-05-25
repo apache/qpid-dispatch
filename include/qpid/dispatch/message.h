@@ -594,9 +594,8 @@ bool qd_message_aborted(const qd_message_t *msg);
 /**
  * Set the aborted flag on the message.
  * @param msg A pointer to the message
- * @param aborted
  */
-void qd_message_set_aborted(const qd_message_t *msg, bool aborted);
+void qd_message_set_aborted(const qd_message_t *msg);
 
 /**
  * Return message priority

@@ -714,7 +714,7 @@ static bool _process_request(_server_request_t *hreq)
         while (rmsg) {
             if (rmsg->dlv) {
                 qd_message_set_receive_complete(qdr_delivery_message(rmsg->dlv));
-                qdr_delivery_set_aborted(rmsg->dlv, true);
+                qdr_delivery_set_aborted(rmsg->dlv);
             }
             _server_response_msg_free(hreq, rmsg);
             rmsg = DEQ_HEAD(hreq->responses);

@@ -2892,12 +2892,12 @@ bool qd_message_aborted(const qd_message_t *msg)
     return ((qd_message_pvt_t *)msg)->content->aborted;
 }
 
-void qd_message_set_aborted(const qd_message_t *msg, bool aborted)
+void qd_message_set_aborted(const qd_message_t *msg)
 {
     if (!msg)
         return;
     qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
-    msg_pvt->content->aborted = aborted;
+    msg_pvt->content->aborted = true;
 }
 
 
