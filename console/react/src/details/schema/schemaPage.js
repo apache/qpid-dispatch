@@ -58,9 +58,6 @@ class SchemaPage extends React.Component {
     const child = { name: entity, id: `ID.${this.nextId++}` };
     const keys = Object.keys(schema[entity]);
     keys.forEach(key => {
-      console.log(
-        `processing schema[${entity}][${key}] which is type ${typeof schema[entity][key]}`
-      );
       const isArray = Array.isArray(schema[entity][key]);
       if (typeof schema[entity][key] === "object" && !isArray) {
         if (!child.children) {
