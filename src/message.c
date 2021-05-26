@@ -46,8 +46,8 @@
 #define UNLOCK sys_mutex_unlock
 
 // Implement bool flags with atomic variables
-#define SET_FLAG(flag)  sys_atomic_set(flag, 1)
-#define  IS_FLAG(flag) (sys_atomic_get(flag) == 1)
+#define    SET_FLAG(flag)  sys_atomic_set(flag, 1)
+#define IS_FLAG_SET(flag) (sys_atomic_get(flag) == 1)
 
 const char *STR_AMQP_NULL = "null";
 const char *STR_AMQP_TRUE = "T";
@@ -1773,7 +1773,7 @@ void qd_message_send(qd_message_t *in_msg,
 
     if (msg->sent_depth < QD_DEPTH_MESSAGE_ANNOTATIONS) {
 
-        if (IS_FLAG(&content->aborted)) {
+        if (IS_FLAG_SET(&content->aborted)) {
             // Message is aborted before any part of it has been sent.
             // Declare the message to be sent,
             msg->send_complete = true;
@@ -1880,7 +1880,7 @@ void qd_message_send(qd_message_t *in_msg,
     pn_session_t              *pns        = pn_link_session(pnl);
     const size_t               q3_upper   = BUFFER_SIZE * QD_QLIMIT_Q3_UPPER;
 
-    while (!IS_FLAG(&content->aborted)
+    while (!IS_FLAG_SET(&content->aborted)
            && buf
            && pn_session_outgoing_bytes(pns) < q3_upper) {
 
@@ -1979,7 +1979,7 @@ void qd_message_send(qd_message_t *in_msg,
     if (q2_unblock.handler)
         q2_unblock.handler(q2_unblock.context);
 
-    if (IS_FLAG(&content->aborted)) {
+    if (IS_FLAG_SET(&content->aborted)) {
         if (pn_link_current(pnl)) {
             msg->send_complete = true;
             if (!pn_delivery_aborted(pn_link_current(pnl))) {
@@ -2900,7 +2900,7 @@ bool qd_message_aborted(const qd_message_t *msg)
 {
     assert(msg);
     qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
-    return IS_FLAG(&msg_pvt->content->aborted);
+    return IS_FLAG_SET(&msg_pvt->content->aborted);
 }
 
 void qd_message_set_aborted(const qd_message_t *msg)
