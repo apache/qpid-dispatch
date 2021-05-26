@@ -743,7 +743,7 @@ class Qdrouterd(Process):
         try:
             self.management.read(identity="router.node/%s" % router_id)
             # TODO aconway 2015-01-29: The above check should be enough, we
-            # should not advertise a remote router in managment till it is fully
+            # should not advertise a remote router in management till it is fully
             # connected. However we still get a race where the router is not
             # actually ready for traffic. Investigate.
             # Meantime the following actually tests send-thru to the router.
