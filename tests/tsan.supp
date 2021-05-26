@@ -58,9 +58,6 @@ race:tsan_reset_delivery_ids
 # DISPATCH-2135
 race:qd_message_Q2_holdoff_disable
 
-# DISPATCH-2136
-race:qd_message_set_aborted
-
 # DISPATCH-2137
 race:remote_sasl_process_init
 race:remote_sasl_prepare

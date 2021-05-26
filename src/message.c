@@ -1004,6 +1004,7 @@ qd_message_t *qd_message()
     ZERO(msg->content);
     msg->content->lock = sys_mutex();
     sys_atomic_init(&msg->content->ref_count, 1);
+    sys_atomic_init(&msg->content->aborted, 0);
     msg->content->parse_depth = QD_DEPTH_NONE;
     return (qd_message_t*) msg;
 }
@@ -1083,6 +1084,7 @@ void qd_message_free(qd_message_t *in_msg)
             qd_buffer_free(content->pending);
 
         sys_mutex_free(content->lock);
+        sys_atomic_destroy(&content->aborted);
         free_qd_message_content_t(content);
     }
 
@@ -2889,7 +2891,9 @@ bool qd_message_is_Q2_blocked(const qd_message_t *msg)
 
 bool qd_message_aborted(const qd_message_t *msg)
 {
-    return ((qd_message_pvt_t *)msg)->content->aborted;
+    assert(msg);
+    qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
+    return sys_atomic_get(&msg_pvt->content->aborted) > 0;
 }
 
 void qd_message_set_aborted(const qd_message_t *msg)
@@ -2897,7 +2901,7 @@ void qd_message_set_aborted(const qd_message_t *msg)
     if (!msg)
         return;
     qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
-    msg_pvt->content->aborted = true;
+    sys_atomic_set(&msg_pvt->content->aborted, 1);
 }
 
 
