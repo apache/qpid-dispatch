@@ -15,6 +15,7 @@ deadlock:push_event
 race:qd_vlog_impl
 
 # DISPATCH-2122
+race:^qd_alloc$
 race:qd_alloc_init
 
 # DISPATCH-2123
@@ -78,6 +79,9 @@ race:qdr_delivery_move_delivery_state_CT
 # DISPATCH-2143
 race:qdr_delivery_mcast_outbound_disposition_CT
 
+# DISPATCH-2157
+race:^qd_message_send$
+
 #
 # External libraries
 #
@@ -86,4 +90,18 @@ race:qdr_delivery_mcast_outbound_disposition_CT
 # TBD: discuss with proton devs, JIRA if necessary
 deadlock:pni_timer_set
 
+# DISPATCH-2150, PROTON-2133
+race:^check_earmark_override$
 
+# DISPATCH-2153
+race:^pn_logger_reset_mask$
+race:^pni_logger_log$
+
+# DISPATCH-2151
+race:^_lws_logv.part.0$
+
+# DISPATCH-2155
+race:^qd_connection_manager_delete_listener$
+
+# DISPATCH-2156
+race:^pconnection_final_free$
