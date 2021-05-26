@@ -79,7 +79,7 @@ race:qdr_delivery_move_delivery_state_CT
 race:qdr_delivery_mcast_outbound_disposition_CT
 
 # DISPATCH-2152
-race:^new_qdr_connection_info_t$
+race:^qd_alloc$
 
 #
 # External libraries
