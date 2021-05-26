@@ -99,3 +99,8 @@ race:^pni_logger_log$
 # DISPATCH-2151
 race:^_lws_logv.part.0$
 
+# DISPATCH-2155
+race:^qd_connection_manager_delete_listener$
+
+# DISPATCH-2156
+race:^pconnection_final_free$
