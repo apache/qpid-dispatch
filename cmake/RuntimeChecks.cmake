@@ -150,7 +150,7 @@ elseif(RUNTIME_CHECK STREQUAL "tsan")
   endif(TSAN_LIBRARY-NOTFOUND)
   message(STATUS "Runtime race checker: gcc/clang thread sanitizer")
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=thread")
-  set(RUNTIME_TSAN_ENV_OPTIONS "second_deadlock_stack=1 suppressions=${CMAKE_SOURCE_DIR}/tests/tsan.supp")
+  set(RUNTIME_TSAN_ENV_OPTIONS "history_size=4 second_deadlock_stack=1 suppressions=${CMAKE_SOURCE_DIR}/tests/tsan.supp")
 
 elseif(RUNTIME_CHECK)
   message(FATAL_ERROR "'RUNTIME_CHECK=${RUNTIME_CHECK}' is invalid, valid values: ${runtime_checks}")
