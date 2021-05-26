@@ -15,6 +15,7 @@ deadlock:push_event
 race:qd_vlog_impl
 
 # DISPATCH-2122
+race:^qd_alloc$
 race:qd_alloc_init
 
 # DISPATCH-2123
@@ -78,8 +79,6 @@ race:qdr_delivery_move_delivery_state_CT
 # DISPATCH-2143
 race:qdr_delivery_mcast_outbound_disposition_CT
 
-# DISPATCH-2152
-race:^qd_alloc$
 
 #
 # External libraries
