@@ -251,7 +251,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04]
-        container: ['library/fedora']
+        container: ['fedora']
         containerTag: ['34']
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan, tsan]
@@ -259,20 +259,20 @@ jobs:
         shards: [ 2 ]
         include:
           - os: ubuntu-20.04
-            container: 'library/centos'
+            container: 'centos'
             containerTag: 7
             runtimeCheck: OFF
             shard: 1
             shards: 2
           - os: ubuntu-20.04
-            container: 'library/centos'
+            container: 'centos'
             containerTag: 7
             runtimeCheck: OFF
             shard: 2
             shards: 2
 
     container:
-      image: '${{ matrix.container }}:${{ matrix.containerTag }}'
+      image: 'library/${{ matrix.container }}:${{ matrix.containerTag }}'
       volumes:
         - ${{github.workspace}}:${{github.workspace}}
 
@@ -326,7 +326,7 @@ jobs:
           path: 'qpid-dispatch'
 
       - name: Install EPEL (on CentOS 7)
-        if: ${{ matrix.container == 'library/centos' }}
+        if: ${{ matrix.container == 'centos' }}
         run: |
           yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
@@ -398,7 +398,7 @@ jobs:
         run: python3 -m pip install tox quart selectors protobuf pytest
 
       - name: Install Python runtime/test dependencies (Fedora)
-        if: ${{ matrix.container == 'library/fedora' }}
+        if: ${{ matrix.container == 'fedora' }}
         run: python3 -m pip install grpcio
 
       - name: Install Linux runtime/test dependencies
