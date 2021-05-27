@@ -76,20 +76,19 @@ if (ASCIIDOC_EXE)
   file (GLOB_RECURSE adoc_files *.adoc)
   foreach (source ${src}/qdmanage.8 ${src}/qdrouterd.8 ${src}/qdstat.8 ${bin}/qdrouterd.conf.5)
     get_filename_component (name ${source} NAME)
-    get_filename_component (dir ${source} PATH)
     string(FIND ${name} "." dot)
     if (dot GREATER 0)
       string (LENGTH ${name} length)
       math (EXPR desired_length "${length}-2")
       string (SUBSTRING ${name} "0" ${desired_length} name)
     endif ()
-    set (output ${bin}/${dir}/${name}.html)
+    set (output ${bin}/${name}.html)
     add_custom_command (
       OUTPUT ${output} ${output}.in
       # Pretty .html for direct viewing.
       COMMAND ${ASCIIDOC_EXE} ${ADOC_FLAGS} -o ${output} ${source}.adoc
       # Raw .html.in body for inclusion in Qpid website.
-      COMMAND  ${ASCIIDOC_EXE} ${ADOC_FLAGS} -s -o ${output}.in ${source}.adoc
+      COMMAND ${ASCIIDOC_EXE} ${ADOC_FLAGS} -s -o ${output}.in ${source}.adoc
       DEPENDS ${source}.adoc ${generated_txt} ${adoc_files} ${bin}/asciidoc.conf
       WORKING_DIRECTORY ${bin}
       )
@@ -101,7 +100,6 @@ if (ASCIIDOC_EXE)
     # Generate man pages.
     foreach (source ${src}/qdmanage.8 ${src}/qdrouterd.8 ${src}/qdstat.8 ${bin}/qdrouterd.conf.5)
       get_filename_component (name ${source} NAME)
-      get_filename_component (dir ${source} PATH)
       string(REGEX REPLACE ".*\\.([0-9])$" "\\1" section ${source}) # Man section number
       set (output ${bin}/${name})
       add_custom_command (
