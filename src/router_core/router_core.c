@@ -167,6 +167,19 @@ void qdr_core_free(qdr_core_t *core)
         qdr_core_delete_link_route(core, link_route);
     }
 
+    //
+    // The connection based link routes need to be removed before we call
+    // qdr_core_remove_address(addr) on all core->addrs
+    //
+    qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
+    while (conn) {
+        while ((link_route = DEQ_HEAD(conn->conn_link_routes))) {
+            DEQ_REMOVE_HEAD(conn->conn_link_routes);
+            qdr_core_delete_link_route(core, link_route);
+        }
+        conn = DEQ_NEXT(conn);
+    }
+
     qdr_auto_link_t *auto_link = 0;
     while ( (auto_link = DEQ_HEAD(core->auto_links))) {
         DEQ_REMOVE_HEAD(core->auto_links);
@@ -277,14 +290,9 @@ void qdr_core_free(qdr_core_t *core)
         cleanup = DEQ_HEAD(core->delivery_cleanup_list);
     }
 
-    qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
+    conn = DEQ_HEAD(core->open_connections);
     while (conn) {
         DEQ_REMOVE_HEAD(core->open_connections);
-
-        while ( (link_route = DEQ_HEAD(conn->conn_link_routes))) {
-            DEQ_REMOVE_HEAD(conn->conn_link_routes);
-            qdr_core_delete_link_route(core, link_route);
-        }
 
         if (conn->conn_id) {
             qdr_del_connection_ref(&conn->conn_id->connection_refs, conn);
