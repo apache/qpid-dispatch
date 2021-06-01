@@ -192,6 +192,12 @@ struct qd_log_source_t {
     bool syslog;
     log_sink_t *sink;
     uint64_t severity_histogram[N_LEVEL_INDICES];
+    // If this structure is returned to you by qd_log_source_lh(), then check
+    // this flag. If it is true, the caller must add this struct to the
+    // qd_entity_cache with this call:
+    //     qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
+    // ...but only after dropping the log_source_lock.
+    bool add_me;
 };
 
 DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
@@ -355,6 +361,7 @@ static void qd_log_source_defaults(qd_log_source_t *log_source) {
     log_source->includeTimestamp = -1;
     log_source->includeSource = -1;
     log_source->sink = 0;
+    log_source->add_me = false;
     memset ( log_source->severity_histogram, 0, sizeof(uint64_t) * (N_LEVEL_INDICES) );
 }
 
@@ -362,15 +369,27 @@ static void qd_log_source_defaults(qd_log_source_t *log_source) {
 static qd_log_source_t *qd_log_source_lh(const char *module)
 {
     qd_log_source_t *log_source = lookup_log_source_lh(module);
-    if (!log_source)
-    {
+    if (! log_source) {
         log_source = NEW(qd_log_source_t);
         ZERO(log_source);
         log_source->module = (char*) malloc(strlen(module) + 1);
         strcpy(log_source->module, module);
         qd_log_source_defaults(log_source);
         DEQ_INSERT_TAIL(source_list, log_source);
-        qd_entity_cache_add(QD_LOG_STATS_TYPE, log_source);
+        // DISPATCH-1956 Note:
+        // If we add this new entity while holding the log lock.
+        // it has the effect of taking the event lock in entity_cache.c --
+        // which causes a potential lock order inversion -- because there
+        // is another code pathway that takes thes two locks in the opposite order.
+        // It seems weird to take that entity lock while holding a mere log lock --
+        // so I am breaking this pathway.
+        // To do that, I add a new field to qd_log_source_t -- a bool that tells
+        // the caller whether it should add the returned log_source structure
+        // to the qd_entity_cache.
+        // If so, the caller should do it with this call:
+        //   qd_entity_cache_add(QD_LOG_STATS_TYPE, log_source);
+        // but only after dropping the log lock.
+        log_source->add_me = true;
     }
     return log_source;
 }
@@ -379,7 +398,14 @@ qd_log_source_t *qd_log_source(const char *module)
 {
     sys_mutex_lock(log_source_lock);
     qd_log_source_t* src = qd_log_source_lh(module);
+    // Note to Mick: Mick! Please don't access log_source fields
+    // outside of the log_source lock. That's why there's a lock, you know.
+    bool add_me = src->add_me;
+    src->add_me = false;  // Reset flag so this src don't get added twice.
     sys_mutex_unlock(log_source_lock);
+    if(add_me) {
+        qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
+    }
     return src;
 }
 
@@ -518,6 +544,7 @@ void qd_log_initialize(void)
     default_log_source->includeTimestamp = true;
     default_log_source->includeSource = 0;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
+    default_log_source->add_me = false;
 }
 
 
@@ -603,7 +630,12 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             log_sink_t* sink = log_sink_lh(outputFile);
             if (!sink) {
                 error_in_output = true;
+                bool add_me = src->add_me;
+                src->add_me = false;
                 sys_mutex_unlock(log_source_lock);
+                if(add_me) {
+                    qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
+                }
                 break;
             }
 
@@ -627,7 +659,12 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
 
             if (mask < -1) {
                 error_in_enable = true;
+                bool add_me = src->add_me;
+                src->add_me = false;
                 sys_mutex_unlock(log_source_lock);
+                if(add_me) {
+                    qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
+                }
                 break;
             }
             else {
@@ -648,8 +685,12 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             src->includeSource = include_source;
         }
 
+        bool add_me = src->add_me;
+        src->add_me = false;
         sys_mutex_unlock(log_source_lock);
-
+        if(add_me) {
+            qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
+        }
     } while(0);
 
     if (error_in_output) {
