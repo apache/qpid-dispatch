@@ -197,7 +197,7 @@ struct qd_log_source_t {
     // qd_entity_cache with this call:
     //     qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
     // ...but only after dropping the log_source_lock.
-    bool add_me;
+    bool add_log_stats;
 };
 
 DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
@@ -361,7 +361,7 @@ static void qd_log_source_defaults(qd_log_source_t *log_source) {
     log_source->includeTimestamp = -1;
     log_source->includeSource = -1;
     log_source->sink = 0;
-    log_source->add_me = false;
+    log_source->add_log_stats = false;
     memset ( log_source->severity_histogram, 0, sizeof(uint64_t) * (N_LEVEL_INDICES) );
 }
 
@@ -389,7 +389,7 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
         // If so, the caller should do it with this call:
         //   qd_entity_cache_add(QD_LOG_STATS_TYPE, log_source);
         // but only after dropping the log lock.
-        log_source->add_me = true;
+        log_source->add_log_stats = true;
     }
     return log_source;
 }
@@ -400,10 +400,10 @@ qd_log_source_t *qd_log_source(const char *module)
     qd_log_source_t* src = qd_log_source_lh(module);
     // Note to Mick: Mick! Please don't access log_source fields
     // outside of the log_source lock. That's why there's a lock, you know.
-    bool add_me = src->add_me;
-    src->add_me = false;  // Reset flag so this src don't get added twice.
+    bool add_log_stats = src->add_log_stats;
+    src->add_log_stats = false;  // Reset flag so this src don't get added twice.
     sys_mutex_unlock(log_source_lock);
-    if(add_me) {
+    if(add_log_stats) {
         qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
     }
     return src;
@@ -544,7 +544,7 @@ void qd_log_initialize(void)
     default_log_source->includeTimestamp = true;
     default_log_source->includeSource = 0;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
-    default_log_source->add_me = false;
+    default_log_source->add_log_stats = false;
 }
 
 
@@ -630,10 +630,10 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             log_sink_t* sink = log_sink_lh(outputFile);
             if (!sink) {
                 error_in_output = true;
-                bool add_me = src->add_me;
-                src->add_me = false;
+                bool add_log_stats = src->add_log_stats;
+                src->add_log_stats = false;
                 sys_mutex_unlock(log_source_lock);
-                if(add_me) {
+                if(add_log_stats) {
                     qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
                 }
                 break;
@@ -659,10 +659,10 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
 
             if (mask < -1) {
                 error_in_enable = true;
-                bool add_me = src->add_me;
-                src->add_me = false;
+                bool add_log_stats = src->add_log_stats;
+                src->add_log_stats = false;
                 sys_mutex_unlock(log_source_lock);
-                if(add_me) {
+                if(add_log_stats) {
                     qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
                 }
                 break;
@@ -685,10 +685,10 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             src->includeSource = include_source;
         }
 
-        bool add_me = src->add_me;
-        src->add_me = false;
+        bool add_log_stats = src->add_log_stats;
+        src->add_log_stats = false;
         sys_mutex_unlock(log_source_lock);
-        if(add_me) {
+        if(add_log_stats) {
             qd_entity_cache_add(QD_LOG_STATS_TYPE, src);
         }
     } while(0);
