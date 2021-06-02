@@ -182,7 +182,7 @@ jobs:
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
       # TODO(DISPATCH-2078) re-enable system_tests_authz_service_plugin when the GHA failure is understood and fixed
-      DispatchCTestExtraArgs: "-E 'system_tests_authz_service_plugin|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'"
+      DispatchCTestExtraArgs: "-E 'system_tests_authz_service_plugin'"
       LD_LIBRARY_PATH: ${{github.workspace}}/install/lib
     steps:
 
@@ -282,7 +282,7 @@ jobs:
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
       # TODO(DISPATCH-2078) re-enable system_tests_authz_service_plugin when the GHA failure is understood and fixed
-      DispatchCTestExtraArgs: "-E 'system_tests_authz_service_plugin|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'"
+      DispatchCTestExtraArgs: "-E 'system_tests_authz_service_plugin'"
 
       # TODO(DISPATCH-2144) use -DPython_EXECUTABLE=/usr/bin/python3-debug when issue is fixed,
       #  as that allows for -DSANITIZE_3RD_PARTY=ON on Fedora
