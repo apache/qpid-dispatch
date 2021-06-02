@@ -52,7 +52,6 @@ jobs:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=Debug
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
-    - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
   - name: "qdrouterd:Coverage"
     os: linux
     env:
@@ -64,7 +63,6 @@ jobs:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0 BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
-    - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     os: linux
     dist: focal
@@ -92,7 +90,6 @@ jobs:
     - CXX=clang++-12
     - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
-    - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on focal)"
     arch: s390x
     os: linux
@@ -117,7 +114,6 @@ jobs:
       - QPID_SYSTEM_TEST_TIMEOUT=300
       - PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
       - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
-      - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal) on arm64"
     arch: arm64
     os: linux
@@ -145,7 +141,6 @@ jobs:
       - CXX=clang++-11
       - PROTON_VERSION=main BUILD_TYPE=RelWithDebInfo
       - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
-      - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
   - name: "qdrouterd:Default Build"
     os: linux
     env:
@@ -169,7 +164,6 @@ jobs:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
-    - DISPATCH_CTEST_EXTRA='-E system_tests_http1_adaptor|system_tests_http2|system_tests_grpc'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on macOS)"
     os: osx
     osx_image: xcode11
