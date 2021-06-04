@@ -47,6 +47,7 @@ from http1_tests import ThreadedTestClient, Http1OneRouterTestBase
 from http1_tests import CommonHttp1OneRouterTest
 from http1_tests import CommonHttp1Edge2EdgeTest
 from http1_tests import Http1Edge2EdgeTestBase
+from http1_tests import Http1ClientCloseTestsMixIn
 
 
 class Http1AdaptorManagementTest(TestCase):
@@ -254,7 +255,9 @@ class Http1AdaptorOneRouterTest(Http1OneRouterTestBase,
             assert_approximately_equal(stats[1].get('bytesIn'), 8830)
 
 
-class Http1AdaptorEdge2EdgeTest(Http1Edge2EdgeTestBase, CommonHttp1Edge2EdgeTest):
+class Http1AdaptorEdge2EdgeTest(Http1Edge2EdgeTestBase,
+                                CommonHttp1Edge2EdgeTest,
+                                Http1ClientCloseTestsMixIn):
     """
     Test an HTTP servers and clients attached to edge routers separated by an
     interior router
@@ -313,6 +316,21 @@ class Http1AdaptorEdge2EdgeTest(Http1Edge2EdgeTestBase, CommonHttp1Edge2EdgeTest
         cls.INT_A.wait_address('EA1')
         cls.INT_A.wait_address('EA2')
 
+    def test_1001_client_request_close(self):
+        """
+        Simulate an HTTP client drop while sending a very large PUT
+        """
+        self.client_request_close_test(self.http_server11_port,
+                                       self.http_listener11_port,
+                                       self.EA2.management)
+
+    def test_1002_client_response_close(self):
+        """
+        Simulate an HTTP client drop while server sends very large response
+        """
+        self.client_response_close_test(self.http_server11_port,
+                                        self.http_listener11_port)
+
 
 class FakeHttpServerBase(object):
     """
@@ -353,7 +371,8 @@ class FakeHttpServerBase(object):
         sleep(0.5)  # fudge factor allow socket close to complete
 
 
-class Http1AdaptorBadEndpointsTest(TestCase):
+class Http1AdaptorBadEndpointsTest(TestCase,
+                                   Http1ClientCloseTestsMixIn):
     """
     Subject the router to mis-behaving HTTP endpoints.
     """
@@ -498,7 +517,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
 
         body_filler = "?" * 1024 * 300  # Q2
 
-        # fake server
+        # fake server - just to create a sink for the "fakeServer" address
         rx = AsyncTestReceiver(self.INT_A.listener,
                                source="fakeServer")
 
@@ -573,6 +592,21 @@ class Http1AdaptorBadEndpointsTest(TestCase):
                                   self.http_listener_port)
         self.assertIsNone(error)
         self.assertEqual(1, count)
+
+    def test_04_client_request_close(self):
+        """
+        Simulate an HTTP client drop while sending a very large PUT
+        """
+        self.client_request_close_test(self.http_server_port,
+                                       self.http_listener_port,
+                                       self.INT_A.management)
+
+    def test_05_client_response_close(self):
+        """
+        Simulate an HTTP client drop while server sends very large response
+        """
+        self.client_response_close_test(self.http_server_port,
+                                        self.http_listener_port)
 
 
 class Http1AdaptorQ2Standalone(TestCase):

@@ -143,7 +143,8 @@ void qdr_http1_out_data_fifo_cleanup(qdr_http1_out_data_fifo_t *out_data)
 {
     if (out_data) {
         // expect: all buffers returned from proton!
-        assert(qdr_http1_out_data_buffers_outstanding(out_data) == 0);
+        // FIXME: not during router shutdown!
+        // assert(qdr_http1_out_data_buffers_outstanding(out_data) == 0);
         qdr_http1_out_data_t *od = DEQ_HEAD(out_data->fifo);
         while (od) {
             DEQ_REMOVE_HEAD(out_data->fifo);
@@ -586,8 +587,8 @@ static uint64_t _core_link_deliver(void *context, qdr_link_t *link, qdr_delivery
 
     if (hconn) {
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-               "[C%"PRIu64"][L%"PRIu64"] Core link deliver %p %s", hconn->conn_id, link->identity,
-               (void*)delivery, settled ? "settled" : "unsettled");
+               DLV_FMT" Core link deliver (%s)", DLV_ARGS(delivery),
+               settled ? "settled" : "unsettled");
 
         if (hconn->type == HTTP1_CONN_SERVER)
             outcome = qdr_http1_server_core_link_deliver(qdr_http1_adaptor, hconn, link, delivery, settled);
@@ -619,10 +620,9 @@ static void _core_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t d
     qdr_http1_request_base_t *hreq = (qdr_http1_request_base_t*) qdr_delivery_get_context(dlv);
     if (hreq) {
         qdr_http1_connection_t *hconn = hreq->hconn;
-        qdr_link_t *link = qdr_delivery_link(dlv);
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-               "[C%"PRIu64"][L%"PRIu64"] Core Delivery update disp=0x%"PRIx64" %s",
-               hconn->conn_id, link->identity, disp,
+               DLV_FMT" core delivery update disp=0x%"PRIx64" %s",
+               DLV_ARGS(dlv), disp,
                settled ? "settled" : "unsettled");
 
         if (hconn->type == HTTP1_CONN_SERVER)

@@ -1200,3 +1200,159 @@ class Http1Edge2EdgeTestBase(TestCase):
         cls.http_listener11_port = cls.tester.get_port()
         cls.http_server10_port = cls.tester.get_port()
         cls.http_listener10_port = cls.tester.get_port()
+
+
+class Http1ClientCloseTestsMixIn(object):
+    """
+    Generic test functions for simulating HTTP/1.x client connection drops.
+    """
+    def client_request_close_test(self, server_port, client_port, server_mgmt):
+        """
+        Simulate an HTTP client drop while sending a very large PUT request
+        """
+        PING = {
+            "GET": [
+                (RequestMsg("GET", "/GET/test_04_client_request_close/ping",
+                            headers={"Content-Length": "0"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={
+                                 "Content-Length": "19",
+                                 "Content-Type": "text/plain;charset=utf-8",
+                             },
+                             body=b'END OF TRANSMISSION'),
+                 ResponseValidator(status=200)
+                 )]
+        }
+
+        TESTS = {
+            "PUT": [
+                (RequestMsg("PUT", "/PUT/test_04_client_request_close",
+                            headers={
+                                "Content-Length": "100000",
+                                "Content-Type": "text/plain;charset=utf-8"
+                            },
+                            body=b'4' * (100000 - 19) + b'END OF TRANSMISSION'),
+                 ResponseMsg(201, reason="Created",
+                             headers={"Test-Header": "/PUT/test_04_client_request_close",
+                                      "Content-Length": "0"}),
+                 ResponseValidator(status=201)
+                 )]
+        }
+        TESTS.update(PING)
+
+        server = TestServer(server_port=server_port,
+                            client_port=client_port,
+                            tests=TESTS)
+        #
+        # ensure the server has fully connected
+        #
+        client = ThreadedTestClient(PING, client_port)
+        client.wait()
+
+        #
+        # Simulate an HTTP client that dies during the sending of the PUT
+        # request
+        #
+
+        fake_request = b'PUT /PUT/test_04_client_request_close HTTP/1.1\r\n' \
+            + b'Content-Length: 500000\r\n' \
+            + b'Content-Type: text/plain;charset=utf-8\r\n' \
+            + b'\r\n' \
+            + b'?' * 50000
+        fake_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        fake_client.settimeout(5)
+        fake_client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        fake_client.connect(("127.0.0.1", client_port))
+        fake_client.sendall(fake_request, socket.MSG_WAITALL)
+        fake_client.close()
+
+        # since socket I/O is asynchronous wait until the request arrives
+        # at the server
+
+        expected = len(fake_request)
+        bytes_in = 0
+        while expected > bytes_in:
+            ri = server_mgmt.query(type="org.apache.qpid.dispatch.httpRequestInfo").get_entities()
+            bytes_in = ri[-1]['bytesIn'] if ri else 0  # most recent request at tail
+            sleep(0.1)
+
+        # now ensure the connection between the router and the HTTP server
+        # still functions:
+        client = ThreadedTestClient(PING, client_port)
+        client.wait()
+        server.wait()
+
+    def client_response_close_test(self, server_port, client_port):
+        """
+        Simulate an HTTP client drop while the server is sending a very large
+        response message.
+        """
+        PING = {
+            "PUT": [
+                (RequestMsg("PUT", "/PUT/test_05_client_response_close/ping",
+                            headers={"Content-Length": "1",
+                                     "content-type":
+                                     "text/plain;charset=utf-8"},
+                            body=b'X'),
+                 ResponseMsg(201, reason="Created",
+                             headers={"Content-Length": "0"}),
+                 ResponseValidator(status=201)
+                 )]
+        }
+
+        big_headers = dict([('Huge%s' % i, chr(ord(b'0') + i) * 8000)
+                            for i in range(10)])
+
+        TESTS = {
+            "GET": [
+                (RequestMsg("GET", "/GET/test_05_client_response_close",
+                            headers={
+                                "Content-Length": "0",
+                                "Content-Type": "text/plain;charset=utf-8"
+                            }),
+                 [ResponseMsg(100, reason="Continue", headers=big_headers),
+                  ResponseMsg(100, reason="Continue", headers=big_headers),
+                  ResponseMsg(100, reason="Continue", headers=big_headers),
+                  ResponseMsg(100, reason="Continue", headers=big_headers),
+                  ResponseMsg(200,
+                              reason="OK",
+                              headers={"Content-Length": 1000000,
+                                       "Content-Type": "text/plain;charset=utf-8"},
+                              body=b'?' * 1000000)],
+                 ResponseValidator(status=200)
+                 )]
+        }
+        TESTS.update(PING)
+
+        server = TestServer(server_port=server_port,
+                            client_port=client_port,
+                            tests=TESTS)
+        #
+        # ensure the server has fully connected
+        #
+        client = ThreadedTestClient(PING, client_port)
+        client.wait()
+
+        #
+        # Simulate an HTTP client that dies during the receipt of the
+        # response
+        #
+
+        fake_request = b'GET /GET/test_05_client_response_close HTTP/1.1\r\n' \
+            + b'Content-Length: 0\r\n' \
+            + b'Content-Type: text/plain;charset=utf-8\r\n' \
+            + b'\r\n'
+        fake_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        fake_client.settimeout(TIMEOUT)
+        fake_client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        fake_client.connect(("127.0.0.1", client_port))
+        fake_client.sendall(fake_request, socket.MSG_WAITALL)
+        fake_client.recv(1)
+        fake_client.close()
+
+        #
+        # Verify the server is still reachable
+        #
+        client = ThreadedTestClient(PING, client_port)
+        client.wait()
+        server.wait()
