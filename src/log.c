@@ -358,18 +358,32 @@ static void qd_log_source_defaults(qd_log_source_t *log_source) {
     memset ( log_source->severity_histogram, 0, sizeof(uint64_t) * (N_LEVEL_INDICES) );
 }
 
-/// Caller must hold the log_source_lock
-static qd_log_source_t *qd_log_source_lh(const char *module)
+/// Find a preexisting source of this name, or make a new one.
+/// Optionally, set default values even if the source was prexisting.
+static qd_log_source_t *qd_log_source_find_or_make(const char *module, bool set_defaults)
 {
+    bool add = false;
+    sys_mutex_lock(log_source_lock);
     qd_log_source_t *log_source = lookup_log_source_lh(module);
-    if (!log_source)
-    {
+    if (log_source) {
+        if ( set_defaults )
+            qd_log_source_defaults(log_source);
+    } else {
         log_source = NEW(qd_log_source_t);
         ZERO(log_source);
         log_source->module = (char*) malloc(strlen(module) + 1);
         strcpy(log_source->module, module);
         qd_log_source_defaults(log_source);
         DEQ_INSERT_TAIL(source_list, log_source);
+        add = true;
+    }
+    sys_mutex_unlock(log_source_lock);
+
+    // The addition of a new source to the entity cache must be done
+    // after the log_source_lock is dropped, or it will cause a lock
+    // order inversion. The entity cache lock should not be taken
+    // while holding the log lock.
+    if ( add ) {
         qd_entity_cache_add(QD_LOG_STATS_TYPE, log_source);
     }
     return log_source;
@@ -377,18 +391,13 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
 
 qd_log_source_t *qd_log_source(const char *module)
 {
-    sys_mutex_lock(log_source_lock);
-    qd_log_source_t* src = qd_log_source_lh(module);
-    sys_mutex_unlock(log_source_lock);
+    qd_log_source_t* src = qd_log_source_find_or_make(module, false);
     return src;
 }
 
 qd_log_source_t *qd_log_source_reset(const char *module)
 {
-    sys_mutex_lock(log_source_lock);
-    qd_log_source_t* src = qd_log_source_lh(module);
-    qd_log_source_defaults(src);
-    sys_mutex_unlock(log_source_lock);
+    qd_log_source_t* src = qd_log_source_find_or_make(module, true);
     return src;
 }
 
@@ -592,24 +601,22 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             QD_ERROR_BREAK();
         }
 
-        //
-        // Obtain the log_source_lock lock. This lock is also used when write_log() is called.
-        //
-        sys_mutex_lock(log_source_lock);
-
-        qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
+        qd_log_source_t *src = qd_log_source_find_or_make(module, false); /* The original (already existing) log source */
 
         if (has_output_file) {
+            sys_mutex_lock(log_source_lock);
             log_sink_t* sink = log_sink_lh(outputFile);
+            sys_mutex_unlock(log_source_lock);
             if (!sink) {
                 error_in_output = true;
-                sys_mutex_unlock(log_source_lock);
                 break;
             }
 
             // DEFAULT source may already have a sink, so free the old sink first
             if (src->sink) {
+                sys_mutex_lock(log_source_lock);
                 log_sink_free_lh(src->sink);
+                sys_mutex_unlock(log_source_lock);
             }
 
             // Assign the new sink
@@ -627,7 +634,6 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
 
             if (mask < -1) {
                 error_in_enable = true;
-                sys_mutex_unlock(log_source_lock);
                 break;
             }
             else {
@@ -647,9 +653,6 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
         if (has_include_source) {
             src->includeSource = include_source;
         }
-
-        sys_mutex_unlock(log_source_lock);
-
     } while(0);
 
     if (error_in_output) {
