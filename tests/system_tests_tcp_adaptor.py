@@ -23,6 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import io
+import json
 import os
 import sys
 import time
@@ -38,6 +39,7 @@ from system_test import TIMEOUT
 from system_test import unittest
 
 from subprocess import PIPE
+from subprocess import STDOUT
 
 # Tests in this file are organized by classes that inherit TestCase.
 # The first instance is TcpAdaptor(TestCase).
@@ -547,6 +549,19 @@ class TcpAdaptor(TestCase):
             cls.echo_server_NS_CONN_STALL.wait()
         super(TcpAdaptor, cls).tearDownClass()
 
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or str(self.router_dict['INTA'].addresses[0]),
+                                             '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception(out if out else str(e))
+        return out
+
     class EchoPair():
         """
         For the concurrent tcp tests this class describes one of the client-
@@ -933,6 +948,32 @@ class TcpAdaptor(TestCase):
         self.ncat_runner(name, "EA1",  "EB1", self.logger)
         self.ncat_runner(name, "EA1",  "EC2", self.logger)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    # connector/listener stats
+    def test_80_stats(self):
+        tname = "test_80 check stats in qdmanage"
+        self.logger.log(tname + " START")
+        # Verify listener stats
+        query_command = 'QUERY --type=tcpListener'
+        outputs = json.loads(self.run_qdmanage(query_command))
+        for output in outputs:
+            if output['name'].startswith("ES"):
+                # Check only echo server listeners
+                assert("connectionsOpened" in output)
+                assert(output["connectionsOpened"] > 0)
+                assert(output["connectionsOpened"] == output["connectionsClosed"])
+                assert(output["bytesIn"] == output["bytesOut"])
+        # Verify connector stats
+        query_command = 'QUERY --type=tcpConnector'
+        outputs = json.loads(self.run_qdmanage(query_command))
+        for output in outputs:
+            assert(output['address'].startswith("ES"))
+            assert("connectionsOpened" in output)
+            assert(output["connectionsOpened"] > 0)
+            # egress_dispatcher connection opens and should never close
+            assert(output["connectionsOpened"] == output["connectionsClosed"] + 1)
+            assert(output["bytesIn"] == output["bytesOut"])
+        self.logger.log(tname + " SUCCESS")
 
 
 class TcpAdaptorManagementTest(TestCase):

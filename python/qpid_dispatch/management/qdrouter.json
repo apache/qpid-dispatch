@@ -1279,6 +1279,26 @@
                     "required": false,
                     "description": "Used to identify where connection is handled.",
                     "create": true
+                },
+                "connectionsOpened": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of connections opened by this listener."
+                },
+                "connectionsClosed": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of connections closed by this listener."
+                },
+                "bytesIn": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of bytes sent from clients to servers on all connections to this listener."
+                },
+                "bytesOut": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of bytes sent from servers to clients on all connections to this listener."
                 }
             }
         },
@@ -1302,13 +1322,32 @@
                     "description": "Port number or symbolic service name.",
                     "type": "string",
                     "create": true
-
                 },
                 "siteId": {
                     "type": "string",
                     "required": false,
                     "description": "Used to identify origin of connections.",
                     "create": true
+                },
+                "connectionsOpened": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of connections opened by this connector."
+                },
+                "connectionsClosed": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of connections closed by this connector."
+                },
+                "bytesIn": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of bytes sent from servers to clients on all connections created by this connector."
+                },
+                "bytesOut": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of bytes sent from clients to servers on all connections created by this connector."
                 }
             }
         },
