@@ -49,6 +49,7 @@ typedef struct _server_response_msg_t {
     qd_composed_field_t *msg_props; // hold incoming headers
     qdr_delivery_t      *dlv;       // inbound to router (qdr_link_deliver)
     bool                 rx_complete; // response rx complete
+    bool                 discard;     // client no longer present
 } _server_response_msg_t;
 ALLOC_DECLARE(_server_response_msg_t);
 ALLOC_DEFINE(_server_response_msg_t);
@@ -715,6 +716,7 @@ static bool _process_request(_server_request_t *hreq)
             if (rmsg->dlv) {
                 qd_message_set_receive_complete(qdr_delivery_message(rmsg->dlv));
                 qdr_delivery_set_aborted(rmsg->dlv);
+                qdr_delivery_continue(qdr_http1_adaptor->core, rmsg->dlv, true);
             }
             _server_response_msg_free(hreq, rmsg);
             rmsg = DEQ_HEAD(hreq->responses);
@@ -1025,15 +1027,20 @@ static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
     }
 
     _server_response_msg_t *rmsg  = DEQ_TAIL(hreq->responses);
+    if (rmsg->discard) {
+        qd_buffer_list_free_buffers(body);
+        return 0;
+    }
 
     qd_message_t *msg = rmsg->msg ? rmsg->msg : qdr_delivery_message(rmsg->dlv);
-
-
     qd_message_stream_data_append(msg, body, &q2_blocked);
     hconn->q2_blocked = hconn->q2_blocked || q2_blocked;
     if (q2_blocked) {
         // note: unit tests grep for this log!
-        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] server link blocked on Q2 limit", hconn->conn_id);
+        if (rmsg->dlv)
+            qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, DLV_FMT" server link blocked on Q2 limit", DLV_ARGS(rmsg->dlv));
+        else
+            qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] server link blocked on Q2 limit", hconn->conn_id);
     }
 
     //
@@ -1191,14 +1198,32 @@ void qdr_http1_server_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
                                            bool                      settled)
 {
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%"PRIu64"][L%"PRIu64"] HTTP response delivery update, outcome=0x%"PRIx64"%s",
-           hconn->conn_id, hconn->in_link_id, disp, settled ? " settled": "");
+           DLV_FMT" HTTP response delivery update, outcome=0x%"PRIx64"%s",
+           DLV_ARGS(dlv), disp, settled ? " settled": "");
 
-    // Not much can be done with error dispositions (I think)
-    if (disp != PN_ACCEPTED) {
-        qd_log(adaptor->log, QD_LOG_WARNING,
-               "[C%"PRIu64"][L%"PRIu64"] response message was not accepted, outcome=0x%"PRIx64,
-               hconn->conn_id, hconn->in_link_id, disp);
+    if (settled) {
+        if (disp && disp != PN_ACCEPTED) {
+            qd_log(adaptor->log, QD_LOG_WARNING,
+                   "[C%"PRIu64"][L%"PRIu64"] response message was not accepted, outcome=0x%"PRIx64,
+                   hconn->conn_id, hconn->in_link_id, disp);
+
+            // This indicates the client that originated the request is
+            // unreachable. Rather than drop the connection allow the server to
+            // finish the response. We'll simply discard the response data as
+            // it is read from the raw connection
+            _server_request_t *hreq = (_server_request_t*)hbase;
+            _server_response_msg_t *rmsg  = DEQ_HEAD(hreq->responses);
+            while (rmsg) {
+                if (rmsg->dlv == dlv) {
+                    rmsg->discard = true;
+                    qd_message_t *msg = qdr_delivery_message(dlv);
+                    qd_message_set_discard(msg, true);
+                    qd_message_Q2_holdoff_disable(msg);
+                    break;
+                }
+                rmsg = DEQ_NEXT(rmsg);
+            }
+        }
     }
     if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
         _server_request_t *hreq = (_server_request_t*)hbase;
@@ -1529,6 +1554,16 @@ uint64_t qdr_http1_server_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
 
     _server_request_t *hreq = (_server_request_t*) qdr_delivery_get_context(delivery);
     if (!hreq) {
+
+        if (qd_message_aborted(msg)) {
+            // can safely discard since it was yet to be processed
+            qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
+                   DLV_FMT" Discarding aborted request", DLV_ARGS(delivery));
+            qd_message_set_send_complete(msg);
+            qdr_link_flow(qdr_http1_adaptor->core, link, 1, false);
+            return PN_REJECTED;
+        }
+
         // new delivery - create new request:
         switch (qd_message_check_depth(msg, QD_DEPTH_PROPERTIES)) {
         case QD_MESSAGE_DEPTH_INCOMPLETE:
@@ -1536,8 +1571,7 @@ uint64_t qdr_http1_server_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
 
         case QD_MESSAGE_DEPTH_INVALID:
             qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                   "[C%"PRIu64"][L%"PRIu64"] Malformed HTTP/1.x message",
-                   hconn->conn_id, link->identity);
+                   DLV_FMT" Malformed HTTP/1.x message", DLV_ARGS(delivery));
             qd_message_set_send_complete(msg);
             qdr_link_flow(qdr_http1_adaptor->core, link, 1, false);
             return PN_REJECTED;
@@ -1546,7 +1580,7 @@ uint64_t qdr_http1_server_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
             hreq = _create_request_context(hconn, msg);
             if (!hreq) {
                 qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-                       "[C%"PRIu64"][L%"PRIu64"] Discarding malformed message.", hconn->conn_id, link->identity);
+                       DLV_FMT" Discarding malformed message.", DLV_ARGS(delivery));
                 qd_message_set_send_complete(msg);
                 qdr_link_flow(qdr_http1_adaptor->core, link, 1, false);
                 return PN_REJECTED;
@@ -1557,8 +1591,22 @@ uint64_t qdr_http1_server_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
             qdr_delivery_incref(delivery, "HTTP1 server referencing request delivery");
             break;
         }
+
+    } else if (qd_message_aborted(msg)) {
+        //
+        // The client has aborted the request message.  This can happen when
+        // the HTTP client has dropped its connection mid-request message. If
+        // this request has not yet been written to the server it can be safely
+        // discard.  However, if some of the request has been sent then the
+        // connection to the server must be bounced in order to recover.
+        //
+        qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
+               DLV_FMT" Client has aborted the request", DLV_ARGS(delivery));
+        _cancel_request(hreq);
+        return 0;
     }
 
+    // send request in the proper order
     if (DEQ_HEAD(hconn->requests) == &hreq->base)
         _send_request_message(hreq);
 
@@ -1596,12 +1644,12 @@ static void _server_request_free(_server_request_t *hreq)
 {
     if (hreq) {
         qdr_http1_request_base_cleanup(&hreq->base);
+        qdr_http1_out_data_fifo_cleanup(&hreq->out_data);
         if (hreq->request_dlv) {
             qdr_delivery_set_context(hreq->request_dlv, 0);
             qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server releasing request delivery");
+            hreq->request_dlv = 0;
         }
-
-        qdr_http1_out_data_fifo_cleanup(&hreq->out_data);
 
         _server_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
         while (rmsg) {

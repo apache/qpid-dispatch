@@ -366,6 +366,18 @@ static void _setup_client_connection(qdr_http1_connection_t *hconn)
 }
 
 
+static void _handle_conn_read_close(qdr_http1_connection_t *hconn)
+{
+    qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for reading", hconn->conn_id);
+}
+
+
+static void _handle_conn_write_close(qdr_http1_connection_t *hconn)
+{
+    qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for writing", hconn->conn_id);
+}
+
+
 // handle PN_RAW_CONNECTION_READ
 static int _handle_conn_read_event(qdr_http1_connection_t *hconn)
 {
@@ -378,6 +390,17 @@ static int _handle_conn_read_event(qdr_http1_connection_t *hconn)
                "[C%"PRIu64"][L%"PRIu64"] Read %"PRIuMAX" bytes from client (%zu buffers)",
                hconn->conn_id, hconn->in_link_id, length, DEQ_SIZE(blist));
         hconn->in_http1_octets += length;
+
+        if (HTTP1_DUMP_BUFFERS) {
+            fprintf(stdout, "\nClient raw buffer READ %"PRIuMAX" total octets\n", length);
+            qd_buffer_t *bb = DEQ_HEAD(blist);
+            while (bb) {
+                fprintf(stdout, "  buffer='%.*s'\n", (int)qd_buffer_size(bb), (char*)&bb[1]);
+                bb = DEQ_NEXT(bb);
+            }
+            fflush(stdout);
+        }
+
         error = h1_codec_connection_rx_data(hconn->http_conn, &blist, length);
     }
     return error;
@@ -413,11 +436,13 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         _setup_client_connection(hconn);
         break;
     }
-    case PN_RAW_CONNECTION_CLOSED_READ:
+    case PN_RAW_CONNECTION_CLOSED_READ: {
+        _handle_conn_read_close(hconn);
+        pn_raw_connection_close(hconn->raw_conn);
+        break;
+    }
     case PN_RAW_CONNECTION_CLOSED_WRITE: {
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for %s", hconn->conn_id,
-               pn_event_type(e) == PN_RAW_CONNECTION_CLOSED_READ
-               ? "reading" : "writing");
+        _handle_conn_write_close(hconn);
         pn_raw_connection_close(hconn->raw_conn);
         break;
     }
@@ -434,10 +459,12 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
 
         if (hconn->out_link) {
             qdr_link_set_context(hconn->out_link, 0);
+            qdr_link_detach(hconn->out_link, QD_LOST, 0);
             hconn->out_link = 0;
         }
         if (hconn->in_link) {
             qdr_link_set_context(hconn->in_link, 0);
+            qdr_link_detach(hconn->in_link, QD_LOST, 0);
             hconn->in_link = 0;
         }
         if (hconn->qdr_conn) {
@@ -944,7 +971,7 @@ static void _client_rx_done_cb(h1_codec_request_state_t *hrs)
 }
 
 
-// The coded has completed processing the request and response messages.
+// The codec has completed processing the request and response messages.
 //
 static void _client_request_complete_cb(h1_codec_request_state_t *lib_rs, bool cancelled)
 {
@@ -962,7 +989,7 @@ static void _client_request_complete_cb(h1_codec_request_state_t *lib_rs, bool c
                "[C%"PRIu64"] HTTP request msg-id=%"PRIu64" %s. Octets read: %"PRIu64" written: %"PRIu64,
                hreq->base.hconn->conn_id,
                hreq->base.msg_id,
-               cancelled ? "cancelled!" : "codec done",
+               cancelled ? "cancelled" : "codec done",
                in_octets, out_octets);
     }
 }
@@ -1651,12 +1678,13 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
 static void _client_response_msg_free(_client_request_t *req, _client_response_msg_t *rmsg)
 {
     DEQ_REMOVE(req->responses, rmsg);
+    qdr_http1_out_data_fifo_cleanup(&rmsg->out_data);
+
     if (rmsg->dlv) {
         qdr_delivery_set_context(rmsg->dlv, 0);
         qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 client response delivery settled");
+        rmsg->dlv = 0;
     }
-
-    qdr_http1_out_data_fifo_cleanup(&rmsg->out_data);
 
     free__client_response_msg_t(rmsg);
 }
