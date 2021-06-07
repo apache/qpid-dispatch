@@ -91,6 +91,7 @@ struct qdr_http2_stream_data_t {
     qd_message_stream_data_result_t  curr_stream_data_result;
     qd_message_stream_data_result_t  next_stream_data_result;
     int                            curr_stream_data_qd_buff_offset;
+    int 						   curr_stream_data_offset;
     int                            stream_data_buff_count;
     int                            in_link_credit;   // provided by router
     int32_t                        stream_id;
