@@ -42,6 +42,8 @@
 #include <string.h>
 #include <time.h>
 
+ #define CHECK_Q2(blist) assert(DEQ_SIZE(blist) <= QD_QLIMIT_Q2_LOWER)
+
 #define LOCK   sys_mutex_lock
 #define UNLOCK sys_mutex_unlock
 
@@ -2390,8 +2392,11 @@ void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_com
     qd_message_content_t *content        = MSG_CONTENT(msg);
     SET_ATOMIC_BOOL(&content->receive_complete, receive_complete);
     qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
+    CHECK_Q2(*field1_buffers);
     qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
+    CHECK_Q2(*field2_buffers);
     qd_buffer_list_t     *field3_buffers = qd_compose_buffers(field3);
+    CHECK_Q2(*field3_buffers);
 
     content->buffers = *field1_buffers;
     DEQ_INIT(*field1_buffers);
@@ -2404,10 +2409,13 @@ void qd_message_compose_5(qd_message_t *msg, qd_composed_field_t *field1, qd_com
     qd_message_content_t *content        = MSG_CONTENT(msg);
     SET_ATOMIC_BOOL(&content->receive_complete, receive_complete);
     qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
+    CHECK_Q2(*field1_buffers);
     qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
+    CHECK_Q2(*field2_buffers);
     qd_buffer_list_t     *field3_buffers = qd_compose_buffers(field3);
+    CHECK_Q2(*field3_buffers);
     qd_buffer_list_t     *field4_buffers = qd_compose_buffers(field4);
-
+    CHECK_Q2(*field4_buffers);
     content->buffers = *field1_buffers;
     DEQ_INIT(*field1_buffers);
     DEQ_APPEND(content->buffers, (*field2_buffers));
@@ -2998,17 +3006,32 @@ bool qd_message_oversize(const qd_message_t *msg)
 }
 
 
+int qd_message_stream_data_footer_append(qd_message_t *message, qd_buffer_list_t *footer_props)
+{
+    qd_composed_field_t *field = 0;
+    int rc = 0;
+
+    field = qd_compose(QD_PERFORMATIVE_FOOTER, field);
+
+    // Stick the buffers into the footer compose field.
+    qd_compose_insert_binary_buffers(field, footer_props);
+
+    rc = qd_message_extend(message, field, 0);
+
+    qd_compose_free(field);
+    return rc;
+
+}
+
 int qd_message_stream_data_append(qd_message_t *message, qd_buffer_list_t *data, bool *q2_blocked)
 {
     unsigned int        length = DEQ_SIZE(*data);
+
     qd_composed_field_t *field = 0;
     int rc = 0;
 
     if (q2_blocked)
         *q2_blocked = false;
-
-    if (length == 0)
-        return rc;
 
     // DISPATCH-1803: ensure no body data section can exceed the
     // QD_QLIMIT_Q2_LOWER.  This allows the egress router to wait for an entire

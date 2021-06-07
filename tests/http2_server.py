@@ -108,5 +108,13 @@ async def get_jpg_images():
     img_file = image_file("apache.jpg")
     return await send_file(img_file, mimetype='image/jpg')
 
+
+@app.route('/upload', methods=['POST'])
+async def process_upload_data():
+    for name, file in (await request.files).items():
+        print(f'Processing {name}: {len(file.read())}')
+    return "Success!"
+
+
 #app.run(port=5000, certfile='cert.pem', keyfile='key.pem')
 app.run(port=os.getenv('SERVER_LISTEN_PORT'))

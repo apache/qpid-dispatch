@@ -416,6 +416,18 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *msg, q
 
 
 /**
+ * qd_message_stream_data_footer_append
+ *
+ * Constructs a footer field by calling the qd_compose(QD_PERFORMATIVE_FOOTER, field);
+ * It then inserts the passed in buffer list to the composed field and proceeds to disable q2 before finally adding the footer
+ * field to the message.
+ *
+ * Use this function if you have the complete footer data available in the passed in buffer list
+ */
+int qd_message_stream_data_footer_append(qd_message_t *message, qd_buffer_list_t *footer_props);
+
+
+/**
  * qd_message_stream_data_append
  *
  * Append the buffers in data as a sequence of one or more BODY_DATA sections
