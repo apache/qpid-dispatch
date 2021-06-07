@@ -255,6 +255,7 @@ static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t
     conn->read_pending = false;
     if (result > 0) {
         // account for any incoming bytes just read
+
         conn->last_in_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_in      += result;
         LOCK(conn->bridge->stats_lock);
@@ -1091,6 +1092,7 @@ static void free_bridge_config(qd_tcp_bridge_t *config)
     free(config->site_id);
     free(config->host_port);
 
+    sys_atomic_destroy(&config->ref_count);
     sys_mutex_free(config->stats_lock);
     free_qd_tcp_bridge_t(config);
 }
