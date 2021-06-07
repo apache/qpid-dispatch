@@ -82,7 +82,7 @@ struct qdr_http2_stream_data_t {
     qd_message_t             *message;
     qd_composed_field_t      *app_properties;
     qd_composed_field_t      *footer_properties;
-    qd_composed_field_t      *body;
+    qd_buffer_list_t          body_buffers;
     qd_message_stream_data_t *curr_stream_data;
     qd_message_stream_data_t *next_stream_data;
     qd_message_stream_data_t *footer_stream_data;
@@ -91,7 +91,8 @@ struct qdr_http2_stream_data_t {
     qd_message_stream_data_result_t  curr_stream_data_result;
     qd_message_stream_data_result_t  next_stream_data_result;
     int                            curr_stream_data_qd_buff_offset;
-    int                            stream_data_buff_count;
+    int                            curr_stream_data_offset; // The offset within the qd_buffer so we can jump there.
+    int 						   payload_handled;
     int                            in_link_credit;   // provided by router
     int32_t                        stream_id;
     size_t                         qd_buffers_to_send;
@@ -113,7 +114,7 @@ struct qdr_http2_stream_data_t {
 
     bool                     in_dlv_decrefed;
     bool                     out_dlv_decrefed;
-    bool                     body_data_added;
+    bool                     body_data_added_to_msg;
     int                      request_status;
     int                      bytes_in;
     int                      bytes_out;
@@ -152,7 +153,8 @@ struct qdr_http2_connection_t {
     bool                      goaway_received;
     sys_atomic_t 		      raw_closed_read;
     sys_atomic_t 			  raw_closed_write;
-
+    bool                      q2_blocked;      // send a connection level WINDOW_UPDATE frame to tell the client to stop sending data.
+    sys_atomic_t              q2_restart;      // signal to resume receive
     DEQ_LINKS(qdr_http2_connection_t);
  };
 

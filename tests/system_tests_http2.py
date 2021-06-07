@@ -19,6 +19,7 @@
 
 import os
 import sys
+import socket
 import unittest
 from time import sleep
 import system_test
@@ -71,6 +72,10 @@ def skip_h2_test():
     if python_37_available() and h2hyper_installed and curl_available():
         return False
     return True
+
+
+def image_file(name):
+    return os.path.join(system_test.DIR, 'images', name)
 
 
 class Http2TestBase(TestCase):
@@ -136,6 +141,16 @@ class CommonHttp2Tests:
         self.assertIn('Success! Your first name is John, last name is Doe', out)
 
     @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_post_upload_large_image_jpg(self):
+        # curl  -X POST -H "Content-Type: multipart/form-data"  -F "data=@/home/gmurthy/opensource/test.jpg"
+        # http://127.0.0.1:9000/upload --http2-prior-knowledge
+        print (image_file('test.jpg'))
+        address = self.router_qdra.http_addresses[0] + "/upload"
+        out = self.run_curl(address, args=['-X', 'POST', '-H', 'Content-Type: multipart/form-data',
+                                           '-F', 'data=@' + image_file('test.jpg')])
+        self.assertIn('Success', out)
+
+    @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     def test_delete_request(self):
         # curl -X DELETE "http://127.0.0.1:9000/myinfo/delete/22122" -H  "accept: application/json" --http2-prior-knowledge
         address = self.router_qdra.http_addresses[0] + "/myinfo/delete/22122"
@@ -158,14 +173,14 @@ class CommonHttp2Tests:
 
     @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     def test_404(self):
-        # Run curl 127.0.0.1:port/unavilable --http2-prior-knowledge
-        address = self.router_qdra.http_addresses[0] + "/unavilable"
-        out = self.run_curl(address)
+        # Run curl 127.0.0.1:port/unavailable --http2-prior-knowledge
+        address = self.router_qdra.http_addresses[0] + "/unavailable"
+        out = self.run_curl(address=address)
         self.assertIn('404 Not Found', out)
 
     @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     def test_500(self):
-        # Run curl 127.0.0.1:port/unavilable --http2-prior-knowledge
+        # Run curl 127.0.0.1:port/test/500 --http2-prior-knowledge
         address = self.router_qdra.http_addresses[0] + "/test/500"
         out = self.run_curl(address)
         self.assertIn('500 Internal Server Error', out)
@@ -728,3 +743,126 @@ class Http2TestGoAway(Http2TestBase):
         address = self.router_qdra.http_addresses[0] + "/goaway_test_1"
         out = self.run_curl(address, args=["-i"])
         self.assertIn("HTTP/2 503", out)
+
+
+class Http2Q2OneRouterTest(Http2TestBase):
+    @classmethod
+    def setUpClass(cls):
+        super(Http2Q2OneRouterTest, cls).setUpClass()
+        if skip_h2_test():
+            return
+        cls.http2_server_name = "http2_slow_q2_server"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="http2_slow_q2_server.py")
+        name = "http2-test-router"
+        cls.connector_name = 'connectorToServer'
+        cls.connector_props = {
+            'port': os.getenv('SERVER_LISTEN_PORT'),
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.connector_name
+        }
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+
+            ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
+                              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('httpConnector', cls.connector_props)
+        ])
+        cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
+
+    @unittest.skipIf(skip_h2_test(),
+                     "Python 3.7 or greater, hyper-h2 and curl needed to run hyperhttp2 tests")
+    def test_q2_block_unblock(self):
+        # curl  -X POST -H "Content-Type: multipart/form-data"  -F "data=@/home/gmurthy/opensource/test.jpg"
+        # http://127.0.0.1:9000/upload --http2-prior-knowledge
+        address = self.router_qdra.http_addresses[0] + "/upload"
+        out = self.run_curl(address, args=['-X', 'POST', '-H', 'Content-Type: multipart/form-data',
+                                           '-F', 'data=@' + image_file('test.jpg')])
+        self.assertIn('Success', out)
+        num_blocked = 0
+        num_unblocked = 0
+        blocked = "blocked"
+        unblocked = "unblocked"
+        with open(self.router_qdra.logfile_path, 'r') as router_log:
+            log_lines = router_log.read().split("\n")
+            for log_line in log_lines:
+                if unblocked in log_line:
+                    num_unblocked += 1
+                elif blocked in log_line:
+                    num_blocked += 1
+
+        self.assertGreater(num_blocked, 0)
+        self.assertGreater(num_unblocked, 0)
+
+
+class Http2Q2TwoRouterTest(Http2TestBase):
+    @classmethod
+    def setUpClass(cls):
+        super(Http2Q2TwoRouterTest, cls).setUpClass()
+        if skip_h2_test():
+            return
+        cls.http2_server_name = "http2_server"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="http2_slow_q2_server.py")
+        qdr_a = "QDR.A"
+        inter_router_port = cls.tester.get_port()
+        config_qdra = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'QDR.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
+                              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('connector', {'name': 'connectorToB', 'role': 'inter-router',
+                           'port': inter_router_port,
+                           'verifyHostname': 'no'})
+        ])
+
+        qdr_b = "QDR.B"
+        cls.connector_name = 'serverConnector'
+        cls.http_connector_props = {
+            'port': os.getenv('SERVER_LISTEN_PORT'),
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.connector_name
+        }
+        config_qdrb = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'QDR.B'}),
+            ('httpConnector', cls.http_connector_props),
+            ('listener', {'role': 'inter-router', 'maxSessionFrames': '10', 'port': inter_router_port})
+        ])
+        cls.router_qdrb = cls.tester.qdrouterd(qdr_b, config_qdrb, wait=True)
+        cls.router_qdra = cls.tester.qdrouterd(qdr_a, config_qdra, wait=True)
+        cls.router_qdra.wait_router_connected('QDR.B')
+
+    @unittest.skipIf(skip_h2_test(),
+                     "Python 3.7 or greater, hyper-h2 and curl needed to run hyperhttp2 tests")
+    def test_q2_block_unblock(self):
+        # curl  -X POST -H "Content-Type: multipart/form-data"  -F "data=@/home/gmurthy/opensource/test.jpg"
+        # http://127.0.0.1:9000/upload --http2-prior-knowledge
+        address = self.router_qdra.http_addresses[0] + "/upload"
+        out = self.run_curl(address, args=['-X', 'POST', '-H', 'Content-Type: multipart/form-data',
+                                           '-F', 'data=@' + image_file('test.jpg')])
+        self.assertIn('Success', out)
+        num_blocked = 0
+        num_unblocked = 0
+        blocked = "blocked"
+        unblocked = "unblocked"
+        with open(self.router_qdra.logfile_path, 'r') as router_log:
+            log_lines = router_log.read().split("\n")
+            for log_line in log_lines:
+                if unblocked in log_line:
+                    num_unblocked += 1
+                elif blocked in log_line:
+                    num_blocked += 1
+
+        self.assertGreater(num_blocked, 0)
+        self.assertGreater(num_unblocked, 0)
