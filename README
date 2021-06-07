@@ -88,7 +88,6 @@ Test Suite Code Coverage (GNU tools only)
 
 Use coverage analysis to ensure that all code paths are exercised by
 the test suite. To run the tests and perform code coverage analysis:
-the test suite. To run the tests and perform code coverage analysis:
 
 # install the lcov package
 $ yum install lcov
