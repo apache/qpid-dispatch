@@ -1485,12 +1485,11 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
                DLV_FMT" qdr_tcp_delivery_update: disp: %"PRIu64", settled: %s",
                DLV_ARGS(dlv), disp, settled ? "true" : "false");
 
-        if (settled) {
-            // the only settlement occurs when the initial delivery is
-            // settled, which occurs when the connector is unable to
-            // connect to the configured tcp endpoint, so in this case
-            // we can just close the connection
-            // (The end of the message is used to convey half closed status)
+        if (settled && disp == PN_RELEASED) {
+            // When the connector is unable to connect to a tcp endpoint it will
+            // release the message. We handle that here by closing the connection.
+            // Half-closed status is signalled by read_eos_seen and is not
+            // sufficient by itself to force a connection closure.
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                    DLV_FMT" qdr_tcp_delivery_update: call pn_raw_connection_close()",
                    DLV_ARGS(dlv));
