@@ -323,14 +323,15 @@ static qd_parse_node_t *new_parse_node(qd_parse_tree_t *tree,
             n->token[tlen] = 0;
             {
                 const size_t hkey_size = HKEY_PREFIX_LEN + tlen + 1;
-                char hkey[hkey_size];
+                char *hkey = qd_malloc(hkey_size);
                 generate_hkey(hkey, hkey_size, parent->hkey_prefix, t);
 
                 if (qd_hash_insert_str(tree->hash, (unsigned char *)hkey, (void *)n, &n->handle) != QD_ERROR_NONE) {
                     free_parse_node(tree, n);
+                    free(hkey);
                     return 0;
                 }
-
+                free(hkey);
                 n->parent = parent;
             }
         }
@@ -346,13 +347,13 @@ static qd_parse_node_t *parse_node_find_child(qd_parse_tree_t *tree, const qd_pa
     qd_parse_node_t *child = 0;
     const size_t tlen = TOKEN_LEN(*token);
     const size_t hkey_size = HKEY_PREFIX_LEN + tlen + 1;
-    char hkey[hkey_size];
-
+    char *hkey = qd_malloc(hkey_size);
     generate_hkey(hkey, hkey_size, node->hkey_prefix, token);
     qd_hash_retrieve_str(tree->hash, (const unsigned char *)hkey, (void **)&child);
     if (child) {
         assert(child->parent == node);
     }
+    free(hkey);
     return child;
 }
 

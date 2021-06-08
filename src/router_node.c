@@ -410,10 +410,11 @@ static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_messa
     if (!conn || !pn_link || !msg) return;
     const qd_server_config_t *cf = qd_connection_config(conn);
     if (!cf) return;
-    char buf[qd_message_repr_len()];
+    size_t repr_len = qd_message_repr_len();
+    char *buf = qd_malloc(repr_len);
     const char *msg_str = qd_message_oversize(msg) ? "oversize message" :
                           qd_message_aborted(msg) ? "aborted message" : 
-                          qd_message_repr(msg, buf, sizeof(buf), cf->log_bits);
+                          qd_message_repr(msg, buf, repr_len, cf->log_bits);
     if (msg_str) {
         const char *src = pn_terminus_get_address(pn_link_source(pn_link));
         const char *tgt = pn_terminus_get_address(pn_link_target(pn_link));
@@ -426,6 +427,7 @@ static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_messa
                src ? src : "",
                tgt ? tgt : "");
     }
+    free(buf);
 }
 
 /**

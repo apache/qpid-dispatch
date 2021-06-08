@@ -416,7 +416,7 @@ void qdr_route_auto_link_detached_CT(qdr_core_t *core, qdr_link_t *link)
     int error_length = link->auto_link->last_error ? strlen(link->auto_link->last_error) : 0;
     int total_length = strlen(activation_failed) + error_length + 1;
 
-    char error_msg[total_length];
+    char *error_msg = qd_malloc(total_length);
     strcpy(error_msg, activation_failed);
     if (error_length)
         strcat(error_msg, link->auto_link->last_error);
@@ -432,6 +432,7 @@ void qdr_route_auto_link_detached_CT(qdr_core_t *core, qdr_link_t *link)
     }
 
     qdr_route_log_CT(core, error_msg, link->auto_link->name, link->auto_link->identity, link->conn);
+    free(error_msg);
 }
 
 
