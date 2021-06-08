@@ -1327,14 +1327,22 @@ void qd_message_set_receive_complete(qd_message_t *in_msg)
 {
     if (!!in_msg) {
         qd_message_content_t *content = MSG_CONTENT(in_msg);
+        qd_message_q2_unblocker_t  q2_unblock = {0};
 
         LOCK(content->lock);
 
         content->receive_complete = true;
+        if (content->q2_input_holdoff) {
+            content->q2_input_holdoff = false;
+            q2_unblock = content->q2_unblocker;
+        }
         content->q2_unblocker.handler = 0;
         qd_nullify_safe_ptr(&content->q2_unblocker.context);
 
         UNLOCK(content->lock);
+
+        if (q2_unblock.handler)
+            q2_unblock.handler(q2_unblock.context);
     }
 }
 
