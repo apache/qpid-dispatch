@@ -272,7 +272,7 @@ static const char *SEPARATORS=", ;:";
 
 /// Calculate the bit mask for a log enable string. Return -1 and set qd_error on error.
 static int enable_mask(const char *enable_) {
-    char enable[strlen(enable_)+1]; /* Non-const copy for strtok */
+    char *enable = malloc(strlen(enable_) + 1);
     strcpy(enable, enable_);
     char *saveptr = 0;
     int mask = 0;
@@ -285,6 +285,7 @@ static int enable_mask(const char *enable_) {
         const level_t* level = level_for_name(token, len-plus);
         mask |= (plus ? level->mask : level->bit);
     }
+    free(enable);
     return mask;
 }
 
