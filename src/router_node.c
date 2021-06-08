@@ -2067,7 +2067,6 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     if (disp && !pn_delivery_settled(pnd)) {
         uint64_t ignore = 0;
         qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
-        assert(ignore == disp); // expected: since both are from the same dlv
 
         // update if the disposition has changed or there is new state associated with it
         if (disp != pn_delivery_local_state(pnd) || dstate) {
