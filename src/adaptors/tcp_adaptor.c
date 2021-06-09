@@ -25,6 +25,7 @@
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/protocol_adaptor.h"
 
+#include <proton/codec.h>
 #include <proton/condition.h>
 #include <proton/listener.h>
 #include <proton/netaddr.h>
@@ -677,6 +678,19 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
     allocate_tcp_buffer(&tc->read_buffer);
     tc->remote_address = get_address_string(tc->pn_raw_conn);
     tc->global_id = get_global_id(tc->config.site_id, tc->remote_address);
+
+    // Create the tcp connection properties map.
+    pn_data_t *props = pn_data(0);
+    pn_data_put_map(props);
+    pn_data_enter(props);
+    pn_data_put_symbol(props,
+                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_ADAPTOR_KEY),
+                                       QD_CONNECTION_PROPERTY_ADAPTOR_KEY));
+    pn_data_put_string(props,
+                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_TCP_ADAPTOR_VALUE),
+                                       QD_CONNECTION_PROPERTY_TCP_ADAPTOR_VALUE));
+    pn_data_exit(props);
+
     qdr_connection_info_t *info = qdr_connection_info(false,               // is_encrypted,
                                                       false,               // is_authenticated,
                                                       true,                // opened,
@@ -687,7 +701,7 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
                                                       "",                  // *ssl_cipher,
                                                       "",                  // *user,
                                                       "TcpAdaptor",        // *container,
-                                                      0,                   // *connection_properties,
+                                                      props,               // *connection_properties,
                                                       0,                   // ssl_ssf,
                                                       false,               // ssl,
                                                       "",                  // peer router version,
@@ -925,6 +939,18 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
     const char *host = tc->egress_dispatcher ? "egress-dispatch" : tc->config.host_port;
     qd_log(tcp_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Opening server-side core connection %s", tc->conn_id, host);
 
+    // Create the tcp connection properties map.
+    pn_data_t *props = pn_data(0);
+    pn_data_put_map(props);
+    pn_data_enter(props);
+    pn_data_put_symbol(props,
+                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_ADAPTOR_KEY),
+                                       QD_CONNECTION_PROPERTY_ADAPTOR_KEY));
+    pn_data_put_string(props,
+                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_TCP_ADAPTOR_VALUE),
+                                       QD_CONNECTION_PROPERTY_TCP_ADAPTOR_VALUE));
+    pn_data_exit(props);
+
     qdr_connection_info_t *info = qdr_connection_info(false,       //bool             is_encrypted,
                                                       false,       //bool             is_authenticated,
                                                       true,        //bool             opened,
@@ -935,7 +961,7 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
                                                       "",          //const char      *ssl_cipher,
                                                       "",          //const char      *user,
                                                       "TcpAdaptor",//const char      *container,
-                                                      0,           //pn_data_t       *connection_properties,
+                                                      props,       //pn_data_t       *connection_properties,
                                                       0,           //int              ssl_ssf,
                                                       false,       //bool             ssl,
                                                       "",          // peer router version,
