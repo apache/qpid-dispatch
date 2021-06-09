@@ -459,7 +459,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
 
         if (hconn->out_link) {
             qdr_link_set_context(hconn->out_link, 0);
-            qdr_link_detach(hconn->in_link, QD_LOST, 0);
+            qdr_link_detach(hconn->out_link, QD_LOST, 0);
             hconn->out_link = 0;
         }
         if (hconn->in_link) {
