@@ -1228,10 +1228,10 @@ class Http1ClientCloseTestsMixIn(object):
             "PUT": [
                 (RequestMsg("PUT", "/PUT/test_04_client_request_close",
                             headers={
-                                "Content-Length": "100000",
+                                "Content-Length": "500000",
                                 "Content-Type": "text/plain;charset=utf-8"
                             },
-                            body=b'4' * (100000 - 19) + b'END OF TRANSMISSION'),
+                            body=b'4' * (500000 - 19) + b'END OF TRANSMISSION'),
                  ResponseMsg(201, reason="Created",
                              headers={"Test-Header": "/PUT/test_04_client_request_close",
                                       "Content-Length": "0"}),

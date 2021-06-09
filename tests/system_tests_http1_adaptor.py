@@ -517,7 +517,8 @@ class Http1AdaptorBadEndpointsTest(TestCase,
 
         body_filler = "?" * 1024 * 300  # Q2
 
-        # fake server - just to create a sink for the "fakeServer" address
+        # fake server - just to create a sink for the "fakeServer" address so
+        # credit will be granted.
         rx = AsyncTestReceiver(self.INT_A.listener,
                                source="fakeServer")
 

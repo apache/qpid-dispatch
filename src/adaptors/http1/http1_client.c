@@ -1678,12 +1678,13 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
 static void _client_response_msg_free(_client_request_t *req, _client_response_msg_t *rmsg)
 {
     DEQ_REMOVE(req->responses, rmsg);
+    qdr_http1_out_data_fifo_cleanup(&rmsg->out_data);
+
     if (rmsg->dlv) {
         qdr_delivery_set_context(rmsg->dlv, 0);
         qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 client response delivery settled");
+        rmsg->dlv = 0;
     }
-
-    qdr_http1_out_data_fifo_cleanup(&rmsg->out_data);
 
     free__client_response_msg_t(rmsg);
 }

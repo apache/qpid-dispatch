@@ -1644,12 +1644,12 @@ static void _server_request_free(_server_request_t *hreq)
 {
     if (hreq) {
         qdr_http1_request_base_cleanup(&hreq->base);
+        qdr_http1_out_data_fifo_cleanup(&hreq->out_data);
         if (hreq->request_dlv) {
             qdr_delivery_set_context(hreq->request_dlv, 0);
             qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server releasing request delivery");
+            hreq->request_dlv = 0;
         }
-
-        qdr_http1_out_data_fifo_cleanup(&hreq->out_data);
 
         _server_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
         while (rmsg) {
