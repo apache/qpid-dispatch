@@ -486,6 +486,12 @@ int qdr_connection_process(qdr_connection_t *conn)
 }
 
 
+void qdr_connection_set_hidden_on_gui(qdr_connection_t *conn)
+{
+    conn->hide_on_gui = true;
+}
+
+
 void qdr_link_set_context(qdr_link_t *link, void *context)
 {
     if (link)

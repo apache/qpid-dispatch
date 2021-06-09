@@ -960,6 +960,10 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
     tc->qdr_conn = conn;
     qdr_connection_set_context(conn, tc);
 
+    if (tc->egress_dispatcher) {
+        qdr_connection_set_hidden_on_gui(conn);
+    }
+
     qdr_terminus_t *source = qdr_terminus(0);
     qdr_terminus_set_address(source, tc->config.address);
 

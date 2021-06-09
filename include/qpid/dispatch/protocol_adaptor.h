@@ -447,6 +447,16 @@ const char *qdr_connection_get_tenant_space(const qdr_connection_t *conn, int *l
 int qdr_connection_process(qdr_connection_t *conn);
 
 /**
+ * qdr_connection_set_hidden
+ *
+ * Set flag to indicate that this connection must not be shown on console
+ * displays. The first use of this feature is to signal to the console not
+ * to display TCP adaptor egress_dispatcher connections.
+ */
+void qdr_connection_set_hidden_on_gui(qdr_connection_t *conn);
+
+
+/**
  ******************************************************************************
  * Terminus functions
  ******************************************************************************

@@ -49,6 +49,7 @@
 #define QDR_CONNECTION_UPTIME_SECONDS        22
 #define QDR_CONNECTION_LAST_DLV_SECONDS      23
 #define QDR_CONNECTION_ENABLE_PROTOCOL_TRACE 24
+#define QDR_CONNECTION_HIDE_ON_GUI           25
 
 
 const char * const QDR_CONNECTION_DIR_IN  = "in";
@@ -94,6 +95,7 @@ const char *qdr_connection_columns[] =
      "uptimeSeconds",
      "lastDlvSeconds",
      "enableProtocolTrace",
+     "hideOnGui",
      0};
 
 const char *CONNECTION_TYPE = "org.apache.qpid.dispatch.connection";
@@ -308,6 +310,11 @@ static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *
         qd_compose_end_map(body);
     }
     break;
+
+    case QDR_CONNECTION_HIDE_ON_GUI:
+        qd_compose_insert_bool(body, conn->hide_on_gui);
+        break;
+
     }
 }
 

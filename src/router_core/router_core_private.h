@@ -699,6 +699,7 @@ struct qdr_connection_t {
     bool                        has_streaming_links;   ///< one or more of this connection's links are for streaming messages
     qdr_link_list_t             streaming_link_pool;   ///< pool of links available for streaming messages
     const qd_policy_spec_t     *policy_spec;
+    bool                        hide_on_gui;
 };
 
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);

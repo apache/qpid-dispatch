@@ -2057,7 +2057,11 @@
                     "type": "integer",
                     "graph": true,
                     "description": "The number of seconds since a delivery was sent on this connection. Will display a - (dash) if no deliveries have been sent on the connection."
-                }                
+                },
+                "hideOnGui": {
+                    "type": "boolean",
+                    "description": "This connection is for internal use only and should not be shown on console screens depicting user configuration or traffic flow."
+                }
             }
         },
 
