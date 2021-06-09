@@ -150,6 +150,8 @@ struct qdr_http2_connection_t {
     bool                      first_pinged;
     bool                      delete_egress_connections;  // If set to true, the egress qdr_connection_t and qdr_http2_connection_t objects will be deleted
     bool                      goaway_received;
+    sys_atomic_t 		      raw_closed_read;
+    sys_atomic_t 			  raw_closed_write;
 
     DEQ_LINKS(qdr_http2_connection_t);
  };

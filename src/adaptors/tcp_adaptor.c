@@ -74,8 +74,8 @@ struct qdr_tcp_connection_t {
     bool                  egress_dispatcher;
     bool                  connector_closed;//only used if egress_dispatcher=true
     bool                  in_list;         // This connection is in the adaptor's connections list
-    bool                  raw_closed_read;   // proton event seen
-    bool                  raw_closed_write;  // proton event seen or write_close called
+    sys_atomic_t	      raw_closed_read;   // proton event seen
+    sys_atomic_t	      raw_closed_write;  // proton event seen or write_close called
     bool                  raw_read_shutdown; // stream closed
     bool                  read_eos_seen;
     qdr_delivery_t       *initial_delivery;
@@ -187,7 +187,7 @@ static void on_activate(void *context)
 
 static void grant_read_buffers(qdr_tcp_connection_t *conn)
 {
-    if (conn->raw_closed_read || conn->read_pending)
+    if (IS_ATOMIC_FLAG_SET(&conn->raw_closed_read) || conn->read_pending)
         return;
 
     conn->read_pending = true;
@@ -370,10 +370,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
     int count = handle_incoming_raw_read(conn, &buffers);
 
     // Grant more buffers to proton for reading if read side is still open
-    if (!conn->raw_closed_read) {
-        // normal path - keep on processing
-        grant_read_buffers(conn);
-    }
+	grant_read_buffers(conn);
 
     // Push the bytes just read into the streaming message
     if (count > 0) {
@@ -394,7 +391,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
     }
 
     // Close the stream message if read side has closed
-    if (conn->raw_closed_read) {
+    if (IS_ATOMIC_FLAG_SET(&conn->raw_closed_read)) {
         qd_log(log, QD_LOG_DEBUG,
             DLV_FMT" close %s instream delivery",
             DLV_ARGS(conn_instream), qdr_tcp_connection_role_name(conn));
@@ -426,6 +423,8 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
     free(tc->remote_address);
     free(tc->global_id);
     sys_atomic_destroy(&tc->q2_restart);
+    sys_atomic_destroy(&tc->raw_closed_read);
+    sys_atomic_destroy(&tc->raw_closed_write);
     if (tc->activate_timer) {
         qd_timer_free(tc->activate_timer);
     }
@@ -595,7 +594,7 @@ static bool copy_outgoing_buffs(qdr_tcp_connection_t *conn)
 static void handle_outgoing(qdr_tcp_connection_t *conn)
 {
     if (conn->outstream) {
-        if (conn->raw_closed_write) {
+        if (IS_ATOMIC_FLAG_SET(&conn->raw_closed_write)) {
             // flush outgoing buffers and free attached stream_data objects
             flush_outgoing_buffs(conn);
             // give no more buffers to raw connection
@@ -639,7 +638,8 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
                    "[C%"PRIu64"] handle_outgoing calling pn_raw_connection_write_close(). rcv_complete:%s, send_complete:%s",
                     conn->conn_id, qd_message_receive_complete(msg) ? "T" : "F", qd_message_send_complete(msg) ? "T" : "F");
             sys_mutex_lock(conn->activation_lock);
-            conn->raw_closed_write = true;
+            SET_ATOMIC_FLAG(&conn->raw_closed_write);
+
             sys_mutex_unlock(conn->activation_lock);
             pn_raw_connection_write_close(conn->pn_raw_conn);
         }
@@ -775,9 +775,9 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     case PN_RAW_CONNECTION_CLOSED_READ: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] PN_RAW_CONNECTION_CLOSED_READ %s",
                conn->conn_id, conn->incoming_id, qdr_tcp_connection_role_name(conn));
+        SET_ATOMIC_FLAG(&conn->raw_closed_read);
         sys_mutex_lock(conn->activation_lock);
         conn->q2_blocked = false;
-        conn->raw_closed_read = true;
         sys_mutex_unlock(conn->activation_lock);
         handle_incoming(conn, "PNRC_CLOSED_READ");
         break;
@@ -786,9 +786,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         qd_log(log, QD_LOG_DEBUG,
                "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_WRITE %s",
                conn->conn_id, qdr_tcp_connection_role_name(conn));
-        sys_mutex_lock(conn->activation_lock);
-        conn->raw_closed_write = true;
-        sys_mutex_unlock(conn->activation_lock);
+        SET_ATOMIC_FLAG(&conn->raw_closed_write);
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
@@ -908,6 +906,8 @@ static qdr_tcp_connection_t *qdr_tcp_connection_ingress(qd_tcp_listener_t* liste
     tc->config = listener->config;
     tc->server = listener->server;
     sys_atomic_init(&tc->q2_restart, 0);
+    sys_atomic_init(&tc->raw_closed_read, 0);
+    sys_atomic_init(&tc->raw_closed_write, 0);
     tc->pn_raw_conn = pn_raw_connection();
     pn_raw_connection_set_context(tc->pn_raw_conn, tc);
     //the following call will cause a PN_RAW_CONNECTION_CONNECTED
@@ -1011,6 +1011,8 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_bridge_config_t *confi
     tc->config = *config;
     tc->server = server;
     sys_atomic_init(&tc->q2_restart, 0);
+    sys_atomic_init(&tc->raw_closed_read, 0);
+    sys_atomic_init(&tc->raw_closed_write, 0);
     tc->conn_id = qd_server_allocate_connection_id(tc->server);
 
     //
@@ -1573,7 +1575,7 @@ static void qdr_tcp_activate(void *notused, qdr_connection_t *c)
     if (context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) context;
         sys_mutex_lock(conn->activation_lock);
-        if (conn->pn_raw_conn && !(conn->raw_closed_read && conn->raw_closed_write)) {
+        if (conn->pn_raw_conn && !(IS_ATOMIC_FLAG_SET(&conn->raw_closed_read) && IS_ATOMIC_FLAG_SET(&conn->raw_closed_write))) {
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                    "[C%"PRIu64"] qdr_tcp_activate: call pn_raw_connection_wake()", conn->conn_id);
             pn_raw_connection_wake(conn->pn_raw_conn);

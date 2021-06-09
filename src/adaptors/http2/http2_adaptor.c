@@ -422,6 +422,9 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn, bool on_shutdo
 
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Freeing http2 connection in free_qdr_http2_connection", http_conn->conn_id);
 
+    sys_atomic_destroy(&http_conn->raw_closed_read);
+    sys_atomic_destroy(&http_conn->raw_closed_write);
+
     free_qdr_http2_connection_t(http_conn);
 }
 
@@ -1355,6 +1358,8 @@ qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_listener_t* listener
     ingress_http_conn->config = &(listener->config);
     ingress_http_conn->server = listener->server;
     ingress_http_conn->pn_raw_conn = pn_raw_connection();
+    sys_atomic_init(&ingress_http_conn->raw_closed_read, 0);
+    sys_atomic_init(&ingress_http_conn->raw_closed_write, 0);
 
     ingress_http_conn->session_data = new_qdr_http2_session_data_t();
     ZERO(ingress_http_conn->session_data);
@@ -1376,26 +1381,27 @@ qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_listener_t* listener
 
 static void grant_read_buffers(qdr_http2_connection_t *conn)
 {
+	if (IS_ATOMIC_FLAG_SET(&conn->raw_closed_read))
+		return;
+
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
     if (conn->pn_raw_conn) {
-        if (!pn_raw_connection_is_read_closed(conn->pn_raw_conn)) {
-            size_t desired = pn_raw_connection_read_buffers_capacity(conn->pn_raw_conn);
-            while (desired) {
-                size_t i;
-                for (i = 0; i < desired && i < READ_BUFFERS; ++i) {
-                    qd_http2_buffer_t *buf = qd_http2_buffer();
-                    DEQ_INSERT_TAIL(conn->granted_read_buffs, buf);
-                    raw_buffers[i].bytes = (char*) qd_http2_buffer_base(buf);
-                    raw_buffers[i].capacity = qd_http2_buffer_capacity(buf);
-                    raw_buffers[i].size = 0;
-                    raw_buffers[i].offset = 0;
-                    raw_buffers[i].context = (uintptr_t) buf;
-                }
-                desired -= i;
-                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Calling pn_raw_connection_give_read_buffers in grant_read_buffers", conn->conn_id);
-                pn_raw_connection_give_read_buffers(conn->pn_raw_conn, raw_buffers, i);
-            }
-        }
+		size_t desired = pn_raw_connection_read_buffers_capacity(conn->pn_raw_conn);
+		while (desired) {
+			size_t i;
+			for (i = 0; i < desired && i < READ_BUFFERS; ++i) {
+				qd_http2_buffer_t *buf = qd_http2_buffer();
+				DEQ_INSERT_TAIL(conn->granted_read_buffs, buf);
+				raw_buffers[i].bytes = (char*) qd_http2_buffer_base(buf);
+				raw_buffers[i].capacity = qd_http2_buffer_capacity(buf);
+				raw_buffers[i].size = 0;
+				raw_buffers[i].offset = 0;
+				raw_buffers[i].context = (uintptr_t) buf;
+			}
+			desired -= i;
+			qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Calling pn_raw_connection_give_read_buffers in grant_read_buffers", conn->conn_id);
+			pn_raw_connection_give_read_buffers(conn->pn_raw_conn, raw_buffers, i);
+		}
     }
 }
 
@@ -1629,7 +1635,7 @@ static void qdr_http_activate(void *notused, qdr_connection_t *c)
     sys_mutex_lock(qd_server_get_activation_lock(http2_adaptor->core->qd->server));
     qdr_http2_connection_t* conn = (qdr_http2_connection_t*) qdr_connection_get_context(c);
     if (conn) {
-        if (conn->pn_raw_conn) {
+        if (conn->pn_raw_conn && !(IS_ATOMIC_FLAG_SET(&conn->raw_closed_read) && IS_ATOMIC_FLAG_SET(&conn->raw_closed_write))) {
             qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Activation triggered, calling pn_raw_connection_wake()", conn->conn_id);
             pn_raw_connection_wake(conn->pn_raw_conn);
         }
@@ -1663,6 +1669,9 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
     //stream_data->processing = true;
     qdr_http2_session_data_t *session_data = stream_data->session_data;
     qdr_http2_connection_t *conn = session_data->conn;
+
+	if (IS_ATOMIC_FLAG_SET(&conn->raw_closed_write))
+		return 0;
 
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Starting to handle_outgoing_http", conn->conn_id);
     if (stream_data->out_dlv) {
@@ -2368,7 +2377,8 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
     DEQ_INIT(egress_http_conn->session_data->streams);
     DEQ_INIT(egress_http_conn->granted_read_buffs);
     egress_http_conn->session_data->conn = egress_http_conn;
-
+    sys_atomic_init(&egress_http_conn->raw_closed_read, 0);
+    sys_atomic_init(&egress_http_conn->raw_closed_write, 0);
     sys_mutex_lock(http2_adaptor->lock);
     DEQ_INSERT_TAIL(http2_adaptor->connections, egress_http_conn);
     sys_mutex_unlock(http2_adaptor->lock);
@@ -2426,6 +2436,8 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             send_settings_frame(conn);
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted Ingress ((PN_RAW_CONNECTION_CONNECTED)) from %s", conn->conn_id, conn->remote_address);
         } else {
+            sys_atomic_init(&conn->raw_closed_read, 0);
+            sys_atomic_init(&conn->raw_closed_write, 0);
             if (!conn->session_data->session) {
                 nghttp2_session_client_new(&conn->session_data->session, (nghttp2_session_callbacks *)http2_adaptor->callbacks, (void *)conn);
                 send_settings_frame(conn);
@@ -2440,6 +2452,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         break;
     }
     case PN_RAW_CONNECTION_CLOSED_READ: {
+    	SET_ATOMIC_FLAG(&conn->raw_closed_read);
         if (conn->pn_raw_conn)
             pn_raw_connection_close(conn->pn_raw_conn);
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_READ", conn->conn_id);
@@ -2447,6 +2460,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     }
     case PN_RAW_CONNECTION_CLOSED_WRITE: {
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_WRITE", conn->conn_id);
+        SET_ATOMIC_FLAG(&conn->raw_closed_write);
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
