@@ -138,45 +138,31 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
     }
 }
 
+static void _free_qdr_http1_out_data(qdr_http1_out_data_t *od)
+{
+    if (od) {
+        qd_iterator_free(od->data_iter);
+        if (od->stream_data)
+            qd_message_stream_data_release(od->stream_data);
+        else
+            qd_buffer_list_free_buffers(&od->raw_buffers);
+        free_qdr_http1_out_data_t(od);
+    }
+}
 
-void qdr_http1_out_data_fifo_cleanup(qdr_http1_out_data_fifo_t *out_data)
+void qdr_http1_out_data_cleanup(qdr_http1_out_data_list_t *out_data)
 {
     if (out_data) {
         // expect: all buffers returned from proton!
         // FIXME: not during router shutdown!
         // assert(qdr_http1_out_data_buffers_outstanding(out_data) == 0);
-        qdr_http1_out_data_t *od = DEQ_HEAD(out_data->fifo);
+        qdr_http1_out_data_t *od = DEQ_HEAD(*out_data);
         while (od) {
-            DEQ_REMOVE_HEAD(out_data->fifo);
-            if (od->stream_data)
-                qd_message_stream_data_release(od->stream_data);
-            else
-                qd_buffer_list_free_buffers(&od->raw_buffers);
-            free_qdr_http1_out_data_t(od);
-            od = DEQ_HEAD(out_data->fifo);
+            DEQ_REMOVE_HEAD(*out_data);
+            _free_qdr_http1_out_data(od);
+            od = DEQ_HEAD(*out_data);
         }
     }
-}
-
-
-// Return the number of buffers in the process of being written out by the proactor.
-// These buffers are "owned" by proton - they must not be freed until proton has
-// released them.
-//
-int qdr_http1_out_data_buffers_outstanding(const qdr_http1_out_data_fifo_t *out_data)
-{
-    int count = 0;
-    if (out_data) {
-        qdr_http1_out_data_t *od = DEQ_HEAD(out_data->fifo);
-        while (od) {
-            count += od->next_buffer - od->free_count;
-            if (od == out_data->write_ptr)
-                break;
-
-            od = DEQ_NEXT(od);
-        }
-    }
-    return count;
 }
 
 
@@ -250,86 +236,51 @@ void qdr_http1_error_response(qdr_http1_request_base_t *hreq,
 //
 
 
-// Write pending data out the raw connection.  Preserve order by only writing
-// the head request data.
+// Write list of data out the raw connection, freeing entries when data is exhausted
 //
-uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_data_fifo_t *fifo)
+uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_data_list_t *fifo)
 {
-    pn_raw_buffer_t buffers[RAW_BUFFER_BATCH];
     size_t count = !hconn->raw_conn || pn_raw_connection_is_write_closed(hconn->raw_conn)
         ? 0
         : pn_raw_connection_write_buffers_capacity(hconn->raw_conn);
 
-    uint64_t total_octets = 0;
-    qdr_http1_out_data_t *od = fifo->write_ptr;
-    while (count > 0 && od) {
-        qd_buffer_t *wbuf   = 0;
-        int          od_len = MIN(count,
-                                  (od->buffer_count - od->next_buffer));
-        assert(od_len);  // error: no data @ head?
+    if (hconn->write_buf_busy || count == 0)
+        return 0;
 
-        // send the out_data as a series of writes to proactor
+    const size_t max_octets = HTTP1_IO_BUF_SIZE;
+    size_t total_octets = 0;
+    while (!DEQ_IS_EMPTY(*fifo) && total_octets < max_octets) {
+        qdr_http1_out_data_t *od = DEQ_HEAD(*fifo);
+        uint32_t data_octets = qd_iterator_remaining(od->data_iter);
 
-        while (od_len) {
-            size_t limit = MIN(RAW_BUFFER_BATCH, od_len);
-            int written = 0;
+        size_t len = MIN(data_octets, max_octets - total_octets);
+        int copied = qd_iterator_ncopy(od->data_iter, &hconn->write_buffer[total_octets], len);
+        assert(copied == len);
+        data_octets -= copied;
+        total_octets += copied;
 
-            if (od->stream_data) {  // buffers stored in qd_message_t
+        qd_iterator_trim_view(od->data_iter, data_octets);
+        if (qd_iterator_remaining(od->data_iter) == 0) {
+            DEQ_REMOVE_HEAD(*fifo);
+            _free_qdr_http1_out_data(od);
+        }
+    }
 
-                written = qd_message_stream_data_buffers(od->stream_data, buffers, od->next_buffer, limit);
-                for (int i = 0; i < written; ++i) {
-                    // enforce this: we expect the context can be used by the adaptor!
-                    assert(buffers[i].context == 0);
-                    buffers[i].context = (uintptr_t)od;
-                    total_octets += buffers[i].size;
-                }
+    if (total_octets) {
+        pn_raw_buffer_t pn_buff = {0};
+        pn_buff.bytes = (char*) hconn->write_buffer;
+        pn_buff.size  = total_octets;
 
-            } else {   // list of buffers in od->raw_buffers
-                // advance to next buffer to send in od
-                if (!wbuf) {
-                    wbuf = DEQ_HEAD(od->raw_buffers);
-                    for (int i = 0; i < od->next_buffer; ++i)
-                        wbuf = DEQ_NEXT(wbuf);
-                }
-
-                pn_raw_buffer_t *rdisc = &buffers[0];
-                while (limit--) {
-                    rdisc->context  = (uintptr_t)od;
-                    rdisc->bytes    = (char*) qd_buffer_base(wbuf);
-                    rdisc->capacity = 0;
-                    rdisc->size     = qd_buffer_size(wbuf);
-                    rdisc->offset   = 0;
-
-                    total_octets += rdisc->size;
-                    ++rdisc;
-                    wbuf = DEQ_NEXT(wbuf);
-                    written += 1;
-                }
-            }
-
-            // keep me, you'll need it
-            if (HTTP1_DUMP_BUFFERS) {
-                for (size_t j = 0; j < written; ++j) {
-                    char *ptr = (char*) buffers[j].bytes;
-                    int len = (int) buffers[j].size;
-                    fprintf(stdout, "\n[C%"PRIu64"] Raw Write: Ptr=%p len=%d\n  value='%.*s'\n",
-                            hconn->conn_id, (void*)ptr, len, len, ptr);
-                    fflush(stdout);
-                }
-            }
-
-            written = pn_raw_connection_write_buffers(hconn->raw_conn, buffers, written);
-            count -= written;
-            od_len -= written;
-            od->next_buffer += written;
+        // keep me, you'll need it
+        if (HTTP1_DUMP_BUFFERS) {
+            fprintf(stdout, "\n[C%"PRIu64"] Raw Write: Ptr=%p len=%"PRIu32"\n  value='%.*s'\n",
+                    hconn->conn_id, (void*)pn_buff.bytes, pn_buff.size,
+                    (int) pn_buff.size, pn_buff.bytes);
+            fflush(stdout);
         }
 
-        if (od->next_buffer == od->buffer_count) {
-            // all buffers in od have been passed to proton.
-            od = DEQ_NEXT(od);
-            fifo->write_ptr = od;
-            wbuf = 0;
-        }
+        pn_raw_connection_write_buffers(hconn->raw_conn, &pn_buff, 1);
+        hconn->write_buf_busy = true;
     }
 
     hconn->out_http1_octets += total_octets;
@@ -340,20 +291,15 @@ uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_d
 // The HTTP encoder has a list of buffers to be written to the raw connection.
 // Queue it to the outgoing data fifo.
 //
-void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_fifo_t *fifo, qd_buffer_list_t *blist)
+void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_list_t *fifo, qd_buffer_list_t *blist, uintmax_t octets)
 {
-    int count = (int) DEQ_SIZE(*blist);
-    if (count) {
+    if (octets) {
         qdr_http1_out_data_t *od = new_qdr_http1_out_data_t();
         ZERO(od);
-        od->owning_fifo = fifo;
-        od->buffer_count = (int) DEQ_SIZE(*blist);
         od->raw_buffers = *blist;
+        od->data_iter = qd_iterator_buffer(DEQ_HEAD(od->raw_buffers), 0, (int)octets, ITER_VIEW_ALL);
         DEQ_INIT(*blist);
-
-        DEQ_INSERT_TAIL(fifo->fifo, od);
-        if (!fifo->write_ptr)
-            fifo->write_ptr = od;
+        DEQ_INSERT_TAIL(*fifo, od);
     }
 }
 
@@ -361,19 +307,14 @@ void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_fifo_t *fifo, qd_buffer_li
 // The HTTP encoder has a message body data to be written to the raw connection.
 // Queue it to the outgoing data fifo.
 //
-void qdr_http1_enqueue_stream_data(qdr_http1_out_data_fifo_t *fifo, qd_message_stream_data_t *stream_data)
+void qdr_http1_enqueue_stream_data(qdr_http1_out_data_list_t *fifo, qd_message_stream_data_t *stream_data)
 {
-    int count = qd_message_stream_data_buffer_count(stream_data);
-    if (count) {
+    if (qd_message_stream_data_payload_length(stream_data)) {
         qdr_http1_out_data_t *od = new_qdr_http1_out_data_t();
         ZERO(od);
-        od->owning_fifo = fifo;
         od->stream_data = stream_data;
-        od->buffer_count = count;
-
-        DEQ_INSERT_TAIL(fifo->fifo, od);
-        if (!fifo->write_ptr)
-            fifo->write_ptr = od;
+        od->data_iter = qd_message_stream_data_iterator(stream_data);
+        DEQ_INSERT_TAIL(*fifo, od);
     } else {
         // empty body-data
         qd_message_stream_data_release(stream_data);
@@ -385,39 +326,61 @@ void qdr_http1_enqueue_stream_data(qdr_http1_out_data_fifo_t *fifo, qd_message_s
 //
 void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn)
 {
-    pn_raw_buffer_t buffers[RAW_BUFFER_BATCH];
-    size_t count;
-    while ((count = pn_raw_connection_take_written_buffers(hconn->raw_conn, buffers, RAW_BUFFER_BATCH)) != 0) {
-        for (size_t i = 0; i < count; ++i) {
+    pn_raw_buffer_t pn_buff = {0};
 
-            // keep me, you'll need it
-            if (HTTP1_DUMP_BUFFERS) {
-                char *ptr = (char*) buffers[i].bytes;
-                int len = (int) buffers[i].size;
-                fprintf(stdout, "\n[C%"PRIu64"] Raw Written: Ptr=%p len=%d c=%d o=%d\n  value='%.*s'\n",
-                        hconn->conn_id, (void*)ptr, len, buffers[i].capacity, buffers[i].offset, len, ptr);
-                fflush(stdout);
-            }
+    if (pn_raw_connection_take_written_buffers(hconn->raw_conn, &pn_buff, 1) != 0) {
+        assert(hconn->write_buf_busy);  // expect write buffer in use
 
-            qdr_http1_out_data_t *od = (qdr_http1_out_data_t*) buffers[i].context;
-            assert(od);
-            // Note: according to proton devs the order in which write buffers
-            // are released are NOT guaranteed to be in the same order in which
-            // they were written!
-
-            od->free_count += 1;
-            if (od->free_count == od->buffer_count) {
-                // all buffers returned
-                qdr_http1_out_data_fifo_t *fifo = od->owning_fifo;
-                DEQ_REMOVE(fifo->fifo, od);
-                if (od->stream_data)
-                    qd_message_stream_data_release(od->stream_data);
-                else
-                    qd_buffer_list_free_buffers(&od->raw_buffers);
-                free_qdr_http1_out_data_t(od);
-            }
+        // keep me, you'll need it
+        if (HTTP1_DUMP_BUFFERS) {
+            char *ptr = (char*) pn_buff.bytes;
+            int len = (int) pn_buff.size;
+            fprintf(stdout, "\n[C%"PRIu64"] Raw Written: Ptr=%p len=%d c=%d o=%d\n  value='%.*s'\n",
+                    hconn->conn_id, (void*)ptr, len, pn_buff.capacity, pn_buff.offset, len, ptr);
+            fflush(stdout);
         }
+
+        hconn->write_buf_busy = false;
     }
+}
+
+
+//
+// Raw Connection Read Buffer Management
+//
+
+int qdr_http1_grant_read_buffers(qdr_http1_connection_t *hconn)
+{
+    if (!hconn->read_buf_busy && hconn->raw_conn
+        && pn_raw_connection_read_buffers_capacity(hconn->raw_conn) > 0) {
+
+        pn_raw_buffer_t pn_buf = {0};
+        pn_buf.bytes = (char*) hconn->read_buffer;
+        pn_buf.capacity = HTTP1_IO_BUF_SIZE;
+        pn_raw_connection_give_read_buffers(hconn->raw_conn, &pn_buf, 1);
+        hconn->read_buf_busy = true;
+        return 1;
+    }
+    return 0;
+}
+
+// take incoming data from raw connection
+uintmax_t qdr_http1_get_read_buffers(qdr_http1_connection_t *hconn,
+                                     qd_buffer_list_t *blist)
+{
+    pn_raw_buffer_t pn_buff;
+    DEQ_INIT(*blist);
+    uintmax_t octets = 0;
+
+    if (hconn->raw_conn && pn_raw_connection_take_read_buffers(hconn->raw_conn,
+                                                               &pn_buff, 1)) {
+        if (pn_buff.size) {
+            octets = pn_buff.size;
+            qd_buffer_list_append(blist, (uint8_t*) pn_buff.bytes, pn_buff.size);
+        }
+        hconn->read_buf_busy = false;
+    }
+    return octets;
 }
 
 

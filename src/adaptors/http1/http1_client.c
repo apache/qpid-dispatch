@@ -50,7 +50,7 @@ typedef struct _client_response_msg_t {
     bool            encoded;          // true when full response encoded
 
     // HTTP encoded message data
-    qdr_http1_out_data_fifo_t out_data;
+    qdr_http1_out_data_list_t out_data;
 
 } _client_response_msg_t;
 ALLOC_DECLARE(_client_response_msg_t);
@@ -383,13 +383,13 @@ static int _handle_conn_read_event(qdr_http1_connection_t *hconn)
 {
     int error = 0;
     qd_buffer_list_t blist;
-    uintmax_t length;
-    qda_raw_conn_get_read_buffers(hconn->raw_conn, &blist, &length);
+    uintmax_t length = qdr_http1_get_read_buffers(hconn, &blist);
+
     if (length) {
+
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
                "[C%"PRIu64"][L%"PRIu64"] Read %"PRIuMAX" bytes from client (%zu buffers)",
                hconn->conn_id, hconn->in_link_id, length, DEQ_SIZE(blist));
-        hconn->in_http1_octets += length;
 
         if (HTTP1_DUMP_BUFFERS) {
             fprintf(stdout, "\nClient raw buffer READ %"PRIuMAX" total octets\n", length);
@@ -401,6 +401,7 @@ static int _handle_conn_read_event(qdr_http1_connection_t *hconn)
             fflush(stdout);
         }
 
+        hconn->in_http1_octets += length;
         error = h1_codec_connection_rx_data(hconn->http_conn, &blist, length);
     }
     return error;
@@ -412,7 +413,7 @@ static void _handle_conn_need_read_buffers(qdr_http1_connection_t *hconn)
 {
     // @TODO(kgiusti): backpressure if no credit
     if (hconn->client.reply_to_addr || hconn->cfg.event_channel /* && hconn->in_link_credit > 0 */) {
-        int granted = qda_raw_conn_grant_read_buffers(hconn->raw_conn);
+        int granted = qdr_http1_grant_read_buffers(hconn);
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %d read buffers granted",
                hconn->conn_id, granted);
     }
@@ -481,9 +482,24 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         _write_pending_response((_client_request_t*) DEQ_HEAD(hconn->requests));
         break;
     }
+    case PN_RAW_CONNECTION_WRITTEN: {
+        qdr_http1_free_written_buffers(hconn);
+        break;
+    }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need read buffers", hconn->conn_id);
         _handle_conn_need_read_buffers(hconn);
+        break;
+    }
+    case PN_RAW_CONNECTION_READ: {
+        if (!hconn->q2_blocked) {
+            int error = _handle_conn_read_event(hconn);
+            if (error)
+                qdr_http1_close_connection(hconn, "Incoming response message failed to parse");
+            else
+                // room for more incoming data
+                _handle_conn_need_read_buffers(hconn);
+        }
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
@@ -495,7 +511,9 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] client link unblocked from Q2 limit", hconn->conn_id);
             hconn->q2_blocked = false;
             error = _handle_conn_read_event(hconn);  // restart receiving
-            _handle_conn_need_read_buffers(hconn);
+            if (!error)
+                // room for more incoming data
+                _handle_conn_need_read_buffers(hconn);
         }
 
         while (qdr_connection_process(hconn->qdr_conn)) {}
@@ -504,18 +522,6 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             qdr_http1_close_connection(hconn, "Incoming request message failed to parse");
 
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Processing done", hconn->conn_id);
-        break;
-    }
-    case PN_RAW_CONNECTION_READ: {
-        if (!hconn->q2_blocked) {
-            int error = _handle_conn_read_event(hconn);
-            if (error)
-                qdr_http1_close_connection(hconn, "Incoming response message failed to parse");
-        }
-        break;
-    }
-    case PN_RAW_CONNECTION_WRITTEN: {
-        qdr_http1_free_written_buffers(hconn);
         break;
     }
     default:
@@ -556,7 +562,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                        hconn->out_link_id, hreq->error_code, hreq->error_text);
                 _client_response_msg_t *rmsg = new__client_response_msg_t();
                 ZERO(rmsg);
-                DEQ_INIT(rmsg->out_data.fifo);
+                DEQ_INIT(rmsg->out_data);
                 DEQ_INSERT_TAIL(hreq->responses, rmsg);
                 qdr_http1_error_response(&hreq->base, hreq->error_code, hreq->error_text);
                 _write_pending_response(hreq);
@@ -566,7 +572,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             _client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
             while (rmsg &&
                    rmsg->dispo &&
-                   DEQ_IS_EMPTY(rmsg->out_data.fifo) &&
+                   DEQ_IS_EMPTY(rmsg->out_data) &&
                    hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
                 // response message fully received and forwarded to client
                 if (rmsg->dlv) {
@@ -660,7 +666,7 @@ static void _client_tx_buffers_cb(h1_codec_request_state_t *hrs, qd_buffer_list_
         rmsg = DEQ_HEAD(hreq->responses);
     }
     assert(rmsg);
-    qdr_http1_enqueue_buffer_list(&rmsg->out_data, blist);
+    qdr_http1_enqueue_buffer_list(&rmsg->out_data, blist, len);
 
     // if this happens to be the current outgoing response try writing to the
     // raw connection
@@ -1033,12 +1039,7 @@ void qdr_http1_client_core_link_flow(qdr_http1_adaptor_t    *adaptor,
     hconn->in_link_credit += credit;
     if (hconn->in_link_credit > 0) {
 
-        if (hconn->raw_conn) {
-            int granted = qda_raw_conn_grant_read_buffers(hconn->raw_conn);
-            qd_log(adaptor->log, QD_LOG_DEBUG,
-                   "[C%"PRIu64"] %d read buffers granted",
-                   hconn->conn_id, granted);
-        }
+        _handle_conn_need_read_buffers(hconn);
 
         // is the current request message blocked by lack of credit?
 
@@ -1327,7 +1328,7 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
                 // if nothing has been sent back so far
                 _client_response_msg_t *rmsg = new__client_response_msg_t();
                 ZERO(rmsg);
-                DEQ_INIT(rmsg->out_data.fifo);
+                DEQ_INIT(rmsg->out_data);
                 DEQ_INSERT_TAIL(hreq->responses, rmsg);
 
                 if (disp == PN_REJECTED) {
@@ -1600,7 +1601,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
             _client_response_msg_t *rmsg = new__client_response_msg_t();
             ZERO(rmsg);
             rmsg->dlv = delivery;
-            DEQ_INIT(rmsg->out_data.fifo);
+            DEQ_INIT(rmsg->out_data);
             qdr_delivery_set_context(delivery, hreq);
             qdr_delivery_incref(delivery, "HTTP1 client referencing response delivery");
             DEQ_INSERT_TAIL(hreq->responses, rmsg);
@@ -1678,7 +1679,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
 static void _client_response_msg_free(_client_request_t *req, _client_response_msg_t *rmsg)
 {
     DEQ_REMOVE(req->responses, rmsg);
-    qdr_http1_out_data_fifo_cleanup(&rmsg->out_data);
+    qdr_http1_out_data_cleanup(&rmsg->out_data);
 
     if (rmsg->dlv) {
         qdr_delivery_set_context(rmsg->dlv, 0);
@@ -1697,7 +1698,7 @@ static void _write_pending_response(_client_request_t *hreq)
     if (hreq && !hreq->cancelled) {
         assert(DEQ_PREV(&hreq->base) == 0);  // must preserve order
         _client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
-        if (rmsg && rmsg->out_data.write_ptr) {
+        if (rmsg && DEQ_HEAD(rmsg->out_data)) {
             uint64_t written = qdr_http1_write_out_data(hreq->base.hconn, &rmsg->out_data);
             hreq->base.out_http1_octets += written;
             qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %"PRIu64" octets written",

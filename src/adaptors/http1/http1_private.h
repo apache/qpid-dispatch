@@ -38,8 +38,9 @@
 // for debug: will dump I/O buffer content to stdout if true
 #define HTTP1_DUMP_BUFFERS false
 
+#define HTTP1_IO_BUF_SIZE 16384
+
 typedef struct qdr_http1_out_data_t      qdr_http1_out_data_t;
-typedef struct qdr_http1_out_data_fifo_t qdr_http1_out_data_fifo_t;
 typedef struct qdr_http1_request_base_t  qdr_http1_request_base_t;
 typedef struct qdr_http1_connection_t    qdr_http1_connection_t;
 
@@ -63,7 +64,7 @@ extern qdr_http1_adaptor_t *qdr_http1_adaptor;
 // This adaptor has to cope with two different data sources: the HTTP1 encoder
 // and the qd_message_stream_data_t list.  The HTTP1 encoder produces a simple
 // qd_buffer_list_t for outgoing header data whose ownership is given to the
-// adaptor: the adaptor is free to deque/free these buffers as needed.  The
+// adaptor: the adaptor is free to dequeue/free these buffers as needed.  The
 // qd_message_stream_data_t buffers are shared with the owning message and the
 // buffer list must not be modified by the adaptor.  The qdr_http1_out_data_t
 // is used to manage both types of data sources.
@@ -71,34 +72,17 @@ extern qdr_http1_adaptor_t *qdr_http1_adaptor;
 struct qdr_http1_out_data_t {
     DEQ_LINKS(qdr_http1_out_data_t);
 
-    qdr_http1_out_data_fifo_t *owning_fifo;
-
     // data is either in a raw buffer chain
     // or a message body data (not both!)
 
     qd_buffer_list_t raw_buffers;
     qd_message_stream_data_t *stream_data;
 
-    int buffer_count;  // # total buffers
-    int next_buffer;   // offset to next buffer to send
-    int free_count;    // # buffers returned from proton
+    // points to the data contained in the stream_data/raw_buffers
+    qd_iterator_t *data_iter;
 };
 ALLOC_DECLARE(qdr_http1_out_data_t);
 DEQ_DECLARE(qdr_http1_out_data_t, qdr_http1_out_data_list_t);
-
-
-//
-// A fifo of outgoing (raw connection) data, oldest at HEAD.
-//
-// write_ptr tracks the point in the fifo where the current out_data node that
-// is being written to the raw connection.  As the raw connection returns
-// written buffers (PN_RAW_CONNECTION_WRITTEN) the are removed from the HEAD
-// and freed.
-//
-struct qdr_http1_out_data_fifo_t {
-    qdr_http1_out_data_list_t fifo;
-    qdr_http1_out_data_t     *write_ptr;
-};
 
 
 // Per HTTP request/response(s) state.
@@ -188,6 +172,14 @@ struct qdr_http1_connection_t {
     // flags
     //
     bool trace;
+
+    //
+    //
+    bool read_buf_busy;
+    bool write_buf_busy;
+
+    uint8_t read_buffer[HTTP1_IO_BUF_SIZE];
+    uint8_t write_buffer[HTTP1_IO_BUF_SIZE];
 };
 ALLOC_DECLARE(qdr_http1_connection_t);
 
@@ -207,12 +199,13 @@ ALLOC_DECLARE(qdr_http1_connection_t);
 //void qdr_http1_write_buffer_list(qdr_http1_request_t *hreq, qd_buffer_list_t *blist);
 
 void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn);
-void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_fifo_t *fifo, qd_buffer_list_t *blist);
-void qdr_http1_enqueue_stream_data(qdr_http1_out_data_fifo_t *fifo, qd_message_stream_data_t *stream_data);
-uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_data_fifo_t *fifo);
-void qdr_http1_out_data_fifo_cleanup(qdr_http1_out_data_fifo_t *out_data);
-// return the number of buffers currently held by the proactor for writing
-int qdr_http1_out_data_buffers_outstanding(const qdr_http1_out_data_fifo_t *out_data);
+void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_list_t *fifo, qd_buffer_list_t *blist, uintmax_t octets);
+void qdr_http1_enqueue_stream_data(qdr_http1_out_data_list_t *fifo, qd_message_stream_data_t *stream_data);
+uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_data_list_t *fifo);
+void qdr_http1_out_data_cleanup(qdr_http1_out_data_list_t *out_data);
+int qdr_http1_grant_read_buffers(qdr_http1_connection_t *hconn);
+uintmax_t qdr_http1_get_read_buffers(qdr_http1_connection_t *hconn,
+                                     qd_buffer_list_t *blist);
 
 void qdr_http1_close_connection(qdr_http1_connection_t *hconn, const char *error);
 void qdr_http1_connection_free(qdr_http1_connection_t *hconn);
