@@ -74,7 +74,8 @@ typedef struct _server_request_t {
     bool            request_discard; // drop incoming request data
     bool            headers_encoded; // True when header encode done
 
-    qdr_http1_out_data_fifo_t out_data;  // encoded request written to raw conn
+    // fifo of encoded request data to be written out the raw connection:
+    qdr_http1_out_data_list_t out_data;
 
     _server_response_msg_list_t responses;  // response(s) to this request
 
@@ -476,24 +477,25 @@ static int _handle_conn_read_event(qdr_http1_connection_t *hconn)
 {
     int              error = 0;
     qd_buffer_list_t blist;
-    uintmax_t        length;
 
-    qda_raw_conn_get_read_buffers(hconn->raw_conn, &blist, &length);
-
-    if (HTTP1_DUMP_BUFFERS) {
-        fprintf(stdout, "\nServer raw buffer READ %"PRIuMAX" total octets\n", length);
-        qd_buffer_t *bb = DEQ_HEAD(blist);
-        while (bb) {
-            fprintf(stdout, "  buffer='%.*s'\n", (int)qd_buffer_size(bb), (char*)&bb[1]);
-            bb = DEQ_NEXT(bb);
-        }
-        fflush(stdout);
-    }
+    uintmax_t length = qdr_http1_get_read_buffers(hconn, &blist);
 
     if (length) {
+
         qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
                "[C%"PRIu64"][L%"PRIu64"] Read %"PRIuMAX" bytes from server (%zu buffers)",
                hconn->conn_id, hconn->in_link_id, length, DEQ_SIZE(blist));
+
+        if (HTTP1_DUMP_BUFFERS) {
+            fprintf(stdout, "\nServer raw buffer READ %"PRIuMAX" total octets\n", length);
+            qd_buffer_t *bb = DEQ_HEAD(blist);
+            while (bb) {
+                fprintf(stdout, "  buffer='%.*s'\n", (int)qd_buffer_size(bb), (char*)&bb[1]);
+                bb = DEQ_NEXT(bb);
+            }
+            fflush(stdout);
+        }
+
         hconn->in_http1_octets += length;
         error = h1_codec_connection_rx_data(hconn->http_conn, &blist, length);
     }
@@ -506,7 +508,7 @@ static void _handle_conn_need_read_buffers(qdr_http1_connection_t *hconn)
 {
     // @TODO(kgiusti): backpressure if no credit
     // if (hconn->in_link_credit > 0 */)
-    int granted = qda_raw_conn_grant_read_buffers(hconn->raw_conn);
+    int granted = qdr_http1_grant_read_buffers(hconn);
     qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %d read buffers granted",
            hconn->conn_id, granted);
 }
@@ -549,7 +551,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         _server_request_t *hreq = (_server_request_t*) DEQ_HEAD(hconn->requests);
         if (_is_request_in_progress(hreq)) {
             hreq->request_discard = true;
-            qdr_http1_out_data_fifo_cleanup(&hreq->out_data);
+            qdr_http1_out_data_cleanup(&hreq->out_data);
         }
         pn_raw_connection_close(hconn->raw_conn);
         break;
@@ -608,8 +610,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
-        if (!hconn->q2_blocked)
-            _handle_conn_need_read_buffers(hconn);
+        _handle_conn_need_read_buffers(hconn);
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
@@ -621,7 +622,9 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] server link unblocked from Q2 limit", hconn->conn_id);
             hconn->q2_blocked = false;
             error = _handle_conn_read_event(hconn);  // restart receiving
-            _handle_conn_need_read_buffers(hconn);
+            if (!error)
+                // room for more incoming data
+                _handle_conn_need_read_buffers(hconn);
         }
 
         while (qdr_connection_process(hconn->qdr_conn)) {}
@@ -679,11 +682,6 @@ static bool _process_request(_server_request_t *hreq)
     qdr_http1_connection_t *hconn = hreq->base.hconn;
 
     if (hreq->cancelled) {
-
-        // have to wait until all buffers returned from proton
-        // before we can release the request
-        if (qdr_http1_out_data_buffers_outstanding(&hreq->out_data))
-            return false;
 
         // clean up the request message delivery
         if (hreq->request_dlv) {
@@ -772,7 +770,7 @@ static bool _process_request(_server_request_t *hreq)
             }
         }
 
-        if (hreq->request_acked && hreq->request_settled && DEQ_SIZE(hreq->out_data.fifo) == 0) {
+        if (hreq->request_acked && hreq->request_settled && DEQ_SIZE(hreq->out_data) == 0) {
             qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP request msg-id=%"PRIu64" completed!",
                    hconn->conn_id, hreq->base.msg_id);
             _server_request_free(hreq);
@@ -804,7 +802,7 @@ static void _server_tx_buffers_cb(h1_codec_request_state_t *hrs, qd_buffer_list_
         qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
                "[C%"PRIu64"][L%"PRIu64"] Sending %u octets to server",
                hconn->conn_id, hconn->out_link_id, len);
-        qdr_http1_enqueue_buffer_list(&hreq->out_data, blist);
+        qdr_http1_enqueue_buffer_list(&hreq->out_data, blist, len);
     }
 }
 
@@ -1150,8 +1148,7 @@ void qdr_http1_server_core_link_flow(qdr_http1_adaptor_t    *adaptor,
 
     if (hconn->in_link_credit > 0) {
 
-        if (hconn->raw_conn && !hconn->q2_blocked)
-            qda_raw_conn_grant_read_buffers(hconn->raw_conn);
+        _handle_conn_need_read_buffers(hconn);
 
         // check for pending responses that are blocked for credit
 
@@ -1293,7 +1290,7 @@ static _server_request_t *_create_request_context(qdr_http1_connection_t *hconn,
     hreq->base.response_addr = reply_to;
     hreq->base.site = group_id;
     hreq->base.start = qd_timer_now();
-    DEQ_INIT(hreq->out_data.fifo);
+    DEQ_INIT(hreq->out_data);
     DEQ_INIT(hreq->responses);
     DEQ_INSERT_TAIL(hconn->requests, &hreq->base);
 
@@ -1644,7 +1641,7 @@ static void _server_request_free(_server_request_t *hreq)
 {
     if (hreq) {
         qdr_http1_request_base_cleanup(&hreq->base);
-        qdr_http1_out_data_fifo_cleanup(&hreq->out_data);
+        qdr_http1_out_data_cleanup(&hreq->out_data);
         if (hreq->request_dlv) {
             qdr_delivery_set_context(hreq->request_dlv, 0);
             qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server releasing request delivery");
