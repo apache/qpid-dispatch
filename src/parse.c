@@ -807,6 +807,7 @@ const char *qd_parse_annotations_v1(
             uint8_t * dp;                     // pointer to key name in raw buf or extract buf
             char key_name[QD_MA_MAX_KEY_LEN]; // key name extracted across buf boundary
             int key_len = anno->size;
+
             const int avail = qd_buffer_cursor(anno->bufptr.buffer) - anno->bufptr.cursor;
             if (avail >= anno->size + anno->length_of_size + 1) {
                 // The best case: key name is completely in current raw buffer

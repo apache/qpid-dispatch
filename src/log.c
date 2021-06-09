@@ -272,7 +272,7 @@ static const char *SEPARATORS=", ;:";
 
 /// Calculate the bit mask for a log enable string. Return -1 and set qd_error on error.
 static int enable_mask(const char *enable_) {
-    char *enable = malloc(strlen(enable_) + 1);
+    char *enable = qd_malloc(strlen(enable_) + 1);
     strcpy(enable, enable_);
     char *saveptr = 0;
     int mask = 0;

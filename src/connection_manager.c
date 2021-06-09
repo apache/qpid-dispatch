@@ -801,8 +801,7 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
     int arr_length = get_failover_info_length(conn_info_list);
 
     // This is the string that will contain the comma separated failover list
-    char *failover_info = malloc(arr_length + 1);
-    memset(failover_info, 0, arr_length + 1);
+    char *failover_info = qd_calloc(arr_length + 1, sizeof(char));
     while(item) {
 
         // Break out of the loop when we have hit all items in the list.
