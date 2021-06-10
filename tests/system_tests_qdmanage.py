@@ -542,17 +542,23 @@ class QdmanageTest(TestCase):
         # Try fetching all 10,000 addresses
         # This qdmanage query command would fail without the fix
         # for DISPATCH-974
+        i = 0
         query_command = 'QUERY --type=org.apache.qpid.dispatch.router.address'
-        outs = json.loads(self.run_qdmanage(query_command))
+        while i < 3:
+            sender_addresses = 0
+            receiver_addresses = 0
+            outs = json.loads(self.run_qdmanage(query_command))
+            for out in outs:
+                if ADDRESS_SENDER in out['name']:
+                    sender_addresses += 1
+                if ADDRESS_RECEIVER in out['name']:
+                    receiver_addresses += 1
 
-        sender_addresses = 0
-        receiver_addresses = 0
-
-        for out in outs:
-            if ADDRESS_SENDER in out['name']:
-                sender_addresses += 1
-            if ADDRESS_RECEIVER in out['name']:
-                receiver_addresses += 1
+            if sender_addresses < COUNT or receiver_addresses < COUNT:
+                sleep(2)
+            else:
+                break
+            i += 1
 
         self.assertEqual(sender_addresses, COUNT)
         self.assertEqual(receiver_addresses, COUNT)
