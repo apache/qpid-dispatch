@@ -1652,9 +1652,11 @@ static int qdr_http_push(void *context, qdr_link_t *link, int limit)
 static void http_connector_establish(qdr_http2_connection_t *conn)
 {
     qd_log(http2_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connecting to: %s", conn->conn_id, conn->config->host_port);
+    sys_mutex_lock(qd_server_get_activation_lock(http2_adaptor->core->qd->server));
     conn->pn_raw_conn = pn_raw_connection();
     pn_raw_connection_set_context(conn->pn_raw_conn, conn);
     pn_proactor_raw_connect(qd_server_proactor(conn->server), conn->pn_raw_conn, conn->config->host_port);
+    sys_mutex_unlock(qd_server_get_activation_lock(http2_adaptor->core->qd->server));
 }
 
 
