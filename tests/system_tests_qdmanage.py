@@ -543,30 +543,29 @@ class QdmanageTest(TestCase):
         # This qdmanage query command would fail without the fix
         # for DISPATCH-974
         query_command = 'QUERY --type=org.apache.qpid.dispatch.router.address'
-        outs = json.loads(self.run_qdmanage(query_command))
-
-        sender_addresses = 0
-        receiver_addresses = 0
-
-        for out in outs:
-            if ADDRESS_SENDER in out['name']:
-                sender_addresses += 1
-            if ADDRESS_RECEIVER in out['name']:
-                receiver_addresses += 1
+        for i in range(3):
+            sender_addresses = 0
+            receiver_addresses = 0
+            outs = json.loads(self.run_qdmanage(query_command))
+            for out in outs:
+                if ADDRESS_SENDER in out['name']:
+                    sender_addresses += 1
+                if ADDRESS_RECEIVER in out['name']:
+                    receiver_addresses += 1
+            if sender_addresses < COUNT or receiver_addresses < COUNT:
+                sleep(2)
+            else:
+                break
 
         self.assertEqual(sender_addresses, COUNT)
         self.assertEqual(receiver_addresses, COUNT)
 
         query_command = 'QUERY --type=link'
-        outs = json.loads(self.run_qdmanage(query_command))
-
-        out_links = 0
-        in_links = 0
         success = False
-
-        i = 0
-        while i < 3:
-            i += 1
+        for i in range(3):
+            out_links = 0
+            in_links = 0
+            outs = json.loads(self.run_qdmanage(query_command))
             for out in outs:
                 if out.get('owningAddr'):
                     if ADDRESS_SENDER in out['owningAddr']:
@@ -581,9 +580,6 @@ class QdmanageTest(TestCase):
             if out_links < COUNT or in_links < COUNT:
                 self.logger.log("out_links=%s, in_links=%s" % (str(out_links), str(in_links)))
                 sleep(2)
-                outs = json.loads(self.run_qdmanage(query_command))
-                out_links = 0
-                in_links = 0
             else:
                 self.logger.log("Test success!")
                 success = True
