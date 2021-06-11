@@ -694,6 +694,12 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
     allocate_tcp_buffer(&tc->read_buffer);
     tc->remote_address = get_address_string(tc->pn_raw_conn);
     tc->global_id = get_global_id(tc->config.site_id, tc->remote_address);
+
+    //
+    // The qdr_connection_info() function makes its own copy of the passed in tcp_conn_properties.
+    // So, we need to call pn_data_free(tcp_conn_properties).
+    //
+    pn_data_t *tcp_conn_properties = qdr_tcp_conn_properties();
     qdr_connection_info_t *info = qdr_connection_info(false,               // is_encrypted,
                                                       false,               // is_authenticated,
                                                       true,                // opened,
@@ -704,12 +710,12 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
                                                       "",                  // *ssl_cipher,
                                                       "",                  // *user,
                                                       "TcpAdaptor",        // *container,
-                                                      qdr_tcp_conn_properties(), // *connection_properties,
+													  tcp_conn_properties, // *connection_properties,
                                                       0,                   // ssl_ssf,
                                                       false,               // ssl,
                                                       "",                  // peer router version,
                                                       false);              // streaming links
-
+    pn_data_free(tcp_conn_properties);
 
     tc->conn_id = qd_server_allocate_connection_id(tc->server);
     qdr_connection_t *conn = qdr_connection_opened(tcp_adaptor->core,
@@ -942,6 +948,11 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
     const char *host = tc->egress_dispatcher ? "egress-dispatch" : tc->config.host_port;
     qd_log(tcp_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Opening server-side core connection %s", tc->conn_id, host);
 
+    //
+    // The qdr_connection_info() function makes its own copy of the passed in tcp_conn_properties.
+    // So, we need to call pn_data_free(tcp_conn_properties)
+    //
+    pn_data_t *tcp_conn_properties = qdr_tcp_conn_properties();
     qdr_connection_info_t *info = qdr_connection_info(false,       //bool             is_encrypted,
                                                       false,       //bool             is_authenticated,
                                                       true,        //bool             opened,
@@ -952,11 +963,12 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
                                                       "",          //const char      *ssl_cipher,
                                                       "",          //const char      *user,
                                                       "TcpAdaptor",//const char      *container,
-                                                      qdr_tcp_conn_properties(),// pn_data_t    *connection_properties,
+													  tcp_conn_properties,// pn_data_t    *connection_properties,
                                                       0,           //int              ssl_ssf,
                                                       false,       //bool             ssl,
                                                       "",          // peer router version,
                                                       false);      // streaming links
+    pn_data_free(tcp_conn_properties);
 
     qdr_connection_t *conn = qdr_connection_opened(tcp_adaptor->core,
                                                    tcp_adaptor->adaptor,
@@ -971,7 +983,7 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
                                                    250,             // link_capacity
                                                    0,               // vhost
                                                    0,               // policy_spec
-                                                   info,            // connection_info
+												   info, // connection_info
                                                    0,               // context_binder
                                                    0);              // bind_token
     tc->qdr_conn = conn;
