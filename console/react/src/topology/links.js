@@ -100,7 +100,7 @@ export class Links {
         x: Math.round(nodes.get(source).x + 40 * Math.sin(client / (Math.PI * 2.0))),
         y: Math.round(nodes.get(source).y + 40 * Math.cos(client / (Math.PI * 2.0))),
         fixed: false,
-        animate: true
+        animate: true,
       };
     } else position.animate = false;
     if (position.y > height) {
@@ -133,15 +133,19 @@ export class Links {
         !onode.connection ||
         !onode.connection.results ||
         onode.connection.results.length === 0
-      )
+      ) {
         continue;
-
+      }
       for (let c = 0; c < onode.connection.results.length; c++) {
         let connection = utils.flatten(
           onode.connection.attributeNames,
           onode.connection.results[c]
         );
 
+        // ignore internal only connections
+        if (connection.properties["qd.adaptor"]) {
+          continue;
+        }
         // we need a unique connection.container
         if (connection.container === "") {
           connection.container = connection.name.replace("/", "").replace(":", "-");
@@ -171,7 +175,7 @@ export class Links {
           source: source,
           linksDir: linksDir,
           connection: connection,
-          resultsIndex: c
+          resultsIndex: c,
         });
       }
     }
@@ -182,7 +186,7 @@ export class Links {
       if (!unique[key])
         unique[key] = {
           c: [],
-          nodes: []
+          nodes: [],
         };
       unique[key].c.push(container);
     }
@@ -214,7 +218,7 @@ export class Links {
           connectionContainer: container.connection.container,
           resultIndex: container.resultsIndex,
           fixed: position.fixed,
-          properties: container.connection.properties
+          properties: container.connection.properties,
         });
         node.host = container.connection.host;
         node.cdir = container.linksDir;
@@ -229,7 +233,7 @@ export class Links {
           node.alsoConnectsTo.push({
             key: nodeIds[connections[c].source],
             cdir: connections[c].linksDir,
-            connectionId: connections[c].connection.identity
+            connectionId: connections[c].connection.identity,
           });
         }
         unique[key].nodes.push(node);
@@ -260,7 +264,7 @@ export class Links {
   }
 }
 
-var getContainerIndex = function(_id, nodeInfo) {
+var getContainerIndex = function (_id, nodeInfo) {
   let nodeIndex = 0;
   for (let id in nodeInfo) {
     if (utils.nameFromId(id) === _id) return nodeIndex;
@@ -269,7 +273,7 @@ var getContainerIndex = function(_id, nodeInfo) {
   return -1;
 };
 
-var getLinkDir = function(connection, onode) {
+var getLinkDir = function (connection, onode) {
   let links = onode["router.link"];
   if (!links) {
     return "unknown";
@@ -279,7 +283,7 @@ var getLinkDir = function(connection, onode) {
   let typeIndex = links.attributeNames.indexOf("linkType");
   let connectionIdIndex = links.attributeNames.indexOf("connectionId");
   let dirIndex = links.attributeNames.indexOf("linkDir");
-  links.results.forEach(function(linkResult) {
+  links.results.forEach(function (linkResult) {
     if (
       linkResult[typeIndex] === "endpoint" &&
       linkResult[connectionIdIndex] === connection.identity
@@ -293,12 +297,12 @@ var getLinkDir = function(connection, onode) {
   return "unknown";
 };
 
-var getKey = function(containers) {
+var getKey = function (containers) {
   let parts = {};
   let connection = containers[0].connection;
   let d = {
     nodeType: connection.role,
-    properties: connection.properties || {}
+    properties: connection.properties || {},
   };
   let connectionType = "client";
   if (utils.isConsole(connection)) connectionType = "console";
