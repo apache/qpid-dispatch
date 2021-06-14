@@ -205,7 +205,9 @@ static inline void sys_atomic_destroy(sys_atomic_t *ref)
 
 #endif
 
-#define    SET_ATOMIC_FLAG(flag)  sys_atomic_set(flag, 1)
+#define    SET_ATOMIC_FLAG(flag)   sys_atomic_set(flag, 1)
+#define    CLEAR_ATOMIC_FLAG(flag) sys_atomic_set(flag, 0)
+
 #define IS_ATOMIC_FLAG_SET(flag) (sys_atomic_get(flag) == 1)
 
 /** Atomic increase: NOTE returns value *before* increase, like i++ */

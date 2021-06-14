@@ -2436,8 +2436,8 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             send_settings_frame(conn);
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted Ingress ((PN_RAW_CONNECTION_CONNECTED)) from %s", conn->conn_id, conn->remote_address);
         } else {
-            sys_atomic_init(&conn->raw_closed_read, 0);
-            sys_atomic_init(&conn->raw_closed_write, 0);
+        	CLEAR_ATOMIC_FLAG(&conn->raw_closed_read);
+        	CLEAR_ATOMIC_FLAG(&conn->raw_closed_write);
             if (!conn->session_data->session) {
                 nghttp2_session_client_new(&conn->session_data->session, (nghttp2_session_callbacks *)http2_adaptor->callbacks, (void *)conn);
                 send_settings_frame(conn);
