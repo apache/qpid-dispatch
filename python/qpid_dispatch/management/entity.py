@@ -112,7 +112,7 @@ class EntityBase(object):
     # attributes name, identity and type are special snowflake
     # attributes that we print before all the not so special
     # attributes.  Assign each a priority for the sort
-    _SPECIAL = {u"name": 0, u"identity": 1, u"type": 2}
+    _SPECIAL = {"name": 0, "identity": 1, "type": 2}
 
     def __str__(self):
         # Sort so the _SPECIAL attributes are printed first, 3 ==

@@ -37,7 +37,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtLeastOnce
 from proton.utils import BlockingConnection
 from qpid_dispatch.management.client import Node
-CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
+CONNECTION_PROPERTIES_UNICODE_STRING = {'connection': 'properties', 'int_property': 6451}
 
 
 class TwoRouterTest(TestCase):
@@ -440,8 +440,8 @@ class DeleteConnectionWithReceiver(MessagingHandler):
             request = Message()
             request.address = "amqp:/_local/$management"
             request.properties = {
-                u'type': u'org.apache.qpid.dispatch.connection',
-                u'operation': u'QUERY'}
+                'type': 'org.apache.qpid.dispatch.connection',
+                'operation': 'QUERY'}
             request.reply_to = self.mgmt_receiver.remote_source.address
             self.mgmt_sender.send(request)
 
@@ -460,20 +460,20 @@ class DeleteConnectionWithReceiver(MessagingHandler):
                             request = Message()
                             request.address = "amqp:/_local/$management"
                             request.properties = {
-                                u'identity': identity,
-                                u'type': u'org.apache.qpid.dispatch.connection',
-                                u'operation': u'UPDATE'
+                                'identity': identity,
+                                'type': 'org.apache.qpid.dispatch.connection',
+                                'operation': 'UPDATE'
                             }
                             request.body = {
-                                u'adminStatus': u'deleted'}
+                                'adminStatus': 'deleted'}
                             request.reply_to = self.mgmt_receiver_1.remote_source.address
                             self.mgmt_sender.send(request)
         elif event.receiver == self.mgmt_receiver_1:
             if event.message.properties['statusDescription'] == 'OK' and event.message.body['adminStatus'] == 'deleted':
                 request = Message()
                 request.address = "amqp:/_local/$management"
-                request.properties = {u'type': u'org.apache.qpid.dispatch.connection',
-                                      u'operation': u'QUERY'}
+                request.properties = {'type': 'org.apache.qpid.dispatch.connection',
+                                      'operation': 'QUERY'}
                 request.reply_to = self.mgmt_receiver_2.remote_source.address
                 self.mgmt_sender.send(request)
 
@@ -872,7 +872,7 @@ class ManagementTest(MessagingHandler):
             request = Message()
             request.correlation_id = "C1"
             request.address = "amqp:/_local/$management"
-            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
+            request.properties = {'type': 'org.amqp.management', 'name': 'self', 'operation': 'GET-MGMT-NODES'}
             request.reply_to = self.receiver.remote_source.address
             self.sender.send(request)
 
@@ -880,7 +880,7 @@ class ManagementTest(MessagingHandler):
             request.address = "amqp:/_topo/0/QDR.B/$management"
             request.correlation_id = "C2"
             request.reply_to = self.receiver.remote_source.address
-            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
+            request.properties = {'type': 'org.amqp.management', 'name': 'self', 'operation': 'GET-MGMT-NODES'}
             self.sender.send(request)
 
     def on_message(self, event):
@@ -1587,21 +1587,21 @@ class PropagatedDisposition(MessagingHandler):
 
     def check(self):
         unique_list = sorted(list(dict.fromkeys(self.settled)))
-        if unique_list == [u'accept', u'modified', u'reject']:
+        if unique_list == ['accept', 'modified', 'reject']:
             self.passed = True
             self.sender_conn.close()
             self.receiver_conn.close()
             self.timer.cancel()
 
     def on_message(self, event):
-        if event.message.body == u'accept':
+        if event.message.body == 'accept':
             event.delivery.update(Delivery.ACCEPTED)
             event.delivery.settle()
-        elif event.message.body == u'reject':
+        elif event.message.body == 'reject':
             self.set_rejected_data(event.delivery.local)
             event.delivery.update(Delivery.REJECTED)
             event.delivery.settle()
-        elif event.message.body == u'modified':
+        elif event.message.body == 'modified':
             self.set_modified_data(event.delivery.local)
             event.delivery.update(Delivery.MODIFIED)
             event.delivery.settle()

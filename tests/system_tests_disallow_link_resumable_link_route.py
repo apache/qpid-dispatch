@@ -93,7 +93,7 @@ class LinkRouteTest(TestCase):
         for i in range(wLoops):
             try:
                 results = local_node.query(type='org.apache.qpid.dispatch.router.address',
-                                           attribute_names=[u'name', u'containerCount']
+                                           attribute_names=['name', 'containerCount']
                                            ).results
                 for res in results:
                     if res[0] == 'Corg.apache':

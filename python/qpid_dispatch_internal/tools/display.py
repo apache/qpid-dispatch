@@ -174,8 +174,8 @@ class BodyFormat:
 
 class CSV_CONFIG:
     """ """
-    SEPERATOR = u','
-    STRING_QUOTE = u'"'
+    SEPERATOR = ','
+    STRING_QUOTE = '"'
 
 
 class Display:

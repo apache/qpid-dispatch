@@ -28,7 +28,7 @@ from subprocess import PIPE, STDOUT
 from qpid_dispatch.management.client import Node
 from system_test import QdManager
 
-CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
+CONNECTION_PROPERTIES = {'connection': 'properties', 'int_property': 6451}
 
 
 class AutoLinkDetachAfterAttachTest(MessagingHandler):

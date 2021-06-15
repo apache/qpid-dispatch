@@ -327,10 +327,10 @@ class TopologyFailover (MessagingHandler):
         # These are the expectes routing traces, in the order we
         # expect to receive them.
         self.expected_traces = [
-            [u'0/A', u'0/D', u'0/C', u'0/B'],
-            [u'0/A', u'0/D', u'0/B'],
-            [u'0/A', u'0/C', u'0/B'],
-            [u'0/A', u'0/B']
+            ['0/A', '0/D', '0/C', '0/B'],
+            ['0/A', '0/D', '0/B'],
+            ['0/A', '0/C', '0/B'],
+            ['0/A', '0/B']
         ]
         self.trace_count    = 0
 

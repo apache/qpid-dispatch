@@ -180,7 +180,7 @@ class ReceiverDropsOffSenderDrain(MessagingHandler):
 
                 # Make sure this is the same message body that was
                 # sent by the newly created receiver
-                if event.message.body[u'number'] == 3:
+                if event.message.body['number'] == 3:
                     self.receiver.close()
                     self.error = None
                     self.sender_conn.close()

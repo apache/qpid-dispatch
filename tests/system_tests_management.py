@@ -34,7 +34,7 @@ from system_test import Qdrouterd, Process
 from system_test import unittest
 from itertools import chain
 
-PREFIX = u'org.apache.qpid.dispatch.'
+PREFIX = 'org.apache.qpid.dispatch.'
 MANAGEMENT = PREFIX + 'management'
 CONFIGURATION = PREFIX + 'configurationEntity'
 OPERATIONAL = PREFIX + 'operationalEntity'
@@ -209,14 +209,14 @@ class ManagementTest(system_test.TestCase):
         node = self.cleanup(Node.connect(self.logrouter.addresses[0]))
         default = node.read(identity='log/DEFAULT')
         self.assertEqual(default.attributes,
-                         {u'identity': u'log/DEFAULT',
-                          u'enable': u'trace+',
-                          u'module': u'DEFAULT',
-                          u'name': u'log/DEFAULT',
-                          u'outputFile': u'logrouter.log',
-                          u'includeSource': True,
-                          u'includeTimestamp': True,
-                          u'type': u'org.apache.qpid.dispatch.log'})
+                         {'identity': 'log/DEFAULT',
+                          'enable': 'trace+',
+                          'module': 'DEFAULT',
+                          'name': 'log/DEFAULT',
+                          'outputFile': 'logrouter.log',
+                          'includeSource': True,
+                          'includeTimestamp': True,
+                          'type': 'org.apache.qpid.dispatch.log'})
 
         def check_log(log, error=True, debug=False):
             """Cause an error and check for expected error and debug logs"""
@@ -348,11 +348,11 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(dummy.attributes, dummy2.attributes)
 
         integers = [0, 1, 42, (2**63) - 1, -1, -42, -(2**63)]
-        test_data = [BINARY("bytes"), u"string"] + integers
+        test_data = [BINARY("bytes"), "string"] + integers
         for data in test_data:
             try:
                 self.assertEqual(
-                    {u'operation': u'callme', u'type': DUMMY, u'identity': identity, u'data': data},
+                    {'operation': 'callme', 'type': DUMMY, 'identity': identity, 'data': data},
                     dummy.call('callme', data=data))
             except TypeError as exc:
                 raise TypeError("data=%r: %s" % (data, exc))
@@ -421,7 +421,7 @@ class ManagementTest(system_test.TestCase):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
         nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
         remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
-        self.assertEqual(set([u'amqp:/_topo/0/router%s/$management' % i for i in [0, 1, 2]]),
+        self.assertEqual(set(['amqp:/_topo/0/router%s/$management' % i for i in [0, 1, 2]]),
                          set(remotes))
         self.assertEqual(9, len(remotes))
         # Query router2 indirectly via router1
@@ -446,7 +446,7 @@ class ManagementTest(system_test.TestCase):
 
     def test_get_attributes(self):
         result = self.node.get_attributes(type=DUMMY)
-        self.assertEqual(set([u'arg1', u'arg2', u'num1', u'num2', u'name', u'identity', u'type']),
+        self.assertEqual(set(['arg1', 'arg2', 'num1', 'num2', 'name', 'identity', 'type']),
                          set(result[DUMMY]))
         result = self.node.get_attributes()
         for type in LISTENER, LINK:

@@ -315,7 +315,7 @@ class OpenPropertiesBadConfigTest(TestCase):
                 "Properties must be a map"
             ),
             (
-                {u"nonascii\u2588": 1},
+                {"nonascii\u2588": 1},
                 "Property keys must be ASCII encoded"
             ),
             (

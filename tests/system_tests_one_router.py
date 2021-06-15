@@ -33,7 +33,7 @@ from time import sleep
 from test_broker import FakeBroker
 
 
-CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
+CONNECTION_PROPERTIES_UNICODE_STRING = {'connection': 'properties', 'int_property': 6451}
 CONNECTION_PROPERTIES_SYMBOL = dict()
 CONNECTION_PROPERTIES_SYMBOL[symbol("connection")] = symbol("properties")
 CONNECTION_PROPERTIES_BINARY = {b'client_identifier': b'policy_server'}
@@ -600,14 +600,14 @@ class OneRouterTest(TestCase):
 
         node = Node.connect(self.router.addresses[0])
 
-        results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'properties']).results
+        results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['properties']).results
 
         found = False
         for result in results:
-            if u'connection' in result[0] and u'int_property' in result[0]:
+            if 'connection' in result[0] and 'int_property' in result[0]:
                 found = True
-                self.assertEqual(result[0][u'connection'], u'properties')
-                self.assertEqual(result[0][u'int_property'], 6451)
+                self.assertEqual(result[0]['connection'], 'properties')
+                self.assertEqual(result[0]['int_property'], 6451)
 
         self.assertTrue(found)
         client.connection.close()
@@ -623,12 +623,12 @@ class OneRouterTest(TestCase):
 
         node = Node.connect(self.router.addresses[0])
 
-        results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'properties']).results
+        results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['properties']).results
 
         found = False
         for result in results:
-            if u'connection' in result[0]:
-                if result[0][u'connection'] == u'properties':
+            if 'connection' in result[0]:
+                if result[0]['connection'] == 'properties':
                     found = True
                     break
 
@@ -1157,9 +1157,9 @@ class ManagementNotImplemented(MessagingHandler):
             request = Message()
             request.address = "amqp:/_local/$management"
             request.reply_to = event.receiver.remote_source.address
-            request.properties = {u'type': u'org.amqp.management',
-                                  u'name': u'self',
-                                  u'operation': u'NOT-IMPL'}
+            request.properties = {'type': 'org.amqp.management',
+                                  'name': 'self',
+                                  'operation': 'NOT-IMPL'}
             self.sender.send(request)
 
     def run(self):
@@ -1204,7 +1204,7 @@ class ManagementGetOperationsTest(MessagingHandler):
             request = Message()
             request.address = "amqp:/_local/$management"
             request.reply_to = self.receiver.remote_source.address
-            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-OPERATIONS'}
+            request.properties = {'type': 'org.amqp.management', 'name': 'self', 'operation': 'GET-OPERATIONS'}
             self.sender.send(request)
 
     def run(self):
@@ -1257,14 +1257,14 @@ class ManagementTest(MessagingHandler):
             request.address = "amqp:/$management"
             request.reply_to = self.receiver.remote_source.address
             request.correlation_id = "C1"
-            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
+            request.properties = {'type': 'org.amqp.management', 'name': 'self', 'operation': 'GET-MGMT-NODES'}
             self.sender.send(request)
 
             request = Message()
             request.address = "amqp:/_topo/0/QDR.B/$management"
             request.correlation_id = "C2"
             request.reply_to = self.receiver.remote_source.address
-            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
+            request.properties = {'type': 'org.amqp.management', 'name': 'self', 'operation': 'GET-MGMT-NODES'}
             self.sender.send(request)
 
     def on_message(self, event):
@@ -3348,7 +3348,7 @@ class RejectDispositionTest(MessagingHandler):
         # explicitly convert to str due to
         # https://issues.apache.org/jira/browse/PROTON-1843
         self.error_description = str('you were out of luck this time!')
-        self.error_name = u'amqp:internal-error'
+        self.error_name = 'amqp:internal-error'
         self.reject_count_match = False
         self.rejects_at_start = 0
 
@@ -3367,7 +3367,7 @@ class RejectDispositionTest(MessagingHandler):
 
     def on_sendable(self, event):
         if not self.sent:
-            event.sender.send(Message(body=u"Hello World!"))
+            event.sender.send(Message(body="Hello World!"))
             self.sent = True
 
     def on_rejected(self, event):

@@ -164,7 +164,7 @@ class UnavailableAnonymousSender(MessagingHandler):
         self.timer = None
         self.link_name = "anon_link"
         self.error_description = "Deliveries cannot be sent to an unavailable address"
-        self.error_name = u'amqp:not-found'
+        self.error_name = 'amqp:not-found'
         self.num_sent = 0
 
     def timeout(self):

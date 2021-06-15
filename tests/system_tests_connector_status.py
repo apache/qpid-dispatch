@@ -120,8 +120,8 @@ class ConnectorStatusTest(TestCase):
         long_type = 'org.apache.qpid.dispatch.connector'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
-        connection_msg = output[0][u'connectionMsg']
-        self.assertEqual('SUCCESS', output[0][u'connectionStatus'])
+        connection_msg = output[0]['connectionMsg']
+        self.assertEqual('SUCCESS', output[0]['connectionStatus'])
         conn_opened = False
         if "Connection Opened: dir=out" in connection_msg:
             conn_opened = True
