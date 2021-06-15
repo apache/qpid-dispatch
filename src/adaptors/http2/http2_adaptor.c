@@ -1171,7 +1171,7 @@ ssize_t read_data_callback(nghttp2_session *session,
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback No body data, get qd_message_next_stream_data", conn->conn_id, stream_data->stream_id);
         }
 
-        if (stream_data->next_stream_data == 0 && stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_NO_MORE) {
+        if (stream_data->next_stream_data == 0 && (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_NO_MORE || stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_INVALID)) {
             stream_data->curr_stream_data_result = stream_data->next_stream_data_result;
         }
 
@@ -1306,11 +1306,14 @@ ssize_t read_data_callback(nghttp2_session *session,
         }
 
         case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_FOOTER_OK", conn->conn_id, stream_data->stream_id);
+        	qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_FOOTER_OK", conn->conn_id, stream_data->stream_id);
             stream_data->out_msg_has_footer = true;
             stream_data->next_stream_data_result = qd_message_next_stream_data(message, &stream_data->next_stream_data);
             if (stream_data->next_stream_data) {
                 qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_FOOTER_OK, we have a next_stream_data", conn->conn_id, stream_data->stream_id);
+            }
+            if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_INVALID) {
+            	stream_data->out_msg_has_footer = false;
             }
             break;
 
@@ -1364,9 +1367,10 @@ ssize_t read_data_callback(nghttp2_session *session,
             //
             *data_flags |= NGHTTP2_DATA_FLAG_EOF;
             stream_data->out_msg_data_flag_eof = true;
-            if (stream_data->curr_stream_data)
+            if (stream_data->curr_stream_data) {
                 qd_message_stream_data_release(stream_data->curr_stream_data);
-            stream_data->curr_stream_data = 0;
+            	stream_data->curr_stream_data = 0;
+            }
             stream_data->out_dlv_local_disposition = PN_REJECTED;
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_INVALID", conn->conn_id, stream_data->stream_id);
             break;
