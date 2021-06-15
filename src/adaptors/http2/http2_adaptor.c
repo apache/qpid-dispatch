@@ -1314,6 +1314,10 @@ ssize_t read_data_callback(nghttp2_session *session,
             }
             if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_INVALID) {
             	stream_data->out_msg_has_footer = false;
+				if (stream_data->next_stream_data) {
+					qd_message_stream_data_release(stream_data->next_stream_data);
+					stream_data->next_stream_data = 0;
+				}
             }
             break;
 
