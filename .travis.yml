@@ -23,7 +23,6 @@ jobs:
   fast_finish: true
   allow_failures:
     - os: osx
-    - name: "qdrouterd:TSAN"
     - arch: arm64
     - arch: s390x
   include:
