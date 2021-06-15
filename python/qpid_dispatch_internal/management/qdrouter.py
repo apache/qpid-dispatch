@@ -20,11 +20,6 @@
 """
 Qpid Dispatch Router management schema and config file parsing.
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import json
 from pkgutil import get_data
 from . import schema

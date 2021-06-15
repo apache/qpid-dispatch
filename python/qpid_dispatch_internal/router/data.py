@@ -22,11 +22,6 @@
 # information shall be considered to be coming from routers using version 0.
 ##
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from ..compat import PY_LONG_TYPE
 from ..compat import LONG
 from ..compat import PY_TEXT_TYPE

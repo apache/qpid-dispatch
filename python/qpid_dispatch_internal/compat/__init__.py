@@ -19,11 +19,6 @@
 
 """Compatibility hacks for older versions of python"""
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 __all__ = [
     "JSON_LOAD_KWARGS",
     "dictify",

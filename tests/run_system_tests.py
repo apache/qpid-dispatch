@@ -24,11 +24,6 @@ Note that each system test is an executable script, you can run them directly.
 Run without any environment settings, this will test a dispatch router installed in
 the standard system places. Use run.py or config.sh to run against dispatch build.
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import os
 import sys
 from fnmatch import fnmatch

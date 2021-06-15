@@ -23,12 +23,6 @@ that might cause problems, or caused issues in the past.
 For example, unresolvable host names.
 """
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-
 import os
 from threading import Timer
 from subprocess import PIPE, STDOUT

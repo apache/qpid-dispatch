@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from system_test import TestCase, Qdrouterd, main_module, TestTimeout, unittest, TIMEOUT
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
 from system_tests_drain_support import DrainNoMessagesHandler, DrainNoMoreMessagesHandler

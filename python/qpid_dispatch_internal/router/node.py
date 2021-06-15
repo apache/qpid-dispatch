@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from ..dispatch import LOG_INFO, LOG_TRACE, LOG_DEBUG
 from .data import LinkState, ProtocolVersion
 from .address import Address

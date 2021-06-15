@@ -29,12 +29,6 @@ The C library also adds the following C extension types to this module:
 
 This module also prevents the proton python module from being accidentally loaded.
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-
 import sys
 import ctypes
 from ctypes import c_char_p, c_long, py_object
