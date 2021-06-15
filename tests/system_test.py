@@ -44,10 +44,7 @@ from copy import copy
 from datetime import datetime
 from subprocess import PIPE, STDOUT
 
-try:
-    import queue as Queue  # 3.x
-except ImportError:
-    import Queue as Queue  # 2.7
+import queue as Queue
 from threading import Thread
 from threading import Event
 import json

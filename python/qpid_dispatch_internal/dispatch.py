@@ -29,10 +29,10 @@ The C library also adds the following C extension types to this module:
 
 This module also prevents the proton python module from being accidentally loaded.
 """
-import sys
+import builtins
 import ctypes
+import sys
 from ctypes import c_char_p, c_long, py_object
-from .compat import IS_PY2
 
 
 class CError(Exception):
@@ -151,10 +151,6 @@ def import_check(name, *args, **kw):
 
 
 check_forbidden()
-if IS_PY2:
-    import __builtin__ as builtins
-else:
-    import builtins
 
 builtin_import = builtins.__import__
 builtins.__import__ = import_check

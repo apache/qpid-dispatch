@@ -26,11 +26,7 @@ import io
 import select
 import socket
 from time import sleep, time
-
-try:
-    from http.client import HTTPConnection
-except ImportError:
-    from httplib import HTTPConnection
+from http.client import HTTPConnection
 
 from proton import Message
 from system_test import TestCase, unittest, main_module, Qdrouterd, QdManager
