@@ -77,7 +77,7 @@ class PathEngine(object):
         # Remove unreachable nodes from the maps.  Note that this will also remove the
         # root node (has no previous node) from the map.
         ##
-        for u, val in prev.items():
+        for u, val in list(prev.items()):
             if not val:
                 prev.pop(u)
                 hops.pop(u)
