@@ -207,6 +207,8 @@ void *router_core_thread(void *arg)
     qdr_action_t      *action;
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
+    qd_log(core->log, QD_LOG_CRITICAL, "Core thread TID:%14p start. This log timestamp corresponds to lock/unlock report timestamp %"PRIu64,
+           (void*)sys_thread_self(), qd_timer_us_now());
     while (core->running) {
         //
         // Use the lock only to protect the condition variable and the action lists
@@ -256,6 +258,8 @@ void *router_core_thread(void *arg)
         }
     }
 
+    qd_log(core->log, QD_LOG_CRITICAL, "Core thread TID:%14p  exit. This log timestamp corresponds to lock/unlock report timestamp %"PRIu64,
+           (void*)sys_thread_self(), qd_timer_us_now());
     qd_log(core->log, QD_LOG_INFO, "Router Core thread exited");
     return 0;
 }

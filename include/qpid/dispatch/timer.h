@@ -39,6 +39,11 @@ typedef int64_t qd_timestamp_t;
 /** Relative duration in milliseconds */
 typedef int64_t qd_duration_t;
 
+/** Absolute time stamp from monotonic clock source, microseconds since arbitrary (fixed) instant */
+typedef uint64_t qd_timestamp_us_t;
+/** Relative duration in microseconds */
+typedef uint64_t qd_duration_us_t;
+
 /**
  * Timer Callback
  *
@@ -116,6 +121,11 @@ void qd_timer_cancel(qd_timer_t *timer);
  * The current time.
  */
 qd_timestamp_t qd_timer_now() ;
+
+/**
+ * The current time. microseconds
+ */
+qd_timestamp_us_t qd_timer_us_now() ;
 
 /**
  * @}

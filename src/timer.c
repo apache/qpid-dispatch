@@ -210,6 +210,15 @@ qd_timestamp_t qd_timer_now()
     return ((qd_timestamp_t)tv.tv_sec) * 1000 + tv.tv_nsec / 1000000;
 }
 
+
+qd_timestamp_us_t qd_timer_us_now()
+{
+    struct timespec tv;
+    clock_gettime(CLOCK_MONOTONIC, &tv);
+    return ((qd_timestamp_t)tv.tv_sec) * 1000000 + tv.tv_nsec / 1000;
+}
+
+
 void qd_timer_schedule(qd_timer_t *timer, qd_duration_t duration)
 {
     sys_mutex_lock(lock);
