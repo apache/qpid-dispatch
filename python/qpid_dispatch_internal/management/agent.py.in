@@ -189,7 +189,7 @@ class EntityAdapter(SchemaEntity):
             counter = type(self)._identifier_count
         except AttributeError:
             counter = type(self)._identifier_count = AtomicCount()
-        return str(next(counter))
+        return str(counter.next())
 
     def _refresh(self):
         """Refresh self.attributes from implementation object(s)."""
