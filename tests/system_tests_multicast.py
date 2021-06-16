@@ -190,7 +190,7 @@ class MulticastLinearTest(TestCase):
         atype = 'org.apache.qpid.dispatch.allocator'
         q = mgmt.query(type=atype).get_dicts()
         for name in stats:
-            d[name] = (a for a in q if a['typeName'] == name)[0]
+            d[name] = next(a for a in q if a['typeName'] == name)
         return d
 
     def _check_for_leaks(self):
