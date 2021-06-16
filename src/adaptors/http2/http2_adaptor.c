@@ -364,6 +364,12 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
         qd_message_free(stream_data->message);
     }
 
+    //
+    // If the client/server closed the connection abruptly, we need to release the stream_data->curr_stream_data and
+    // stream_data->next_stream_data.
+    // This final decref of the delivery is going to free the associated message but before this message can be freed
+    // all stream data (body data) objects need to be freed. We do this here.
+    //
     if (stream_data->in_dlv && !stream_data->in_dlv_decrefed) {
     	if (stream_data->curr_stream_data)
     		qd_message_stream_data_release(stream_data->curr_stream_data);
@@ -463,10 +469,13 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
 }
 
 
+/**
+ * This callback function  isinvoked when the nghttp2 library tells the application about the error code, and error message.
+ */
 static int on_error_callback(nghttp2_session *session, int lib_error_code, const char *msg, size_t len, void *user_data)
 {
 	qdr_http2_connection_t *conn = (qdr_http2_connection_t *)user_data;
-	qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] on_error_callback=%s", conn->conn_id, msg);
+	qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Error generated in the on_error_callback, lib_error_code=%i, error_msg=%s", conn->conn_id, lib_error_code, msg);
 	return 0;
 }
 
@@ -1147,7 +1156,7 @@ ssize_t read_data_callback(nghttp2_session *session,
     qd_message_t *message = qdr_delivery_message(stream_data->out_dlv);
     qd_message_depth_status_t status = qd_message_check_depth(message, QD_DEPTH_BODY);
 
-    // This flag tells nghttp2 that the data is not being copied into its buffer (uint8_t *buf).
+    // This flag tells nghttp2 that the data is not being copied into the buffer supplied by nghttp2 (uint8_t *buf).
     *data_flags |= NGHTTP2_DATA_FLAG_NO_COPY;
 
     switch (status) {
@@ -1233,9 +1242,6 @@ ssize_t read_data_callback(nghttp2_session *session,
                 return 0;
             }
 
-            stream_data->stream_data_buff_count = qd_message_stream_data_buffer_count(stream_data->curr_stream_data);
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, stream_data->stream_data_buff_count=%i, payload_length=%zu", conn->conn_id, stream_data->stream_id, stream_data->stream_data_buff_count, payload_length);
-
             size_t bytes_to_send = 0;
             if (payload_length) {
                 size_t remaining_payload_length = payload_length - (stream_data->curr_stream_data_qd_buff_offset * BUFFER_SIZE) - stream_data->curr_stream_data_offset;
@@ -1243,23 +1249,12 @@ ssize_t read_data_callback(nghttp2_session *session,
                 if (remaining_payload_length <= QD_HTTP2_BUFFER_SIZE) {
                 	if (length < remaining_payload_length) {
                 		bytes_to_send = length;
-						if (length % BUFFER_SIZE == 0) {
-							stream_data->qd_buffers_to_send = length/BUFFER_SIZE;
-						}
-						else {
-							stream_data->qd_buffers_to_send = length/BUFFER_SIZE + 1;
-						}
-						*data_flags |= NGHTTP2_DATA_FLAG_NO_END_STREAM;
+                		stream_data->qd_buffers_to_send = (length % BUFFER_SIZE == 0) ? length/BUFFER_SIZE : length/BUFFER_SIZE + 1;
                 		stream_data->full_payload_handled = false;
                 	}
                 	else {
                 		bytes_to_send = remaining_payload_length;
-                		if (remaining_payload_length == 0) {
-                			stream_data->qd_buffers_to_send = 0;
-                		}
-                		else {
-                			stream_data->qd_buffers_to_send = stream_data->stream_data_buff_count;
-                		}
+                		stream_data->qd_buffers_to_send = (remaining_payload_length == 0) ? 0: qd_message_stream_data_buffer_count(stream_data->curr_stream_data);
                 		stream_data->full_payload_handled = true;
                 		qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length (%zu) <= QD_HTTP2_BUFFER_SIZE(16384), bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, remaining_payload_length, bytes_to_send, stream_data->qd_buffers_to_send);
 
@@ -1269,20 +1264,8 @@ ssize_t read_data_callback(nghttp2_session *session,
                             *data_flags |= NGHTTP2_DATA_FLAG_EOF;
                             stream_data->out_msg_data_flag_eof = true;
                             stream_data->out_msg_body_sent = true;
-                            if (stream_data->next_stream_data) {
-                                qd_message_stream_data_release(stream_data->next_stream_data);
-                                stream_data->next_stream_data = 0;
-                            }
                             stream_data->out_dlv_local_disposition = PN_ACCEPTED;
                             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, looking ahead one body data QD_MESSAGE_STREAM_DATA_NO_MORE", conn->conn_id, stream_data->stream_id);
-                        }
-                        else if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_INCOMPLETE) {
-                            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, looking ahead one body data QD_MESSAGE_STREAM_DATA_INCOMPLETE", conn->conn_id, stream_data->stream_id);
-
-                        }
-                        else if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_BODY_OK) {
-                            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, looking ahead one body data QD_MESSAGE_STREAM_DATA_OK", conn->conn_id, stream_data->stream_id);
-
                         }
                         else if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_FOOTER_OK) {
                             stream_data->out_msg_body_sent = true;
@@ -1291,12 +1274,18 @@ ssize_t read_data_callback(nghttp2_session *session,
                 	}
                 }
                 else {
-                    // This means that there is more that 16k worth of payload in one body data.
-                    // We want to send only 16k data per read_data_callback
-                    bytes_to_send = QD_HTTP2_BUFFER_SIZE;
-                    stream_data->full_payload_handled = false;
-                    stream_data->qd_buffers_to_send = NUM_QD_BUFFERS_IN_ONE_HTTP2_BUFFER;
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
+                	if (length < remaining_payload_length) {
+                		bytes_to_send = length;
+                		stream_data->qd_buffers_to_send = (length % BUFFER_SIZE == 0) ? length/BUFFER_SIZE : length/BUFFER_SIZE + 1;
+                    }
+                	else {
+						// This means that there is more that 16k worth of payload in one body data.
+						// We want to send only 16k data per read_data_callback
+						bytes_to_send = QD_HTTP2_BUFFER_SIZE;
+						stream_data->qd_buffers_to_send = NUM_QD_BUFFERS_IN_ONE_HTTP2_BUFFER;
+						qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
+                	}
+                	stream_data->full_payload_handled = false;
                 }
             }
 
@@ -1332,7 +1321,6 @@ ssize_t read_data_callback(nghttp2_session *session,
         case QD_MESSAGE_STREAM_DATA_NO_MORE: {
             //
             // We have already handled the last body-data segment for this delivery.
-            // Complete the "sending" of this delivery and replenish credit.
             //
             size_t pn_buffs_write_capacity = pn_raw_connection_write_buffers_capacity(conn->pn_raw_conn);
             if (pn_buffs_write_capacity == 0) {
