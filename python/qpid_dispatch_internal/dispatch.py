@@ -114,7 +114,7 @@ class QdDll(ctypes.PyDLL):
         def _do_check(result, func, args):
             if check and self.qd_error_code():
                 raise CError(self.qd_error_message())
-            if restype is c_char_p and result and not IS_PY2:
+            if restype is c_char_p and result:
                 # in python3 c_char_p returns a byte type for the error
                 # message. We need to convert that to a string
                 result = result.decode('utf-8')

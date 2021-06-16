@@ -33,7 +33,6 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, ReceiverOption
 from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
-from qpid_dispatch_internal.compat import dict_iteritems
 from test_broker import FakeBroker
 
 
@@ -118,7 +117,7 @@ class LoadPolicyFromFolder(TestCase):
                 with open(policy_config_path + "/" + f[:-3], 'w') as outfile:
                     with open(policy_config_path + "/" + f) as infile:
                         for line in infile:
-                            for src, target in dict_iteritems(replacements):
+                            for src, target in replacements.items():
                                 if ipv6_enabled:
                                     line = line.replace(src, target)
                                 else:
@@ -568,7 +567,7 @@ class VhostPolicyNameField(TestCase):
                 with open(policy_config_path + "/" + f[:-3], 'w') as outfile:
                     with open(policy_config_path + "/" + f) as infile:
                         for line in infile:
-                            for src, target in dict_iteritems(replacements):
+                            for src, target in replacements.items():
                                 if ipv6_enabled:
                                     line = line.replace(src, target)
                                 else:

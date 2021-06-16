@@ -17,9 +17,6 @@
 # under the License.
 #
 
-from ..compat import dict_items
-from ..compat import dict_keys
-
 
 class PathEngine(object):
     """
@@ -80,7 +77,7 @@ class PathEngine(object):
         # Remove unreachable nodes from the maps.  Note that this will also remove the
         # root node (has no previous node) from the map.
         ##
-        for u, val in dict_items(prev):
+        for u, val in prev.items():
             if not val:
                 prev.pop(u)
                 hops.pop(u)
@@ -103,9 +100,9 @@ class PathEngine(object):
             if node != self.id:
                 valid_origin[node] = []
 
-        for root in dict_keys(valid_origin):
+        for root in valid_origin.keys():
             prev, cost, hops = self._calculate_tree_from_root(root, collection)
-            nodes = dict_keys(prev)
+            nodes = list(prev.keys())
             while len(nodes) > 0:
                 u = nodes[0]
                 path = [u]
@@ -128,7 +125,7 @@ class PathEngine(object):
         # Generate the shortest-path tree with the local node as root
         ##
         prev, cost, hops = self._calculate_tree_from_root(self.id, collection)
-        nodes = dict_keys(prev)
+        nodes = list(prev.keys())
 
         ##
         # We will also compute the radius of the topology.  This is the number of
@@ -157,9 +154,9 @@ class PathEngine(object):
         ##
         # Calculate the valid origins for remote routers
         ##
-        valid_origins = self._calculate_valid_origins(dict_keys(prev), collection)
+        valid_origins = self._calculate_valid_origins(list(prev.keys()), collection)
 
-        return (next_hops, cost, valid_origins, radius)
+        return next_hops, cost, valid_origins, radius
 
 
 class NodeSet(object):

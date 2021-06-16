@@ -19,8 +19,6 @@
 
 from .data import MessageHELLO
 from ..dispatch import LOG_TRACE, LOG_CRITICAL
-from ..compat import dict_keys
-from ..compat import dict_items
 
 
 class HelloProtocol(object):
@@ -44,7 +42,7 @@ class HelloProtocol(object):
         self.ticks += 1.0
         if self.ticks - self.last_hello_ticks >= self.hello_interval:
             self.last_hello_ticks = self.ticks
-            msg = MessageHELLO(None, self.id, dict_keys(self.hellos), self.container.instance)
+            msg = MessageHELLO(None, self.id, list(self.hellos.keys()), self.container.instance)
             self.container.send('amqp:/_local/qdhello', msg)
             self.container.log_hello(LOG_TRACE, "SENT: %r" % msg)
 
@@ -63,7 +61,7 @@ class HelloProtocol(object):
         Expire local records of received hellos.  This is not involved in the
         expiration of neighbor status for routers.
         """
-        for key, last_seen in dict_items(self.hellos):
+        for key, last_seen in self.hellos.items():
             if now - last_seen > self.hello_max_age:
                 self.hellos.pop(key)
                 self.container.log_hello(LOG_TRACE, "HELLO peer expired: %s" % key)

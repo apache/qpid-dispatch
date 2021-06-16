@@ -23,20 +23,6 @@ AMQP Managment Entity
 
 import itertools
 import re
-import sys
-
-
-if sys.version_info[0] > 2:
-    # Python 3 does not have a unicode() builtin method,
-    # luckily all strings are unicode to start with
-    def unicode(s):
-        return s
-
-    def dict_iteritems(d):
-        return iter(d.items())
-else:
-    def dict_iteritems(d):
-        return d.iteritems()
 
 
 def clean_dict(items, **kwargs):
@@ -45,9 +31,9 @@ def clean_dict(items, **kwargs):
     @return: dict containing items + kwargs without any None values. All keys are unicode.
     """
     if isinstance(items, dict):
-        items = dict_iteritems(items)
-    return dict((unicode(k), v) for k, v in itertools.chain(items,
-                                                            dict_iteritems(kwargs))
+        items = items.items()
+    return dict((k, v)
+                for k, v in itertools.chain(items, kwargs.items())
                 if v is not None)
 
 
@@ -69,10 +55,10 @@ class EntityBase(object):
     def __init__(self, attributes=None, **kwargs):
         self.__dict__['attributes'] = {}
         if attributes:
-            for k, v in dict_iteritems(attributes):
+            for k, v in attributes.items():
                 self.attributes[k] = v
                 self.__dict__[self._pyname(k)] = v
-        for k, v in dict_iteritems(kwargs):
+        for k, v in kwargs.items():
             self._set(k, v)
 
     def __getitem__(self, name):
@@ -127,7 +113,7 @@ def update(entity, values):
     @param entity: an Entity
     @param values: a map of values
     """
-    for k, v in dict_iteritems(values):
+    for k, v in values.items():
         entity[k] = v
 
 

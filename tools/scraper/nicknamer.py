@@ -154,7 +154,7 @@ class ShortNames():
             print("</ul>")
 
     def sort_customers(self):
-        for c in common.dict_iterkeys(self.customer_dict):
+        for c in self.customer_dict.keys():
             x = self.customer_dict[c]
             self.customer_dict[c] = sorted(x, key=lambda lfl: lfl.datetime)
 
