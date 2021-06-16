@@ -29,7 +29,6 @@ from __future__ import print_function
 import sys
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.management.schema_doc import SchemaWriter
-from qpid_dispatch_internal.compat import dict_itervalues
 
 CONNECTOR = 'org.apache.qpid.dispatch.connector'
 LISTENER = 'org.apache.qpid.dispatch.listener'
@@ -139,7 +138,7 @@ listener {
         with self.section("Configuration Sections"):
 
             config = self.schema.entity_type("configurationEntity")
-            for entity_type in dict_itervalues(self.schema.entity_types):
+            for entity_type in self.schema.entity_types.values():
                 if entity_type.short_name in TYPE_FILTER:
                     continue
                 if config in entity_type.all_bases:
