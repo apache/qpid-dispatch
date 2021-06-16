@@ -695,7 +695,7 @@ class RouterFluxTest(TestCase):
         mgmt = INT_C.management
         a_type = 'org.apache.qpid.dispatch.router.address'
         rsp = mgmt.query(a_type).get_dicts()
-        while any(map(lambda a: a['name'].find('closest/on_A') != -1, rsp)):
+        while any('closest/on_A' in a['name'] for a in rsp):
             time.sleep(0.25)
             rsp = mgmt.query(a_type).get_dicts()
 
@@ -730,7 +730,7 @@ class RouterFluxTest(TestCase):
         mgmt = INT_C.management
         a_type = 'org.apache.qpid.dispatch.router.address'
         rsp = mgmt.query(a_type).get_dicts()
-        while any(map(lambda a: a['name'].find('closest/on_A') != -1, rsp)):
+        while any('closest/on_A' in a['name'] for a in rsp):
             time.sleep(0.25)
             rsp = mgmt.query(a_type).get_dicts()
 

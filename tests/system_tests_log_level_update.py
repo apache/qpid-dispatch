@@ -534,7 +534,7 @@ class LogLevelUpdateTest(TestCase):
 
         self.create_sender_receiver(TEST_ADDR, hello_world_5,
                                     blocking_connection)
-        # Count the nimber of attaches for address TEST_ADDR, there should be 4
+        # Count the number of attaches for address TEST_ADDR, there should be 4
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
@@ -550,7 +550,7 @@ class LogLevelUpdateTest(TestCase):
 
         self.create_sender_receiver(TEST_ADDR, hello_world_6, blocking_connection)
 
-        # Count the nimber of attaches for address TEST_ADDR, there should be 0
+        # Count the number of attaches for address TEST_ADDR, there should be 0
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:

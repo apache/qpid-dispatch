@@ -377,7 +377,7 @@ class ResponseValidator(object):
                                 % (key, value, rsp.getheader(key)))
 
         body = rsp.read()
-        if (self.expect_body and self.expect_body != body):
+        if self.expect_body and self.expect_body != body:
             raise Exception("Bad response body expected %s got %s"
                             % (self.expect_body, body))
         return body

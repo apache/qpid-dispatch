@@ -190,7 +190,7 @@ class MulticastLinearTest(TestCase):
         atype = 'org.apache.qpid.dispatch.allocator'
         q = mgmt.query(type=atype).get_dicts()
         for name in stats:
-            d[name] = list(filter(lambda a: a['typeName'] == name, q))[0]
+            d[name] = (a for a in q if a['typeName'] == name)[0]
         return d
 
     def _check_for_leaks(self):
@@ -627,7 +627,7 @@ class MulticastBase(MessagingHandler):
                 mgmt = cfg['router'].management
                 atype = 'org.apache.qpid.dispatch.router.address'
                 addrs = mgmt.query(type=atype).get_dicts()
-                if list(filter(lambda a: a['name'].find(self.topic) != -1, addrs)):
+                if any(self.topic in a['name'] for a in addrs):
                     clean = False
                     break
             if not clean:

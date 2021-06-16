@@ -1972,8 +1972,7 @@ class ConnectionLinkRouteTest(TestCase):
 
     def _get_address(self, mgmt, addr):
         a_type = 'org.apache.qpid.dispatch.router.address'
-        return list(filter(lambda a: a['name'].endswith(addr),
-                           mgmt.query(a_type)))
+        return [a for a in mgmt.query(a_type) if a['name'].endswith(addr)]
 
     def test_config_file_bad(self):
         # verify that specifying a connection link route in the configuration

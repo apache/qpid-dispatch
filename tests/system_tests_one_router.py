@@ -3678,7 +3678,7 @@ class Q2HoldoffDropTest(MessagingHandler):
             clean = True
             atype = 'org.apache.qpid.dispatch.router.address'
             addrs = self.router.management.query(type=atype).get_dicts()
-            if list(filter(lambda a: a['name'].find("dispatch-1330") != -1, addrs)):
+            if any("dispatch-1330" in a['name'] for a in addrs):
                 clean = False
                 break
             if not clean:
