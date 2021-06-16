@@ -32,8 +32,6 @@ from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.tools.command import (UsageError, _qdmanage_parser, check_args,
                                                   main, opts_ssl_domain, opts_url, opts_sasl)
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.compat import PY_TEXT_TYPE
-from qpid_dispatch_internal.compat import PY_STRING_TYPE
 
 INTEGER_TYPE = "integer"
 
@@ -70,7 +68,7 @@ class QdManage():
 
     def run(self, argv):
         # Make all args unicode to avoid encoding arg values as AMQP bytes.
-        al = [x.decode() if not isinstance(x, PY_TEXT_TYPE) else x
+        al = [x.decode() if not isinstance(x, str) else x
               for x in argv[1:]]
         self.opts, self.args = self.op.parse_known_args(al)
         self.clean_opts()
@@ -101,7 +99,7 @@ class QdManage():
         """Print a string result as-is, else try json dump, else print as-is"""
         if not result:
             return
-        if isinstance(result, (PY_STRING_TYPE, PY_TEXT_TYPE)):
+        if isinstance(result, str):
             print("%s" % result)
         else:
             try:
