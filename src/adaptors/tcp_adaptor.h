@@ -36,17 +36,31 @@
 
 typedef struct qd_tcp_listener_t qd_tcp_listener_t;
 typedef struct qd_tcp_connector_t qd_tcp_connector_t;
-typedef struct qd_bridge_config_t qd_bridge_config_t;
+typedef struct qd_tcp_bridge_t qd_tcp_bridge_t;
 
-struct qd_bridge_config_t
+struct qd_tcp_bridge_t
 {
-    char *name;
-    char *address;
-    char *host;
-    char *port;
-    char *site_id;
-    char *host_port;
+    /* Created and referenced by each new listener or connector.
+     * Referenced by all connections created by listener or connector
+     */
+    sys_atomic_t  ref_count;
+    // static configuration defined at listener/connector creation
+    char         *name;
+    char         *address;
+    char         *host;
+    char         *port;
+    char         *site_id;
+    char         *host_port;
+    // run time statistics updated by connections
+    sys_mutex_t  *stats_lock;
+    uint64_t      connections_opened;
+    uint64_t      connections_closed;
+    uint64_t      bytes_in;
+    uint64_t      bytes_out;
 };
+
+DEQ_DECLARE(qd_tcp_bridge_t, qd_bridge_config_list_t);
+ALLOC_DECLARE(qd_tcp_bridge_t);
 
 struct qd_tcp_listener_t
 {
@@ -54,7 +68,7 @@ struct qd_tcp_listener_t
     /* May be referenced by connection_manager and pn_listener_t */
     sys_atomic_t              ref_count;
     qd_server_t              *server;
-    qd_bridge_config_t        config;
+    qd_tcp_bridge_t          *config;
     pn_listener_t            *pn_listener;
 
     DEQ_LINKS(qd_tcp_listener_t);
@@ -68,7 +82,7 @@ struct qd_tcp_connector_t
     /* May be referenced by connection_manager, timer and pn_connection_t */
     sys_atomic_t              ref_count;
     qd_server_t              *server;
-    qd_bridge_config_t        config;
+    qd_tcp_bridge_t          *config;
     void                     *dispatcher;
 
     DEQ_LINKS(qd_tcp_connector_t);
