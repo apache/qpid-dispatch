@@ -470,7 +470,7 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
 
 
 /**
- * This callback function  isinvoked when the nghttp2 library tells the application about the error code, and error message.
+ * This callback function  is invoked when the nghttp2 library tells the application about the error code, and error message.
  */
 static int on_error_callback(nghttp2_session *session, int lib_error_code, const char *msg, size_t len, void *user_data)
 {
