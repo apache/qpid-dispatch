@@ -159,7 +159,7 @@ class QdmanageTest(TestCase):
         long_types = [long_type(name) for name in types]
 
         qall = json.loads(self.run_qdmanage('query'))
-        qall_types = set([e['type'] for e in qall])
+        qall_types = {e['type'] for e in qall}
         for t in long_types:
             self.assertIn(t, qall_types)
 

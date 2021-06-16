@@ -143,7 +143,7 @@ class ManagementTest(system_test.TestCase):
             self.assertEqual(len(response.attribute_names), len(r))
             self.assertEqual(r['type'], LISTENER)
         self.assertTrue(
-            set(['l0', 'l1', 'l2']) <= set(r['name'] for r in response.get_entities()))
+            {'l0', 'l1', 'l2'} <= set(r['name'] for r in response.get_entities()))
 
     def test_query_type_attributes(self):
         """Query with type and attribute names"""
@@ -398,9 +398,9 @@ class ManagementTest(system_test.TestCase):
             self.assertEqual(attrs['address'], 'amqp:/_topo/0/%s' % name)
             return name
 
-        self.assertEqual(set(["router0", "router1", "router2"]), set([check(n) for n in rnode_lists[0]]))
-        self.assertEqual(set(["router0", "router1", "router2"]), set([check(n) for n in rnode_lists[1]]))
-        self.assertEqual(set(["router0", "router1", "router2"]), set([check(n) for n in rnode_lists[2]]))
+        self.assertEqual({"router0", "router1", "router2"}, {check(n) for n in rnode_lists[0]})
+        self.assertEqual({"router0", "router1", "router2"}, {check(n) for n in rnode_lists[1]})
+        self.assertEqual({"router0", "router1", "router2"}, {check(n) for n in rnode_lists[2]})
 
     def test_entity_names(self):
         nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
@@ -421,7 +421,7 @@ class ManagementTest(system_test.TestCase):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
         nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
         remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
-        self.assertEqual(set(['amqp:/_topo/0/router%s/$management' % i for i in [0, 1, 2]]),
+        self.assertEqual({'amqp:/_topo/0/router%s/$management' % i for i in [0, 1, 2]},
                          set(remotes))
         self.assertEqual(9, len(remotes))
         # Query router2 indirectly via router1
@@ -446,7 +446,7 @@ class ManagementTest(system_test.TestCase):
 
     def test_get_attributes(self):
         result = self.node.get_attributes(type=DUMMY)
-        self.assertEqual(set(['arg1', 'arg2', 'num1', 'num2', 'name', 'identity', 'type']),
+        self.assertEqual({'arg1', 'arg2', 'num1', 'num2', 'name', 'identity', 'type'},
                          set(result[DUMMY]))
         result = self.node.get_attributes()
         for type in LISTENER, LINK:

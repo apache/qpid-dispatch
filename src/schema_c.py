@@ -20,11 +20,6 @@
 """
 Generate C code from the router schema.
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import re
 from qpid_dispatch_internal.management.schema import EnumType
 from qpid_dispatch_internal.management.qdrouter import QdSchema

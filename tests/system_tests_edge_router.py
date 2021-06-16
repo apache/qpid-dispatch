@@ -1800,7 +1800,7 @@ class LinkRouteProxyTest(TestCase):
                            conns[l['connectionId']]['container'] == elink[1]
                            and
                            conns[l['connectionId']]['role'] == elink[2])]
-            self.assertEquals(len(matches), 1, msg=matches)
+            self.assertEqual(len(matches), 1, msg=matches)
 
     def test_03_interior_conn_lost(self):
         """
