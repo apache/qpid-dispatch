@@ -184,6 +184,7 @@ jobs:
       # TODO(DISPATCH-2078) re-enable system_tests_authz_service_plugin when the GHA failure is understood and fixed
       DispatchCTestExtraArgs: "-E 'system_tests_authz_service_plugin'"
       LD_LIBRARY_PATH: ${{github.workspace}}/install/lib
+      QPID_SYSTEM_TEST_TIMEOUT: 300
     steps:
 
       - name: Show environment (Linux)
@@ -219,7 +220,7 @@ jobs:
         working-directory: ${{env.DispatchBuildDir}}
         run: |
           ulimit -c unlimited
-          ctest -C ${BuildType} -V -T Test --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2 ${{env.DispatchCTestExtraArgs}}
+          ctest --timeout 1200 -C ${BuildType} -V -T Test --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2 ${{env.DispatchCTestExtraArgs}}
 
       - name: Upload test results
         uses: actions/upload-artifact@v2
@@ -308,6 +309,7 @@ jobs:
       CCACHE_DIR: ${{github.workspace}}/.ccache
       CCACHE_COMPRESS: 'true'
       CCACHE_MAXSIZE: '400MB'
+      QPID_SYSTEM_TEST_TIMEOUT: 300
 
     steps:
 
@@ -418,7 +420,7 @@ jobs:
         working-directory: ${{env.DispatchBuildDir}}
         run: |
           ulimit -c unlimited
-          ctest -C ${BuildType} -V -T Test --output-on-failure --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2 ${{env.DispatchCTestExtraArgs}}
+          ctest --timeout 1200 -C ${BuildType} -V -T Test --output-on-failure --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2 ${{env.DispatchCTestExtraArgs}}
 
       - name: Upload test results
         uses: actions/upload-artifact@v2
