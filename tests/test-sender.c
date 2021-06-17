@@ -55,6 +55,7 @@
 //
 
 bool stop = false;
+bool verbose = false;
 
 uint64_t limit = 1;               // # messages to send
 uint64_t count = 0;               // # sent
@@ -357,6 +358,7 @@ static void usage(void)
   printf("-E      \tExit without cleanly closing the connection [off]\n");
   printf("-p      \tMessage priority [%d]\n", priority);
   printf("-X      \tMessage body data pattern [%c]\n", (char)body_data_pattern);
+  printf("-d      \tPrint periodic status updates [%s]\n", BOOL2STR(verbose));
   exit(1);
 }
 
@@ -365,7 +367,7 @@ int main(int argc, char** argv)
     /* command line options */
     opterr = 0;
     int c;
-    while ((c = getopt(argc, argv, "ha:c:i:ns:t:uMEp:X:")) != -1) {
+    while ((c = getopt(argc, argv, "ha:c:i:ns:t:udMEp:X:")) != -1) {
         switch(c) {
         case 'h': usage(); break;
         case 'a': host_address = optarg; break;
@@ -386,6 +388,7 @@ int main(int argc, char** argv)
             }
             break;
         case 't': target_address = optarg; break;
+        case 'd': verbose = true;          break;
         case 'u': presettle = true;        break;
         case 'M': add_annotations = true;  break;
         case 'E': drop_connection = true;  break;
@@ -432,7 +435,7 @@ int main(int argc, char** argv)
 
     pn_reactor_start(reactor);
 
-    time_t last_log = 0;
+    time_t last_log = time(NULL);
     while (pn_reactor_process(reactor)) {
         if (stop) {
             if (drop_connection) {  // hard stop
@@ -442,26 +445,22 @@ int main(int argc, char** argv)
                         count, accepted, rejected, released, modified);
                 exit(0);
             }
+            if (pn_link) pn_link_close(pn_link);
+            if (pn_ssn) pn_session_close(pn_ssn);
+            if (pn_conn) pn_connection_close(pn_conn);
 
-            // wait (forever) until all sent messages are confirmed by the
-            // receiver
+        } else if (verbose) {
 
-            if (count == acked) {
-                // close the endpoints this will cause pn_reactor_process() to
-                // eventually break the loop
-                if (pn_link) pn_link_close(pn_link);
-                if (pn_ssn) pn_session_close(pn_ssn);
-                if (pn_conn) pn_connection_close(pn_conn);
-            } else {
-                // periodically give status for test output logs
-                time_t now = time(NULL);
-                if ((now - last_log) >= 1) {
-                    fprintf(stdout,
-                            "Sent:%"PRIu64" Accepted:%"PRIu64" Rejected:%"PRIu64
-                            " Released:%"PRIu64" Modified:%"PRIu64"\n",
-                            count, accepted, rejected, released, modified);
-                    last_log = now;
-                }
+            // periodically give status for test output logs
+
+            time_t now = time(NULL);
+            if ((now - last_log) >= 10) {
+                fprintf(stdout,
+                        "Sent:%"PRIu64" Accepted:%"PRIu64" Rejected:%"PRIu64
+                        " Released:%"PRIu64" Modified:%"PRIu64" Limit:%"PRIu64"\n",
+                        count, accepted, rejected, released, modified, limit);
+                fflush(stdout);
+                last_log = now;
             }
         }
     }
@@ -471,6 +470,14 @@ int main(int argc, char** argv)
     if (pn_conn) pn_connection_close(pn_conn);
 
     pn_reactor_free(reactor);
+
+    if (verbose) {
+        fprintf(stdout,
+                "Sent:%"PRIu64" Accepted:%"PRIu64" Rejected:%"PRIu64
+                " Released:%"PRIu64" Modified:%"PRIu64" Limit:%"PRIu64"\n",
+                count, accepted, rejected, released, modified, limit);
+        fflush(stdout);
+    }
 
     return 0;
 }

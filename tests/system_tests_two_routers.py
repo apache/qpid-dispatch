@@ -1998,7 +1998,8 @@ class StreamingLinkScrubberTest(TestCase):
         cmd = ["test-receiver",
                "-a", self.RouterB.listener,
                "-s", address,
-               "-c", str(sender_count)]
+               "-c", str(sender_count),
+               "-d"]
         rx = self.popen(cmd, env=env)
 
         self.RouterA.wait_address(address)
@@ -2011,7 +2012,8 @@ class StreamingLinkScrubberTest(TestCase):
                "-a", self.RouterA.listener,
                "-t", address,
                "-c", "1",
-               "-sx"
+               "-sx",
+               "-d"
                ]
         senders = [self.popen(cmd, env=env) for x in range(sender_count)]
 

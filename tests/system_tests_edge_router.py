@@ -3110,7 +3110,8 @@ class StreamingMessageTest(TestCase):
                "-i", "TestReceiver-%d" % self._container_index,
                "-a", router.listener,
                "-c", str(count),
-               "-s", address]
+               "-s", address,
+               "-d"]
         self._container_index += 1
         env = dict(os.environ, PN_TRACE_FRM="1")
         return self.popen(cmd, expect=expect, env=env)
@@ -3125,7 +3126,8 @@ class StreamingMessageTest(TestCase):
                "-a", router.listener,
                "-c", str(count),
                "-t", address,
-               size]
+               size,
+               "-d"]
         self._container_index += 1
         env = dict(os.environ, PN_TRACE_FRM="1")
         return self.popen(cmd, expect=expect, env=env)

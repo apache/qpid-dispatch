@@ -32,9 +32,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
+#define BOOL2STR(b) ((b)?"true":"false")
+
 bool stop = false;
+bool verbose = false;
 
 int  credit_window = 1000;
 char *source_address = "test-address";  // name of the source node to receive from
@@ -155,6 +159,7 @@ static void usage(void)
     printf("-s      \tSource address [%s]\n", source_address);
     printf("-w      \tCredit window [%d]\n", credit_window);
     printf("-E      \tExit without cleanly closing the connection [off]\n");
+    printf("-d      \tPrint periodic status updates [%s]\n", BOOL2STR(verbose));
     exit(1);
 }
 
@@ -169,7 +174,7 @@ int main(int argc, char** argv)
     /* command line options */
     opterr = 0;
     int c;
-    while((c = getopt(argc, argv, "i:a:s:hw:c:E")) != -1) {
+    while((c = getopt(argc, argv, "i:a:s:hdw:c:E")) != -1) {
         switch(c) {
         case 'h': usage(); break;
         case 'a': host_address = optarg; break;
@@ -184,6 +189,7 @@ int main(int argc, char** argv)
                 usage();
             break;
         case 'E': drop_connection = true;  break;
+        case 'd': verbose = true;          break;
 
         default:
             usage();
@@ -219,6 +225,7 @@ int main(int argc, char** argv)
 
     pn_reactor_start(reactor);
 
+    time_t last_log = time(NULL);
     while (pn_reactor_process(reactor)) {
         if (stop) {
             if (drop_connection)  // hard exit
@@ -228,6 +235,17 @@ int main(int argc, char** argv)
             if (pn_link) pn_link_close(pn_link);
             if (pn_ssn) pn_session_close(pn_ssn);
             if (pn_conn) pn_connection_close(pn_conn);
+
+        } else if (verbose) {
+
+            // periodically give status for test output logs
+
+            time_t now = time(NULL);
+            if ((now - last_log) >= 10) {
+                fprintf(stdout, "Received:%"PRIu64" of %"PRIu64"\n", count, limit);
+                fflush(stdout);
+                last_log = now;
+            }
         }
     }
 
@@ -236,6 +254,11 @@ int main(int argc, char** argv)
     if (pn_conn) pn_connection_close(pn_conn);
 
     pn_reactor_free(reactor);
+
+    if (verbose) {
+        fprintf(stdout, "Received:%"PRIu64" of %"PRIu64"\n", count, limit);
+        fflush(stdout);
+    }
 
     return 0;
 }

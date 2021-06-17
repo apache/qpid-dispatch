@@ -2653,7 +2653,7 @@ class LinkRoute3Hop(TestCase):
         same session.
         """
         send_clients = 10
-        send_batch = 10
+        send_batch = 5
         total = send_clients * send_batch
 
         fake_service = FakeService(self.QDR_A.addresses[1],
@@ -2665,7 +2665,8 @@ class LinkRoute3Hop(TestCase):
         rx = self.popen(["test-receiver",
                          "-a", self.QDR_C.addresses[0],
                          "-c", str(total),
-                         "-s", "closest/test-client"],
+                         "-s", "closest/test-client",
+                         "-d"],
                         env=env,
                         expect=Process.EXIT_OK)
 
@@ -2675,7 +2676,8 @@ class LinkRoute3Hop(TestCase):
                                "-c", str(send_batch),
                                "-i", "TestSender-%s" % x,
                                "-sx",   # huge message size to trigger Q2/Q3
-                               "-t", "closest/test-client"],
+                               "-t", "closest/test-client",
+                               "-d"],
                               env=env,
                               expect=Process.EXIT_OK)
 

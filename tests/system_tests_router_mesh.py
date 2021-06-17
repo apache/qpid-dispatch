@@ -205,8 +205,7 @@ class ThreeRouterTest(TestCase):
 
     def test_06_parallel_priority(self):
         """
-        Create 10 senders each with a different priority.  Send large messages
-        - large enough to trigger Qx flow control (sender argument "-sx").
+        Create 10 senders each with a different priority.
         Ensure all messages arrive as expected.
         """
         priorities = 10
@@ -214,22 +213,25 @@ class ThreeRouterTest(TestCase):
 
         total = priorities * send_batch
         rx = self.spawn_receiver(self.RouterC,
-                                 count=total,
-                                 address="closest/test_06_address")
+                                 total,
+                                 "closest/test_06_address",
+                                 "-d")
         self.RouterA.wait_address("closest/test_06_address")
 
         senders = [self.spawn_sender(self.RouterA,
                                      send_batch,
                                      "closest/test_06_address",
-                                     "-sx", "-p%s" % p)
+                                     "-sm", "-p%s" % p, "-d")
                    for p in range(priorities)]
 
-        if rx.wait(timeout=TIMEOUT):
-            raise Exception("Receiver failed to consume all messages")
+        # wait for all senders to finish first, then check the receiver
         for tx in senders:
             out_text, out_err = tx.communicate(timeout=TIMEOUT)
             if tx.returncode:
                 raise Exception("Sender failed: %s %s" % (out_text, out_err))
+
+        if rx.wait(timeout=TIMEOUT):
+            raise Exception("Receiver failed to consume all messages")
 
 
 if __name__ == '__main__':
