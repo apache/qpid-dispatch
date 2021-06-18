@@ -93,6 +93,9 @@ deadlock:pni_timer_set
 # DISPATCH-2150, PROTON-2133
 race:^check_earmark_override$
 
+# DISPATCH-2175, PROTON-2230
+race:^listener_final_free$
+
 # DISPATCH-2153
 race:^pn_logger_reset_mask$
 race:^pni_logger_log$
