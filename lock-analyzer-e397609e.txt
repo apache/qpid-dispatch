@@ -1,0 +1,341 @@
+This file holds a sample complete run for /system_tests_topology_disposition/TopologyDispositionTests/setUpClass/A router.
+
+/home/chug/git/qpid-dispatch/tools/lock-analyzer.py --outfile /home/chug/git/qpid-dispatch/build/tests/system_test.dir/system_tests_topology_disposition/TopologyDispositionTests/setUpClass/A-1.out --core-tid 0x1a374d0
+pydev debugger: process 249727 is connecting
+
+Connected to pydev debugger (build 201.8538.36)
+
+Exceptional observations made during processing
+===============================================
+
+Long wait timestamp:294674242371 0x7fcbad72fe60 acquire: 0 use: 49470 total: 49470 lock stack: ['PYTHON']
+Long wait timestamp:294674295265 0x1a374d0 --CORE-- acquire: 0 use: 10094 total: 10094 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674301251 0x7fcbad72fe60 acquire: 0 use: 58776 total: 58776 lock stack: ['PYTHON']
+Long wait timestamp:294674437946 0x1a374d0 --CORE-- acquire: 0 use: 138148 total: 138148 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674599862 0x1a374d0 --CORE-- acquire: 0 use: 142095 total: 142095 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674612272 0x1a374d0 --CORE-- acquire: 0 use: 12193 total: 12193 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674779562 0x1a374d0 --CORE-- acquire: 0 use: 150288 total: 150288 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674793120 0x1a374d0 --CORE-- acquire: 0 use: 12915 total: 12915 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674811638 0x1a374d0 --CORE-- acquire: 0 use: 11937 total: 11937 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674814842 0x1a374d0 --CORE-- acquire: 1307 use: 9 total: 1316 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674841982 0x1a374d0 --CORE-- acquire: 0 use: 16484 total: 16484 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674881197 0x1a374d0 --CORE-- acquire: 0 use: 36282 total: 36282 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674895315 0x1a374d0 --CORE-- acquire: 6727 use: 28 total: 6755 lock stack: ['ALLOC_INIT', 'ENTITY_CACHE']
+Long wait timestamp:294674952963 0x1a374d0 --CORE-- acquire: 0 use: 17797 total: 17797 lock stack: ['CORE_ACTION']
+Long wait timestamp:294674993731 0x1a374d0 --CORE-- acquire: 0 use: 33753 total: 33753 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675069122 0x1a374d0 --CORE-- acquire: 0 use: 68750 total: 68750 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675221216 0x1a374d0 --CORE-- acquire: 0 use: 131847 total: 131847 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675238349 0x1a6b210 acquire: 0 use: 11020 total: 11020 lock stack: ['PYTHON']
+Long wait timestamp:294675287330 0x1a374d0 --CORE-- acquire: 0 use: 43700 total: 43700 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675300026 0x1a374d0 --CORE-- acquire: 1152 use: 648 total: 1800 lock stack: ['LOG']
+Long wait timestamp:294675311855 0x1a374d0 --CORE-- acquire: 1312 use: 489 total: 1801 lock stack: ['LOG']
+Long wait timestamp:294675446877 0x1a374d0 --CORE-- acquire: 0 use: 125585 total: 125585 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675460289 0x1a13050 acquire: 0 use: 11476 total: 11476 lock stack: ['PYTHON']
+Long wait timestamp:294675506835 0x1a374d0 --CORE-- acquire: 0 use: 45432 total: 45432 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675535851 0x1a13050 acquire: 0 use: 13126 total: 13126 lock stack: ['PYTHON', 'ROUTER', 'ENTITY_CACHE']
+Long wait timestamp:294675535904 0x1a13050 acquire: 0 use: 13237 total: 13237 lock stack: ['PYTHON', 'ROUTER']
+Long wait timestamp:294675538906 0x1a374d0 --CORE-- acquire: 0 use: 15623 total: 15623 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675539350 0x1a13050 acquire: 1 use: 19599 total: 19600 lock stack: ['PYTHON']
+Long wait timestamp:294675573385 0x1a374d0 --CORE-- acquire: 0 use: 28001 total: 28001 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675782023 0x1a374d0 --CORE-- acquire: 0 use: 188675 total: 188675 lock stack: ['CORE_ACTION']
+Long wait timestamp:294675806116 0x1a6b210 acquire: 1 use: 19537 total: 19538 lock stack: ['PYTHON']
+Long wait timestamp:294676295428 0x1a374d0 --CORE-- acquire: 0 use: 480127 total: 480127 lock stack: ['CORE_ACTION']
+Long wait timestamp:294676318114 0x1a374d0 --CORE-- acquire: 1341 use: 294 total: 1635 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294676331494 0x1a6b210 acquire: 1 use: 37638 total: 37639 lock stack: ['PYTHON']
+Long wait timestamp:294676338653 0x1a374d0 --CORE-- acquire: 1011 use: 25 total: 1036 lock stack: ['LOG']
+Long wait timestamp:294676437467 0x1a374d0 --CORE-- acquire: 0 use: 61078 total: 61078 lock stack: ['CORE_ACTION']
+Long wait timestamp:294676457997 0x1a374d0 --CORE-- acquire: 1258 use: 10 total: 1268 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294676461583 0x1a374d0 --CORE-- acquire: 1924 use: 49 total: 1973 lock stack: ['LOG']
+Long wait timestamp:294676471912 0x1a374d0 --CORE-- acquire: 1607 use: 11 total: 1618 lock stack: ['CORE_ACTION']
+Long wait timestamp:294676496532 0x1a374d0 --CORE-- acquire: 1 use: 10607 total: 10608 lock stack: ['CORE_ACTION']
+Long wait timestamp:294676602948 0x1a374d0 --CORE-- acquire: 0 use: 94140 total: 94140 lock stack: ['CORE_ACTION']
+Long wait timestamp:294676621985 0x1a6b210 acquire: 1 use: 10110 total: 10111 lock stack: ['PYTHON']
+Long wait timestamp:294676662983 0x1a374d0 --CORE-- acquire: 0 use: 13847 total: 13847 lock stack: ['CORE_ACTION']
+Long wait timestamp:294676662737 0x1a6b210 acquire: 1 use: 27792 total: 27793 lock stack: ['PYTHON']
+Long wait timestamp:294676692963 0x1a374d0 --CORE-- acquire: 1460 use: 107 total: 1567 lock stack: ['LOG']
+Long wait timestamp:294676698880 0x1a6b210 acquire: 0 use: 16179 total: 16179 lock stack: ['PYTHON']
+Long wait timestamp:294676718360 0x1a374d0 --CORE-- acquire: 2063 use: 13 total: 2076 lock stack: ['qd_message_t']
+Long wait timestamp:294676719484 0x1a6b210 acquire: 1 use: 14398 total: 14399 lock stack: ['PYTHON']
+Long wait timestamp:294676723612 0x1a374d0 --CORE-- acquire: 3798 use: 23 total: 3821 lock stack: ['qd_buffer_t']
+Long wait timestamp:294676779581 0x1a374d0 --CORE-- acquire: 2203 use: 36 total: 2239 lock stack: ['LOG']
+Long wait timestamp:294676796007 0x1a374d0 --CORE-- acquire: 1153 use: 30 total: 1183 lock stack: ['LOG']
+Long wait timestamp:294676866349 0x1a374d0 --CORE-- acquire: 0 use: 18998 total: 18998 lock stack: ['CORE_ACTION']
+Long wait timestamp:294677333411 0x1a374d0 --CORE-- acquire: 0 use: 466098 total: 466098 lock stack: ['CORE_ACTION']
+Long wait timestamp:294677346070 0x1a13050 acquire: 0 use: 14077 total: 14077 lock stack: ['PYTHON']
+Long wait timestamp:294677454177 0x1a374d0 --CORE-- acquire: 0 use: 73051 total: 73051 lock stack: ['CORE_ACTION']
+Long wait timestamp:294677490576 0x1a374d0 --CORE-- acquire: 0 use: 29789 total: 29789 lock stack: ['CORE_ACTION']
+Long wait timestamp:294677507798 0x1a374d0 --CORE-- acquire: 1005 use: 96 total: 1101 lock stack: ['LOG']
+Long wait timestamp:294677636006 0x1a374d0 --CORE-- acquire: 0 use: 92741 total: 92741 lock stack: ['CORE_ACTION']
+Long wait timestamp:294677800828 0x1a374d0 --CORE-- acquire: 0 use: 154574 total: 154574 lock stack: ['CORE_ACTION']
+Long wait timestamp:294677820842 0x1a6b210 acquire: 0 use: 14991 total: 14991 lock stack: ['PYTHON']
+Long wait timestamp:294677832917 0x1a6b210 acquire: 1 use: 10503 total: 10504 lock stack: ['PYTHON']
+Long wait timestamp:294678348849 0x1a374d0 --CORE-- acquire: 0 use: 492036 total: 492036 lock stack: ['CORE_ACTION']
+Long wait timestamp:294678365639 0x1a374d0 --CORE-- acquire: 1535 use: 50 total: 1585 lock stack: ['qd_buffer_t']
+Long wait timestamp:294678458294 0x1a374d0 --CORE-- acquire: 0 use: 57119 total: 57119 lock stack: ['CORE_ACTION']
+Long wait timestamp:294678643582 0x1a374d0 --CORE-- acquire: 0 use: 179788 total: 179788 lock stack: ['CORE_ACTION']
+Long wait timestamp:294678802933 0x1a374d0 --CORE-- acquire: 0 use: 148825 total: 148825 lock stack: ['CORE_ACTION']
+Long wait timestamp:294678820482 0x7fcbad72fe60 acquire: 1 use: 15323 total: 15324 lock stack: ['PYTHON']
+Long wait timestamp:294678833541 0x7fcbad72fe60 acquire: 1 use: 11552 total: 11553 lock stack: ['PYTHON']
+Long wait timestamp:294678862561 0x1a374d0 --CORE-- acquire: 0 use: 13271 total: 13271 lock stack: ['CORE_ACTION']
+Long wait timestamp:294678891484 0x1a374d0 --CORE-- acquire: 0 use: 11398 total: 11398 lock stack: ['CORE_ACTION']
+Long wait timestamp:294678963462 0x1a374d0 --CORE-- acquire: 0 use: 60255 total: 60255 lock stack: ['CORE_ACTION']
+Long wait timestamp:294678991083 0x1a374d0 --CORE-- acquire: 0 use: 19085 total: 19085 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679024091 0x1a374d0 --CORE-- acquire: 0 use: 29333 total: 29333 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679041583 0x1a374d0 --CORE-- acquire: 0 use: 13008 total: 13008 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679065026 0x1a374d0 --CORE-- acquire: 0 use: 13558 total: 13558 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679097426 0x1a374d0 --CORE-- acquire: 0 use: 16503 total: 16503 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679115043 0x1a374d0 --CORE-- acquire: 0 use: 17314 total: 17314 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679134411 0x1a374d0 --CORE-- acquire: 0 use: 19106 total: 19106 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679162959 0x1a374d0 --CORE-- acquire: 0 use: 17873 total: 17873 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679265776 0x1a374d0 --CORE-- acquire: 0 use: 70842 total: 70842 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679306273 0x1a374d0 --CORE-- acquire: 1 use: 22258 total: 22259 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679354030 0x1a374d0 --CORE-- acquire: 0 use: 42290 total: 42290 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679386913 0x1a374d0 --CORE-- acquire: 2982 use: 395 total: 3377 lock stack: ['LOG']
+Long wait timestamp:294679423518 0x1a374d0 --CORE-- acquire: 0 use: 10405 total: 10405 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679564887 0x1a374d0 --CORE-- acquire: 0 use: 97369 total: 97369 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679649845 0x1a374d0 --CORE-- acquire: 0 use: 78427 total: 78427 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679665689 0x1a374d0 --CORE-- acquire: 2133 use: 57 total: 2190 lock stack: ['SERVER']
+Long wait timestamp:294679768002 0x1a374d0 --CORE-- acquire: 1 use: 85802 total: 85803 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679806026 0x1a374d0 --CORE-- acquire: 0 use: 25463 total: 25463 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679870887 0x1a374d0 --CORE-- acquire: 0 use: 50857 total: 50857 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679910111 0x1a374d0 --CORE-- acquire: 0 use: 17366 total: 17366 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679925630 0x1a374d0 --CORE-- acquire: 0 use: 10569 total: 10569 lock stack: ['CORE_ACTION']
+Long wait timestamp:294679965806 0x1a374d0 --CORE-- acquire: 0 use: 31154 total: 31154 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680067676 0x1a374d0 --CORE-- acquire: 1 use: 71516 total: 71517 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680102146 0x1a374d0 --CORE-- acquire: 0 use: 22354 total: 22354 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680137858 0x1a374d0 --CORE-- acquire: 0 use: 30738 total: 30738 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680167588 0x1a374d0 --CORE-- acquire: 0 use: 23841 total: 23841 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680219128 0x1a374d0 --CORE-- acquire: 0 use: 13175 total: 13175 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680249713 0x1a374d0 --CORE-- acquire: 0 use: 24790 total: 24790 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680284883 0x1a374d0 --CORE-- acquire: 0 use: 24877 total: 24877 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680322395 0x1a374d0 --CORE-- acquire: 0 use: 28814 total: 28814 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680357230 0x1a374d0 --CORE-- acquire: 0 use: 13031 total: 13031 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680459792 0x1a374d0 --CORE-- acquire: 0 use: 49421 total: 49421 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680479302 0x1a374d0 --CORE-- acquire: 0 use: 16406 total: 16406 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680581886 0x1a374d0 --CORE-- acquire: 0 use: 95203 total: 95203 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680667558 0x1a374d0 --CORE-- acquire: 1 use: 18697 total: 18698 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680683915 0x1a374d0 --CORE-- acquire: 0 use: 15966 total: 15966 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680695803 0x1a374d0 --CORE-- acquire: 5962 use: 263 total: 6225 lock stack: ['LOG']
+Long wait timestamp:294680718449 0x1a374d0 --CORE-- acquire: 2445 use: 11 total: 2456 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294680746889 0x1a374d0 --CORE-- acquire: 0 use: 16209 total: 16209 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680789482 0x1a374d0 --CORE-- acquire: 1819 use: 23 total: 1842 lock stack: ['LOG']
+Long wait timestamp:294680813499 0x1a374d0 --CORE-- acquire: 0 use: 17658 total: 17658 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680837840 0x1a374d0 --CORE-- acquire: 0 use: 12942 total: 12942 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680841298 0x1a374d0 --CORE-- acquire: 1620 use: 8 total: 1628 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294680903265 0x1a374d0 --CORE-- acquire: 1026 use: 11 total: 1037 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680921067 0x1a374d0 --CORE-- acquire: 1 use: 11972 total: 11973 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680947775 0x1a374d0 --CORE-- acquire: 0 use: 10684 total: 10684 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680978369 0x1a374d0 --CORE-- acquire: 0 use: 19957 total: 19957 lock stack: ['CORE_ACTION']
+Long wait timestamp:294680987386 0x1a374d0 --CORE-- acquire: 1277 use: 9 total: 1286 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294681078426 0x1a374d0 --CORE-- acquire: 0 use: 38482 total: 38482 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681111610 0x1a374d0 --CORE-- acquire: 0 use: 16856 total: 16856 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681179424 0x1a374d0 --CORE-- acquire: 1 use: 35087 total: 35088 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681222044 0x1a374d0 --CORE-- acquire: 0 use: 27583 total: 27583 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681249377 0x1a374d0 --CORE-- acquire: 0 use: 12412 total: 12412 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681278975 0x1a374d0 --CORE-- acquire: 0 use: 15514 total: 15514 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681293602 0x1a374d0 --CORE-- acquire: 1080 use: 40 total: 1120 lock stack: ['LOG']
+Long wait timestamp:294681371014 0x1a374d0 --CORE-- acquire: 0 use: 22330 total: 22330 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681421682 0x1a374d0 --CORE-- acquire: 0 use: 21600 total: 21600 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681479633 0x1a374d0 --CORE-- acquire: 0 use: 17723 total: 17723 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681484066 0x1a374d0 --CORE-- acquire: 1009 use: 173 total: 1182 lock stack: ['LOG']
+Long wait timestamp:294681527517 0x1a374d0 --CORE-- acquire: 0 use: 12239 total: 12239 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681579510 0x1a374d0 --CORE-- acquire: 0 use: 32643 total: 32643 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681627347 0x1a374d0 --CORE-- acquire: 0 use: 10936 total: 10936 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681659067 0x1a374d0 --CORE-- acquire: 0 use: 16174 total: 16174 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681679521 0x1a374d0 --CORE-- acquire: 0 use: 17893 total: 17893 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681711555 0x1a374d0 --CORE-- acquire: 0 use: 16346 total: 16346 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681780062 0x1a374d0 --CORE-- acquire: 0 use: 35829 total: 35829 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681822954 0x1a374d0 --CORE-- acquire: 0 use: 24335 total: 24335 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681831703 0x1a374d0 --CORE-- acquire: 1693 use: 44 total: 1737 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294681881196 0x1a374d0 --CORE-- acquire: 0 use: 15127 total: 15127 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681923874 0x1a374d0 --CORE-- acquire: 0 use: 23049 total: 23049 lock stack: ['CORE_ACTION']
+Long wait timestamp:294681980246 0x1a374d0 --CORE-- acquire: 0 use: 20707 total: 20707 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682081000 0x1a374d0 --CORE-- acquire: 0 use: 30708 total: 30708 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682112080 0x1a374d0 --CORE-- acquire: 0 use: 14856 total: 14856 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682134232 0x1a374d0 --CORE-- acquire: 0 use: 12468 total: 12468 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682181158 0x1a374d0 --CORE-- acquire: 0 use: 32416 total: 32416 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682281756 0x1a374d0 --CORE-- acquire: 0 use: 37167 total: 37167 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682290527 0x1a374d0 --CORE-- acquire: 1645 use: 9 total: 1654 lock stack: ['qd_buffer_t']
+Long wait timestamp:294682311230 0x1a374d0 --CORE-- acquire: 0 use: 10866 total: 10866 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682373072 0x1a374d0 --CORE-- acquire: 0 use: 48467 total: 48467 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682426816 0x1a374d0 --CORE-- acquire: 0 use: 14812 total: 14812 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682461818 0x1a374d0 --CORE-- acquire: 0 use: 26146 total: 26146 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682483652 0x1a374d0 --CORE-- acquire: 0 use: 17692 total: 17692 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682531972 0x1a374d0 --CORE-- acquire: 0 use: 15905 total: 15905 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682583212 0x1a374d0 --CORE-- acquire: 0 use: 39589 total: 39589 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682664777 0x1a374d0 --CORE-- acquire: 0 use: 22094 total: 22094 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682684447 0x1a374d0 --CORE-- acquire: 0 use: 14124 total: 14124 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682782751 0x1a374d0 --CORE-- acquire: 0 use: 40268 total: 40268 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682828559 0x1a374d0 --CORE-- acquire: 1068 use: 18 total: 1086 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294682882929 0x1a374d0 --CORE-- acquire: 0 use: 25631 total: 25631 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682900601 0x1a374d0 --CORE-- acquire: 1004 use: 33 total: 1037 lock stack: ['LOG']
+Long wait timestamp:294682914134 0x1a374d0 --CORE-- acquire: 0 use: 10644 total: 10644 lock stack: ['CORE_ACTION']
+Long wait timestamp:294682982706 0x1a374d0 --CORE-- acquire: 0 use: 37627 total: 37627 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683019549 0x1a374d0 --CORE-- acquire: 0 use: 21053 total: 21053 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683083644 0x1a374d0 --CORE-- acquire: 0 use: 41743 total: 41743 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683129676 0x1a374d0 --CORE-- acquire: 0 use: 20917 total: 20917 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683183989 0x1a374d0 --CORE-- acquire: 0 use: 22798 total: 22798 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683235055 0x1a374d0 --CORE-- acquire: 0 use: 32682 total: 32682 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683283929 0x1a374d0 --CORE-- acquire: 0 use: 10209 total: 10209 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683373937 0x1a374d0 --CORE-- acquire: 0 use: 18808 total: 18808 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683462333 0x1a374d0 --CORE-- acquire: 0 use: 22882 total: 22882 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683484804 0x1a374d0 --CORE-- acquire: 0 use: 20074 total: 20074 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683489564 0x1a374d0 --CORE-- acquire: 1753 use: 21 total: 1774 lock stack: ['qd_buffer_t']
+Long wait timestamp:294683520420 0x1a374d0 --CORE-- acquire: 0 use: 17069 total: 17069 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683584519 0x1a374d0 --CORE-- acquire: 1 use: 39195 total: 39196 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683598526 0x1a374d0 --CORE-- acquire: 1982 use: 11 total: 1993 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294683622661 0x1a374d0 --CORE-- acquire: 1 use: 14846 total: 14847 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683669618 0x1a374d0 --CORE-- acquire: 0 use: 17583 total: 17583 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683684648 0x1a374d0 --CORE-- acquire: 0 use: 12418 total: 12418 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683726951 0x1a374d0 --CORE-- acquire: 0 use: 20282 total: 20282 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683785251 0x1a374d0 --CORE-- acquire: 0 use: 38241 total: 38241 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683807421 0x1a374d0 --CORE-- acquire: 1714 use: 55 total: 1769 lock stack: ['LOG']
+Long wait timestamp:294683824961 0x1a374d0 --CORE-- acquire: 1 use: 14961 total: 14962 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683845376 0x1a374d0 --CORE-- acquire: 1360 use: 11 total: 1371 lock stack: ['LOG', 'qd_log_entry_t']
+Long wait timestamp:294683886285 0x1a374d0 --CORE-- acquire: 0 use: 22431 total: 22431 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683931084 0x1a374d0 --CORE-- acquire: 0 use: 22898 total: 22898 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683985351 0x1a374d0 --CORE-- acquire: 0 use: 23648 total: 23648 lock stack: ['CORE_ACTION']
+Long wait timestamp:294683997318 0x1a374d0 --CORE-- acquire: 1082 use: 21 total: 1103 lock stack: ['LOG']
+Long wait timestamp:294684023065 0x1a374d0 --CORE-- acquire: 0 use: 17914 total: 17914 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684085872 0x1a374d0 --CORE-- acquire: 0 use: 38757 total: 38757 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684129072 0x1a374d0 --CORE-- acquire: 0 use: 23225 total: 23225 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684185988 0x1a374d0 --CORE-- acquire: 1 use: 31679 total: 31680 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684223902 0x1a374d0 --CORE-- acquire: 0 use: 17900 total: 17900 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684286734 0x1a374d0 --CORE-- acquire: 0 use: 36919 total: 36919 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684319970 0x1a374d0 --CORE-- acquire: 0 use: 13369 total: 13369 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684375563 0x1a374d0 --CORE-- acquire: 1 use: 41575 total: 41576 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684440279 0x1a374d0 --CORE-- acquire: 0 use: 18087 total: 18087 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684488737 0x1a374d0 --CORE-- acquire: 0 use: 10498 total: 10498 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684586922 0x1a374d0 --CORE-- acquire: 0 use: 60899 total: 60899 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684674832 0x1a374d0 --CORE-- acquire: 0 use: 49932 total: 49932 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684689656 0x1a374d0 --CORE-- acquire: 0 use: 10060 total: 10060 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684698599 0x1a374d0 --CORE-- acquire: 1006 use: 244 total: 1250 lock stack: ['LOG']
+Long wait timestamp:294684887530 0x1a374d0 --CORE-- acquire: 0 use: 23890 total: 23890 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684928355 0x1a374d0 --CORE-- acquire: 0 use: 19328 total: 19328 lock stack: ['CORE_ACTION']
+Long wait timestamp:294684958858 0x1a374d0 --CORE-- acquire: 0 use: 14904 total: 14904 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685051824 0x1a374d0 --CORE-- acquire: 0 use: 13107 total: 13107 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685158634 0x1a374d0 --CORE-- acquire: 0 use: 19955 total: 19955 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685374099 0x1a374d0 --CORE-- acquire: 0 use: 11263 total: 11263 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685406297 0x1a374d0 --CORE-- acquire: 1252 use: 712 total: 1964 lock stack: ['CONN_WORK']
+Long wait timestamp:294685446940 0x1a374d0 --CORE-- acquire: 1026 use: 139 total: 1165 lock stack: ['LOG']
+Long wait timestamp:294685450188 0x1a374d0 --CORE-- acquire: 1301 use: 11 total: 1312 lock stack: ['LOG', 'qd_log_entry_t']
+Long wait timestamp:294685525888 0x1a374d0 --CORE-- acquire: 0 use: 20634 total: 20634 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685589001 0x1a374d0 --CORE-- acquire: 0 use: 35716 total: 35716 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685676856 0x1a374d0 --CORE-- acquire: 0 use: 30209 total: 30209 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685726694 0x1a374d0 --CORE-- acquire: 0 use: 16326 total: 16326 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685790510 0x1a374d0 --CORE-- acquire: 0 use: 40822 total: 40822 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685840516 0x1a374d0 --CORE-- acquire: 0 use: 22706 total: 22706 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685890277 0x1a374d0 --CORE-- acquire: 0 use: 20239 total: 20239 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685936293 0x1a374d0 --CORE-- acquire: 0 use: 15348 total: 15348 lock stack: ['CORE_ACTION']
+Long wait timestamp:294685989648 0x1a374d0 --CORE-- acquire: 0 use: 18975 total: 18975 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686026277 0x1a374d0 --CORE-- acquire: 0 use: 18153 total: 18153 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686040616 0x1a374d0 --CORE-- acquire: 0 use: 12428 total: 12428 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686090533 0x1a374d0 --CORE-- acquire: 0 use: 35585 total: 35585 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686125041 0x1a374d0 --CORE-- acquire: 0 use: 15840 total: 15840 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686190159 0x1a374d0 --CORE-- acquire: 0 use: 31875 total: 31875 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686224775 0x1a374d0 --CORE-- acquire: 0 use: 10604 total: 10604 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686240681 0x1a374d0 --CORE-- acquire: 2188 use: 105 total: 2293 lock stack: ['LOG']
+Long wait timestamp:294686291147 0x1a374d0 --CORE-- acquire: 0 use: 40716 total: 40716 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686302514 0x1a374d0 --CORE-- acquire: 1071 use: 19 total: 1090 lock stack: ['qd_message_t']
+Long wait timestamp:294686385497 0x1a374d0 --CORE-- acquire: 0 use: 47686 total: 47686 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686401072 0x1a374d0 --CORE-- acquire: 1217 use: 153 total: 1370 lock stack: ['CONN_WORK']
+Long wait timestamp:294686481597 0x1a374d0 --CORE-- acquire: 2983 use: 30 total: 3013 lock stack: ['qd_log_entry_t']
+Long wait timestamp:294686591788 0x1a374d0 --CORE-- acquire: 0 use: 48760 total: 48760 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686680432 0x1a374d0 --CORE-- acquire: 1 use: 46014 total: 46015 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686712268 0x7fcbad72fe60 acquire: 1 use: 15375 total: 15376 lock stack: ['PYTHON']
+Long wait timestamp:294686777935 0x1a374d0 --CORE-- acquire: 0 use: 34235 total: 34235 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686843994 0x1a374d0 --CORE-- acquire: 0 use: 25801 total: 25801 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686889369 0x1a374d0 --CORE-- acquire: 0 use: 11221 total: 11221 lock stack: ['CORE_ACTION']
+Long wait timestamp:294686931747 0x1a374d0 --CORE-- acquire: 1962 use: 10 total: 1972 lock stack: ['LOG', 'qd_log_entry_t']
+Long wait timestamp:294687056996 0x1a374d0 --CORE-- acquire: 0 use: 25437 total: 25437 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687125544 0x1a374d0 --CORE-- acquire: 0 use: 11059 total: 11059 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687244828 0x1a374d0 --CORE-- acquire: 0 use: 22278 total: 22278 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687286423 0x1a374d0 --CORE-- acquire: 0 use: 15553 total: 15553 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687337449 0x1a374d0 --CORE-- acquire: 1 use: 14751 total: 14752 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687376968 0x1a374d0 --CORE-- acquire: 0 use: 12148 total: 12148 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687488170 0x1a374d0 --CORE-- acquire: 0 use: 32837 total: 32837 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687528022 0x1a374d0 --CORE-- acquire: 0 use: 11937 total: 11937 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687592980 0x1a374d0 --CORE-- acquire: 0 use: 51450 total: 51450 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687690586 0x1a374d0 --CORE-- acquire: 0 use: 95474 total: 95474 lock stack: ['CORE_ACTION']
+Long wait timestamp:294687846860 0x1a374d0 --CORE-- acquire: 0 use: 147616 total: 147616 lock stack: ['CORE_ACTION']
+Long wait timestamp:294688390654 0x1a374d0 --CORE-- acquire: 0 use: 541414 total: 541414 lock stack: ['CORE_ACTION']
+Long wait timestamp:294688490015 0x1a374d0 --CORE-- acquire: 0 use: 83876 total: 83876 lock stack: ['CORE_ACTION']
+Long wait timestamp:294688687361 0x1a374d0 --CORE-- acquire: 0 use: 156335 total: 156335 lock stack: ['CORE_ACTION']
+Long wait timestamp:294688850179 0x1a374d0 --CORE-- acquire: 0 use: 160646 total: 160646 lock stack: ['CORE_ACTION']
+Long wait timestamp:294689393085 0x1a374d0 --CORE-- acquire: 0 use: 506271 total: 506271 lock stack: ['CORE_ACTION']
+Long wait timestamp:294689491208 0x1a374d0 --CORE-- acquire: 0 use: 91260 total: 91260 lock stack: ['CORE_ACTION']
+Long wait timestamp:294689690887 0x1a374d0 --CORE-- acquire: 0 use: 197439 total: 197439 lock stack: ['CORE_ACTION']
+Long wait timestamp:294689851701 0x1a374d0 --CORE-- acquire: 0 use: 157742 total: 157742 lock stack: ['CORE_ACTION']
+Long wait timestamp:294690395710 0x1a374d0 --CORE-- acquire: 0 use: 541623 total: 541623 lock stack: ['CORE_ACTION']
+Long wait timestamp:294690493499 0x1a374d0 --CORE-- acquire: 1 use: 89753 total: 89754 lock stack: ['CORE_ACTION']
+Long wait timestamp:294690684179 0x1a374d0 --CORE-- acquire: 0 use: 187541 total: 187541 lock stack: ['CORE_ACTION']
+Long wait timestamp:294691092729 0x1a374d0 --CORE-- acquire: 0 use: 375034 total: 375034 lock stack: ['CORE_ACTION']
+Long wait timestamp:294691397035 0x1a374d0 --CORE-- acquire: 0 use: 297765 total: 297765 lock stack: ['CORE_ACTION']
+Long wait timestamp:294691463297 0x1a374d0 --CORE-- acquire: 0 use: 48214 total: 48214 lock stack: ['CORE_ACTION']
+Long wait timestamp:294691860357 0x1a374d0 --CORE-- acquire: 0 use: 392001 total: 392001 lock stack: ['CORE_ACTION']
+
+Per thread lock summary
+=======================
+
+Thread 0x7fcbad72fe60 
+            , acq:       0, acq:       1, acq:     2-9, acq:   10-99, acq: 100-999, acq:  1k-10k, acq:10k-100k, acq: 100k-1m,       Total
+use: 100k-1m,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:10k-100k,            2,            3,            0,            0,            0,            0,            0,            0,            5
+use:  1k-10k,           42,           10,            0,            1,            1,            1,            0,            0,           55
+use: 100-999,          713,          156,            1,          149,          129,            8,            0,            0,         1156
+use:   10-99,        11426,         1534,          199,         1745,          208,            6,            0,            0,        15118
+use:     2-9,        20128,         1518,          281,          433,           19,            4,            0,            0,        22383
+use:       1,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:       0,            0,            0,            0,            0,            0,            0,            0,            0,            0
+       Total,        32311,         3221,          481,         2328,          357,           19,            0,            0,        38717
+
+Thread 0x1a374d0 --CORE--
+            , acq:       0, acq:       1, acq:     2-9, acq:   10-99, acq: 100-999, acq:  1k-10k, acq:10k-100k, acq: 100k-1m,       Total
+use: 100k-1m,           24,            0,            0,            0,            0,            0,            0,            0,           24
+use:10k-100k,          163,           15,            0,            0,            0,            0,            0,            0,          178
+use:  1k-10k,          456,           58,            0,            6,            4,            0,            0,            0,          524
+use: 100-999,         3347,          534,            7,          551,          342,           12,            0,            0,         4793
+use:   10-99,        35900,         3953,          797,         7037,          624,           26,            0,            0,        48337
+use:     2-9,        49160,         3956,         1615,         1600,           76,            6,            0,            0,        56413
+use:       1,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:       0,            0,            0,            0,            0,            0,            0,            0,            0,            0
+       Total,        89050,         8516,         2419,         9194,         1046,           44,            0,            0,       110269
+
+Thread 0x1a6b210 
+            , acq:       0, acq:       1, acq:     2-9, acq:   10-99, acq: 100-999, acq:  1k-10k, acq:10k-100k, acq: 100k-1m,       Total
+use: 100k-1m,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:10k-100k,            3,            6,            0,            0,            0,            0,            0,            0,            9
+use:  1k-10k,           79,           12,            0,            1,            0,            0,            0,            0,           92
+use: 100-999,          773,          188,            9,          212,          168,            6,            0,            0,         1356
+use:   10-99,        12161,         1771,          246,         2267,          274,           11,            0,            0,        16730
+use:     2-9,        19748,         1580,          407,          651,           33,            2,            0,            0,        22421
+use:       1,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:       0,            0,            0,            0,            0,            0,            0,            0,            0,            0
+       Total,        32764,         3557,          662,         3131,          475,           19,            0,            0,        40608
+
+Thread 0x1a67a90 
+            , acq:       0, acq:       1, acq:     2-9, acq:   10-99, acq: 100-999, acq:  1k-10k, acq:10k-100k, acq: 100k-1m,       Total
+use: 100k-1m,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:10k-100k,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:  1k-10k,           32,           10,            0,            1,            2,            0,            0,            0,           45
+use: 100-999,         1115,          236,            9,          247,          222,           11,            0,            0,         1840
+use:   10-99,        14775,         1915,          321,         2691,          337,           13,            0,            0,        20052
+use:     2-9,        29028,         1977,          643,          672,           34,            1,            0,            0,        32355
+use:       1,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:       0,            0,            0,            0,            0,            0,            0,            0,            0,            0
+       Total,        44950,         4138,          973,         3611,          595,           25,            0,            0,        54292
+
+Thread 0x1a13050 
+            , acq:       0, acq:       1, acq:     2-9, acq:   10-99, acq: 100-999, acq:  1k-10k, acq:10k-100k, acq: 100k-1m,       Total
+use: 100k-1m,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:10k-100k,            4,            1,            0,            0,            0,            0,            0,            0,            5
+use:  1k-10k,           36,           10,            1,            1,            1,            0,            0,            0,           49
+use: 100-999,         1095,          227,            5,          249,          202,           10,            0,            0,         1788
+use:   10-99,        16613,         1884,          390,         3337,          388,           18,            0,            0,        22630
+use:     2-9,        25072,         2043,          802,          810,           46,            5,            0,            0,        28778
+use:       1,            0,            0,            0,            0,            0,            0,            0,            0,            0
+use:       0,            0,            0,            0,            0,            0,            0,            0,            0,            0
+       Total,        42820,         4165,         1198,         4397,          637,           33,            0,            0,        53250
+
+
+Process finished with exit code 0
