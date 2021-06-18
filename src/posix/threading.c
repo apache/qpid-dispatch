@@ -68,12 +68,12 @@ static void _dump_locks_lock()
     char buffer[PBUFSIZE];
     char *bufptr = buffer;
     char *end = &buffer[PBUFSIZE];
-    aprintf(&bufptr, end, "%"PRIu64" TID:%14p ", qd_timer_us_now(), (void*)sys_thread_self());
+    aprintf(&bufptr, end, "%"PRIu64" TID: %14p ", qd_timer_us_now(), (void*)sys_thread_self());
     for (int i = 0; i < _held_index; i++) {
-        aprintf(&bufptr, end, "%s%16s", i ? ", " : "  LOCKS: ", _held_locks[i].name);
+        aprintf(&bufptr, end, "%s%16s", i ? " " : "  LOCK ", _held_locks[i].name);
     }
     const sys_mutex_debug_t *last_locked = &_held_locks[_held_index - 1];
-    aprintf(&bufptr, end, " ==> [LOCK acquire uS: %ld]\n", last_locked->acquire_granted - last_locked->acquire_start);
+    aprintf(&bufptr, end, " ==> [ LOCK acquire_uS %ld ]\n", last_locked->acquire_granted - last_locked->acquire_start);
     fprintf(stderr, "%s", buffer);
 }
 
@@ -82,16 +82,16 @@ static void _dump_locks_unlock()
     char buffer[PBUFSIZE];
     char *bufptr = buffer;
     char *end = &buffer[PBUFSIZE];
-    aprintf(&bufptr, end, "%"PRIu64" TID:%14p ", qd_timer_us_now(), (void*)sys_thread_self());
+    aprintf(&bufptr, end, "%"PRIu64" TID: %14p ", qd_timer_us_now(), (void*)sys_thread_self());
     for (int i = 0; i < _held_index; i++) {
-        aprintf(&bufptr, end, "%s%16s", i ? ", " : "UNLOCKS: ", _held_locks[i].name);
+        aprintf(&bufptr, end, "%s%16s", i ? " " : "UNLOCK ", _held_locks[i].name);
     }
     const sys_mutex_debug_t *last_locked = &_held_locks[_held_index - 1];
     qd_timestamp_us_t acquire = last_locked->acquire_granted  - last_locked->acquire_start;
     qd_timestamp_us_t use     = last_locked->acquire_released - last_locked->acquire_granted;
     qd_timestamp_us_t total   = last_locked->acquire_released - last_locked->acquire_start;
     assert(total < 1000000000);
-    aprintf(&bufptr, end, " <== [UNLOCK acquire: %ld, use: %ld, total:  %ld]\n", acquire, use, total);
+    aprintf(&bufptr, end, " <== [ UNLOCK acquire_uS %ld use %ld total  %ld ]\n", acquire, use, total);
     fprintf(stderr, "%s", buffer);
 }
 
