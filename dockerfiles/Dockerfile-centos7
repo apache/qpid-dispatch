@@ -44,7 +44,7 @@ MAINTAINER "dev@qpid.apache.org"
 RUN yum -y install epel-release
 
 # now install the rest of the packages
-RUN yum -y install gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig python-devel git make doxygen valgrind emacs libwebsockets-devel && yum clean all -y
+RUN yum -y install gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig python3-devel git make doxygen valgrind emacs libwebsockets-devel && yum clean all -y
 
 # Create a main directory and clone the qpid-proton repo from github
 RUN mkdir /main && cd /main && git clone https://github.com/apache/qpid-proton.git && cd /main/qpid-proton && mkdir /main/qpid-proton/build

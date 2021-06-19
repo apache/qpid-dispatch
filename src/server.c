@@ -1738,7 +1738,7 @@ void qd_connector_decref(qd_connector_t* connector)
     }
 }
 
-__attribute__((noinline)) // permit replacement by dummy implementation in unit_tests
+__attribute__((weak)) // permit replacement by dummy implementation in unit_tests
 void qd_server_timeout(qd_server_t *server, qd_duration_t duration) {
     pn_proactor_set_timeout(server->proactor, duration);
 }

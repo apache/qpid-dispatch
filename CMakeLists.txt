@@ -275,14 +275,13 @@ install(FILES
   README
   DESTINATION ${QD_DOC_INSTALL_DIR})
 
-add_subdirectory(src) # Build src first so other subdirs can use QPID_DISPATCH_LIB
-
-# run.py environment runner script - needs QPID_DISPATCH_LIB
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/tests/run.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_http.py.in ${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_http.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/python/qpid_dispatch_internal/management/agent.py.in ${CMAKE_CURRENT_SOURCE_DIR}/python/qpid_dispatch_internal/management/agent.py)
 execute_process(COMMAND ${RUN} --sh OUTPUT_FILE config.sh)
+
+add_subdirectory(src) # Build src first so other subdirs can use qpid-dispatch library
 
 if (NOT UNITTEST_MISSING)
   file(GLOB SCRAPER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/tools/scraper/*.py)

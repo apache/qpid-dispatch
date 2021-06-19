@@ -86,7 +86,6 @@ env_vars = {
     'SOURCE_DIR': "${CMAKE_SOURCE_DIR}",
     'BUILD_DIR': "${CMAKE_BINARY_DIR}",
     'QPID_DISPATCH_HOME': "${CMAKE_SOURCE_DIR}",
-    'QPID_DISPATCH_LIB': "${CMAKE_BINARY_DIR}/src/${QPID_DISPATCH_LIB}",
     'QPID_DISPATCH_RUNNER': qdrouterd_runner,
     'MALLOC_CHECK_': "3",      # 3 = print error and abort
     'MALLOC_PERTURB_': "153",  # 153 = 0x99 freed memory pattern
