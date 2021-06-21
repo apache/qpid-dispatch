@@ -36,7 +36,10 @@ class ConnectionManager {
     this.on_message = context => {
       this.correlator.resolve(context);
     };
-    this.on_disconnected = () => {
+    this.on_disconnected = context => {
+      if (!context.connection.state.was_open) {
+        return;
+      }
       this.errorText = "Disconnected";
       this.executeDisconnectActions(this.errorText);
     };
@@ -182,6 +185,7 @@ class ConnectionManager {
 */
   on_reconnected = () => {
     const self = this;
+    this.connection.once("disconnected", this.on_disconnected);
     setTimeout(self.on_connection_open, 100);
   };
 
@@ -203,7 +207,7 @@ class ConnectionManager {
           ? this.connection.properties.version
           : "0.1.0";
         // in case this connection dies
-        this.rhea.on("disconnected", this.on_disconnected);
+        //this.rhea.on("disconnected", this.on_disconnected);
         // in case this connection dies and is then reconnected automatically
         this.rhea.on("connection_open", this.on_reconnected);
         // receive messages here
@@ -222,7 +226,7 @@ class ConnectionManager {
       this.connection.once("receiver_open", receiver_open);
       // create a dynamic receiver
       this.receiver = this.connection.open_receiver({
-        source: { dynamic: true }
+        source: { dynamic: true },
       });
     });
   };
@@ -280,8 +284,8 @@ class ConnectionManager {
         connection_details: new ws(wsprotocol + "://" + baseAddress, ["binary"]),
         reconnect: reconnect,
         properties: options.properties || {
-          console_identifier: "Dispatch console"
-        }
+          console_identifier: "Dispatch console",
+        },
       };
       if (options.hostname) c.hostname = options.hostname;
       if (options.username && options.username !== "") {
@@ -293,7 +297,7 @@ class ConnectionManager {
       // set a timeout
       var timedOut = () => {
         clearTimeout(timer);
-        this.rhea.removeListener("disconnected", timedOut);
+        //this.rhea.removeListener("disconnected", once_disconnected);
         this.rhea.removeListener("connection_open", connection_open);
         this.rhea.removeListener("error", connection_error);
         var rej = "failed to connect - timed out";
@@ -304,27 +308,19 @@ class ConnectionManager {
       const connection_error = error => {
         clearTimeout(timer);
         this.rhea.removeListener("connection_open", connection_open);
-        this.rhea.removeListener("disconnected", timedOut);
         this.rhea.removeListener("error", connection_error);
         reject(error);
       };
       var connection_open = context => {
         clearTimeout(timer);
-        // prevent future disconnects from calling reject
-        this.rhea.removeListener("disconnected", timedOut);
         this.rhea.removeListener("error", connection_error);
         if (options.reconnect) this.connection.set_reconnect(true);
+        // get notified if this connection is disconnected
+        this.connection.once("disconnected", this.on_disconnected);
         resolve({ context: context });
       };
       // register an event handler for when the connection opens
       this.rhea.once("connection_open", connection_open);
-      // register an event handler for if the connection fails to open
-      this.rhea.once("disconnected", context => {
-        clearTimeout(timer);
-        this.rhea.removeListener("connection_open", connection_open);
-        this.rhea.removeListener("error", connection_error);
-        reject(context.error);
-      });
       this.rhea.on("error", connection_error);
       // attempt the connection
       this.connection = this.rhea.connect(c);
@@ -349,7 +345,7 @@ class ConnectionManager {
     var application_properties = {
       operation: operation,
       type: "org.amqp.management",
-      name: "self"
+      name: "self",
     };
     if (entityType) application_properties.entityType = entityType;
     return this._send(body, to, application_properties);
@@ -357,7 +353,7 @@ class ConnectionManager {
   sendMethod = (toAddr, entity, attrs, operation, props) => {
     var fullAddr = this._fullAddr(toAddr);
     var application_properties = {
-      operation: operation
+      operation: operation,
     };
     if (entity) {
       application_properties.type = this.schema.entityTypes[entity].fullyQualifiedType;
@@ -372,6 +368,10 @@ class ConnectionManager {
     return this._send(attrs, fullAddr, application_properties);
   };
   _send = (body, to, application_properties) => {
+    if (!this.receiver.remote.attach) {
+      // the connection was closed, but we had a pending send
+      return;
+    }
     var _correlationId = this.correlator.corr();
     var self = this;
     return new Promise((resolve, reject) => {
@@ -382,7 +382,7 @@ class ConnectionManager {
           to: to,
           reply_to: self.receiver.remote.attach.source.address,
           correlation_id: _correlationId,
-          application_properties: application_properties
+          application_properties: application_properties,
         });
       } catch (error) {
         console.log(error);
