@@ -25,6 +25,7 @@ from proton import Message, SASL
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+import system_test
 from system_test import TestCase, Qdrouterd, main_module, DIR, Process, SkipIfNeeded
 from system_test import unittest
 
@@ -55,6 +56,10 @@ sasldb_path: users.sasldb
 mech_list: SCRAM-SHA-1 PLAIN
 """)
 
+    @staticmethod
+    def ssl_file(name):
+        return os.path.join(system_test.DIR, 'ssl_certs', name)
+
     @classmethod
     def setUpClass(cls):
         """
@@ -69,18 +74,18 @@ mech_list: SCRAM-SHA-1 PLAIN
 
         cls.auth_service_port = cls.tester.get_port()
         cls.tester.popen([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'),
-                          '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
+                          '-a', 'amqps://localhost:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
         policy_config_path = os.path.join(DIR, 'policy-authz')
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
-            ('sslProfile', {'name': 'myssl'}),
+            ('sslProfile', {'name': 'myssl', 'caCertFile': cls.ssl_file('ca-certificate.pem')}),
             ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'}),
             # authService attribute has been deprecated. We are using it here to make sure that we are
             # still backward compatible.
-            ('authServicePlugin', {'name': 'myauth', 'sslProfile': 'myssl', 'port': cls.auth_service_port, 'host': '127.0.0.1'}),
-            ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin': 'myauth', 'saslMechanisms': 'SCRAM-SHA-1 PLAIN'}),
+            ('authServicePlugin', {'name': 'myauth', 'sslProfile': 'myssl', 'port': cls.auth_service_port, 'host': 'localhost'}),
+            ('listener', {'host': 'localhost', 'port': cls.router_port, 'role': 'normal', 'saslPlugin': 'myauth', 'saslMechanisms': 'SCRAM-SHA-1 PLAIN'}),
             ('router', {'mode': 'standalone', 'id': 'router',
                         'saslConfigName': 'tests-mech-SCRAM',
                         'saslConfigPath': os.getcwd()})
@@ -154,15 +159,15 @@ class AuthServicePluginAuthzDeprecatedTest(AuthServicePluginAuthzTest):
 
         cls.auth_service_port = cls.tester.get_port()
         cls.tester.popen([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'),
-                          '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
+                          '-a', 'amqps://localhost:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
-            ('sslProfile', {'name': 'myssl'}),
+            ('sslProfile', {'name': 'myssl', 'caCertFile': cls.ssl_file('ca-certificate.pem')}),
             # authService and authSslProfile attributea have been deprecated.
             # We are using it here to make sure that we are backward compatible.
-            ('authServicePlugin', {'name': 'myauth', 'authSslProfile': 'myssl', 'authService': '127.0.0.1:%d' % cls.auth_service_port}),
-            ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin': 'myauth', 'saslMechanisms': 'SCRAM-SHA-1 PLAIN'}),
+            ('authServicePlugin', {'name': 'myauth', 'authSslProfile': 'myssl', 'authService': 'localhost:%d' % cls.auth_service_port}),
+            ('listener', {'host': 'localhost', 'port': cls.router_port, 'role': 'normal', 'saslPlugin': 'myauth', 'saslMechanisms': 'SCRAM-SHA-1 PLAIN'}),
             ('router', {'mode': 'standalone', 'id': 'router',
                         'saslConfigName': 'tests-mech-SCRAM',
                         'saslConfigPath': os.getcwd()})

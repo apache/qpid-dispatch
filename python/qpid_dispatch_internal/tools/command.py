@@ -261,9 +261,8 @@ def opts_url(opts):
     url = Url(opts.bus)
 
     # If the options indicate SSL, make sure we use the amqps scheme.
-    if opts.ssl_certificate or opts.ssl_trustfile:
+    if opts.ssl_certificate or opts.ssl_trustfile or opts.bus.startswith("amqps:"):
         url.scheme = "amqps"
-
     return url
 
 
@@ -282,15 +281,16 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     @param opts: Parsed optoins including connection_options()
     """
 
+    url = opts_url(opts)
+    if not url.scheme == "amqps":
+        return None
+
     certificate, key, trustfile, password, password_file, ssl_disable_peer_name_verify = opts.ssl_certificate,\
         opts.ssl_key,\
         opts.ssl_trustfile,\
         opts.ssl_password,\
         opts.ssl_password_file, \
         opts.ssl_disable_peer_name_verify
-
-    if not (certificate or trustfile):
-        return None
 
     if password_file:
         password = get_password(password_file)
@@ -299,10 +299,11 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
 
     if trustfile:
         domain.set_trusted_ca_db(str(trustfile))
-        if ssl_disable_peer_name_verify:
-            domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
-        else:
-            domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME, str(trustfile))
+
+    if ssl_disable_peer_name_verify:
+        domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+    else:
+        domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME)
 
     if certificate:
         domain.set_credentials(str(certificate), str(key), str(password))

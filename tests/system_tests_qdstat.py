@@ -648,7 +648,6 @@ class QdstatLinkPriorityTest(system_test.TestCase):
 
     def _test_links_all_routers(self, command):
         out = self.run_qdstat(command)
-        print("_test_links_all_routers out=", out)
         self.assertTrue(out.count('UTC') == 1)
         self.assertTrue(out.count('Router Links') == 2)
         self.assertTrue(out.count('inter-router') == 40)
@@ -728,17 +727,20 @@ try:
                                 'certFile': cls.ssl_file('server-certificate.pem'),
                                 'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                                 'password': 'server-password'}),
-                ('listener', {'port': cls.tester.get_port()}),
-                ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'yes'}),
-                ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'no'}),
-                ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl', 'authenticatePeer': 'yes', 'requireSsl': 'yes',
+                ('listener', {'host': 'localhost', 'port': cls.tester.get_port()}),
+                ('listener', {'host': 'localhost', 'port': cls.tester.get_port(), 'sslProfile': 'server-ssl',
+                              'authenticatePeer': 'no', 'requireSsl': 'yes'}),
+                ('listener', {'host': 'localhost', 'port': cls.tester.get_port(), 'sslProfile': 'server-ssl',
+                              'authenticatePeer': 'no', 'requireSsl': 'no'}),
+                ('listener', {'host': 'localhost', 'port': cls.tester.get_port(), 'sslProfile': 'server-ssl',
+                              'authenticatePeer': 'yes', 'requireSsl': 'yes',
                               'saslMechanisms': 'EXTERNAL'})
             ])
             cls.router = cls.tester.qdrouterd('test-router', config)
 
         def run_qdstat(self, args, regexp=None, address=None):
             p = self.popen(
-                ['qdstat', '--bus', str(address or self.router.addresses[0]), '--ssl-disable-peer-name-verify',
+                ['qdstat', '--bus', str(address or self.router.addresses[0]),
                  '--timeout', str(system_test.TIMEOUT)] + args,
                 name='qdstat-' + self.id(), stdout=PIPE, expect=None,
                 universal_newlines=True)
@@ -778,75 +780,123 @@ try:
         def ssl_test_bad(self, url_name, arg_names):
             self.assertRaises(AssertionError, self.ssl_test, url_name, arg_names)
 
-        # Non-SSL enabled listener should fail SSL connections.
+        # qdstat -b amqp://localhost:<port> --general and makes sure
+        # the router sends back a valid response.
         def test_ssl_none(self):
             self.ssl_test('none', [])
 
+        # qdstat -b amqps://localhost:<port> --general
+        # Make sure that the command fails.
         def test_ssl_scheme_to_none(self):
             self.ssl_test_bad('none_s', [])
 
+        # qdstat -b amqp://localhost:<port> --general --ssl-certificate /path/to/client-certificate.pem
+        # Makes sure the command fails.
         def test_ssl_cert_to_none(self):
             self.ssl_test_bad('none', ['client_cert'])
 
-        # Strict SSL listener, SSL only
+        # Tries to run the following command on a listener that requires SSL (requireSsl:yes)
+        # qdstat -b amqp://localhost:<port> --general
+        # Makes sure the command fails.
         def test_ssl_none_to_strict(self):
             self.ssl_test_bad('strict', [])
 
+        # qdstat -b amqps://localhost:<port> --general
         def test_ssl_schema_to_strict(self):
-            self.ssl_test('strict_s', [])
+            self.ssl_test_bad('strict_s', [])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-certificate /path/to/client-certificate.pem
+        # --ssl-key /path/to/client-private-key.pem --ssl-password client-password'
         def test_ssl_cert_to_strict(self):
-            self.ssl_test('strict_s', ['client_cert_all'])
+            self.ssl_test_bad('strict_s', ['client_cert_all'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile /path/to/ca-certificate.pem
         def test_ssl_trustfile_to_strict(self):
             self.ssl_test('strict_s', ['trustfile'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile
+        # /path/to/ca-certificate.pem --ssl-certificate /path/to/client-certificate.pem
+        # --ssl-key /path/to/client-private-key.pem --ssl-password client-password
         def test_ssl_trustfile_cert_to_strict(self):
             self.ssl_test('strict_s', ['trustfile', 'client_cert_all'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile /path/to/bad-ca-certificate.pem
+        # Send in a bad ca cert and make sure the test fails.
         def test_ssl_bad_trustfile_to_strict(self):
             self.ssl_test_bad('strict_s', ['bad_trustfile'])
 
         # Require-auth SSL listener
-
+        # qdstat -b amqp://localhost:<port> --general
+        # Send in no certs to a 'authenticatePeer': 'yes', 'requireSsl': 'yes' listener and make sure it fails.
+        # Also protocol is amqp not amqps
         def test_ssl_none_to_auth(self):
             self.ssl_test_bad('auth', [])
 
+        # qdstat -b amqps://localhost:28491 --general
+        # Send in no certs to a 'authenticatePeer': 'yes', 'requireSsl': 'yes' listener and make sure it fails.
         def test_ssl_schema_to_auth(self):
             self.ssl_test_bad('auth_s', [])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile /path/to/ca-certificate.pem'
+        # Send in just a trustfile to an 'authenticatePeer': 'yes', 'requireSsl': 'yes' listener and make sure it fails.
         def test_ssl_trustfile_to_auth(self):
             self.ssl_test_bad('auth_s', ['trustfile'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-certificate /path/to/client-certificate.pem
+        # --ssl-key /path/to/client-private-key.pem --ssl-password client-password
+        # Without a trustfile, this test fails
         def test_ssl_cert_to_auth(self):
-            self.ssl_test('auth_s', ['client_cert_all'])
+            self.ssl_test_bad('auth_s', ['client_cert_all'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile /path/to/ca-certificate.pem
+        # --ssl-certificate /path/to/client-certificate.pem
+        # --ssl-key /path/to/client-private-key.pem --ssl-password client-password
+        # This has everything, the test should pass.
         def test_ssl_trustfile_cert_to_auth(self):
             self.ssl_test('auth_s', ['trustfile', 'client_cert_all'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile /path/to/bad-ca-certificate.pem
+        # --ssl-certificate /path/to/client-certificate.pem --ssl-key /path/to/client-private-key.pem
+        # --ssl-password client-password
+        # Bad trustfile should be rejected.
         def test_ssl_bad_trustfile_to_auth(self):
             self.ssl_test_bad('auth_s', ['bad_trustfile', 'client_cert_all'])
 
+        # qdstat -b amqps://localhost:<port> --general --sasl-mechanisms EXTERNAL
+        # --ssl-certificate /path/to/client-certificate.pem --ssl-key /path/to/client-private-key.pem
+        # --ssl-password client-password --ssl-trustfile /path/to/ca-certificate.pem'
         def test_ssl_cert_explicit_external_to_auth(self):
-            self.ssl_test('auth_s', ['sasl_external', 'client_cert_all'])
+            self.ssl_test('auth_s', ['sasl_external', 'client_cert_all', 'trustfile'])
 
         # Unsecured SSL listener, allows non-SSL
-
+        # qdstat -b amqp://localhost:<port> --general
         def test_ssl_none_to_unsecured(self):
             self.ssl_test('unsecured', [])
 
+        # qdstat -b amqps://localhost:<port> --general
         def test_ssl_schema_to_unsecured(self):
-            self.ssl_test('unsecured_s', [])
+            self.ssl_test_bad('unsecured_s', [])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-certificate /path/to/client-certificate.pem --ssl-key
+        # /path/to/client-private-key.pem --ssl-password client-password
+        # A trustfile is required, test will fail
         def test_ssl_cert_to_unsecured(self):
-            self.ssl_test('unsecured_s', ['client_cert_all'])
+            self.ssl_test_bad('unsecured_s', ['client_cert_all'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile /path/to/ca-certificate.pem'
+        # Just send in the trustfile, should be all good.
         def test_ssl_trustfile_to_unsecured(self):
             self.ssl_test('unsecured_s', ['trustfile'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile /path/to/ca-certificate.pem
+        # --ssl-certificate /path/to/client-certificate.pem --ssl-key /path/to/client-private-key.pem
+        # --ssl-password client-password
+        # We have everything, this should work.
         def test_ssl_trustfile_cert_to_unsecured(self):
             self.ssl_test('unsecured_s', ['trustfile', 'client_cert_all'])
 
+        # qdstat -b amqps://localhost:<port> --general --ssl-trustfile /path/to/bad-ca-certificate.pem']
+        # Bad trustfile, test will fail.
         def test_ssl_bad_trustfile_to_unsecured(self):
             self.ssl_test_bad('unsecured_s', ['bad_trustfile'])
 
