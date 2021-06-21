@@ -208,7 +208,7 @@ class QdSSLUseridTest(TestCase):
             ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl11', 'authenticatePeer': 'yes',
                           'requireSsl': 'yes', 'saslMechanisms': 'EXTERNAL'}),
 
-            # peer is not being authenticated here. the user must "anonymous" which is what pn_transport_get_user
+            # peer is not being authenticated here. the user must be "anonymous" which is what pn_transport_get_user
             # returns
             ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl12', 'authenticatePeer': 'no',
                           'requireSsl': 'yes', 'saslMechanisms': 'ANONYMOUS'}),
@@ -242,7 +242,7 @@ class QdSSLUseridTest(TestCase):
         domain = SSLDomain(mode)
         if trustfile:
             domain.set_trusted_ca_db(str(trustfile))
-            domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
+        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
         if certificate:
             domain.set_credentials(str(certificate), str(key), str(password))
 
@@ -314,11 +314,11 @@ class QdSSLUseridTest(TestCase):
         user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[10][0]
         self.assertEqual("C=US,ST=NC,L=Raleigh,OU=Dev,O=Client,CN=127.0.0.1", str(user))
 
-        # authenticatePeer is set to 'no' in this listener, there should be no user on the connection.
+        # authenticatePeer is set to 'no' in this listener, the user should anonymous on the connection.
         addr = self.address(11).replace("amqp", "amqps")
-        node = Node.connect(addr)
+        node = Node.connect(addr, ssl_domain=domain)
         user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[11][0]
-        self.assertEqual(None, user)
+        self.assertEqual("anonymous", user)
 
         addr = self.address(12).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
