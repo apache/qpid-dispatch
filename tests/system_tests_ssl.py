@@ -382,6 +382,7 @@ class RouterTestSslClient(RouterTestSslBase):
         url = Url("amqps://0.0.0.0:%d/$management" % listener_port)
         # Preparing SSLDomain (client cert) and SASL authentication info
         domain = SSLDomain(SSLDomain.MODE_CLIENT)
+        domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER, None)
         # Enforcing given TLS protocol
         cproton.pn_ssl_domain_set_protocols(domain._domain, tls_protocol)
 
@@ -415,6 +416,7 @@ class RouterTestSslClient(RouterTestSslBase):
         domain.set_credentials(self.ssl_file('client-certificate.pem'),
                                self.ssl_file('client-private-key.pem'),
                                'client-password')
+        domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER, None)
         # Enforcing given TLS protocol
         cproton.pn_ssl_domain_set_protocols(domain._domain, tls_protocol)
 

@@ -28,6 +28,7 @@ from __future__ import print_function
 
 import proton
 from proton import Url
+from proton import SSLDomain
 from .error import *  # noqa F403: import all error symbols for convenience to users.
 from .entity import EntityBase, clean_dict
 from proton.utils import SyncRequestResponse, BlockingConnection
@@ -127,6 +128,11 @@ class Node(object):
             path = u'_edge/%s/$management' % edge_router
         else:
             path = u'$management'
+
+        if not ssl_domain:
+            if url_.scheme == "amqps":
+                ssl_domain = SSLDomain(SSLDomain.MODE_CLIENT)
+                ssl_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER, None)
         return Node(Node.connection(url, router, timeout, ssl_domain, sasl,
                                     edge_router=edge_router), path)
 

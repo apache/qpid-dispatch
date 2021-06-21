@@ -318,7 +318,7 @@ class QdSSLUseridTest(TestCase):
         addr = self.address(11).replace("amqp", "amqps")
         node = Node.connect(addr)
         user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[11][0]
-        self.assertEqual(None, user)
+        self.assertEqual("anonymous", user)
 
         addr = self.address(12).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
