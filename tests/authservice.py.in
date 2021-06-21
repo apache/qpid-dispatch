@@ -18,18 +18,23 @@
 # under the License.
 #
 
+
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+
 import sys
 import signal
 import optparse
+import os
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Array, Data, symbol, UNDESCRIBED
+from proton import SSLDomain
 from cproton import pn_sasl_config_path
+import system_test
 
 
 class AuthService(MessagingHandler):
@@ -42,6 +47,15 @@ class AuthService(MessagingHandler):
         self.listener = None
         self.tmo = 0.1  # seconds
         self.stop_req = False
+        self.acceptor = None
+        self.ssl_domain = SSLDomain(SSLDomain.MODE_SERVER)
+        self.ssl_domain.set_credentials(self.ssl_file('server-certificate.pem'),
+                                        self.ssl_file('server-private-key.pem'),
+                                        password="server-password")
+        self.ssl_domain.set_trusted_ca_db(self.ssl_file('ca-certificate.pem'))
+
+    def ssl_file(self, name):
+        return os.path.join(system_test.DIR, 'ssl_certs', name)
 
     def allow(self, user, address, permissions):
         if not self.permissions.get(user):
@@ -49,7 +63,7 @@ class AuthService(MessagingHandler):
         self.permissions[user][address] = Array(UNDESCRIBED, Data.STRING, *permissions)
 
     def on_start(self, event):
-        self.listener = event.container.listen(self.address)
+        self.listener = event.container.listen(self.address, ssl_domain=self.ssl_domain)
         event.container.schedule(self.tmo, self)
 
     def stop(self):
