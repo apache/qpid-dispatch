@@ -169,8 +169,7 @@ add_library(qpid-dispatch OBJECT ${qpid_dispatch_SOURCES})
 target_include_directories(qpid-dispatch PRIVATE ${qpid_dispatch_INCLUDES})
 
 # Workaround. CMake < 3.12 does not allow using object libraries in target_link_libraries
-add_library(qpid-dispatch-libraries STATIC /dev/null)
-set_target_properties(qpid-dispatch-libraries PROPERTIES LINKER_LANGUAGE C)
+add_library(qpid-dispatch-libraries STATIC empty.c)
 target_link_libraries(qpid-dispatch-libraries ${qpid_dispatch_LIBRARIES})
 
 # check for various function availability
