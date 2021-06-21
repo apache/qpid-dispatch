@@ -23,8 +23,9 @@ import { TreeView, Button } from "@patternfly/react-core";
 class SchemaPage extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { activeItems: {}, allExpanded: false };
+    this.state = { activeItems: [], allExpanded: false };
     this.nextId = 0;
+    this.options = this.buildTreeOptions();
   }
 
   handleTreeClick = (evt, treeViewItem, parentItem) => {
@@ -57,7 +58,7 @@ class SchemaPage extends React.Component {
   initChild = (parent, entity, schema) => {
     const child = { name: entity, id: `ID.${this.nextId++}` };
     const keys = Object.keys(schema[entity]);
-    keys.forEach(key => {
+    keys.forEach((key, i) => {
       const isArray = Array.isArray(schema[entity][key]);
       if (typeof schema[entity][key] === "object" && !isArray) {
         if (!child.children) {
@@ -72,7 +73,7 @@ class SchemaPage extends React.Component {
           name: `${key}: ${
             isArray ? schema[entity][key].join(", ") : schema[entity][key]
           }`,
-          id: `ID.{this.nextId++}`,
+          id: `ID.${this.nextId++}`,
         });
       }
     });
@@ -81,7 +82,6 @@ class SchemaPage extends React.Component {
 
   render() {
     const { activeItems, allExpanded } = this.state;
-    const options = this.buildTreeOptions();
     return (
       <React.Fragment>
         <Button variant="link" onClick={this.onToggle}>
@@ -89,7 +89,7 @@ class SchemaPage extends React.Component {
           {!allExpanded && "Expand all"}
         </Button>
         <TreeView
-          data={options}
+          data={this.options}
           activeItems={activeItems}
           onSelect={this.handleTreeClick}
           allExpanded={allExpanded}
