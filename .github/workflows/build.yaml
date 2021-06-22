@@ -93,7 +93,7 @@ jobs:
             ${{ matrix.os }}-${{ matrix.runtimeCheck }}-${{ env.cache-name }}
 
       - name: Create Build and Install directories
-        run: mkdir -p "${ProtonBuildDir}" "${DispatchBuildDir}" "{InstallPrefix}"
+        run: mkdir -p "${ProtonBuildDir}" "${DispatchBuildDir}" "${InstallPrefix}"
 
       - name: Setup python
         uses: actions/setup-python@v2
