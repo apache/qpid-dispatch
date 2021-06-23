@@ -711,7 +711,6 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
             pn_ssl_domain_t* plugin_ssl_domain = NULL;
             if (config->sasl_plugin_config.use_ssl) {
                 plugin_ssl_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
-                pn_ssl_domain_set_peer_authentication(plugin_ssl_domain, PN_SSL_ANONYMOUS_PEER, NULL);
                 if (config->sasl_plugin_config.ssl_certificate_file) {
                     if (pn_ssl_domain_set_credentials(plugin_ssl_domain,
                                                       config->sasl_plugin_config.ssl_certificate_file,
