@@ -98,12 +98,12 @@ class QdstatTest(system_test.TestCase):
 
     def test_connections(self):
         self.run_qdstat(['--connections'], r'host.*container.*role')
-        outs = self.run_qdstat(['--connections'], 'no-auth')
+        outs = self.run_qdstat(['--connections'], 'anonymous-user')
         outs = self.run_qdstat(['--connections'], 'QDR.A')
 
     def test_connections_csv(self):
         self.run_qdstat(['--connections', "--csv"], r'host.*container.*role')
-        outs = self.run_qdstat(['--connections'], 'no-auth')
+        outs = self.run_qdstat(['--connections'], 'anonymous-user')
         outs = self.run_qdstat(['--connections'], 'QDR.A')
 
     def test_links(self):

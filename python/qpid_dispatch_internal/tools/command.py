@@ -288,9 +288,6 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
         opts.ssl_password_file, \
         opts.ssl_disable_peer_name_verify
 
-    if not (certificate or trustfile):
-        return None
-
     if password_file:
         password = get_password(password_file)
 
