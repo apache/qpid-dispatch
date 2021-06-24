@@ -242,7 +242,7 @@ class QdSSLUseridTest(TestCase):
         domain = SSLDomain(mode)
         if trustfile:
             domain.set_trusted_ca_db(str(trustfile))
-        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
+        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, None)
         if certificate:
             domain.set_credentials(str(certificate), str(key), str(password))
 
