@@ -545,6 +545,9 @@ void qd_message_add_fanout(qd_message_t *in_msg,
 /**
  * Disable the Q2-holdoff for this message.
  *
+ * Note: this call may invoke the Q2 unblock hander routine associated with
+ * this message.  See qd_message_set_q2_unblocked_handler().
+ *
  * @param msg A pointer to the message
  */
 void qd_message_Q2_holdoff_disable(qd_message_t *msg);

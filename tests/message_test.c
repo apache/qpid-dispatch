@@ -940,6 +940,14 @@ static char *test_check_stream_data(void * context)
 }
 
 
+// for testing Q2 unblock callback
+static void q2_unblocked_handler(qd_alloc_safe_ptr_t context)
+{
+    int *iptr = (int*) context.ptr;
+    (*iptr) += 1;
+}
+
+
 // Verify that qd_message_stream_data_append() will break up a long binary data
 // field in order to avoid triggering Q2.  Ensure all stream_data buffers are
 // freed when done.
@@ -949,6 +957,7 @@ static char *test_check_stream_data_append(void * context)
     char *result = 0;
     qd_message_t *msg = 0;
     qd_message_t *out_msg = 0;
+    int unblock_called = 0;
 
     // generate a buffer list of binary data large enough to trigger Q2
     //
@@ -962,6 +971,12 @@ static char *test_check_stream_data_append(void * context)
 
     // simulate building a message as an adaptor would:
     msg = qd_message();
+
+    qd_alloc_safe_ptr_t unblock_arg = {0};
+    unblock_arg.ptr = (void*) &unblock_called;
+
+    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
+
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(field);
     qd_compose_insert_bool(field, 0);     // durable
@@ -1071,6 +1086,18 @@ static char *test_check_stream_data_append(void * context)
         result = "Possible buffer leak detected!";
         goto exit;
     }
+
+    // and Q2 should be unblocked
+    if (qd_message_is_Q2_blocked(msg)) {
+        result = "Q2 expected to be unblocked!";
+        goto exit;
+    }
+
+    if (unblock_called != 1) {
+        result = "Q2 unblock handler not called!";
+        goto exit;
+    }
+
 
 exit:
     qd_message_free(msg);
@@ -1332,6 +1359,96 @@ exit:
 }
 
 
+static char *test_q2_callback_on_disable(void *context)
+{
+    char *result = 0;
+    qd_message_t *msg = 0;
+    int unblock_called = 0;
+
+    // first test: ensure calling disable without being in Q2 does not invoke the
+    // handler:
+    msg = qd_message();
+
+    qd_alloc_safe_ptr_t unblock_arg = {0};
+    unblock_arg.ptr = (void*) &unblock_called;
+    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
+
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(field);
+    qd_compose_insert_bool(field, 0);     // durable
+    qd_compose_insert_null(field);        // priority
+    qd_compose_end_list(field);
+    field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
+    qd_compose_start_list(field);
+    qd_compose_insert_ulong(field, 666);    // message-id
+    qd_compose_insert_null(field);                 // user-id
+    qd_compose_insert_string(field, "/whereevah"); // to
+    qd_compose_insert_string(field, "my-subject");  // subject
+    qd_compose_insert_string(field, "/reply-to");   // reply-to
+    qd_compose_end_list(field);
+
+    qd_message_compose_2(msg, field, false);
+    qd_compose_free(field);
+
+    qd_message_Q2_holdoff_disable(msg);
+
+    if (unblock_called != 0) {
+        result = "Unexpected call to Q2 unblock handler!";
+        goto exit;
+    }
+
+    qd_message_free(msg);
+
+    // now try it again with a message with Q2 active
+
+    msg = qd_message();
+
+    unblock_arg.ptr = (void*) &unblock_called;
+    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
+
+    field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(field);
+    qd_compose_insert_bool(field, 0);     // durable
+    qd_compose_insert_null(field);        // priority
+    qd_compose_end_list(field);
+    field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
+    qd_compose_start_list(field);
+    qd_compose_insert_ulong(field, 666);    // message-id
+    qd_compose_insert_null(field);                 // user-id
+    qd_compose_insert_string(field, "/whereevah"); // to
+    qd_compose_insert_string(field, "my-subject");  // subject
+    qd_compose_insert_string(field, "/reply-to");   // reply-to
+    qd_compose_end_list(field);
+
+    qd_message_compose_2(msg, field, false);
+    qd_compose_free(field);
+
+    // grow message until Q2 activates
+
+    bool blocked = false;
+    uint8_t data[1000] = {0};
+    while (!blocked) {
+        qd_buffer_list_t bin_data = DEQ_EMPTY;
+        qd_buffer_list_append(&bin_data, data, sizeof(data));
+        qd_message_stream_data_append(msg, &bin_data, &blocked);
+    }
+
+    // now ensure callback is made
+
+    qd_message_Q2_holdoff_disable(msg);
+
+    if (unblock_called != 1) {
+        result = "Failed to invoke unblock handler";
+        goto exit;
+    }
+
+
+exit:
+    qd_message_free(msg);
+    return result;
+}
+
+
 int message_tests(void)
 {
     int result = 0;
@@ -1349,6 +1466,7 @@ int message_tests(void)
     TEST_CASE(test_check_stream_data_append, 0);
     TEST_CASE(test_check_stream_data_fanout, 0);
     TEST_CASE(test_check_stream_data_footer, 0);
+    TEST_CASE(test_q2_callback_on_disable, 0);
 
     return result;
 }

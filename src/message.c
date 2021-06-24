@@ -2889,7 +2889,21 @@ void qd_message_Q2_holdoff_disable(qd_message_t *msg)
     if (!msg)
         return;
     qd_message_pvt_t *msg_pvt = (qd_message_pvt_t*) msg;
-    msg_pvt->content->disable_q2_holdoff = true;
+    qd_message_content_t *content = msg_pvt->content;
+    qd_message_q2_unblocker_t  q2_unblock = {0};
+
+    LOCK(content->lock);
+    if (!msg_pvt->content->disable_q2_holdoff) {
+        msg_pvt->content->disable_q2_holdoff = true;
+        if (content->q2_input_holdoff) {
+            content->q2_input_holdoff = false;
+            q2_unblock = content->q2_unblocker;
+        }
+    }
+    UNLOCK(content->lock);
+
+    if (q2_unblock.handler)
+        q2_unblock.handler(q2_unblock.context);
 }
 
 

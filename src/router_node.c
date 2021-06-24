@@ -1113,10 +1113,14 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
             if (msg) {
                 if (!qd_message_receive_complete(msg)) {
                     qd_link_set_q2_limit_unbounded(link, true);
+
+                    // since this thread owns link we can call the
+                    // rx_hander directly rather than schedule it via
+                    // the unblock handler:
+                    qd_message_clear_q2_unblocked_handler(msg);
                     qd_message_Q2_holdoff_disable(msg);
-                    qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
-                    set_safe_ptr_qd_link_t(link, safe_ptr);
-                    deferred_AMQP_rx_handler(safe_ptr, false);
+                    while (AMQP_rx_handler((qd_router_t*) context, link))
+                           ;
                 }
             }
         }
@@ -2108,10 +2112,6 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
                 // and if it is blocked by Q2 holdoff, get the link rolling again.
                 //
                 qd_message_Q2_holdoff_disable(msg);
-
-                qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
-                set_safe_ptr_qd_link_t(link, safe_ptr);
-                qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, safe_ptr);
             }
         }
     }
