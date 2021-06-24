@@ -281,6 +281,10 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     @param opts: Parsed optoins including connection_options()
     """
 
+    url = opts_url(opts)
+    if not url.scheme == "amqps":
+        return None
+
     certificate, key, trustfile, password, password_file, ssl_disable_peer_name_verify = opts.ssl_certificate,\
         opts.ssl_key,\
         opts.ssl_trustfile,\
