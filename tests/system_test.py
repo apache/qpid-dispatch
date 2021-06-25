@@ -486,8 +486,8 @@ class Qdrouterd(Process):
         if not default_log:
             self.logfile = "%s.log" % name
             config.append(
-                ('log', {'module': 'DEFAULT', 'enable': 'trace+',
-                         'includeSource': 'true', 'outputFile': self.logfile}))
+                ('log', {'module': 'DEFAULT', 'enable': 'info+',
+                         'includeSource': 'false', 'outputFile': self.logfile}))
         else:
             self.logfile = default_log[0][1].get('outputfile')
         args = ['qdrouterd', '-c', config.write(name)] + cl_args

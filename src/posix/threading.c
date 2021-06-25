@@ -36,6 +36,7 @@ typedef struct sys_mutex_debug_s sys_mutex_debug_t;
 
 struct sys_mutex_debug_s {
     char               *name;
+    void               *sys_mutex;
     qd_timestamp_us_t   acquire_start;
     qd_timestamp_us_t   acquire_granted;
     qd_timestamp_us_t   acquire_released;
@@ -62,17 +63,18 @@ struct sys_mutex_debug_s {
 #define PBUFSIZE 1000             // print buffer size
 static __thread sys_mutex_debug_t _held_locks[QD_THREAD_MAX_LOCKS];
 static __thread int _held_index;
+static char *PHONY_IDLE_LOCK_NAME = "CORE_IDLE";
 
 static void _dump_locks_lock()
 {
     char buffer[PBUFSIZE];
     char *bufptr = buffer;
     char *end = &buffer[PBUFSIZE];
-    aprintf(&bufptr, end, "%"PRIu64" TID: %14p ", qd_timer_us_now(), (void*)sys_thread_self());
+    const sys_mutex_debug_t *last_locked = &_held_locks[_held_index - 1];
+    aprintf(&bufptr, end, "%"PRIu64" TID: %14p ", last_locked->acquire_start, (void*)sys_thread_self());
     for (int i = 0; i < _held_index; i++) {
         aprintf(&bufptr, end, "%s%16s", i ? " " : "  LOCK ", _held_locks[i].name);
     }
-    const sys_mutex_debug_t *last_locked = &_held_locks[_held_index - 1];
     aprintf(&bufptr, end, " ==> [ LOCK acquire_uS %ld ]\n", last_locked->acquire_granted - last_locked->acquire_start);
     fprintf(stderr, "%s", buffer);
 }
@@ -82,24 +84,31 @@ static void _dump_locks_unlock()
     char buffer[PBUFSIZE];
     char *bufptr = buffer;
     char *end = &buffer[PBUFSIZE];
-    aprintf(&bufptr, end, "%"PRIu64" TID: %14p ", qd_timer_us_now(), (void*)sys_thread_self());
+    const sys_mutex_debug_t *last_locked = &_held_locks[_held_index - 1];
+    aprintf(&bufptr, end, "%"PRIu64" TID: %14p ", last_locked->acquire_released, (void*)sys_thread_self());
     for (int i = 0; i < _held_index; i++) {
         aprintf(&bufptr, end, "%s%16s", i ? " " : "UNLOCK ", _held_locks[i].name);
     }
-    const sys_mutex_debug_t *last_locked = &_held_locks[_held_index - 1];
     qd_timestamp_us_t acquire = last_locked->acquire_granted  - last_locked->acquire_start;
     qd_timestamp_us_t use     = last_locked->acquire_released - last_locked->acquire_granted;
     qd_timestamp_us_t total   = last_locked->acquire_released - last_locked->acquire_start;
     assert(total < 1000000000);
-    aprintf(&bufptr, end, " <== [ UNLOCK acquire_uS %ld use %ld total  %ld ]\n", acquire, use, total);
+    aprintf(&bufptr, end, " <== [%p UNLOCK acquire_uS %ld use %ld total  %ld ]\n", last_locked->sys_mutex, acquire, use, total);
     fprintf(stderr, "%s", buffer);
 }
 
-#define TAKE_LOCK(N, A_START, A_GRANTED)                      \
+static char *_current_lock_name()
+{
+    return _held_locks[_held_index - 1].name;
+}
+
+
+#define TAKE_LOCK(N, L, A_START, A_GRANTED)                      \
     do {                                                      \
         assert(_held_index < QD_THREAD_MAX_LOCKS);            \
         sys_mutex_debug_t * mtxd = &_held_locks[_held_index]; \
         mtxd->name = (N);                                     \
+        mtxd->sys_mutex = (L);                                \
         mtxd->acquire_start   = (A_START);                    \
         mtxd->acquire_granted = (A_GRANTED);                  \
         _held_index++;                                        \
@@ -119,7 +128,6 @@ static void _dump_locks_unlock()
         mtxd->acquire_released = 0;                             \
         _held_index--;                                          \
     } while (0);
-
 
 #else
 
@@ -165,15 +173,17 @@ void sys_mutex_lock(sys_mutex_t *mutex)
     int result = pthread_mutex_lock(&(mutex->mutex));
     qd_timestamp_us_t acquire_granted = qd_timer_us_now();
     _CHECK(result == 0);
-    TAKE_LOCK(mutex->name, acquire_start, acquire_granted);
+    TAKE_LOCK(mutex->name, (void*)&(mutex->mutex), acquire_start, acquire_granted);
 }
 
 
 void sys_mutex_unlock(sys_mutex_t *mutex)
 {
-    qd_timestamp_us_t acquire_released = qd_timer_us_now();
-    DROP_LOCK(mutex->name, acquire_released);
+    qd_timestamp_us_t gonna_release = qd_timer_us_now();
     int result = pthread_mutex_unlock(&(mutex->mutex));
+    qd_timestamp_us_t acquire_released = qd_timer_us_now();
+    assert(acquire_released >= gonna_release);
+    DROP_LOCK(mutex->name, acquire_released);
     _CHECK(result == 0);
 }
 
@@ -204,7 +214,14 @@ void sys_cond_free(sys_cond_t *cond)
 
 void sys_cond_wait(sys_cond_t *cond, sys_mutex_t *held_mutex)
 {
+    char *held_mutex_name = _current_lock_name();
+    qd_timestamp_us_t now = qd_timer_us_now();
+    DROP_LOCK(held_mutex_name, now);
+    TAKE_LOCK(PHONY_IDLE_LOCK_NAME, (void*)1, now, now);
     int result = pthread_cond_wait(&(cond->cond), &(held_mutex->mutex));
+    now = qd_timer_us_now();
+    DROP_LOCK(PHONY_IDLE_LOCK_NAME, now);
+    TAKE_LOCK(held_mutex_name, 0, now, now);
     _CHECK(result == 0);
 }
 
@@ -255,7 +272,7 @@ void sys_rwlock_wrlock(sys_rwlock_t *lock)
     int result = pthread_rwlock_wrlock(&(lock->lock));
     qd_timestamp_us_t acquire_granted = qd_timer_us_now();
     assert(result == 0);
-    TAKE_LOCK(lock->name, acquire_start, acquire_granted);
+    TAKE_LOCK(lock->name, (void*)&(lock->lock), acquire_start, acquire_granted);
 }
 
 
@@ -265,15 +282,17 @@ void sys_rwlock_rdlock(sys_rwlock_t *lock)
     int result = pthread_rwlock_rdlock(&(lock->lock));
     qd_timestamp_us_t acquire_granted = qd_timer_us_now();
     assert(result == 0);
-    TAKE_LOCK(lock->name, acquire_start, acquire_granted);
+    TAKE_LOCK(lock->name, (void*)&(lock->lock), acquire_start, acquire_granted);
 }
 
 
 void sys_rwlock_unlock(sys_rwlock_t *lock)
 {
-    qd_timestamp_us_t acquire_released = qd_timer_us_now();
-    DROP_LOCK(lock->name, acquire_released);
+    qd_timestamp_us_t gonna_release = qd_timer_us_now();
     int result = pthread_rwlock_unlock(&(lock->lock));
+    qd_timestamp_us_t acquire_released = qd_timer_us_now();
+    assert(acquire_released >= gonna_release);
+    DROP_LOCK(lock->name, acquire_released);
     assert(result == 0);
 }
 
