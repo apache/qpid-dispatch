@@ -666,126 +666,126 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("test_56 test error: %s" % (test.error))
             test.logger.dump()
         self.assertTrue(test.error is None)
-
-    def test_57_allow_undersize_INTB_EB1(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.INT_B,
-                                           MaxMessageSizeBlockOversize.EB1,
-                                           "e57",
-                                           message_size=INTB_MAX_SIZE - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_57 test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_58_allow_undersize_EA1_INTA(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
-                                           MaxMessageSizeBlockOversize.INT_A,
-                                           "e58",
-                                           message_size=min(EA1_MAX_SIZE, INTA_MAX_SIZE) - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_58 test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_59_allow_undersize_EA1_INTB(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
-                                           MaxMessageSizeBlockOversize.INT_B,
-                                           "e59",
-                                           message_size=min(EA1_MAX_SIZE, INTA_MAX_SIZE) - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_59 test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_5a_allow_undersize_EA1_EA1(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
-                                           MaxMessageSizeBlockOversize.EA1,
-                                           "e5a",
-                                           message_size=min(EA1_MAX_SIZE, INTA_MAX_SIZE) - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_5a test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_5b_allow_undersize_EA1_EB1(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
-                                           MaxMessageSizeBlockOversize.EB1,
-                                           "e5b",
-                                           message_size=min(EA1_MAX_SIZE, INTA_MAX_SIZE) - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_5b test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_5c_allow_undersize_EB1_INTA(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
-                                           MaxMessageSizeBlockOversize.INT_A,
-                                           "e5c",
-                                           message_size=min(EB1_MAX_SIZE, INTB_MAX_SIZE) - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_5c test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_5d_allow_undersize_EB1_INTB(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
-                                           MaxMessageSizeBlockOversize.INT_B,
-                                           "e5d",
-                                           message_size=min(EB1_MAX_SIZE, INTB_MAX_SIZE) - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_5d test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_5e_allow_undersize_EB1_EA1(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
-                                           MaxMessageSizeBlockOversize.EA1,
-                                           "e5e",
-                                           message_size=min(EB1_MAX_SIZE, INTB_MAX_SIZE) - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_5e test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_5f_allow_undersize_EB1_EB1(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
-                                           MaxMessageSizeBlockOversize.EB1,
-                                           "e5f",
-                                           message_size=min(EB1_MAX_SIZE, INTB_MAX_SIZE) - OVER_UNDER,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_5f test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
-
-    def test_s32_allow_gt_signed_32bit_max(self):
-        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.S32,
-                                           MaxMessageSizeBlockOversize.S32,
-                                           "s32",
-                                           message_size=200,
-                                           expect_block=False)
-        test.run()
-        if test.error is not None:
-            test.logger.log("test_s32 test error: %s" % (test.error))
-            test.logger.dump()
-        self.assertTrue(test.error is None)
+    #
+    # def test_57_allow_undersize_INTB_EB1(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.INT_B,
+    #                                        MaxMessageSizeBlockOversize.EB1,
+    #                                        "e57",
+    #                                        message_size=INTB_MAX_SIZE - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_57 test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_58_allow_undersize_EA1_INTA(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+    #                                        MaxMessageSizeBlockOversize.INT_A,
+    #                                        "e58",
+    #                                        message_size=min(EA1_MAX_SIZE, INTA_MAX_SIZE) - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_58 test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_59_allow_undersize_EA1_INTB(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+    #                                        MaxMessageSizeBlockOversize.INT_B,
+    #                                        "e59",
+    #                                        message_size=min(EA1_MAX_SIZE, INTA_MAX_SIZE) - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_59 test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_5a_allow_undersize_EA1_EA1(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+    #                                        MaxMessageSizeBlockOversize.EA1,
+    #                                        "e5a",
+    #                                        message_size=min(EA1_MAX_SIZE, INTA_MAX_SIZE) - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_5a test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_5b_allow_undersize_EA1_EB1(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+    #                                        MaxMessageSizeBlockOversize.EB1,
+    #                                        "e5b",
+    #                                        message_size=min(EA1_MAX_SIZE, INTA_MAX_SIZE) - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_5b test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_5c_allow_undersize_EB1_INTA(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
+    #                                        MaxMessageSizeBlockOversize.INT_A,
+    #                                        "e5c",
+    #                                        message_size=min(EB1_MAX_SIZE, INTB_MAX_SIZE) - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_5c test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_5d_allow_undersize_EB1_INTB(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
+    #                                        MaxMessageSizeBlockOversize.INT_B,
+    #                                        "e5d",
+    #                                        message_size=min(EB1_MAX_SIZE, INTB_MAX_SIZE) - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_5d test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_5e_allow_undersize_EB1_EA1(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
+    #                                        MaxMessageSizeBlockOversize.EA1,
+    #                                        "e5e",
+    #                                        message_size=min(EB1_MAX_SIZE, INTB_MAX_SIZE) - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_5e test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_5f_allow_undersize_EB1_EB1(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EB1,
+    #                                        MaxMessageSizeBlockOversize.EB1,
+    #                                        "e5f",
+    #                                        message_size=min(EB1_MAX_SIZE, INTB_MAX_SIZE) - OVER_UNDER,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_5f test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
+    #
+    # def test_s32_allow_gt_signed_32bit_max(self):
+    #     test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.S32,
+    #                                        MaxMessageSizeBlockOversize.S32,
+    #                                        "s32",
+    #                                        message_size=200,
+    #                                        expect_block=False)
+    #     test.run()
+    #     if test.error is not None:
+    #         test.logger.log("test_s32 test error: %s" % (test.error))
+    #         test.logger.dump()
+    #     self.assertTrue(test.error is None)
 
 
 if __name__ == '__main__':
