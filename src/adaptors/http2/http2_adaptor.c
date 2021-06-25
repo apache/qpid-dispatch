@@ -371,19 +371,27 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
     // all stream data (body data) objects need to be freed. We do this here.
     //
     if (stream_data->in_dlv && !stream_data->in_dlv_decrefed) {
-    	if (stream_data->curr_stream_data)
+    	if (stream_data->curr_stream_data) {
     		qd_message_stream_data_release(stream_data->curr_stream_data);
-    	if (stream_data->next_stream_data)
+    		stream_data->curr_stream_data = 0;
+    	}
+    	if (stream_data->next_stream_data) {
     		qd_message_stream_data_release(stream_data->next_stream_data);
+    		stream_data->next_stream_data = 0;
+    	}
         qdr_delivery_decref(http2_adaptor->core, stream_data->in_dlv, "HTTP2 adaptor in_dlv - free_http2_stream_data");
     }
 
     if (stream_data->out_dlv && !stream_data->out_dlv_decrefed) {
-    	if (stream_data->curr_stream_data)
+    	if (stream_data->curr_stream_data) {
     		qd_message_stream_data_release(stream_data->curr_stream_data);
-    	if (stream_data->next_stream_data)
+    		stream_data->curr_stream_data = 0;
+    	}
+    	if (stream_data->next_stream_data) {
     		qd_message_stream_data_release(stream_data->next_stream_data);
-        qdr_delivery_decref(http2_adaptor->core, stream_data->out_dlv, "HTTP2 adaptor out_dlv - free_http2_stream_data");
+    		stream_data->next_stream_data = 0;
+    	}
+    	qdr_delivery_decref(http2_adaptor->core, stream_data->out_dlv, "HTTP2 adaptor out_dlv - free_http2_stream_data");
     }
 
     free_qdr_http2_stream_data_t(stream_data);
@@ -475,7 +483,7 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
 static int on_error_callback(nghttp2_session *session, int lib_error_code, const char *msg, size_t len, void *user_data)
 {
 	qdr_http2_connection_t *conn = (qdr_http2_connection_t *)user_data;
-	qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Error generated in the on_error_callback, lib_error_code=%i, error_msg=%s", conn->conn_id, lib_error_code, msg);
+	qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] Error generated in the on_error_callback, lib_error_code=%i, error_msg=%s", conn->conn_id, lib_error_code, msg);
 	return 0;
 }
 
@@ -609,7 +617,8 @@ static int snd_data_callback(nghttp2_session *session,
         memcpy(qd_http2_buffer_cursor(http2_buff), framehd, HTTP2_DATA_FRAME_HEADER_LENGTH);
         qd_http2_buffer_insert(http2_buff, HTTP2_DATA_FRAME_HEADER_LENGTH);
         pn_raw_buffer_t pn_raw_buffs[stream_data->qd_buffers_to_send];
-        qd_message_stream_data_buffers(stream_data->curr_stream_data, pn_raw_buffs, stream_data->curr_stream_data_qd_buff_offset, stream_data->qd_buffers_to_send);
+        int written = qd_message_stream_data_buffers(stream_data->curr_stream_data, pn_raw_buffs, stream_data->curr_stream_data_qd_buff_offset, stream_data->qd_buffers_to_send);
+        assert (written == stream_data->qd_buffers_to_send);
 
         int idx = 0;
         size_t bytes_to_send = length;
@@ -652,6 +661,7 @@ static int snd_data_callback(nghttp2_session *session,
         else {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback, full_payload_handled, out_msg_has_footer", conn->conn_id, stream_data->stream_id);
         }
+        stream_data->curr_stream_data_offset = 0;
         stream_data->curr_stream_data_qd_buff_offset = 0;
     }
 
@@ -1254,7 +1264,7 @@ ssize_t read_data_callback(nghttp2_session *session,
                 	}
                 	else {
                 		bytes_to_send = remaining_payload_length;
-                		stream_data->qd_buffers_to_send = (remaining_payload_length == 0) ? 0: qd_message_stream_data_buffer_count(stream_data->curr_stream_data);
+                		stream_data->qd_buffers_to_send = (remaining_payload_length == 0) ? 0: qd_message_stream_data_buffer_count(stream_data->curr_stream_data) - stream_data->curr_stream_data_qd_buff_offset;
                 		stream_data->full_payload_handled = true;
                 		qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length (%zu) <= QD_HTTP2_BUFFER_SIZE(16384), bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, remaining_payload_length, bytes_to_send, stream_data->qd_buffers_to_send);
 
