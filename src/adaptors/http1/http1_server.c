@@ -74,7 +74,9 @@ typedef struct _server_request_t {
     bool            request_discard; // drop incoming request data
     bool            headers_encoded; // True when header encode done
 
-    // fifo of encoded request data to be written out the raw connection:
+    // fifo of encoded request data to be written out the raw connection.
+    // Note well: cannot release request_dlv while there is pending out
+    // data since it references body data from the message.
     qdr_http1_out_data_list_t out_data;
 
     _server_response_msg_list_t responses;  // response(s) to this request
@@ -464,6 +466,7 @@ static void _accept_and_settle_request(_server_request_t *hreq)
                                       0,      // delivery state
                                       false);
     // can now release the delivery
+    assert(DEQ_IS_EMPTY(hreq->out_data));  // expect no held references to message data
     qdr_delivery_set_context(hreq->request_dlv, 0);
     qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request settled");
     hreq->request_dlv = 0;
@@ -683,7 +686,6 @@ static bool _process_request(_server_request_t *hreq)
 
     if (hreq->cancelled) {
 
-        // clean up the request message delivery
         if (hreq->request_dlv) {
 
             if ((!hreq->request_acked || !hreq->request_settled) &&
@@ -703,9 +705,6 @@ static bool _process_request(_server_request_t *hreq)
                                                   false);
                 hreq->request_acked = hreq->request_settled = true;
             }
-            qdr_delivery_set_context(hreq->request_dlv, 0);
-            qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server request cancelled releasing delivery");
-            hreq->request_dlv = 0;
         }
 
         // drop in flight responses
@@ -763,11 +762,6 @@ static bool _process_request(_server_request_t *hreq)
                                               0,      // delivery state
                                               false);
             hreq->request_acked = true;
-            if (hreq->request_settled) {
-                qdr_delivery_set_context(hreq->request_dlv, 0);
-                qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server request settled releasing delivery");
-                hreq->request_dlv = 0;
-            }
         }
 
         if (hreq->request_acked && hreq->request_settled && DEQ_SIZE(hreq->out_data) == 0) {
@@ -1643,6 +1637,7 @@ static void _server_request_free(_server_request_t *hreq)
         qdr_http1_request_base_cleanup(&hreq->base);
         qdr_http1_out_data_cleanup(&hreq->out_data);
         if (hreq->request_dlv) {
+            assert(DEQ_IS_EMPTY(hreq->out_data));  // expect no held references to message data
             qdr_delivery_set_context(hreq->request_dlv, 0);
             qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server releasing request delivery");
             hreq->request_dlv = 0;

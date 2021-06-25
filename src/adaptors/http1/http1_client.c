@@ -1651,14 +1651,12 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                        hconn->conn_id, link->identity, hreq->base.msg_id);
 
             } else {
-                // The response was bad.  There's not much that can be done to
-                // recover, so for now I punt...
-
-                // returning a terminal disposition will cause the delivery to be updated and settled,
-                // so drop our reference
-                qdr_delivery_set_context(rmsg->dlv, 0);
-                qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 client releasing malformed response delivery");
-                rmsg->dlv = 0;
+                // The response was bad.  This should not happen since the
+                // response was created by the remote HTTP/1.x adaptor.  Likely
+                // a bug? There's not much that can be done to recover, so for
+                // now just drop the connection to the client.  Note that
+                // returning a terminal disposition will cause the delivery to
+                // be updated and settled.
                 qdr_http1_close_connection(hconn, "Cannot parse response message");
                 return rmsg->dispo;
             }
@@ -1682,6 +1680,7 @@ static void _client_response_msg_free(_client_request_t *req, _client_response_m
     qdr_http1_out_data_cleanup(&rmsg->out_data);
 
     if (rmsg->dlv) {
+        assert(DEQ_IS_EMPTY(rmsg->out_data));  // expect no held references to message data
         qdr_delivery_set_context(rmsg->dlv, 0);
         qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 client response delivery settled");
         rmsg->dlv = 0;
