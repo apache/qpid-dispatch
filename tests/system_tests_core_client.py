@@ -90,7 +90,9 @@ class CoreClientAPITest(TestCase):
 
 
 class TestService(MessagingHandler):
-    # a service that the core client can communicate with
+    """a service that the core client can communicate with"""
+    __test__ = False
+
     class Timeout(object):
         def __init__(self, service):
             self.service = service
@@ -170,8 +172,10 @@ class TestService(MessagingHandler):
         self._container.process()
 
 
-# wait until all credit is exhausted, then re-flow more credit
 class TestCreditStarve(TestService):
+    """wait until all credit is exhausted, then re-flow more credit"""
+    __test__ = False
+
     def __init__(self, address):
         super(TestCreditStarve, self).__init__(address, credit=5)
         self.starved = False
@@ -187,8 +191,10 @@ class TestCreditStarve(TestService):
                 self._conn.close()
 
 
-# grant 10, but don't respond and close early
 class TestEarlyClose(TestService):
+    """grant 10, but don't respond and close early"""
+    __test__ = False
+
     def __init__(self, address):
         super(TestEarlyClose, self).__init__(address, credit=10)
 
@@ -199,6 +205,8 @@ class TestEarlyClose(TestService):
 
 
 class TestNoCorrelationId(TestService):
+    __test__ = False
+
     def __init__(self, address):
         super(TestNoCorrelationId, self).__init__(address, credit=1)
         self.rejected = False
@@ -211,6 +219,8 @@ class TestNoCorrelationId(TestService):
 
 
 class TestOldCorrelationId(TestService):
+    __test__ = False
+
     def __init__(self, address):
         super(TestOldCorrelationId, self).__init__(address, credit=1)
         self.accepted = False
@@ -224,7 +234,8 @@ class TestOldCorrelationId(TestService):
 
 
 class TestCallTimeout(TestService):
-    # test that the timeout is handled properly
+    """test that the timeout is handled properly"""
+    __test__ = False
 
     class PeriodicLogScrape(object):
         # periodically scan the log for the timeout error
