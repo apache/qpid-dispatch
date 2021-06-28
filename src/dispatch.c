@@ -122,9 +122,10 @@ STATIC_ASSERT(sizeof(long) >= sizeof(void*), pointer_is_bigger_than_long);
 
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
-    qd->dl_handle = dlopen(QPID_DISPATCH_LIB, RTLD_LAZY | RTLD_NOLOAD);
+    // `dlopen(NULL, ...)` opens the current executable; qdrouterd used to dlopen libqpid-dispatch.so here before
+    qd->dl_handle = dlopen(NULL, RTLD_LAZY | RTLD_NOLOAD);
     if (!qd->dl_handle)
-        return qd_error(QD_ERROR_RUNTIME, "Cannot locate library %s", QPID_DISPATCH_LIB);
+        return qd_error(QD_ERROR_RUNTIME, "Failed to dlopen the current executable");
 
     qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.management.config");

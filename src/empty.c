@@ -17,7 +17,5 @@
  * under the License.
  */
 
-#define QPID_DISPATCH_VERSION "${QPID_DISPATCH_VERSION}"
-#define QPID_CONSOLE_STAND_ALONE_INSTALL_DIR "${CONSOLE_STAND_ALONE_INSTALL_DIR}"
-#cmakedefine01 QD_MEMORY_STATS
-#cmakedefine01 QD_HAVE_GETRLIMIT
+/// Workaround. Some C compilers raise warning when asked to compile an empty file.
+typedef int qd_make_this_translation_unit_not_be_empty;

@@ -164,24 +164,14 @@ endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 if ((DEFINED ASAN_LIBRARY) OR (DEFINED UBSAN_LIBRARY) OR (DEFINED TSAN_LIBRARY))
   set(USING_SANITIZERS TRUE)
 endif()
-if (APPLE)
-  # DISPATCH-1384 - for macOS use flat_namespace instead of 2 level
-  #  namespace (acts more like linux)
-  set(QPID_DISPATCH_LIB_LINK_FLAGS "-Wl,-flat_namespace ${QPID_DISPATCH_LIB_LINK_FLAGS}")
-elseif(CMAKE_C_COMPILER_ID MATCHES "Clang" AND USING_SANITIZERS)
-  # https://github.com/google/sanitizers/issues/380 - can't enable error on
-  #  undefined symbols when linking sanitizers with Clang
-else()
-  set(QPID_DISPATCH_LIB_LINK_FLAGS "-Wl,-z,defs ${QPID_DISPATCH_LIB_LINK_FLAGS}")
-endif()
 
-add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
+add_library(qpid-dispatch OBJECT ${qpid_dispatch_SOURCES})
 target_include_directories(qpid-dispatch PRIVATE ${qpid_dispatch_INCLUDES})
-target_link_libraries(qpid-dispatch ${qpid_dispatch_LIBRARIES})
-set_target_properties(qpid-dispatch PROPERTIES
-    LINK_FLAGS "${QPID_DISPATCH_LIB_LINK_FLAGS}")
-install(TARGETS qpid-dispatch
-    LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
+
+# Workaround. CMake < 3.12 does not allow using object libraries in target_link_libraries;
+#  `ar` on macOS refuses to produce a static library consisting of /dev/null as the only source file.
+add_library(qpid-dispatch-libraries STATIC empty.c)
+target_link_libraries(qpid-dispatch-libraries ${qpid_dispatch_LIBRARIES})
 
 # check for various function availability
 check_symbol_exists(getrlimit sys/resource.h QD_HAVE_GETRLIMIT)
