@@ -17,4 +17,5 @@
  * under the License.
  */
 
+/// Workaround. Some C compilers raise warning when asked to compile an empty file.
 typedef int qd_make_this_translation_unit_not_be_empty;

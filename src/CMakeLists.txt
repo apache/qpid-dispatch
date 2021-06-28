@@ -168,7 +168,8 @@ endif()
 add_library(qpid-dispatch OBJECT ${qpid_dispatch_SOURCES})
 target_include_directories(qpid-dispatch PRIVATE ${qpid_dispatch_INCLUDES})
 
-# Workaround. CMake < 3.12 does not allow using object libraries in target_link_libraries
+# Workaround. CMake < 3.12 does not allow using object libraries in target_link_libraries;
+#  `ar` on macOS refuses to produce a static library consisting of /dev/null as the only source file.
 add_library(qpid-dispatch-libraries STATIC empty.c)
 target_link_libraries(qpid-dispatch-libraries ${qpid_dispatch_LIBRARIES})
 
