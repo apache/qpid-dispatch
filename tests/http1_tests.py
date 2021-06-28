@@ -212,6 +212,7 @@ class TestServer(object):
     """
     A HTTPServer running in a separate thread
     """
+    __test__ = False
 
     @classmethod
     def new_server(cls, server_port, client_port, tests, handler_cls=None):

@@ -1342,6 +1342,7 @@ class TestTimeout(object):
     A callback object for MessagingHandler class
     parent: A MessagingHandler with a timeout() method
     """
+    __test__ = False
 
     def __init__(self, parent):
         self.parent = parent
