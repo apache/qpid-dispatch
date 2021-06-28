@@ -26,25 +26,16 @@ check for uniqueness of enties/attributes that are specified to be unique.
 A Schema can be loaded/dumped to a json file.
 """
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-
 import sys
 import traceback
 from collections import OrderedDict
 from qpid_dispatch.management.entity import EntityBase
 from qpid_dispatch.management.error import NotImplementedStatus
-from ..compat import PY_STRING_TYPE
-from ..compat import PY_TEXT_TYPE
-from ..compat import dict_keys
-from ..compat import dict_items
+
 try:
     from ..dispatch import LogAdapter, LOG_WARNING
     logger_available = True
-except:
+except ImportError:
     # We need to do this because at compile time the schema is pulled using this code and at that time the
     # LogAdapter is not loaded. When running the router, the LogAdapter is available.
     logger_available = False
@@ -102,7 +93,7 @@ class BooleanType(Type):
         @return A python bool.
         """
         try:
-            if isinstance(value, (PY_STRING_TYPE, PY_TEXT_TYPE)):
+            if isinstance(value, str):
                 return self.VALUES[value.lower()]
             return bool(value)
         except:
@@ -178,7 +169,7 @@ class PropertiesType(Type):
             raise ValidationError("Properties must be a map")
 
         for key in value.keys():
-            if (not isinstance(key, PY_STRING_TYPE)
+            if (not isinstance(key, str)
                     or any(ord(x) > 127 for x in key)):
                 raise ValidationError("Property keys must be ASCII encoded")
         return value
@@ -433,7 +424,7 @@ class EntityType(object):
                                       % (self.name, how, other.short_name, what, ",".join(overlap)))
         check(self.operations, other.operations, "operations")
         self.operations += other.operations
-        check(dict_keys(self.attributes), other.attributes.values(), "attributes")
+        check(list(self.attributes.keys()), other.attributes.values(), "attributes")
         self.attributes.update(other.attributes)
         if other.name == 'entity':
             # Fill in entity "type" attribute automatically.
@@ -445,7 +436,7 @@ class EntityType(object):
 
     def attribute(self, name):
         """Get the AttributeType for name"""
-        if name not in self.attributes and name not in dict_keys(self.deprecated_attributes):
+        if name not in self.attributes and name not in self.deprecated_attributes.keys():
             raise ValidationError("Unknown attribute '%s' for '%s'" % (name, self))
         if self.attributes.get(name):
             return self.attributes[name]
@@ -502,7 +493,7 @@ class EntityType(object):
                                                   (deprecation_name, attr.name, self.short_name))
 
             # Validate attributes.
-            for name, value in dict_items(attributes):
+            for name, value in attributes.items():
                 if name == 'type':
                     value = self.schema.long_name(value)
                 attributes[name] = self.attribute(name).validate(value)
@@ -590,7 +581,7 @@ class Schema(object):
 
         for e in self.entity_types.values():
             e.init()
-            self.all_attributes.update(dict_keys(e.attributes))
+            self.all_attributes.update(e.attributes.keys())
 
     def log(self, level, text):
         if not self.log_adapter:

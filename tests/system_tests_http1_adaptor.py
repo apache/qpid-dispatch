@@ -21,22 +21,12 @@
 # Test the HTTP/1.x Adaptor
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-
 import errno
 import io
 import select
 import socket
 from time import sleep, time
-
-try:
-    from http.client import HTTPConnection
-except ImportError:
-    from httplib import HTTPConnection
+from http.client import HTTPConnection
 
 from proton import Message
 from system_test import TestCase, unittest, main_module, Qdrouterd, QdManager

@@ -20,11 +20,6 @@
 """
 Qpid Dispatch Router management schema and config file parsing.
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import json
 from pkgutil import get_data
 from . import schema
@@ -36,8 +31,8 @@ class QdSchema(schema.Schema):
     Qpid Dispatch Router management schema.
     """
 
-    CONFIGURATION_ENTITY = u"configurationEntity"
-    OPERATIONAL_ENTITY = u"operationalEntity"
+    CONFIGURATION_ENTITY = "configurationEntity"
+    OPERATIONAL_ENTITY = "operationalEntity"
 
     def __init__(self):
         """Load schema."""

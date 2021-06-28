@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from time import sleep
 import os
 from subprocess import PIPE, Popen
@@ -502,16 +497,16 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         results = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()
 
         # sslProto should be TLSv1.x
-        self.assertIn(u'TLSv1', results[0].sslProto)
+        self.assertIn('TLSv1', results[0].sslProto)
 
         # role should be inter-router
-        self.assertEqual(u'inter-router', results[0].role)
+        self.assertEqual('inter-router', results[0].role)
 
         # sasl must be plain
-        self.assertEqual(u'PLAIN', results[0].sasl)
+        self.assertEqual('PLAIN', results[0].sasl)
 
         # user must be test@domain.com
-        self.assertEqual(u'test@domain.com', results[0].user)
+        self.assertEqual('test@domain.com', results[0].user)
 
 
 class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
@@ -697,16 +692,16 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         self.assertTrue(found, "Connection to %s not found" % search)
 
         # sslProto should be TLSv1.x
-        self.assertIn(u'TLSv1', results[N].sslProto)
+        self.assertIn('TLSv1', results[N].sslProto)
 
         # role should be inter-router
-        self.assertEqual(u'inter-router', results[N].role)
+        self.assertEqual('inter-router', results[N].role)
 
         # sasl must be plain
-        self.assertEqual(u'PLAIN', results[N].sasl)
+        self.assertEqual('PLAIN', results[N].sasl)
 
         # user must be test@domain.com
-        self.assertEqual(u'test@domain.com', results[N].user)
+        self.assertEqual('test@domain.com', results[N].user)
 
     @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_plain_over_ssl_exists(self):

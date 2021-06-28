@@ -61,10 +61,6 @@ When refreshing attributes, the agent must also read C implementation object
 data that may be updated in other threads.
 
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
 
 import traceback
 import json
@@ -74,20 +70,10 @@ import unicodedata
 from traceback import format_exc
 from threading import Lock
 from cProfile import Profile
-try:
-    # py2
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 from ctypes import c_void_p, py_object, c_long
 from subprocess import Popen
-try:
-    # Python 2
-    from future_builtins import filter
-except ImportError:
-    # Python 3
-    pass
 
 from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
@@ -98,12 +84,11 @@ from .qdrouter import QdSchema
 from ..router.message import Message
 from ..router.address import Address
 from ..policy.policy_manager import PolicyManager
-from qpid_dispatch_internal.compat import dict_iteritems
 
 
 def dictstr(d):
     """Stringify a dict in the form 'k=v, k=v ...' instead of '{k:v, ...}'"""
-    return ", ".join("%s=%s" % (k, v) for k, v in dict_iteritems(d))
+    return ", ".join("%s=%s" % (k, v) for k, v in d.items())
 
 
 def required_property(prop, request):
@@ -187,11 +172,11 @@ class EntityAdapter(SchemaEntity):
         name = self.attributes.get("name")
         if identity:
             if not name:
-                self.attributes[u"name"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
+                self.attributes["name"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
         else:
-            self.attributes[u"identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
+            self.attributes["identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
             if not name:
-                self.attributes.setdefault(u'name', self.attributes[u'identity'])
+                self.attributes.setdefault('name', self.attributes['identity'])
 
         super(EntityAdapter, self).validate(**kwargs)
 
@@ -529,7 +514,7 @@ class ConsoleEntity(EntityAdapter):
                                 dargs['$wsport'] = wsport
                             if home:
                                 dargs['$home'] = home
-                            for k, v in dict_iteritems(dargs):
+                            for k, v in dargs.items():
                                 args = args.replace(k, str(v))
                             pargs += args.split()
 
@@ -834,13 +819,13 @@ class ManagementEntity(EntityAdapter):
     def get_operations(self, request):
         type = self.requested_type(request)
         return (OK, dict((t, et.operations)
-                         for t, et in dict_iteritems(self._schema.entity_types)
+                         for t, et in self._schema.entity_types.items()
                          if not type or type.name == t))
 
     def get_attributes(self, request):
         type = self.requested_type(request)
         return (OK, dict((t, [a for a in et.attributes])
-                         for t, et in dict_iteritems(self._schema.entity_types)
+                         for t, et in self._schema.entity_types.items()
                          if not type or type.name == t))
 
     def get_mgmt_nodes(self, request):
@@ -1093,9 +1078,9 @@ class Agent(object):
 
         def attrvals():
             """String form of the id attribute values for error messages"""
-            return " ".join(["%s=%s" % (k, v) for k, v in dict_iteritems(ids)])
+            return " ".join(["%s=%s" % (k, v) for k, v in ids.items()])
 
-        k, v = next(dict_iteritems(ids))  # Get the first id attribute
+        k, v = next(iter(ids.items()))  # Get the first id attribute
         found = self.entities.map_filter(None, lambda e: e.attributes.get(k) == v)
         if len(found) == 1:
             entity = found[0]
@@ -1105,7 +1090,7 @@ class Agent(object):
         else:
             raise NotFoundStatus("No entity with %s" % attrvals())
 
-        for k, v in dict_iteritems(ids):
+        for k, v in ids.items():
             if entity[k] != v:
                 raise BadRequestStatus("Conflicting %s" % attrvals())
 

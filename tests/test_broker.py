@@ -21,11 +21,6 @@
 # proton python examples.  Accepts incoming links and forwards messages based
 # on target address.
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import collections
 from threading import Thread
 import uuid

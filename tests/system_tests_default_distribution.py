@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import re
 from subprocess import PIPE
 from system_test import TestCase, Qdrouterd, TIMEOUT, main_module, unittest, TestTimeout
@@ -169,7 +164,7 @@ class UnavailableAnonymousSender(MessagingHandler):
         self.timer = None
         self.link_name = "anon_link"
         self.error_description = "Deliveries cannot be sent to an unavailable address"
-        self.error_name = u'amqp:not-found'
+        self.error_name = 'amqp:not-found'
         self.num_sent = 0
 
     def timeout(self):

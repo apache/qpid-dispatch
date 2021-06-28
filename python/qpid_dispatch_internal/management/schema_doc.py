@@ -19,15 +19,9 @@
 
 """Library for generating asciidoc documentation from a L{schema.Schema}"""
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from collections import namedtuple
 import sys
 from .schema import AttributeType
-from qpid_dispatch_internal.compat import PY_STRING_TYPE, dict_itervalues
 
 
 class SchemaWriter(object):
@@ -61,7 +55,7 @@ class SchemaWriter(object):
 
     def attribute_qualifiers(self, attr, show_create=True, show_update=True):
         default = attr.default
-        if isinstance(default, PY_STRING_TYPE) and default.startswith('$'):
+        if isinstance(default, str) and default.startswith('$'):
             default = None  # Don't show defaults that are references, confusing.
         return ' (%s)' % (', '.join(
             filter(None, [str(attr.atype),
@@ -109,7 +103,7 @@ class SchemaWriter(object):
                         message.body.description))
                 if message.properties:
                     self.para(".%s properties" % (what.capitalize()))
-                    for prop in dict_itervalues(message.properties):
+                    for prop in message.properties.values():
                         self.attribute_type(prop)
 
         with self.section("Operation %s" % op.name):
@@ -119,7 +113,7 @@ class SchemaWriter(object):
             request_response("response")
 
     def operation_defs(self, entity_type):
-        for op in dict_itervalues(entity_type.operation_defs):
+        for op in entity_type.operation_defs.values():
             self.operation_def(op, entity_type)
 
     def entity_type(self, entity_type, operation_defs=True):

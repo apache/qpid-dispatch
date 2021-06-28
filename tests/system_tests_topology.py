@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from proton import Message, Timeout
 from system_test import AsyncTestReceiver
 from system_test import TestCase, Qdrouterd, main_module
@@ -332,10 +327,10 @@ class TopologyFailover (MessagingHandler):
         # These are the expectes routing traces, in the order we
         # expect to receive them.
         self.expected_traces = [
-            [u'0/A', u'0/D', u'0/C', u'0/B'],
-            [u'0/A', u'0/D', u'0/B'],
-            [u'0/A', u'0/C', u'0/B'],
-            [u'0/A', u'0/B']
+            ['0/A', '0/D', '0/C', '0/B'],
+            ['0/A', '0/D', '0/B'],
+            ['0/A', '0/C', '0/B'],
+            ['0/A', '0/B']
         ]
         self.trace_count    = 0
 
@@ -700,7 +695,7 @@ class RouterFluxTest(TestCase):
         mgmt = INT_C.management
         a_type = 'org.apache.qpid.dispatch.router.address'
         rsp = mgmt.query(a_type).get_dicts()
-        while any(map(lambda a: a['name'].find('closest/on_A') != -1, rsp)):
+        while any('closest/on_A' in a['name'] for a in rsp):
             time.sleep(0.25)
             rsp = mgmt.query(a_type).get_dicts()
 
@@ -735,7 +730,7 @@ class RouterFluxTest(TestCase):
         mgmt = INT_C.management
         a_type = 'org.apache.qpid.dispatch.router.address'
         rsp = mgmt.query(a_type).get_dicts()
-        while any(map(lambda a: a['name'].find('closest/on_A') != -1, rsp)):
+        while any('closest/on_A' in a['name'] for a in rsp):
             time.sleep(0.25)
             rsp = mgmt.query(a_type).get_dicts()
 

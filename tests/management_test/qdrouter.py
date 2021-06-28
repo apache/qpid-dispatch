@@ -19,11 +19,6 @@
 
 # pylint: disable=wildcard-import,unused-wildcard-import,missing-docstring,too-many-public-methods
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import unittest
 from qpid_dispatch_internal.management.config import Config
 
@@ -90,24 +85,24 @@ class QdrouterTest(unittest.TestCase):
         content = conf._parse(text.split("\n"))
         self.maxDiff = None
         expect = [
-            [u'router', {u'mode': u'standalone', u'id': u'QDR'}],
-            [u'sslProfile', {u'password': u'secret', u'name': u'test-profile'}],
-            [u'listener', {u'sslProfile': u'test-profile', u'name': u'l0', u'saslMechanisms': u'ANONYMOUS'}],
-            [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'identity': u'l1', u'port': u'1234'}],
-            [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'port': u'4567'}]
+            ['router', {'mode': 'standalone', 'id': 'QDR'}],
+            ['sslProfile', {'password': 'secret', 'name': 'test-profile'}],
+            ['listener', {'sslProfile': 'test-profile', 'name': 'l0', 'saslMechanisms': 'ANONYMOUS'}],
+            ['listener', {'saslMechanisms': 'ANONYMOUS', 'identity': 'l1', 'port': '1234'}],
+            ['listener', {'saslMechanisms': 'ANONYMOUS', 'port': '4567'}]
         ]
         self.assertEqual(content, expect)
 
         expect = [
-            [u'router', {u'mode': u'standalone', u'id': u'QDR'}],
-            [u'sslProfile', {u'password': u'secret', u'name': u'test-profile'}],
-            [u'listener', {u'name': u'l0', u'sslProfile': u'test-profile', u'saslMechanisms': u'ANONYMOUS'}],
-            [u'listener', {u'port': u'1234', u'identity': u'l1', u'saslMechanisms': u'ANONYMOUS'}],
-            [u'listener', {u'port': u'4567', u'saslMechanisms': u'ANONYMOUS'}]
+            ['router', {'mode': 'standalone', 'id': 'QDR'}],
+            ['sslProfile', {'password': 'secret', 'name': 'test-profile'}],
+            ['listener', {'name': 'l0', 'sslProfile': 'test-profile', 'saslMechanisms': 'ANONYMOUS'}],
+            ['listener', {'port': '1234', 'identity': 'l1', 'saslMechanisms': 'ANONYMOUS'}],
+            ['listener', {'port': '4567', 'saslMechanisms': 'ANONYMOUS'}]
         ]
         self.assertEqual(content, expect)
 
-        conf.load(text.split(u"\n"))
+        conf.load(text.split("\n"))
         router = conf.by_type('router')[0]
         listeners = list(conf.by_type('listener'))
         self.assertEqual(len(listeners), 3)

@@ -29,16 +29,10 @@ The C library also adds the following C extension types to this module:
 
 This module also prevents the proton python module from being accidentally loaded.
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-
-import sys
+import builtins
 import ctypes
+import sys
 from ctypes import c_char_p, c_long, py_object
-from .compat import IS_PY2
 
 
 class CError(Exception):
@@ -120,7 +114,7 @@ class QdDll(ctypes.PyDLL):
         def _do_check(result, func, args):
             if check and self.qd_error_code():
                 raise CError(self.qd_error_message())
-            if restype is c_char_p and result and not IS_PY2:
+            if restype is c_char_p and result:
                 # in python3 c_char_p returns a byte type for the error
                 # message. We need to convert that to a string
                 result = result.decode('utf-8')
@@ -157,10 +151,6 @@ def import_check(name, *args, **kw):
 
 
 check_forbidden()
-if IS_PY2:
-    import __builtin__ as builtins
-else:
-    import builtins
 
 builtin_import = builtins.__import__
 builtins.__import__ = import_check

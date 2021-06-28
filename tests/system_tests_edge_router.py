@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import os
 import re
 from time import sleep
@@ -1671,8 +1666,7 @@ class LinkRouteProxyTest(TestCase):
         """Lookup address in route table"""
         a_type = 'org.apache.qpid.dispatch.router.address'
         addrs = router.management.query(a_type).get_dicts()
-        return list(filter(lambda a: a['name'].find(address) != -1,
-                           addrs))
+        return [a for a in addrs if address in a['name']]
 
     def _wait_address_gone(self, router, address):
         """Block until address is removed from the route table"""
@@ -1800,13 +1794,13 @@ class LinkRouteProxyTest(TestCase):
         self.assertEqual(len(expected_links), len(test_links))
 
         for elink in expected_links:
-            matches = filter(lambda l: (l['linkDir'] == elink[0]
-                                        and
-                                        conns[l['connectionId']]['container'] == elink[1]
-                                        and
-                                        conns[l['connectionId']]['role'] == elink[2]),
-                             test_links)
-            self.assertTrue(len(list(matches)) == 1)
+            matches = [l for l in test_links
+                       if (l['linkDir'] == elink[0]
+                           and
+                           conns[l['connectionId']]['container'] == elink[1]
+                           and
+                           conns[l['connectionId']]['role'] == elink[2])]
+            self.assertEqual(len(matches), 1, msg=matches)
 
     def test_03_interior_conn_lost(self):
         """
@@ -3087,8 +3081,7 @@ class StreamingMessageTest(TestCase):
         """Lookup address in route table"""
         a_type = 'org.apache.qpid.dispatch.router.address'
         addrs = router.management.query(a_type).get_dicts()
-        return list(filter(lambda a: a['name'].find(address) != -1,
-                           addrs))
+        return [a for a in addrs if address in a['name']]
 
     def _wait_address_gone(self, router, address):
         """Block until address is removed from the route table"""

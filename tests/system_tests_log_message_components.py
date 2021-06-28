@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import json
 from proton import Message, symbol
 from system_test import TestCase, Qdrouterd, Process, TIMEOUT
@@ -80,7 +75,7 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
         everything_ok = False
 
         logs = json.loads(self.run_qdmanage("get-log"))
-        message_logs = [log for log in logs if log[0] == u'MESSAGE']
+        message_logs = [log for log in logs if log[0] == 'MESSAGE']
         self.assertTrue(message_logs)
         test_message = [log for log in message_logs if "message-id=\"123455\"" in log[2]]
         self.assertTrue(2 == len(test_message), message_logs)  # Sent and Received
@@ -129,7 +124,7 @@ class RouterMessageLogTestNone(RouterMessageLogTestBase):
         everything_ok = True
         logs = json.loads(self.run_qdmanage("get-log"))
         for log in logs:
-            if log[0] == u'MESSAGE':
+            if log[0] == 'MESSAGE':
                 everything_ok = False
 
         self.assertTrue(everything_ok)
@@ -165,13 +160,13 @@ class RouterMessageLogTestSome(RouterMessageLogTestBase):
 
         everything_ok = False
         logs = json.loads(self.run_qdmanage("get-log"))
-        message_logs = [log for log in logs if log[0] == u'MESSAGE']
+        message_logs = [log for log in logs if log[0] == 'MESSAGE']
         self.assertTrue(message_logs)
         test_message = [log for log in message_logs if
-                        u'Received Message{user-id=b"testuser", subject="test-subject", reply-to="hello_world"}' in log[2]]
+                        'Received Message{user-id=b"testuser", subject="test-subject", reply-to="hello_world"}' in log[2]]
         self.assertTrue(test_message, message_logs)
         test_message = [log for log in message_logs if
-                        u'Sent Message{user-id=b"testuser", subject="test-subject", reply-to="hello_world"}' in log[2]]
+                        'Sent Message{user-id=b"testuser", subject="test-subject", reply-to="hello_world"}' in log[2]]
         self.assertTrue(test_message, message_logs)
 
 
@@ -206,7 +201,7 @@ class LogMessageTest(MessagingHandler):
             application_properties['app-property'] = [10, 20, 30]
             application_properties['some-other'] = symbol("O_one")
             msg.properties = application_properties
-            msg.body = u"Hello World!"
+            msg.body = "Hello World!"
             event.sender.send(msg)
             self.sent = True
 

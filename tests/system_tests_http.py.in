@@ -16,23 +16,13 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import errno
 import os
 import threading
 import ssl
 
-try:
-    from urllib2 import urlopen, build_opener, HTTPSHandler
-    from urllib2 import HTTPError, URLError
-except ImportError:
-    # python3
-    from urllib.request import urlopen, build_opener, HTTPSHandler
-    from urllib.error import HTTPError, URLError
+from urllib.request import urlopen, build_opener, HTTPSHandler
+from urllib.error import HTTPError, URLError
 
 from system_test import TIMEOUT, Process, QdManager, retry
 from subprocess import PIPE, STDOUT
@@ -84,10 +74,10 @@ class RouterTestHttp(TestCase):
         return out
 
     def assert_get(self, url):
-        self.assertEqual(u'HTTP test\n', self.get("%s/system_tests_http.txt" % url))
+        self.assertEqual('HTTP test\n', self.get("%s/system_tests_http.txt" % url))
 
     def assert_get_cert(self, url):
-        self.assertEqual(u'HTTP test\n', self.get_cert("%s/system_tests_http.txt" % url))
+        self.assertEqual('HTTP test\n', self.get_cert("%s/system_tests_http.txt" % url))
 
     def test_listen_error(self):
         """Make sure a router exits if an initial HTTP listener fails, doesn't hang"""
@@ -106,7 +96,7 @@ class RouterTestHttp(TestCase):
             else:
                 self.get(url, use_ca=use_ca)
             return False
-        except (IOError, OSError) as e:  # TODO(DISPATCH-1539): in Python 3.3+ it is sufficient to catch only OSError
+        except OSError as e:
             expected = (errno.ECONNREFUSED, errno.ECONNRESET)
             if e.errno in expected or e.reason.errno in expected:
                 return True

@@ -21,27 +21,8 @@
 AMQP Managment Entity
 """
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import itertools
 import re
-import sys
-
-
-if sys.version_info[0] > 2:
-    # Python 3 does not have a unicode() builtin method,
-    # luckily all strings are unicode to start with
-    def unicode(s):
-        return s
-
-    def dict_iteritems(d):
-        return iter(d.items())
-else:
-    def dict_iteritems(d):
-        return d.iteritems()
 
 
 def clean_dict(items, **kwargs):
@@ -50,9 +31,9 @@ def clean_dict(items, **kwargs):
     @return: dict containing items + kwargs without any None values. All keys are unicode.
     """
     if isinstance(items, dict):
-        items = dict_iteritems(items)
-    return dict((unicode(k), v) for k, v in itertools.chain(items,
-                                                            dict_iteritems(kwargs))
+        items = items.items()
+    return dict((k, v)
+                for k, v in itertools.chain(items, kwargs.items())
                 if v is not None)
 
 
@@ -74,10 +55,10 @@ class EntityBase(object):
     def __init__(self, attributes=None, **kwargs):
         self.__dict__['attributes'] = {}
         if attributes:
-            for k, v in dict_iteritems(attributes):
+            for k, v in attributes.items():
                 self.attributes[k] = v
                 self.__dict__[self._pyname(k)] = v
-        for k, v in dict_iteritems(kwargs):
+        for k, v in kwargs.items():
             self._set(k, v)
 
     def __getitem__(self, name):
@@ -117,7 +98,7 @@ class EntityBase(object):
     # attributes name, identity and type are special snowflake
     # attributes that we print before all the not so special
     # attributes.  Assign each a priority for the sort
-    _SPECIAL = {u"name": 0, u"identity": 1, u"type": 2}
+    _SPECIAL = {"name": 0, "identity": 1, "type": 2}
 
     def __str__(self):
         # Sort so the _SPECIAL attributes are printed first, 3 ==
@@ -132,7 +113,7 @@ def update(entity, values):
     @param entity: an Entity
     @param values: a map of values
     """
-    for k, v in dict_iteritems(values):
+    for k, v in values.items():
         entity[k] = v
 
 

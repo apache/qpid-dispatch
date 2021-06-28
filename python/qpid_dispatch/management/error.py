@@ -21,11 +21,6 @@
 ManagementError exception class and subclasses, with status codes used by AMQP.
 """
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 #from httplib import responses as STATUS_TEXT
 # from httplib import OK, NO_CONTENT, CREATED, \
 #    BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_SERVER_ERROR, NOT_IMPLEMENTED
@@ -144,9 +139,9 @@ class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)):
 
 
 __all__ = [
-    u"STATUS_TEXT", u"OK", u"NO_CONTENT", u"CREATED",
-    u"BAD_REQUEST", u"UNAUTHORIZED", u"FORBIDDEN", u"NOT_FOUND",
-    u"INTERNAL_SERVER_ERROR", u"NOT_IMPLEMENTED",
-    u"ManagementError",
-    u"BadRequestStatus", u"UnauthorizedStatus", u"ForbiddenStatus",
-    u"NotFoundStatus", u"InternalServerErrorStatus", u"NotImplementedStatus"]
+    "STATUS_TEXT", "OK", "NO_CONTENT", "CREATED",
+    "BAD_REQUEST", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND",
+    "INTERNAL_SERVER_ERROR", "NOT_IMPLEMENTED",
+    "ManagementError",
+    "BadRequestStatus", "UnauthorizedStatus", "ForbiddenStatus",
+    "NotFoundStatus", "InternalServerErrorStatus", "NotImplementedStatus"]

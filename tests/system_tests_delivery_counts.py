@@ -28,16 +28,15 @@ from qpid_dispatch.management.client import Node
 
 LARGE_PAYLOAD = ("X" * 1024) * 30
 
-
-_LINK_STATISTIC_KEYS = set(['unsettledCount',
-                            'undeliveredCount',
-                            'releasedCount',
-                            'presettledCount',
-                            'acceptedCount',
-                            'droppedPresettledCount',
-                            'rejectedCount',
-                            'deliveryCount',
-                            'modifiedCount'])
+_LINK_STATISTIC_KEYS = {'unsettledCount',
+                        'undeliveredCount',
+                        'releasedCount',
+                        'presettledCount',
+                        'acceptedCount',
+                        'droppedPresettledCount',
+                        'rejectedCount',
+                        'deliveryCount',
+                        'modifiedCount'}
 
 
 def get_body(n_sent, large_message=False):
@@ -90,8 +89,8 @@ class OneRouterModifiedTest(TestCase):
 
         # check link statistics
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'modifiedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'modifiedCount'}))
         self.assertEqual(test.sender_stats['deliveryCount'], num_messages)
         self.assertEqual(test.sender_stats['modifiedCount'], num_messages)
 
@@ -100,8 +99,8 @@ class OneRouterModifiedTest(TestCase):
         self.assertEqual(test.receiver_stats['deliveryCount'], num_messages)
         self.assertEqual(test.receiver_stats['unsettledCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'unsettledCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'unsettledCount'}))
 
     def test_one_router_modified_counts(self):
         self.router_modified_counts()
@@ -145,14 +144,14 @@ class OneRouterRejectedTest(TestCase):
         self.assertEqual(test.sender_stats['deliveryCount'], num_messages)
         self.assertEqual(test.sender_stats['rejectedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'rejectedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'rejectedCount'}))
 
         self.assertEqual(test.receiver_stats['deliveryCount'], num_messages)
         self.assertEqual(test.receiver_stats['rejectedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'rejectedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'rejectedCount'}))
 
     def test_one_router_rejected_counts(self):
         self.one_router_rejected_counts()
@@ -207,10 +206,10 @@ class OneRouterReleasedDroppedPresettledTest(TestCase):
         self.assertEqual(test.sender_stats['presettledCount'], 10)
         self.assertEqual(test.sender_stats['droppedPresettledCount'], 10)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'releasedCount',
-                                                                         'presettledCount',
-                                                                         'droppedPresettledCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'releasedCount',
+                                                                     'presettledCount',
+                                                                     'droppedPresettledCount'}))
 
     def test_one_router_released_dropped_counts(self):
         self.one_router_released_dropped_count()
@@ -278,10 +277,10 @@ class TwoRouterReleasedDroppedPresettledTest(TestCase):
         self.assertEqual(test.sender_stats['presettledCount'], 10)
         self.assertEqual(test.sender_stats['droppedPresettledCount'], 10)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'releasedCount',
-                                                                         'presettledCount',
-                                                                         'droppedPresettledCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'releasedCount',
+                                                                     'presettledCount',
+                                                                     'droppedPresettledCount'}))
 
     def test_two_router_released_dropped_counts(self):
         self.two_router_released_dropped_counts()
@@ -690,14 +689,14 @@ class LinkRouteIngressEgressTransitTest(TestCase):
         self.assertEqual(test.sender_stats['deliveryCount'], 10)
         self.assertEqual(test.sender_stats['acceptedCount'], 10)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
         self.assertEqual(test.receiver_stats['deliveryCount'], 10)
         self.assertEqual(test.receiver_stats['acceptedCount'], 10)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
     def test_link_route_ingress_egress_transit_counts(self):
         self.link_route_ingress_egress_transit_counts()
@@ -784,14 +783,14 @@ class TwoRouterIngressEgressTest(TestCase):
         self.assertEqual(test.sender_stats['deliveryCount'], num_messages)
         self.assertEqual(test.sender_stats['acceptedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
         self.assertEqual(test.receiver_stats['deliveryCount'], num_messages)
         self.assertEqual(test.receiver_stats['acceptedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
         # The management requests are counted in the acceptedDeliveries, so it is difficult to measure the
         # exact number of accepted deliveries at this point in time. But it must at least be 10 since
@@ -848,14 +847,14 @@ class OneRouterIngressEgressTest(TestCase):
         self.assertEqual(test.sender_stats['deliveryCount'], num_messages)
         self.assertEqual(test.sender_stats['acceptedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
         self.assertEqual(test.receiver_stats['deliveryCount'], num_messages)
         self.assertEqual(test.receiver_stats['acceptedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
     def test_one_router_ingress_egress_counts(self):
         self.one_router_ingress_egress_counts()
@@ -915,14 +914,14 @@ class RouteContainerEgressCount(TestCase):
         self.assertEqual(test.sender_stats['deliveryCount'], num_messages)
         self.assertEqual(test.sender_stats['acceptedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
         self.assertEqual(test.receiver_stats['deliveryCount'], num_messages)
         self.assertEqual(test.receiver_stats['acceptedCount'], num_messages)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
     def test_route_container_egress_count(self):
         self.route_container_egress()
@@ -1058,15 +1057,15 @@ class OneRouterLinkCountersTest(TestCase):
         self.assertEqual(test.receiver_stats['releasedCount'], self.COUNT)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
                                              _LINK_STATISTIC_KEYS
-                                             - set(['deliveryCount',
-                                                    'releasedCount'])))
+                                             - {'deliveryCount',
+                                                'releasedCount'}))
 
         self.assertEqual(test.sender_stats['deliveryCount'], self.COUNT)
         self.assertEqual(test.sender_stats['releasedCount'], self.COUNT)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
                                              _LINK_STATISTIC_KEYS
-                                             - set(['deliveryCount',
-                                                    'releasedCount'])))
+                                             - {'deliveryCount',
+                                                'releasedCount'}))
 
     def verify_unsettled_count(self, large_message=False):
         """
@@ -1086,16 +1085,16 @@ class OneRouterLinkCountersTest(TestCase):
         self.assertEqual(test.receiver_stats['unsettledCount'], self.CREDIT)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
                                              _LINK_STATISTIC_KEYS
-                                             - set(['deliveryCount',
-                                                    'unsettledCount'])))
+                                             - {'deliveryCount',
+                                                'unsettledCount'}))
 
         # expect sender only to be able to send as much as credit
         self.assertEqual(test.sender_stats['deliveryCount'], self.CREDIT)
         self.assertEqual(test.sender_stats['unsettledCount'], self.CREDIT)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
                                              _LINK_STATISTIC_KEYS
-                                             - set(['deliveryCount',
-                                                    'unsettledCount'])))
+                                             - {'deliveryCount',
+                                                'unsettledCount'}))
 
     def verify_presettled_count(self, large_message=False):
         """
@@ -1117,8 +1116,8 @@ class OneRouterLinkCountersTest(TestCase):
         self.assertEqual(test.sender_stats['presettledCount'], self.COUNT)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
                                              _LINK_STATISTIC_KEYS
-                                             - set(['deliveryCount',
-                                                    'presettledCount'])))
+                                             - {'deliveryCount',
+                                                'presettledCount'}))
 
         # since credit is fixed at limit, exactly that number of msgs can be received
         self.assertEqual(test.receiver_stats['deliveryCount'], limit)
@@ -1143,10 +1142,10 @@ class OneRouterLinkCountersTest(TestCase):
         # all other counters must be zero
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
                                              _LINK_STATISTIC_KEYS
-                                             - set(['deliveryCount',
-                                                    'undeliveredCount',
-                                                    'droppedPresettledCount',
-                                                    'presettledCount'])))
+                                             - {'deliveryCount',
+                                                'undeliveredCount',
+                                                'droppedPresettledCount',
+                                                'presettledCount'}))
 
     def verify_one_credit_accepted(self, large_message=False):
         """
@@ -1163,9 +1162,9 @@ class OneRouterLinkCountersTest(TestCase):
         self.assertEqual(test.receiver_stats['undeliveredCount'], self.CREDIT)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
                                              _LINK_STATISTIC_KEYS
-                                             - set(['deliveryCount',
-                                                    'undeliveredCount',
-                                                    'acceptedCount'])))
+                                             - {'deliveryCount',
+                                                'undeliveredCount',
+                                                'acceptedCount'}))
 
         # expect that one message will be delivered, then link capacity
         # messages will be enqueued internally
@@ -1174,9 +1173,9 @@ class OneRouterLinkCountersTest(TestCase):
         self.assertEqual(test.sender_stats['acceptedCount'], 1)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
                                              _LINK_STATISTIC_KEYS
-                                             - set(['deliveryCount',
-                                                    'unsettledCount',
-                                                    'acceptedCount'])))
+                                             - {'deliveryCount',
+                                                'unsettledCount',
+                                                'acceptedCount'}))
 
     def test_01_presettled(self):
         self.verify_presettled_count()
@@ -1248,18 +1247,18 @@ class RouteContainerIngressCount(TestCase):
         self.assertEqual(test.sender_stats['deliveryCount'], 10)
         self.assertEqual(test.sender_stats['acceptedCount'], 10)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
         self.assertEqual(test.sender1_stats['deliveryCount'], 10)
         self.assertEqual(test.sender1_stats['acceptedCount'], 10)
         self.assertTrue(_link_stats_are_zero(test.sender1_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
         self.assertEqual(test.receiver_stats['deliveryCount'], 20)
         self.assertEqual(test.receiver_stats['acceptedCount'], 20)
         self.assertTrue(_link_stats_are_zero(test.receiver_stats,
-                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
-                                                                         'acceptedCount'])))
+                                             _LINK_STATISTIC_KEYS - {'deliveryCount',
+                                                                     'acceptedCount'}))
 
 
 class IngressEgressTwoRouterTest(MessagingHandler):

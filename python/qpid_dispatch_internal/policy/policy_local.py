@@ -20,18 +20,8 @@
 """
 
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import json
 from .policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr, is_ipv6_enabled
-from ..compat import PY_STRING_TYPE
-from ..compat import PY_TEXT_TYPE
-from ..compat import dict_iteritems
-from ..compat import dict_keys
-
 
 """
 Entity implementing the business logic of user connection/access policy.
@@ -216,7 +206,7 @@ class PolicyCompiler(object):
         if isinstance(val, list):
             # ['abc', 'def', 'mytarget']
             pass
-        elif isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)):
+        elif isinstance(val, str):
             val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
         else:
             errors.append(
@@ -275,7 +265,7 @@ class PolicyCompiler(object):
         user_targets = False
         user_src_pattern = False
         user_tgt_pattern = False
-        for key, val in dict_iteritems(policy_in):
+        for key, val in policy_in.items():
             if key not in self.allowed_settings_options:
                 warnings.append("Policy vhost '%s' user group '%s' option '%s' is ignored." %
                                 (vhostname, usergroup, key))
@@ -315,7 +305,7 @@ class PolicyCompiler(object):
                          PolicyKeys.KW_ALLOW_DYNAMIC_LINK_ROUTES,
                          PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE
                          ]:
-                if isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)) and val.lower() in ['true', 'false']:
+                if isinstance(val, str) and val.lower() in ['true', 'false']:
                     val = True if val == 'true' else False
                 if not type(val) is bool:
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal boolean value '%s'." %
@@ -333,7 +323,7 @@ class PolicyCompiler(object):
                 if isinstance(val, list):
                     # ['abc', 'def', 'mytarget']
                     pass
-                elif isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)):
+                elif isinstance(val, str):
                     # 'abc, def, mytarget'
                     val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                 else:
@@ -436,7 +426,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_VHOST_ALIASES] = []
 
         # validate the options
-        for key, val in dict_iteritems(policy_in):
+        for key, val in policy_in.items():
             if key not in self.allowed_ruleset_options:
                 warnings.append("Policy vhost '%s' option '%s' is ignored." %
                                 (name, key))
@@ -485,7 +475,7 @@ class PolicyCompiler(object):
                     errors.append("Policy vhost '%s' option '%s' must be of type 'dict' but is '%s'" %
                                   (name, key, type(val)))
                     return False
-                for skey, sval in dict_iteritems(val):
+                for skey, sval in val.items():
                     newsettings = {}
                     if not self.compile_app_settings(name, skey, sval, newsettings, warnings, errors):
                         return False
@@ -496,7 +486,7 @@ class PolicyCompiler(object):
         # Create user-to-group map for looking up user's group
         policy_out[PolicyKeys.RULESET_U2G_MAP] = {}
         if PolicyKeys.KW_GROUPS in policy_out:
-            for group, groupsettings in dict_iteritems(policy_out[PolicyKeys.KW_GROUPS]):
+            for group, groupsettings in policy_out[PolicyKeys.KW_GROUPS].items():
                 if PolicyKeys.KW_USERS in groupsettings:
                     users = [x.strip(' ') for x in groupsettings[PolicyKeys.KW_USERS].split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                     for user in users:
@@ -758,7 +748,7 @@ class PolicyLocal(object):
         """
         Return a list of vhost names in this policy
         """
-        return dict_keys(self.rulesetdb)
+        return list(self.rulesetdb.keys())
 
     def set_default_vhost(self, name):
         """

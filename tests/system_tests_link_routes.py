@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from time import sleep, time
 from threading import Event
 from subprocess import PIPE, STDOUT
@@ -321,8 +316,8 @@ class LinkRouteTest(TestCase):
         # Connect to the router acting like the broker (QDR.A) and check the deliveriesIngress and deliveriesEgress
         local_node = Node.connect(self.routers[0].addresses[0], timeout=TIMEOUT)
 
-        self.assertEqual(u'QDR.A', local_node.query(type='org.apache.qpid.dispatch.router',
-                                                    attribute_names=[u'id']).results[0][0])
+        self.assertEqual('QDR.A', local_node.query(type='org.apache.qpid.dispatch.router',
+                                                   attribute_names=['id']).results[0][0])
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
                                             name='M0org.apache.dev').deliveriesEgress)
@@ -1002,7 +997,7 @@ class DynamicSourceTest(MessagingHandler):
         if event.connection == self.conn_route:
             self.conn_normal = event.container.connect(self.normal_addr)
         elif event.connection == self.conn_normal:
-            self.receiver = event.container.create_receiver(self.conn_normal, None, dynamic=True, options=DynamicNodeProperties({"x-opt-qd.address": u"pulp.task.abc"}))
+            self.receiver = event.container.create_receiver(self.conn_normal, None, dynamic=True, options=DynamicNodeProperties({"x-opt-qd.address": "pulp.task.abc"}))
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
@@ -1059,7 +1054,7 @@ class DynamicTargetTest(MessagingHandler):
         if event.connection == self.conn_route:
             self.conn_normal = event.container.connect(self.normal_addr)
         elif event.connection == self.conn_normal:
-            self.sender = event.container.create_sender(self.conn_normal, None, options=[DynamicTarget(), DynamicNodeProperties({"x-opt-qd.address": u"pulp.task.abc"})])
+            self.sender = event.container.create_sender(self.conn_normal, None, options=[DynamicTarget(), DynamicNodeProperties({"x-opt-qd.address": "pulp.task.abc"})])
 
     def on_link_opened(self, event):
         if event.sender == self.sender:
@@ -1977,8 +1972,7 @@ class ConnectionLinkRouteTest(TestCase):
 
     def _get_address(self, mgmt, addr):
         a_type = 'org.apache.qpid.dispatch.router.address'
-        return list(filter(lambda a: a['name'].endswith(addr),
-                           mgmt.query(a_type)))
+        return [a for a in mgmt.query(a_type) if a['name'].endswith(addr)]
 
     def test_config_file_bad(self):
         # verify that specifying a connection link route in the configuration

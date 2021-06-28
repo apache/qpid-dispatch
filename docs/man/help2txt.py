@@ -29,12 +29,6 @@ import re
 import subprocess
 import sys
 
-IS_PY2 = sys.version_info[0] == 2
-if IS_PY2:
-    PY_STRING_TYPE = basestring  # noqa: F821
-else:
-    PY_STRING_TYPE = str
-
 
 def help2txt(help_out):
     VALUE = r"(?:[\w-]+|<[^>]+>)"
@@ -46,7 +40,7 @@ def help2txt(help_out):
     SUBHEAD = r"^((?: +\w+)*):$"
 
     # check_output returns binary in py3
-    if not isinstance(help_out, PY_STRING_TYPE):
+    if not isinstance(help_out, str):
         help_out = help_out.decode()
 
     options = re.search("^Options:$", help_out, re.IGNORECASE | re.MULTILINE)

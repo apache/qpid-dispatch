@@ -19,33 +19,18 @@
 # under the License.
 #
 
-# Common data storage and utilities
+"""Common data storage and utilities"""
 
 import sys
 
 import nicknamer
 
-IS_PY2 = sys.version_info[0] == 2
 
-if IS_PY2:
-    def dict_iteritems(d):
-        return d.iteritems()
-
-    def dict_iterkeys(d):
-        return d.iterkeys()
-else:
-    def dict_iteritems(d):
-        return iter(d.items())
-
-    def dict_iterkeys(d):
-        return iter(d.keys())
-
-
-class Common():
+class Common:
 
     # analysis_level_ludicrous
-    # Adverbl tries too hard to cross reference data
-    # Use these switchs to turn some of the biggest offenders off
+    # Adverb tries too hard to cross reference data
+    # Use these switches to turn some of the biggest offenders off
     per_link_detail = True
     message_progress_tables = False
 

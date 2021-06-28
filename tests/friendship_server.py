@@ -55,7 +55,7 @@ class FriendShipService(FriendshipServicer):
 
     def CommonFriendsCount(self, request_iterator, context):
         res = CommonFriendsResult()
-        fs = set([p.email for p in self.people])
+        fs = {p.email for p in self.people}
         for pe in request_iterator:
             common_friends = [p.email for p in self.people if pe.email in p.friends]
             fs.intersection_update(common_friends)

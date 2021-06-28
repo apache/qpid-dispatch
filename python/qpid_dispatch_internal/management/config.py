@@ -20,12 +20,6 @@
 """
 Configuration file parsing
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-
 import json
 import re
 import os
@@ -34,10 +28,6 @@ from qpid_dispatch.management.entity import camelcase
 
 from ..dispatch import QdDll
 from .qdrouter import QdSchema
-from qpid_dispatch_internal.compat import dict_itervalues
-from qpid_dispatch_internal.compat import dict_iteritems
-from qpid_dispatch_internal.compat import PY_STRING_TYPE
-from qpid_dispatch_internal.compat import PY_TEXT_TYPE
 
 try:
     from ..dispatch import LogAdapter, LOG_WARNING, LOG_ERROR
@@ -52,7 +42,7 @@ class Config(object):
 
     def __init__(self, filename=None, schema=QdSchema(), raw_json=False):
         self.schema = schema
-        self.config_types = [et for et in dict_itervalues(schema.entity_types)
+        self.config_types = [et for et in schema.entity_types.values()
                              if schema.is_configuration(et)]
         self._log_adapter = LogAdapter("AGENT") if _log_imported else None
 
@@ -74,7 +64,7 @@ class Config(object):
     def transform_sections(sections):
         for s in sections:
             s[0] = camelcase(s[0])
-            s[1] = dict((camelcase(k), v) for k, v in dict_iteritems(s[1]))
+            s[1] = dict((camelcase(k), v) for k, v in s[1].items())
             if s[0] == "address":
                 s[0] = "router.config.address"
             if s[0] == "linkRoute":
@@ -236,7 +226,7 @@ class Config(object):
         @param source: A file name, open file object or iterable list of lines
         @param raw_json: Source is pure json not needing conf-style substitutions
         """
-        if isinstance(source, (PY_STRING_TYPE, PY_TEXT_TYPE)):
+        if isinstance(source, str):
             raw_json |= source.endswith(".json")
             with open(source) as f:
                 self.load(f, raw_json)

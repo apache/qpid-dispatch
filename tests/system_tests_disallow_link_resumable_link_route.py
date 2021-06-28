@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from time import sleep
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
@@ -98,7 +93,7 @@ class LinkRouteTest(TestCase):
         for i in range(wLoops):
             try:
                 results = local_node.query(type='org.apache.qpid.dispatch.router.address',
-                                           attribute_names=[u'name', u'containerCount']
+                                           attribute_names=['name', 'containerCount']
                                            ).results
                 for res in results:
                     if res[0] == 'Corg.apache':

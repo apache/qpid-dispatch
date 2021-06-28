@@ -20,11 +20,6 @@
 """
 Mock implementation of the dispatch C extension module for use in unit tests.
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from qpid_dispatch_internal import dispatch as real_dispatch
 from . import dispatch as mock_dispatch
 

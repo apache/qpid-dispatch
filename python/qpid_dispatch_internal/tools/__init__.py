@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from .display import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, Sortable, BodyFormat, PlainNum
 from .display import NumKMG
 

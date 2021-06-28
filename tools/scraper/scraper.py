@@ -259,7 +259,7 @@ def main_except(argv):
     # Generate javascript
     #
     # output the frame show/hide functions into the header
-    for conn_id, plfs in common.dict_iteritems(comn.conn_to_frame_map):
+    for conn_id, plfs in comn.conn_to_frame_map.items():
         print("function show_%s() {" % conn_id)
         for plf in plfs:
             print("  javascript:show_node(\'%s\');" % plf.fid)
@@ -295,15 +295,15 @@ def main_except(argv):
 
     # Select/Deselect/Toggle All Connections functions
     print("function select_all() {")
-    for conn_id, frames_ids in common.dict_iteritems(comn.conn_to_frame_map):
+    for conn_id, frames_ids in comn.conn_to_frame_map.items():
         print("  javascript:select_cb_sel_%s();" % conn_id)
     print("}")
     print("function deselect_all() {")
-    for conn_id, frames_ids in common.dict_iteritems(comn.conn_to_frame_map):
+    for conn_id, frames_ids in comn.conn_to_frame_map.items():
         print("  javascript:deselect_cb_sel_%s();" % conn_id)
     print("}")
     print("function toggle_all() {")
-    for conn_id, frames_ids in common.dict_iteritems(comn.conn_to_frame_map):
+    for conn_id, frames_ids in comn.conn_to_frame_map.items():
         print("  javascript:toggle_cb_sel_%s();" % conn_id)
     print("}")
 
@@ -672,7 +672,7 @@ def main_except(argv):
               "style=\"display:none; font-weight: normal; margin-bottom: 2px; margin-left: 10px\" "
               "id=\"%s\">" %
               detailname)
-        for key in sorted(common.dict_iterkeys(l_dict)):
+        for key in sorted(l_dict.keys()):
             val = l_dict[key]
             print("%s : %s <br>" % (key, common.html_escape(str(val))))
         if plf.data.name == "transfer":
@@ -867,7 +867,7 @@ def main_except(argv):
                     print("<td>%s</td>" % val)
                 # track costs published when there is no column to put the number
                 tgts = costs_pub[c.router.router.container_name]
-                for k, v in common.dict_iteritems(l_dict):
+                for k, v in l_dict.items():
                     if k not in comn.router_ids:
                         if k not in tgts:
                             tgts.append(k)  # this cost went unreported
@@ -904,7 +904,7 @@ def main_except(argv):
 
     # maybe display cost declarations that were not displayed
     costs_clean = True
-    for k, v in common.dict_iteritems(costs_pub):
+    for k, v in costs_pub.items():
         if len(v) > 0:
             costs_clean = False
             break
@@ -912,7 +912,7 @@ def main_except(argv):
         print("<h4>Router costs declared in logs but not displayed in Link state cost table</h4>")
         print("<table>")
         print("<tr><th>Router</th><Peers whose logs are absent</th></tr>")
-        for k, v in common.dict_iteritems(costs_pub):
+        for k, v in costs_pub.items():
             if len(v) > 0:
                 print("<tr><td>%s</td><td>%s</td></tr>" % (k, str(v)))
         print("</table>")

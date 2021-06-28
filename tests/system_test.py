@@ -28,11 +28,6 @@ Features:
 - Sundry other tools.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import errno
 import sys
 import time
@@ -49,10 +44,7 @@ from copy import copy
 from datetime import datetime
 from subprocess import PIPE, STDOUT
 
-try:
-    import queue as Queue  # 3.x
-except ImportError:
-    import Queue as Queue  # 2.7
+import queue as Queue
 from threading import Thread
 from threading import Event
 import json
@@ -66,7 +58,6 @@ from proton.handlers import MessagingHandler
 from proton.reactor import AtLeastOnce, Container
 from proton.reactor import AtMostOnce
 from qpid_dispatch.management.client import Node
-from qpid_dispatch_internal.compat import dict_iteritems
 
 
 # Optional modules
@@ -227,14 +218,14 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
 def wait_ports(ports, **retry_kwargs):
     """Wait up to timeout for all ports (on host) to be connectable.
     Takes same keyword arguments as retry to control the timeout"""
-    for port, protocol_family in dict_iteritems(ports):
+    for port, protocol_family in ports.items():
         wait_port(port=port, protocol_family=protocol_family, **retry_kwargs)
 
 
 def message(**properties):
     """Convenience to create a proton.Message with properties set"""
     m = Message()
-    for name, value in dict_iteritems(properties):
+    for name, value in properties.items():
         getattr(m, name)        # Raise exception if not a valid message attribute.
         setattr(m, name, value)
     return m
@@ -441,7 +432,7 @@ class Qdrouterd(Process):
             """Fill in default values in gconfiguration"""
             for name, props in self:
                 if name in Qdrouterd.Config.DEFAULTS:
-                    for n, p in dict_iteritems(Qdrouterd.Config.DEFAULTS[name]):
+                    for n, p in Qdrouterd.Config.DEFAULTS[name].items():
                         props.setdefault(n, p)
 
         def __str__(self):
@@ -469,7 +460,7 @@ class Qdrouterd(Process):
                 return "".join(["%s%s: %s\n" % (tabs(level),
                                                 k,
                                                 value(v, level + 1))
-                                for k, v in dict_iteritems(e)])
+                                for k, v in e.items()])
 
             self.defaults()
             # top level list of tuples ('section-name', dict)
@@ -682,7 +673,7 @@ class Qdrouterd(Process):
             # endswith check is because of M0/L/R prefixes
             addrs = self.management.query(
                 type='org.apache.qpid.dispatch.router.address',
-                attribute_names=[u'name', u'subscriberCount', u'remoteCount', u'containerCount']).get_entities()
+                attribute_names=['name', 'subscriberCount', 'remoteCount', 'containerCount']).get_entities()
 
             addrs = [a for a in addrs if a['name'].endswith(address)]
 
@@ -700,8 +691,7 @@ class Qdrouterd(Process):
 
         def check():
             addrs = self.management.query(a_type).get_dicts()
-            rc = list(filter(lambda a: a['name'].find(address) != -1,
-                             addrs))
+            rc = [a for a in addrs if address in a['name']]
             count = 0
             for a in rc:
                 count += a['subscriberCount']

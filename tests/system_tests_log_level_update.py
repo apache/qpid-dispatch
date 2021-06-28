@@ -164,7 +164,7 @@ class LogModuleProtocolTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
 
@@ -192,7 +192,7 @@ class LogModuleProtocolTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
 
@@ -211,7 +211,7 @@ class LogModuleProtocolTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
 
@@ -264,8 +264,8 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
         results = qd_manager.query("org.apache.qpid.dispatch.connection")
         conn_id = None
         for result in results:
-            if result[u'role'] == u'inter-router':
-                conn_id = result[u'identity']
+            if result['role'] == 'inter-router':
+                conn_id = result['identity']
 
         # Turn on trace logging for the inter-router connection
         qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "true"}, identity=conn_id)
@@ -280,7 +280,7 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
         logs = qd_manager.get_log()
         mau_found = False
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@transfer" in log[2] and TEST_ADDR_1 in log[2] and "MAU" in log[2]:
                     mau_found = True
                     break
@@ -300,7 +300,7 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
         logs = qd_manager.get_log()
         mau_found = False
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@transfer" in log[2] and TEST_ADDR_2 in log[2] and "MAU" in log[2]:
                     mau_found = True
                     break
@@ -361,8 +361,8 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         results = qd_manager.query("org.apache.qpid.dispatch.connection")
         conn_id = None
         for result in results:
-            if result[u'container'] == CONTAINER_ID_1:
-                conn_id = result[u'identity']
+            if result['container'] == CONTAINER_ID_1:
+                conn_id = result['identity']
 
         # Turn on trace logging for connection with identity conn_id
         qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "true"}, identity=conn_id)
@@ -377,7 +377,7 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         num_attaches_2 = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR_1 in log[2]:
                     num_attaches_1 += 1
                 elif "@attach" in log[2] and TEST_ADDR_2 in log[2]:
@@ -401,7 +401,7 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         logs = qd_manager.get_log()
         num_detaches = 0
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@detach" in log[2]:
                     num_detaches += 1
         self.assertTrue(num_detaches == 0)
@@ -456,7 +456,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         # num_attaches for address TEST_ADDR must be 4, two attaches to/from sender and receiver
@@ -476,7 +476,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         # There should be no attach frames with address TEST_ADDR
@@ -492,7 +492,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         # There should be 4 attach frames with address TEST_ADDR
@@ -507,7 +507,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
 
@@ -534,11 +534,11 @@ class LogLevelUpdateTest(TestCase):
 
         self.create_sender_receiver(TEST_ADDR, hello_world_5,
                                     blocking_connection)
-        # Count the nimber of attaches for address TEST_ADDR, there should be 4
+        # Count the number of attaches for address TEST_ADDR, there should be 4
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         # There should be 4 attach frames with address TEST_ADDR
@@ -550,11 +550,11 @@ class LogLevelUpdateTest(TestCase):
 
         self.create_sender_receiver(TEST_ADDR, hello_world_6, blocking_connection)
 
-        # Count the nimber of attaches for address TEST_ADDR, there should be 0
+        # Count the number of attaches for address TEST_ADDR, there should be 0
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         self.assertTrue(num_attaches == 0)
@@ -566,7 +566,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'PROTOCOL' in log[0]:
+            if 'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
 
@@ -613,7 +613,7 @@ class RouterCoreModuleLogTest(TestCase):
 
         router_core_found = False
         for log in logs:
-            if u'ROUTER_CORE' in log[0]:
+            if 'ROUTER_CORE' in log[0]:
                 router_core_found = True
                 break
 

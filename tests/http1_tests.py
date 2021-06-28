@@ -21,13 +21,9 @@ import uuid
 from threading import Thread
 
 from time import sleep
-try:
-    from http.server import HTTPServer, BaseHTTPRequestHandler
-    from http.client import HTTPConnection
-    from http.client import HTTPException
-except ImportError:
-    from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-    from httplib import HTTPConnection, HTTPException
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.client import HTTPConnection
+from http.client import HTTPException
 
 from system_test import TestCase, TIMEOUT, Logger, Qdrouterd
 TEST_SERVER_ERROR = "TestServer failed to start due to port %s already in use issue"
@@ -382,7 +378,7 @@ class ResponseValidator(object):
                                 % (key, value, rsp.getheader(key)))
 
         body = rsp.read()
-        if (self.expect_body and self.expect_body != body):
+        if self.expect_body and self.expect_body != body:
             raise Exception("Bad response body expected %s got %s"
                             % (self.expect_body, body))
         return body

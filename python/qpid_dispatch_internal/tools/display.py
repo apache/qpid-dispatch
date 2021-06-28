@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from time import strftime, gmtime
 from qpid_dispatch_internal.compat import UNICODE
 
@@ -179,8 +174,8 @@ class BodyFormat:
 
 class CSV_CONFIG:
     """ """
-    SEPERATOR = u','
-    STRING_QUOTE = u'"'
+    SEPERATOR = ','
+    STRING_QUOTE = '"'
 
 
 class Display:

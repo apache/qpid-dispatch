@@ -17,12 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
-
 import json
 from threading import Timer
 from proton import Message
@@ -34,7 +28,7 @@ from subprocess import PIPE, STDOUT
 from qpid_dispatch.management.client import Node
 from system_test import QdManager
 
-CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
+CONNECTION_PROPERTIES = {'connection': 'properties', 'int_property': 6451}
 
 
 class AutoLinkDetachAfterAttachTest(MessagingHandler):

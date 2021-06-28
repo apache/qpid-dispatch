@@ -17,11 +17,6 @@
 # under the License
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import json
 import os
 import sys
@@ -37,7 +32,7 @@ from system_test import QdManager
 
 DUMMY = "org.apache.qpid.dispatch.dummy"
 
-CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
+CONNECTION_PROPERTIES_UNICODE_STRING = {'connection': 'properties', 'int_property': 6451}
 
 TOTAL_ENTITIES = 35   # for tests that check the total # of entities
 
@@ -158,13 +153,13 @@ class QdmanageTest(TestCase):
     def test_query(self):
 
         def long_type(name):
-            return u'org.apache.qpid.dispatch.' + name
+            return 'org.apache.qpid.dispatch.' + name
 
         types = ['listener', 'log', 'router']
         long_types = [long_type(name) for name in types]
 
         qall = json.loads(self.run_qdmanage('query'))
-        qall_types = set([e['type'] for e in qall])
+        qall_types = {e['type'] for e in qall}
         for t in long_types:
             self.assertIn(t, qall_types)
 
@@ -211,11 +206,11 @@ class QdmanageTest(TestCase):
     def test_get_operations(self):
         out = json.loads(self.run_qdmanage("get-operations"))
         self.assertEqual(len(out), TOTAL_ENTITIES)
-        self.assertEqual(out['org.apache.qpid.dispatch.sslProfile'], [u'CREATE', u'DELETE', u'READ'])
+        self.assertEqual(out['org.apache.qpid.dispatch.sslProfile'], ['CREATE', 'DELETE', 'READ'])
 
     def test_get_types_with_ssl_profile_type(self):
         out = json.loads(self.run_qdmanage("get-types --type=org.apache.qpid.dispatch.sslProfile"))
-        self.assertEqual(out['org.apache.qpid.dispatch.sslProfile'], [u'org.apache.qpid.dispatch.configurationEntity', u'org.apache.qpid.dispatch.entity'])
+        self.assertEqual(out['org.apache.qpid.dispatch.sslProfile'], ['org.apache.qpid.dispatch.configurationEntity', 'org.apache.qpid.dispatch.entity'])
 
     def test_get_ssl_profile_type_attributes(self):
         out = json.loads(self.run_qdmanage('get-attributes --type=org.apache.qpid.dispatch.sslProfile'))
@@ -241,7 +236,7 @@ class QdmanageTest(TestCase):
         logs = json.loads(self.run_qdmanage("get-log limit=20"))
         found = False
         for log in logs:
-            if u'get-log' in log[2] and ['AGENT', 'debug'] == log[0:2]:
+            if 'get-log' in log[2] and ['AGENT', 'debug'] == log[0:2]:
                 found = True
         self.assertTrue(found)
 

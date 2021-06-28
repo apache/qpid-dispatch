@@ -17,11 +17,6 @@
 # under the License.
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 import json
 
 from proton.handlers import MessagingHandler
@@ -320,7 +315,7 @@ class OpenPropertiesBadConfigTest(TestCase):
                 "Properties must be a map"
             ),
             (
-                {u"nonascii\u2588": 1},
+                {"nonascii\u2588": 1},
                 "Property keys must be ASCII encoded"
             ),
             (

@@ -300,10 +300,10 @@ class LogFile:
         smap = defaultdict(list)
         conns_by_size = []
         # create size map. index is size, list holds all connections of that many transfers
-        for k, v in dict_iteritems(self.connections):
+        for k, v in self.connections.items():
             smap[str(sortfunc1(v))].append(v)
         # create a sorted list of sizes in sizemap
-        sl = list(dict_iterkeys(smap))
+        sl = list(smap.keys())
         sli = [int(k) for k in sl]
         slist = sorted(sli, reverse=True)
         # create grand list of all connections
@@ -321,7 +321,7 @@ class LogFile:
         self.conns_by_size_loglines = self.sort_sizes(lambda x: len(x.lines), lambda x: x.transfers)
 
         # compute log_n and file name facts for all connections
-        for k, v in dict_iteritems(self.connections):
+        for k, v in self.connections.items():
             v.log_n_lines = self.log_of(len(v.lines))
             v.generate_paths()
 
@@ -478,7 +478,7 @@ function show_node(node)
             os.makedirs(ndir)
             odirs.append(ndir)
 
-        for k, c in dict_iteritems(self.connections):
+        for k, c in self.connections.items():
             cdir = odirs[self.log_of(len(c.lines))]
             opath = os.path.join(cdir, (c.disp_name() + ".log"))
             with open(opath, 'w') as f:
@@ -548,7 +548,7 @@ function show_node(node)
         #  observe source and target addresses regardless of the role of the link
         # TODO speed this up a little
         nn2 = defaultdict(list)
-        for k, conn in dict_iteritems(self.connections):
+        for k, conn in self.connections.items():
             for aline in conn.attaches:
                 try:
                     pl = parsed_attach(conn.instance, aline, k)
@@ -622,24 +622,6 @@ function show_node(node)
             print("</table>")
             print("</div>")
             n += 1
-
-
-# py 2-3 compat
-
-IS_PY2 = sys.version_info[0] == 2
-
-if IS_PY2:
-    def dict_iteritems(d):
-        return d.iteritems()
-
-    def dict_iterkeys(d):
-        return d.iterkeys()
-else:
-    def dict_iteritems(d):
-        return iter(d.items())
-
-    def dict_iterkeys(d):
-        return iter(d.keys())
 
 
 #
