@@ -22,10 +22,7 @@
 import sys
 import json
 import re
-try:
-    from collections.abc import Mapping, Sequence
-except ImportError:
-    from collections import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 import qpid_dispatch_site  # noqa: F401 # imported for side-effects (inserts to sys.path)
 from qpid_dispatch.management.client import Node
