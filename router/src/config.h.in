@@ -1,3 +1,5 @@
+#ifndef __router_src_config_h_in__
+#define __router_src_config_h_in__
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,3 +23,4 @@
 #cmakedefine DEFAULT_CONFIG_PATH          "${DEFAULT_CONFIG_PATH}"
 #cmakedefine QPID_DISPATCH_HOME_INSTALLED "${QPID_DISPATCH_HOME_INSTALLED}"
 
+#endif // __router_src_config_h_in__

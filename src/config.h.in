@@ -1,3 +1,5 @@
+#ifndef __src_config_h_in__
+#define __src_config_h_in__
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,3 +23,4 @@
 #define QPID_CONSOLE_STAND_ALONE_INSTALL_DIR "${CONSOLE_STAND_ALONE_INSTALL_DIR}"
 #cmakedefine01 QD_MEMORY_STATS
 #cmakedefine01 QD_HAVE_GETRLIMIT
+#endif // __src_config_h_in__
