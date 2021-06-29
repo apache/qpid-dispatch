@@ -321,6 +321,9 @@ def main_except(argv):
     p.add_argument('--verbose',
                    action='store_true',
                    help='Show suppressed mutex data: disposition locks')
+    p.add_argument('--core-thread-only',
+                   action='store_true',
+                   help='Tables show core thread activity only')
     p.add_argument("--include-start-stop",
                    action='store_true',
                    help='Normally the mutex activity during router server startup and shutdown is excluded. This switch includes it.')
@@ -389,6 +392,9 @@ def main_except(argv):
                         # always add to kept structure
                         core_thread_core_idle.add(acquire, use)
                         do_this = args.include_core_idle
+                else:
+                    if args.core_thread_only:
+                        do_this = False
                 if do_this:
                     if tid not in thread_data:
                         thread_data[tid] = StatsStorage(common, "Thread", title, len(thread_data))
@@ -404,7 +410,7 @@ def main_except(argv):
                     common.deliveries_hidden += 1
 
                 # Collect interesting lines
-                if is_interesting(common, acquire, use, lock_name, is_core, args.include_core_idle):
+                if do_this and is_interesting(common, acquire, use, lock_name, is_core, args.include_core_idle):
                     interesting_lines.append(fields)
 
     print()
@@ -414,6 +420,7 @@ def main_except(argv):
 
     print("CLI infile  : %s" % os.path.abspath(args.infile))
     print("CLI logfile : %s" % os.path.abspath(args.logfile))
+    print("CLI selects %s" % ("CORE thread only" if args.core_thread_only else "all threads"))
     print()
 
     start_ticks = int(common.collection_times_first)
