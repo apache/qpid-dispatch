@@ -1098,7 +1098,7 @@ static qd_tcp_bridge_t *qd_bridge_config()
     if (!bc) return 0;
     ZERO(bc);
     sys_atomic_init(&bc->ref_count, 1);
-    bc->stats_lock = sys_mutex();
+    bc->stats_lock = sys_mutex("bridge_stats_lock");
     return bc;
 }
 
