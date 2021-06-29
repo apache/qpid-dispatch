@@ -288,7 +288,7 @@ def process_logfile(common, filename, container_name):
                     # Remaining instances must match to prevent multiple router
                     # runs piling differing values into the same router log file.
                     core_tid, base_dt = process_core_line(common, line)
-                    delta = timedelta(microseconds=100)
+                    delta = timedelta(microseconds=500)
                     assert base_dt < common.BASE_DATETIME + delta
                     assert base_dt > common.BASE_DATETIME - delta
             elif common.SERVER_START_CONTENT in line:
