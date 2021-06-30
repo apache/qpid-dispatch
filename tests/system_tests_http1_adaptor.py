@@ -128,7 +128,7 @@ class Http1AdaptorManagementTest(TestCase):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(("", self.http_server_port))
-        s.setblocking(1)
+        s.setblocking(True)
         s.settimeout(3)  # reconnect attempts every 2.5 seconds
         s.listen(1)
         with self.assertRaises(socket.timeout):

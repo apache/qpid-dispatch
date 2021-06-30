@@ -16,8 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+import unittest
 
-from system_test import TestCase, Qdrouterd, SkipIfNeeded, TIMEOUT
+from system_test import TestCase, Qdrouterd, TIMEOUT
 try:
     import grpc
     import friendship_server as fs
@@ -151,7 +152,7 @@ class GrpcServiceMethodsTest(TestCase):
             pe.email = friend
             yield pe
 
-    @SkipIfNeeded(skip_test(), "grpcio is needed to run grpc tests")
+    @unittest.skipIf(skip_test(), "grpcio is needed to run grpc tests")
     def test_grpc_01_unary(self):
         """
         Validates unary request and response message
@@ -163,7 +164,7 @@ class GrpcServiceMethodsTest(TestCase):
             p = self.create_person(name, mail)
             assert p is not None
 
-    @SkipIfNeeded(skip_test(), "grpcio is needed to run grpc tests")
+    @unittest.skipIf(skip_test(), "grpcio is needed to run grpc tests")
     def test_grpc_02_bidirectional_stream(self):
         """
         Validates bidirectional streaming request and response messages
@@ -174,7 +175,7 @@ class GrpcServiceMethodsTest(TestCase):
             assert res.friend2 is not None
             assert not res.error
 
-    @SkipIfNeeded(skip_test(), "grpcio is needed to run grpc tests")
+    @unittest.skipIf(skip_test(), "grpcio is needed to run grpc tests")
     def test_grpc_03_server_stream(self):
         """
         Validates server streaming response messages
@@ -189,7 +190,7 @@ class GrpcServiceMethodsTest(TestCase):
             assert(all(f in self.EXP_FRIENDS[key] for f in friends))
             assert(all(f in friends for f in self.EXP_FRIENDS[key]))
 
-    @SkipIfNeeded(skip_test(), "grpcio is needed to run grpc tests")
+    @unittest.skipIf(skip_test(), "grpcio is needed to run grpc tests")
     def test_grpc_04_client_stream(self):
         """
         Validates client streaming request messages

@@ -19,6 +19,8 @@
 
 language: c
 cache: ccache
+os: linux
+dist: xenial
 jobs:
   fast_finish: true
   allow_failures:
@@ -65,7 +67,6 @@ jobs:
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     os: linux
     dist: focal
-    compiler: clang
     before_install:
     # https://travis-ci.community/t/clang-10-was-recently-broken-on-linux-unmet-dependencies-for-clang-10-clang-tidy-10-valgrind/11527
     - sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2
@@ -118,8 +119,6 @@ jobs:
     os: linux
     dist: focal
     compiler: clang
-    python:
-      - "3.9"
     before_install:
       - sudo apt-get install clang-11 llvm-11-dev
       # Install and use the latest Node.js LTS version

@@ -18,7 +18,7 @@
 #
 
 """
-AMQP Managment Entity
+AMQP Management Entity
 """
 
 import itertools

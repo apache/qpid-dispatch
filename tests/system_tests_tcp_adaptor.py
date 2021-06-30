@@ -28,7 +28,6 @@ from system_test import Logger
 from system_test import main_module
 from system_test import Process
 from system_test import Qdrouterd
-from system_test import SkipIfNeeded
 from system_test import TestCase
 from system_test import TIMEOUT
 from system_test import unittest
@@ -770,7 +769,7 @@ class TcpAdaptor(TestCase):
     #
     # Tests run by ctest
     #
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_01_tcp_basic_connectivity(self):
         """
         Echo a series of 1-byte messages, one at a time, to prove general connectivity.
@@ -790,7 +789,7 @@ class TcpAdaptor(TestCase):
                 self.logger.log("TCP_TEST test_01_tcp_basic_connectivity Stop %s SUCCESS" % name)
 
     # larger messages
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_10_tcp_INTA_INTA_100(self):
         name = "test_10_tcp_INTA_INTA_100"
         self.logger.log("TCP_TEST Start %s" % name)
@@ -802,7 +801,7 @@ class TcpAdaptor(TestCase):
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_11_tcp_INTA_INTA_1000(self):
         name = "test_11_tcp_INTA_INTA_1000"
         self.logger.log("TCP_TEST Start %s" % name)
@@ -814,7 +813,7 @@ class TcpAdaptor(TestCase):
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_12_tcp_INTA_INTA_500000(self):
         name = "test_12_tcp_INTA_INTA_500000"
         self.logger.log("TCP_TEST Start %s" % name)
@@ -826,7 +825,7 @@ class TcpAdaptor(TestCase):
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_13_tcp_EA1_EC2_500000(self):
         name = "test_12_tcp_EA1_EC2_500000"
         self.logger.log("TCP_TEST Start %s" % name)
@@ -837,7 +836,7 @@ class TcpAdaptor(TestCase):
             sys.stdout.flush()
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
 
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_20_tcp_connect_disconnect(self):
         name = "test_20_tcp_connect_disconnect"
         self.logger.log("TCP_TEST Start %s" % name)
@@ -851,7 +850,7 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     # concurrent messages
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_50_concurrent(self):
         name = "test_50_concurrent_AtoA_BtoB"
         self.logger.log("TCP_TEST Start %s" % name)
@@ -865,7 +864,7 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     # Q2 holdoff
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_60_q2_holdoff(self):
         # for now, Q2 is disabled to avoid stalling TCP backpressure
         self.skipTest("Q2 is disabled on TCP adaptor")
@@ -1010,7 +1009,7 @@ class TcpAdaptorManagementTest(TestCase):
         # The router and the echo server are running at this point.
         assert cls.echo_server.is_running
 
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_01_mgmt(self):
         """
         Create and delete TCP connectors and listeners

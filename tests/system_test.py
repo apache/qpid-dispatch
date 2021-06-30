@@ -33,7 +33,6 @@ import sys
 import time
 
 import __main__
-import functools
 import os
 import random
 import re
@@ -74,9 +73,6 @@ try:
 except ImportError as err:
     qm = None  # pylint: disable=invalid-name
     MISSING_MODULES.append(str(err))
-
-
-is_python2 = sys.version_info[0] == 2
 
 
 def find_exe(program):
@@ -300,39 +296,6 @@ class Process(subprocess.Popen):
             status = self.wait()
         if self.expect is not None and self.expect != status:
             error("exit code %s, expected %s" % (status, self.expect))
-
-    def wait(self, timeout=None):
-        """
-        Add support for a timeout when using Python 2
-        """
-        if timeout is None:
-            return super(Process, self).wait()
-
-        if is_python2:
-            start = time.time()
-            while True:
-                rc = super(Process, self).poll()
-                if rc is not None:
-                    return rc
-                if time.time() - start >= timeout:
-                    raise Exception("Process did not terminate")
-                time.sleep(0.1)
-        else:
-            return super(Process, self).wait(timeout=timeout)
-
-    def communicate(self, input=None, timeout=None):
-        """
-        Add support for a timeout when using Python 2
-        """
-        if timeout is None:
-            return super(Process, self).communicate(input=input)
-
-        if is_python2:
-            self.wait(timeout=timeout)
-            return super(Process, self).communicate(input=input)
-
-        return super(Process, self).communicate(input=input,
-                                                timeout=timeout)
 
 
 class Config(object):
@@ -873,47 +836,6 @@ class TestCase(unittest.TestCase, Tester):  # pylint: disable=too-many-public-me
     if not hasattr(unittest.TestCase, 'assertNotRegex'):
         def assertNotRegex(self, text, regexp, msg=None):
             assert not re.search(regexp, text), msg or "Found %r in '%s'" % (regexp, text)
-
-
-class SkipIfNeeded(object):
-    """
-    Decorator class that can be used along with test methods
-    to provide skip test behavior when using both python2.6 or
-    a greater version.
-    This decorator can be used in test methods and a boolean
-    condition must be provided (skip parameter) to define whether
-    or not the test will be skipped.
-    """
-
-    def __init__(self, skip, reason):
-        """
-        :param skip: if True the method wont be called
-        :param reason: reason why test was skipped
-        """
-        self.skip = skip
-        self.reason = reason
-
-    def __call__(self, f):
-
-        @functools.wraps(f)
-        def wrap(*args, **kwargs):
-            """
-            Wraps original test method's invocation and dictates whether or
-            not the test will be executed based on value (boolean) of the
-            skip parameter.
-            When running test with python < 2.7, if the "skip" parameter is
-            true, the original method won't be called. If running python >= 2.7, then
-            skipTest will be called with given "reason" and original method
-            will be invoked.
-            :param args:
-            :return:
-            """
-            instance = args[0]
-            if self.skip:
-                instance.skipTest(self.reason)
-            return f(*args, **kwargs)
-
-        return wrap
 
 
 def main_module():

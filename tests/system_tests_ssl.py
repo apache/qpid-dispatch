@@ -27,7 +27,7 @@ import re
 import time
 from subprocess import Popen, PIPE
 from qpid_dispatch.management.client import Node
-from system_test import TestCase, main_module, Qdrouterd, DIR, SkipIfNeeded
+from system_test import TestCase, main_module, Qdrouterd, DIR
 from system_test import unittest
 from proton import SASL, Url, SSLDomain, SSLUnavailable
 from proton.utils import BlockingConnection
@@ -456,7 +456,7 @@ class RouterTestSslClient(RouterTestSslBase):
                 self.OPENSSL_ALLOW_TLSV1_2 and tlsv1_2,
                 self.OPENSSL_ALLOW_TLSV1_3 and tlsv1_3]
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_only(self):
         """
         Expects TLSv1 only is allowed
@@ -464,7 +464,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(self.get_expected_tls_result([True, False, False, False]),
                          self.get_allowed_protocols(self.PORT_TLS1))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls11_only(self):
         """
         Expects TLSv1.1 only is allowed
@@ -472,7 +472,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(self.get_expected_tls_result([False, True, False, False]),
                          self.get_allowed_protocols(self.PORT_TLS11))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls12_only(self):
         """
         Expects TLSv1.2 only is allowed
@@ -480,7 +480,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(self.get_expected_tls_result([False, False, True, False]),
                          self.get_allowed_protocols(self.PORT_TLS12))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls13_only(self):
         """
         Expects TLSv1.3 only is allowed
@@ -488,7 +488,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(self.get_expected_tls_result([False, False, False, True]),
                          self.get_allowed_protocols(self.PORT_TLS13))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_tls11_only(self):
         """
         Expects TLSv1 and TLSv1.1 only are allowed
@@ -496,7 +496,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(self.get_expected_tls_result([True, True, False, False]),
                          self.get_allowed_protocols(self.PORT_TLS1_TLS11))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_tls12_only(self):
         """
         Expects TLSv1 and TLSv1.2 only are allowed
@@ -504,7 +504,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(self.get_expected_tls_result([True, False, True, False]),
                          self.get_allowed_protocols(self.PORT_TLS1_TLS12))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls11_tls12_only(self):
         """
         Expects TLSv1.1 and TLSv1.2 only are allowed
@@ -512,7 +512,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(self.get_expected_tls_result([False, True, True, False]),
                          self.get_allowed_protocols(self.PORT_TLS11_TLS12))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls_all(self):
         """
         Expects all supported versions: TLSv1, TLSv1.1, TLSv1.2 and TLSv1.3 to be allowed
@@ -520,15 +520,15 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(self.get_expected_tls_result([True, True, True, True]),
                          self.get_allowed_protocols(self.PORT_TLS_ALL))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_ssl_invalid(self):
         """
         Expects connection is rejected as SSL is no longer supported
         """
         self.assertEqual(False, self.is_proto_allowed(self.PORT_SSL3, 'SSLv3'))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
-                  "Cyrus library not available. skipping test")
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
+                     "Cyrus library not available. skipping test")
     def test_ssl_sasl_client_valid(self):
         """
         Attempts to connect a Proton client using a valid SASL authentication info
@@ -542,8 +542,8 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEqual(exp_tls_results[0], self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1"))
         self.assertEqual(exp_tls_results[2], self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1.2"))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
-                  "Cyrus library not available. skipping test")
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
+                     "Cyrus library not available. skipping test")
     def test_ssl_sasl_client_invalid(self):
         """
         Attempts to connect a Proton client using a valid SASL authentication info
@@ -756,8 +756,8 @@ class RouterTestSslInterRouter(RouterTestSslBase):
         node.close()
         return router_nodes
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
-                  "Cyrus library not available. skipping test")
+    @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
+                     "Cyrus library not available. skipping test")
     def test_connected_tls_sasl_routers(self):
         """
         Validates if all expected routers are connected in the network

@@ -23,7 +23,7 @@ import time
 import unittest
 import subprocess
 from subprocess import PIPE
-from system_test import main_module, SkipIfNeeded, TestCase
+from system_test import main_module, TestCase
 from system_test import Qdrouterd, TIMEOUT, AsyncTestSender, AsyncTestReceiver
 
 from proton import Message
@@ -129,7 +129,7 @@ class ConsoleTest(TestCase):
         return out
 
     # If we are unable to run the npm command. Skip the test
-    @SkipIfNeeded(ConsolePreReq.should_skip(), 'Test skipped: npm command not found')
+    @unittest.skipIf(ConsolePreReq.should_skip(), 'Test skipped: npm command not found')
     def test_console(self):
         self.run_console_test()
 
