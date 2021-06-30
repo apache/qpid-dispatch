@@ -25,10 +25,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import argparse
+import ast
 import os
 import sys
 import traceback
 
+from collections import defaultdict
 from datetime import timedelta
 from datetime import datetime
 
@@ -178,8 +180,8 @@ class StatsStorage(object):
 
     def summary_title(self):
         #      123456789012345678901234567890 12345678 12345678 12345678 12345678 12345678 12345678 12345678 12345678 12345678 1234567890 12345678
-        print("                                             Min      Max     Mean    Total  Total %      Min      Max     Mean      Total    Total")
-        print("                         Title, N locks, Acquire, Acquire, Acquire, Acquire, Acquire,     Use,     Use,  Use uS,       Use,   Use %")
+        print("                                          uS Min   uS Max  uS Mean    Total  Total %   uS Min   uS Max  uS Mean   uS Total  Total %")
+        print("Title                         , N locks, Acquire, Acquire, Acquire, Acquire, Acquire,     Use,     Use,     Use,       Use,     Use")
         print("------------------------------ -------- -------- -------- -------- -------- -------- -------- -------- -------- ---------- --------")
 
     def summary(self):
@@ -350,6 +352,9 @@ def main_except(argv):
     lock_data = {}
     interesting_lines = []  # lines split into fields
 
+    # lock inversion data is a set of lists where each list is a lock stack
+    lock_stacks = set()
+
     core_thread_core_idle = StatsStorage(common, "Mutex", "core_thread_core_idle", 0)
 
     with open(args.infile) as f:
@@ -379,6 +384,10 @@ def main_except(argv):
                 # Lock name
                 lock_stack = fields[common.FLD_FIRST_LOCK:common.FLD_LAST_LOCK]
                 lock_name = lock_stack[-1]
+
+                # Deadlock inversion detection. Create inversion database.
+                if len(lock_stack) > 1:
+                    lock_stacks.add(','.join(lock_stack))
 
                 # Accumulate per thread
                 # 'do_this' controls adding lock data to general thread/mutex tables
@@ -452,6 +461,32 @@ def main_except(argv):
     if common.start_stop_hidden > 0:
         print("%d Mutex locks during server start and stop hidden. Expose with --include-start-stop CLI arg."
               % common.start_stop_hidden)
+
+    print()
+    print("Possible deadlocks")
+    print("==================")
+    print()
+
+    # Deadlock inversion detection. Create inversion database.
+    lock_inversion_data = defaultdict(set)
+    for lock_stack_str in lock_stacks:
+        lock_stack = lock_stack_str.split(',')
+        stack_len = len(lock_stack)
+        # Add lock stack to inversion database
+        for heldi in range(stack_len-1):
+            for locksi in range(heldi + 1, stack_len):
+                held = lock_stack[heldi]
+                locks = lock_stack[locksi]
+                if held not in lock_inversion_data:
+                    lock_inversion_data[held] = set()
+                lock_inversion_data[held].add(locks)
+
+    # Deadlock inversion detection
+    for k, v in lock_inversion_data.items():
+        for locks in v:
+            if locks in lock_inversion_data:
+                if k in lock_inversion_data[locks]:
+                    print("Inversion %s and %s" % (k, locks))
 
     print()
     print("Per thread lock summary")
