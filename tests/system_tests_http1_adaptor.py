@@ -38,6 +38,7 @@ from http1_tests import CommonHttp1OneRouterTest
 from http1_tests import CommonHttp1Edge2EdgeTest
 from http1_tests import Http1Edge2EdgeTestBase
 from http1_tests import Http1ClientCloseTestsMixIn
+from http1_tests import Http1CurlTestsMixIn
 
 
 class Http1AdaptorManagementTest(TestCase):
@@ -247,7 +248,8 @@ class Http1AdaptorOneRouterTest(Http1OneRouterTestBase,
 
 class Http1AdaptorEdge2EdgeTest(Http1Edge2EdgeTestBase,
                                 CommonHttp1Edge2EdgeTest,
-                                Http1ClientCloseTestsMixIn):
+                                Http1ClientCloseTestsMixIn,
+                                Http1CurlTestsMixIn):
     """
     Test an HTTP servers and clients attached to edge routers separated by an
     interior router
@@ -320,6 +322,27 @@ class Http1AdaptorEdge2EdgeTest(Http1Edge2EdgeTestBase,
         """
         self.client_response_close_test(self.http_server11_port,
                                         self.http_listener11_port)
+
+    def test_2000_curl_get(self):
+        """
+        Perform a get via curl
+        """
+        self.curl_get_test("127.0.0.1", self.http_listener11_port,
+                           self.http_server11_port)
+
+    def test_2001_curl_put(self):
+        """
+        Perform a put via curl
+        """
+        self.curl_put_test("127.0.0.1", self.http_listener11_port,
+                           self.http_server11_port)
+
+    def test_2002_curl_post(self):
+        """
+        Perform a post via curl
+        """
+        self.curl_post_test("127.0.0.1", self.http_listener11_port,
+                            self.http_server11_port)
 
 
 class FakeHttpServerBase(object):

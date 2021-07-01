@@ -25,8 +25,21 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from http.client import HTTPConnection
 from http.client import HTTPException
 
-from system_test import TestCase, TIMEOUT, Logger, Qdrouterd
+from system_test import TestCase, TIMEOUT, Logger, Qdrouterd, unittest
+from system_test import curl_available, run_curl
+
+
 TEST_SERVER_ERROR = "TestServer failed to start due to port %s already in use issue"
+CURL_VERSION = (7, 47, 0)   # minimum required
+
+
+def _curl_ok():
+    """
+    Returns True if curl is installed and is the proper version for
+    running http1.1
+    """
+    installed = curl_available()
+    return installed and installed >= CURL_VERSION
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -42,7 +55,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if "test-echo" in self.headers:
                     xhdrs = {"test-echo":
                              self.headers["test-echo"]}
-
                 self._consume_body()
                 if not isinstance(resp, list):
                     resp = [resp]
@@ -106,7 +118,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                         self.rfile.readline()  # discard last \r\n
                         break
                 return body
-        return self.rfile.read()
+        return b''
 
 
 class RequestHandler10(RequestHandler):
@@ -329,7 +341,7 @@ class ResponseMsg(object):
 
         if self.body:
             handler.wfile.write(self.body)
-            handler.wfile.flush()
+        handler.wfile.flush()
 
 
 class RequestMsg(object):
@@ -1352,4 +1364,180 @@ class Http1ClientCloseTestsMixIn(object):
         #
         client = ThreadedTestClient(PING, client_port)
         client.wait()
+        server.wait()
+
+
+class Http1CurlTestsMixIn(object):
+    """
+    Test cases using curl as the command line client
+    """
+
+    @unittest.skipIf(not _curl_ok(),
+                     "required curl version >= %s" % str(CURL_VERSION))
+    def curl_get_test(self, host, port, server_port):
+        """
+        Use curl to get a resource
+        """
+        CURL_TESTS = {
+            "GET": [
+                (RequestMsg("GET", "/GET/curl_get"),
+                 ResponseMsg(200, reason="OK",
+                             headers={
+                                 "Content-Length": "19",
+                                 "Content-Type": "text/plain;charset=utf-8",
+                                 "Test-Header": "/GET/curl_get"
+                             },
+                             body=b'END OF TRANSMISSION'),
+                 ResponseValidator())
+            ],
+
+            "HEAD": [
+                (RequestMsg("HEAD", "/HEAD/curl_head",
+                            headers={"Content-Length": "0"}),
+                 ResponseMsg(200, headers={"App-Header-1": "Value 01",
+                                           "Content-Length": "10",
+                                           "App-Header-2": "Value 02"},
+                             body=None),
+                 ResponseValidator())
+            ]
+        }
+
+        server = TestServer.new_server(server_port, port, CURL_TESTS)
+        self.assertIsNotNone(server, TEST_SERVER_ERROR % server_port)
+
+        get_url = "http://%s:%s/GET/curl_get" % (host, port)
+        head_url = "http://%s:%s/HEAD/curl_head" % (host, port)
+
+        status, out, err = run_curl(["--http1.1", "-G", get_url])
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                      % (out, err))
+
+        status, out, err = run_curl(["--http1.1", "-I", head_url])
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        self.assertIn("App-Header-2", out, "Unexpected out=%s (err=%s)"
+                      % (out, err))
+
+        status, out, err = run_curl(["--http1.0", "-G", get_url])
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                      % (out, err))
+
+        status, out, err = run_curl(["--http1.1", "-G", get_url])
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                      % (out, err))
+
+        server.wait()
+
+    @unittest.skipIf(not _curl_ok(),
+                     "required curl version >= %s" % str(CURL_VERSION))
+    def curl_put_test(self, host, port, server_port):
+        """
+        Use curl to PUT a resource
+        """
+
+        CURL_TESTS = {
+            "PUT": [
+                (RequestMsg("PUT", "/PUT/curl_put"),
+                 ResponseMsg(201, reason="Created",
+                             headers={
+                                 "Test-Header": "/PUT/curl_put",
+                                 "content-length": "0"
+                             }),
+                 ResponseValidator())
+            ],
+
+            "HEAD": [
+                (RequestMsg("HEAD", "/HEAD/curl_head",
+                            headers={"Content-Length": "0"}),
+                 ResponseMsg(200, headers={"App-Header-1": "Value 01",
+                                           "Content-Length": "10",
+                                           "App-Header-2": "Value 02"},
+                             body=None),
+                 ResponseValidator())
+            ]
+        }
+
+        server = TestServer.new_server(server_port, port, CURL_TESTS)
+        self.assertIsNotNone(server, TEST_SERVER_ERROR % server_port)
+
+        put_url = "http://%s:%s/PUT/curl_put" % (host, port)
+        head_url = "http://%s:%s/HEAD/curl_head" % (host, port)
+
+        status, out, err = run_curl(["--http1.1", "-T", ".", put_url],
+                                    input="Mary had a little pug."
+                                    "\nIts fleece was brown as dirt."
+                                    "\nIts color made Mary shrug."
+                                    "\nShe should dress it in a shirt.")
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+
+        status, out, err = run_curl(["--http1.1", "-I", head_url])
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        self.assertIn("App-Header-2", out, "Unexpected out=%s (err=%s)"
+                      % (out, err))
+
+        status, out, err = run_curl(["--http1.1", "-T", ".", put_url],
+                                    input="Ph'nglui mglw'nafh Cthulhu"
+                                    "\nR'lyeh wgah'nagl fhtagn")
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+
+        server.wait()
+
+    @unittest.skipIf(not _curl_ok(),
+                     "required curl version >= %s" % str(CURL_VERSION))
+    def curl_post_test(self, host, port, server_port):
+        """
+        Use curl to post to a resource
+        """
+
+        CURL_TESTS = {
+            "POST": [
+                (RequestMsg("POST", "/POST/curl_post"),
+                 ResponseMsg(201, reason="Created",
+                             headers={
+                                 "Test-Header": "/POST/curl_put",
+                                 "content-length": "19",
+                                 "Content-Type": "text/plain;charset=utf-8",
+                             },
+                             body=b'END OF TRANSMISSION'),
+                 ResponseValidator())
+            ],
+
+            "GET": [
+                (RequestMsg("GET", "/GET/curl_get",
+                            headers={"Content-Length": "0"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={"App-Header-1": "Value 01",
+                                      "Content-Length": "10",
+                                      "App-Header-2": "Value 02"},
+                             body=b'0123456789'),
+                 ResponseValidator())
+            ]
+        }
+
+        server = TestServer.new_server(server_port, port, CURL_TESTS)
+        self.assertIsNotNone(server, TEST_SERVER_ERROR % server_port)
+
+        post_url = "http://%s:%s/POST/curl_post" % (host, port)
+        get_url = "http://%s:%s/GET/curl_get" % (host, port)
+
+        status, out, err = run_curl(["--http1.1", "-F", "name=Skupper",
+                                     "-F", "breed=Pug", post_url])
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                      % (out, err))
+
+        status, out, err = run_curl(["--http1.1", "-G", get_url])
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        self.assertIn("0123456789", out, "Unexpected out=%s (err=%s)"
+                      % (out, err))
+
+        status, out, err = run_curl(["--http1.1", "-F", "name=Coco",
+                                     "-F", "breed=French Bulldog",
+                                     post_url])
+        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                      % (out, err))
+
         server.wait()

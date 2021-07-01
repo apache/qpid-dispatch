@@ -1366,3 +1366,42 @@ class Logger(object):
             lines.append("%s %s" % (ts, msg))
         res = str('\n'.join(lines))
         return res
+
+
+def curl_available():
+    """
+    Check if the curl command line tool is present on the system.
+    Return a tuple containing the version if found, otherwise
+    return false.
+    """
+    popen_args = ['curl', '--version']
+    try:
+        process = Process(popen_args,
+                          name='curl_check',
+                          stdout=PIPE,
+                          expect=None,
+                          universal_newlines=True)
+        out = process.communicate()[0]
+        if process.returncode == 0:
+            # return curl version as a tuple (major, minor[,fix])
+            # expects --version outputs "curl X.Y.Z ..."
+            return tuple([int(x) for x in out.split()[1].split('.')])
+    except:
+        pass
+    return False
+
+
+def run_curl(args, input=None, timeout=TIMEOUT):
+    """
+    Run the curl command with the given argument list.
+    Pass optional input to curls stdin.
+    Return tuple of (return code, stdout, stderr)
+    """
+    popen_args = ['curl'] + args
+    if timeout is not None:
+        popen_args = popen_args + ["--max-time", str(timeout)]
+    stdin_value = PIPE if input is not None else None
+    with subprocess.Popen(popen_args, stdin=stdin_value, stdout=PIPE,
+                          stderr=PIPE, universal_newlines=True) as p:
+        out = p.communicate(input, timeout)
+        return p.returncode, out[0], out[1]
