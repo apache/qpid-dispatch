@@ -85,6 +85,7 @@ typedef struct _client_request_t {
     bool cancelled;
     bool close_on_complete;   // close the conn when this request is complete
     bool conn_close_hdr;      // add Connection: close to response msg
+    bool expect_continue;     // Expect: 100-Continue header found
 
     uint32_t version_major;
     uint32_t version_minor;
@@ -115,6 +116,7 @@ static void _client_response_msg_free(_client_request_t *req, _client_response_m
 static void _client_request_free(_client_request_t *req);
 static void _write_pending_response(_client_request_t *req);
 static void _deliver_request(qdr_http1_connection_t *hconn, _client_request_t *req);
+static bool _find_token(const char *list, const char *value);
 
 
 ////////////////////////////////////////////////////////
@@ -812,18 +814,17 @@ static int _client_rx_header_cb(h1_codec_request_state_t *hrs, const char *key, 
         // @TODO(kgiusti): also have to remove other headers given in value!
         // @TODO(kgiusti): do we need to support keep-alive on 1.0 connections?
         //
-        size_t len;
-        const char *token = h1_codec_token_list_next(value, &len, &value);
-        while (token) {
-            if (len == 5 && strncasecmp(token, "close", 5) == 0) {
-                hreq->close_on_complete = true;
-                hreq->conn_close_hdr = true;
-                break;
-            }
-            token = h1_codec_token_list_next(value, &len, &value);
+        if (_find_token(value, "close")) {
+            hreq->close_on_complete = true;
+            hreq->conn_close_hdr = true;
         }
 
     } else {
+        if (strcasecmp(key, "Expect") == 0) {
+            // DISPATCH-2189: mark this message as streaming so the router will
+            // not wait for it to complete before forwarding it.
+            hreq->expect_continue = _find_token(value, "100-continue");
+        }
         qd_compose_insert_symbol(hreq->request_props, key);
         qd_compose_insert_string(hreq->request_props, value);
     }
@@ -853,6 +854,7 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     // the AMQP message
 
     hreq->request_msg = qd_message();
+    qd_message_set_stream_annotation(hreq->request_msg, hreq->expect_continue);
 
     qd_composed_field_t *hdrs = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(hdrs);
@@ -1670,6 +1672,24 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
 //
 // Misc
 //
+
+
+// return true if value appears in token list.  The compare
+// is case-insensitive.
+//
+static bool _find_token(const char *list, const char *value)
+{
+    size_t len;
+    const size_t token_len = strlen(value);
+    const char *token = h1_codec_token_list_next(list, &len, &list);
+    while (token) {
+        if (len == token_len && strncasecmp(token, value, token_len) == 0) {
+            return true;
+        }
+        token = h1_codec_token_list_next(list, &len, &list);
+    }
+    return false;
+}
 
 
 // free the response message
