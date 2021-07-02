@@ -48,6 +48,8 @@ class QdmanageTest(TestCase):
     def setUpClass(cls):
         super(QdmanageTest, cls).setUpClass()
         cls.inter_router_port = cls.tester.get_port()
+        cls.secure_port = cls.tester.get_port()
+        cls.secure_user_port = cls.tester.get_port()
         config_1 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'R1'}),
             ('sslProfile', {'name': 'server-ssl',
@@ -62,7 +64,15 @@ class QdmanageTest(TestCase):
             ('linkRoute', {'name': 'test-link-route', 'prefix': 'xyz', 'direction': 'in'}),
             ('autoLink', {'name': 'test-auto-link', 'address': 'mnop', 'direction': 'out'}),
             ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl'}),
-            ('address', {'name': 'pattern-address', 'pattern': 'a/*/b/#/c', 'distribution': 'closest'})
+            ('address', {'name': 'pattern-address', 'pattern': 'a/*/b/#/c', 'distribution': 'closest'}),
+
+            # for testing SSL
+            ('listener', {'host': 'localhost', 'port': cls.secure_port,
+                          'sslProfile': 'server-ssl', 'requireSsl': 'yes'}),
+            ('listener', {'host': 'localhost', 'port': cls.secure_user_port,
+                          'sslProfile': 'server-ssl', 'requireSsl': 'yes',
+                          'authenticatePeer': 'yes',
+                          'saslMechanisms': 'EXTERNAL'})
         ])
 
         config_2 = Qdrouterd.Config([
@@ -86,7 +96,7 @@ class QdmanageTest(TestCase):
         try:
             p.teardown()
         except Exception as e:
-            raise Exception(out if out else str(e))
+            raise sys.exc_info()[0](out if out else str(e))
         return out
 
     def assert_entity_equal(self, expect, actual, copy=None):
@@ -164,7 +174,7 @@ class QdmanageTest(TestCase):
             self.assertIn(t, qall_types)
 
         qlistener = json.loads(self.run_qdmanage('query --type=listener'))
-        self.assertEqual([long_type('listener')] * 2, [e['type'] for e in qlistener])
+        self.assertEqual([long_type('listener')] * 4, [e['type'] for e in qlistener])
         self.assertEqual(self.router_1.ports[0], int(qlistener[0]['port']))
 
         qattr = json.loads(self.run_qdmanage('query type name'))
@@ -611,6 +621,59 @@ class QdmanageTest(TestCase):
             # @TODO(kgiusti) - update test to handle other platforms as support
             # is added
             self.assertTrue(mem is None)
+
+    def test_ssl_connection(self):
+        """Verify qdmanage can securely connect via SSL"""
+        ssl_address = "amqps://localhost:%s" % self.secure_port
+        ssl_user_address = "amqps://localhost:%s" % self.secure_user_port
+        query = 'QUERY --type org.apache.qpid.dispatch.router'
+
+        # this should fail: no trustfile
+        with self.assertRaises(RuntimeError,
+                               msg="failure expected: no trustfile") as exc:
+            self.run_qdmanage(query, address=ssl_address)
+        self.assertIn("certificate verify failed", str(exc.exception),
+                      "unexpected exception: %s" % str(exc.exception))
+
+        # this should pass:
+        self.run_qdmanage(query + " --ssl-trustfile " +
+                          self.ssl_file('ca-certificate.pem'),
+                          address=ssl_address)
+
+        # this should fail: wrong hostname
+        with self.assertRaises(RuntimeError,
+                               msg="failure expected: wrong hostname") as exc:
+            self.run_qdmanage(query + " --ssl-trustfile " +
+                              self.ssl_file('ca-certificate.pem'),
+                              address="amqps://127.0.0.1:%s" % self.secure_port)
+        self.assertIn("certificate verify failed", str(exc.exception),
+                      "unexpected exception: %s" % str(exc.exception))
+
+        # this should pass: disable hostname check:
+        self.run_qdmanage(query + " --ssl-trustfile " +
+                          self.ssl_file('ca-certificate.pem') +
+                          " --ssl-disable-peer-name-verify",
+                          address="amqps://127.0.0.1:%s" % self.secure_port)
+
+        # this should fail: router requires client to authenticate
+        with self.assertRaises(RuntimeError,
+                               msg="client authentication should fail") as exc:
+            self.run_qdmanage(query + " --ssl-trustfile " +
+                              self.ssl_file('ca-certificate.pem'),
+                              address=ssl_user_address)
+        self.assertIn("SSL Failure", str(exc.exception),
+                      "unexpected exception: %s" % str(exc.exception))
+
+        # this should pass: qdmanage provides credentials
+        self.run_qdmanage(query + " --ssl-trustfile " +
+                          self.ssl_file('ca-certificate.pem') +
+                          " --ssl-certificate " +
+                          self.ssl_file('client-certificate.pem') +
+                          " --ssl-password-file " +
+                          self.ssl_file('client-password-file.txt') +
+                          " --ssl-key " +
+                          self.ssl_file('client-private-key.pem'),
+                          address=ssl_user_address)
 
 
 if __name__ == '__main__':
