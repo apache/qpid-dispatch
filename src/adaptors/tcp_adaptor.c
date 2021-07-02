@@ -79,8 +79,8 @@ struct qdr_tcp_connection_t {
     bool                  egress_dispatcher;
     bool                  connector_closed;//only used if egress_dispatcher=true
     bool                  in_list;         // This connection is in the adaptor's connections list
-    sys_atomic_t	      raw_closed_read;   // proton event seen
-    sys_atomic_t	      raw_closed_write;  // proton event seen or write_close called
+    sys_atomic_t          raw_closed_read;   // proton event seen
+    sys_atomic_t          raw_closed_write;  // proton event seen or write_close called
     bool                  raw_read_shutdown; // stream closed
     bool                  read_eos_seen;
     qdr_delivery_t       *initial_delivery;
@@ -381,7 +381,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
     int count = handle_incoming_raw_read(conn, &buffers);
 
     // Grant more buffers to proton for reading if read side is still open
-	grant_read_buffers(conn);
+    grant_read_buffers(conn);
 
     // Push the bytes just read into the streaming message
     if (count > 0) {
@@ -721,7 +721,7 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
                                                       "",                  // *ssl_cipher,
                                                       "",                  // *user,
                                                       "TcpAdaptor",        // *container,
-													  tcp_conn_properties, // *connection_properties,
+                                                      tcp_conn_properties, // *connection_properties,
                                                       0,                   // ssl_ssf,
                                                       false,               // ssl,
                                                       "",                  // peer router version,
@@ -983,7 +983,7 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
                                                       "",          //const char      *ssl_cipher,
                                                       "",          //const char      *user,
                                                       "TcpAdaptor",//const char      *container,
-													  tcp_conn_properties,// pn_data_t    *connection_properties,
+                                                      tcp_conn_properties,// pn_data_t *connection_properties,
                                                       0,           //int              ssl_ssf,
                                                       false,       //bool             ssl,
                                                       "",          // peer router version,
@@ -1003,7 +1003,7 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
                                                    250,             // link_capacity
                                                    0,               // vhost
                                                    0,               // policy_spec
-												   info, // connection_info
+                                                   info,            // connection_info
                                                    0,               // context_binder
                                                    0);              // bind_token
     tc->qdr_conn = conn;
