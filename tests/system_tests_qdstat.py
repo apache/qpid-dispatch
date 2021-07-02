@@ -711,7 +711,9 @@ try:
             # Write SASL configuration file:
             with open('tests-mech-EXTERNAL.conf', 'w') as sasl_conf:
                 sasl_conf.write("mech_list: EXTERNAL ANONYMOUS DIGEST-MD5 PLAIN\n")
-            # qdrouterd configuration:
+            # qdrouterd configuration.  Note well: modifying the order of
+            # listeners will require updating ssl_test()
+            cls.strict_port = cls.tester.get_port()
             config = system_test.Qdrouterd.Config([
                 ('router', {'id': 'QDR.B',
                             'saslConfigPath': os.getcwd(),
@@ -722,11 +724,19 @@ try:
                                 'certFile': cls.ssl_file('server-certificate.pem'),
                                 'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                                 'password': 'server-password'}),
+
+                # 'none', 'none_s':
                 ('listener', {'host': 'localhost', 'port': cls.tester.get_port()}),
-                ('listener', {'host': 'localhost', 'port': cls.tester.get_port(), 'sslProfile': 'server-ssl',
+
+                # 'strict', 'strict_s':
+                ('listener', {'host': 'localhost', 'port': cls.strict_port, 'sslProfile': 'server-ssl',
                               'authenticatePeer': 'no', 'requireSsl': 'yes'}),
+
+                # 'unsecured', 'unsecured_s':
                 ('listener', {'host': 'localhost', 'port': cls.tester.get_port(), 'sslProfile': 'server-ssl',
                               'authenticatePeer': 'no', 'requireSsl': 'no'}),
+
+                # 'auth', 'auth_s':
                 ('listener', {'host': 'localhost', 'port': cls.tester.get_port(), 'sslProfile': 'server-ssl',
                               'authenticatePeer': 'yes', 'requireSsl': 'yes',
                               'saslMechanisms': 'EXTERNAL'})
@@ -748,6 +758,10 @@ try:
             return out
 
         def get_ssl_args(self):
+            """
+            A map of short names to the corresponding qdstat arguments.  A list
+            of keys are passed to ssl_test() via the arg_names parameter list.
+            """
             args = dict(
                 sasl_external=['--sasl-mechanisms', 'EXTERNAL'],
                 trustfile=['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
@@ -760,7 +774,19 @@ try:
             return args
 
         def ssl_test(self, url_name, arg_names):
-            """Run simple SSL connection test with supplied parameters.
+            """
+            Run simple SSL connection test with supplied parameters.
+
+            :param url_name: a shorthand name used to select which router
+            interface qdstat will connect to:
+            'none' = No SSL or SASL config
+            'strict' = Require SSL, No SASL config
+            'unsecured' = SSL not required, SASL not required
+            'auth' = Require SASL (external) and SSL
+
+            The '*_s' names simply replace 'amqp:' with 'amqps:' in the
+            generated URL.
+
             See test_ssl_* below.
             """
             args = self.get_ssl_args()
@@ -894,6 +920,29 @@ try:
         # Bad trustfile, test will fail.
         def test_ssl_bad_trustfile_to_unsecured(self):
             self.ssl_test_bad('unsecured_s', ['bad_trustfile'])
+
+        def test_ssl_peer_name_verify_disabled(self):
+            """
+            Verify the --ssl-disable-peer-name-verify option
+            """
+            params = [x for x in self.get_ssl_args()['trustfile']]
+            try:
+                self.run_qdstat(address="amqps://127.0.0.1:%s" % self.strict_port,
+                                args=['--general'] + params)
+                self.assertTrue(False, "Expected connection attempt to fail!")
+            except AssertionError:
+                # Expect the connection to fail, since the certificate has
+                # 'localhost' as the peer name and we used '127.0.0.1' instead.
+                pass
+            except Exception as exc:
+                self.assertTrue(False, "Unexpected exception: %s" % str(exc))
+
+            # repeat the same operation but using
+            # --ssl-disable--peer-name-verify.  This should succeed:
+
+            self.run_qdstat(address="amqps://127.0.0.1:%s" % self.strict_port,
+                            args=['--general',
+                                  '--ssl-disable-peer-name-verify'] + params)
 
 except SSLUnavailable:
     class QdstatSslTest(system_test.TestCase):
