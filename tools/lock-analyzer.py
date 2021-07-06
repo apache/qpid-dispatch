@@ -230,12 +230,38 @@ class StatsStorage(object):
 
 
 def usec_log_timestamp(common, usecs):
+    """
+    Return printable string representing base time + given number of usecs
+    :param common: common block
+    :param usecs: usecs from base
+    :return:
+    """
     ntime = usec_to_dt(common, usecs)
     return ntime.strftime('%Y-%m-%d %H:%M:%S.%f')
 
 
 def usec_to_dt(common, usecs):
+    """
+    Return datetime object representing base time + given number of usecs
+    :param common: common block
+    :param usecs: usecs from base
+    :return: datetime object
+    """
     return common.BASE_DATETIME + timedelta(microseconds=usecs)
+
+
+def usec_from_dt(common, dt):
+    """
+    Given a datetime timestamp return its offset from base time in usecs
+    :param common: common block
+    :param dt: timestamp
+    :return: usecs
+    """
+    delta = dt - common.BASE_DATETIME
+    usec = delta.microseconds
+    usec += delta.seconds * 1000000
+    usec += delta.days * 1000000 * 60 * 60 * 24
+    return int(usec)
 
 
 def process_core_line(common, line):
@@ -441,6 +467,15 @@ def main_except(argv):
     print("Collection    end time: %s, ticks: %d" % (usec_log_timestamp(common, stop_ticks), stop_ticks))
     print("Collection duration uS: %d" % common.total_duration)
     print()
+
+    common.START_US = usec_from_dt(common, common.START_DATETIME)
+    common.STOP_US  = usec_from_dt(common, common.STOP_DATETIME)
+    print("Server start-stop times")
+    print("Server  begin time: %s, ticks: %d" % (common.START_DATETIME, common.START_US))
+    print("Server    end time: %s, ticks: %d" % (common.STOP_DATETIME, common.STOP_US))
+    print("Server duration uS: %d" % (common.STOP_US - common.START_US))
+    print()
+
     print("Threads reported: %d" % len(thread_data))
     print("Mutexes reported: %d" % len(lock_data))
     print()
