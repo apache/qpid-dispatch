@@ -96,7 +96,7 @@ class QdmanageTest(TestCase):
         try:
             p.teardown()
         except Exception as e:
-            raise Exception(out if out else str(e))
+            raise sys.exc_info()[0](out if out else str(e))
         return out
 
     def assert_entity_equal(self, expect, actual, copy=None):
@@ -623,20 +623,17 @@ class QdmanageTest(TestCase):
             self.assertTrue(mem is None)
 
     def test_ssl_connection(self):
-        """
-        Verify qdmanage can securely connect via SSL:
-        """
+        """Verify qdmanage can securely connect via SSL"""
         ssl_address = "amqps://localhost:%s" % self.secure_port
         ssl_user_address = "amqps://localhost:%s" % self.secure_user_port
         query = 'QUERY --type org.apache.qpid.dispatch.router'
 
         # this should fail: no trustfile
-        try:
+        with self.assertRaises(RuntimeError,
+                               msg="failure expected: no trustfile") as exc:
             self.run_qdmanage(query, address=ssl_address)
-            self.fail("expected qdmanage to fail")
-        except Exception as exc:
-            self.assertIn("certificate verify failed", str(exc),
-                          "unexpected exception: %s" % str(exc))
+        self.assertIn("certificate verify failed", str(exc.exception),
+                      "unexpected exception: %s" % str(exc.exception))
 
         # this should pass:
         self.run_qdmanage(query + " --ssl-trustfile " +
@@ -644,14 +641,13 @@ class QdmanageTest(TestCase):
                           address=ssl_address)
 
         # this should fail: wrong hostname
-        try:
+        with self.assertRaises(RuntimeError,
+                               msg="failure expected: wrong hostname") as exc:
             self.run_qdmanage(query + " --ssl-trustfile " +
                               self.ssl_file('ca-certificate.pem'),
                               address="amqps://127.0.0.1:%s" % self.secure_port)
-            self.fail("expected qdmanage to fail")
-        except Exception as exc:
-            self.assertIn("certificate verify failed", str(exc),
-                          "unexpected exception: %s" % str(exc))
+        self.assertIn("certificate verify failed", str(exc.exception),
+                      "unexpected exception: %s" % str(exc.exception))
 
         # this should pass: disable hostname check:
         self.run_qdmanage(query + " --ssl-trustfile " +
@@ -660,14 +656,13 @@ class QdmanageTest(TestCase):
                           address="amqps://127.0.0.1:%s" % self.secure_port)
 
         # this should fail: router requires client to authenticate
-        try:
+        with self.assertRaises(RuntimeError,
+                               msg="client authentication should fail") as exc:
             self.run_qdmanage(query + " --ssl-trustfile " +
                               self.ssl_file('ca-certificate.pem'),
                               address=ssl_user_address)
-            self.fail("expected qdmanage to fail")
-        except Exception as exc:
-            self.assertIn("SSL Failure", str(exc),
-                          "unexpected exception: %s" % str(exc))
+        self.assertIn("SSL Failure", str(exc.exception),
+                      "unexpected exception: %s" % str(exc.exception))
 
         # this should pass: qdmanage provides credentials
         self.run_qdmanage(query + " --ssl-trustfile " +
