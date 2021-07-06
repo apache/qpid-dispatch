@@ -633,7 +633,7 @@ class QdmanageTest(TestCase):
         # this should fail: no trustfile
         try:
             self.run_qdmanage(query, address=ssl_address)
-            self.assertTrue(False, "expected qdmanage to fail")
+            self.fail("expected qdmanage to fail")
         except Exception as exc:
             self.assertIn("certificate verify failed", str(exc),
                           "unexpected exception: %s" % str(exc))
@@ -648,7 +648,7 @@ class QdmanageTest(TestCase):
             self.run_qdmanage(query + " --ssl-trustfile " +
                               self.ssl_file('ca-certificate.pem'),
                               address="amqps://127.0.0.1:%s" % self.secure_port)
-            self.assertTrue(False, "expected qdmanage to fail")
+            self.fail("expected qdmanage to fail")
         except Exception as exc:
             self.assertIn("certificate verify failed", str(exc),
                           "unexpected exception: %s" % str(exc))
@@ -664,7 +664,7 @@ class QdmanageTest(TestCase):
             self.run_qdmanage(query + " --ssl-trustfile " +
                               self.ssl_file('ca-certificate.pem'),
                               address=ssl_user_address)
-            self.assertTrue(False, "expected qdmanage to fail")
+            self.fail("expected qdmanage to fail")
         except Exception as exc:
             self.assertIn("SSL Failure", str(exc),
                           "unexpected exception: %s" % str(exc))

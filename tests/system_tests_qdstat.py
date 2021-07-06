@@ -929,13 +929,13 @@ try:
             try:
                 self.run_qdstat(address="amqps://127.0.0.1:%s" % self.strict_port,
                                 args=['--general'] + params)
-                self.assertTrue(False, "Expected connection attempt to fail!")
+                self.fail("Expected connection attempt to fail!")
             except AssertionError:
                 # Expect the connection to fail, since the certificate has
                 # 'localhost' as the peer name and we used '127.0.0.1' instead.
                 pass
             except Exception as exc:
-                self.assertTrue(False, "Unexpected exception: %s" % str(exc))
+                self.fail("Unexpected exception: %s" % str(exc))
 
             # repeat the same operation but using
             # --ssl-disable--peer-name-verify.  This should succeed:
