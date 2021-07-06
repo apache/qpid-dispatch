@@ -56,7 +56,7 @@ sslProfile {
 
 `certFile`:: The absolute path to the file containing the public certificate for this router.
 
-`caCertFile`:: The absolute path to the CA certificate that was used to sign the router's certificate.
+`caCertFile`:: The absolute path to the CA certificate that the router uses to authenticate incoming clients.
 
 `privateKeyFile`:: The absolute path to the file containing the private key for this router's public certificate.
 +
