@@ -57,12 +57,12 @@ jobs:
     os: linux
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0 BUILD_TYPE=Coverage
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.35.0 BUILD_TYPE=Coverage
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on xenial)"
     os: linux
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0 BUILD_TYPE=RelWithDebInfo
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.35.0 BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     os: linux
@@ -143,7 +143,7 @@ jobs:
     os: linux
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.35.0
   - name: "qdrouterd:TSAN"
     os: linux
     dist: focal
@@ -160,7 +160,7 @@ jobs:
       - python -m pip install --user grpcio protobuf
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.34.0
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.35.0
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on macOS)"
     os: osx
