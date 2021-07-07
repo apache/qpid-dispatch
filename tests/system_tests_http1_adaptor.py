@@ -107,8 +107,8 @@ class Http1AdaptorManagementTest(TestCase):
         mgmt.delete(type=CONNECTOR_TYPE, name="ServerConnector")
         self.assertEqual(0, len(mgmt.query(type=CONNECTOR_TYPE).results))
 
-        hconns = 0
         retry = 20  # 20 * 0.25 = 5 sec
+        hconns = 0
         while retry:
             obj = mgmt.query(type=CONNECTION_TYPE,
                              attribute_names=["protocol"])
@@ -119,6 +119,7 @@ class Http1AdaptorManagementTest(TestCase):
                 break
             sleep(0.25)
             retry -= 1
+            hconns = 0
 
         self.assertEqual(0, hconns, msg="HTTP connection not deleted")
 
