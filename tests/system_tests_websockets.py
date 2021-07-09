@@ -47,7 +47,7 @@ class WebsocketsConsoleTest(TestCase):
         try:
             import websockets
         except ImportError:
-            self.skipTest("python test requirement package `websocket` is missing")
+            self.skipTest("python test requirement package `websockets` is missing")
 
         async def run():
             uri = f"ws://localhost:{self.http_port}"
