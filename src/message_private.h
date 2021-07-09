@@ -132,6 +132,7 @@ typedef struct {
     bool                 ma_stream;                      // indicates whether this message is streaming
     uint64_t             max_message_size;               // configured max; 0 if no max to enforce
     uint64_t             bytes_received;                 // bytes returned by pn_link_recv() when enforcing max_message_size
+    size_t               protected_buffers;              // count of permanent buffers that hold the message headers
     uint32_t             fanout;                         // The number of receivers for this message, including in-process subscribers.
 
     qd_message_q2_unblocker_t q2_unblocker;              // callback and context to signal Q2 unblocked to receiver
@@ -178,6 +179,10 @@ void qd_message_initialize();
 #define QDR_N_PRIORITIES     10
 #define QDR_MAX_PRIORITY     (QDR_N_PRIORITIES - 1)
 #define QDR_DEFAULT_PRIORITY  4
+
+// These expect content->lock to be locked.
+bool _Q2_holdoff_should_block_LH(const qd_message_content_t *content);
+bool _Q2_holdoff_should_unblock_LH(const qd_message_content_t *content);
 
 ///@}
 

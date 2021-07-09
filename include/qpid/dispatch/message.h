@@ -553,26 +553,6 @@ void qd_message_add_fanout(qd_message_t *in_msg,
 void qd_message_Q2_holdoff_disable(qd_message_t *msg);
 
 /**
- * Test if attempt to retrieve message data through qd_message_recv should block
- * due to Q2 input holdoff limit being exceeded. This message has enough
- * buffers in the internal buffer chain and any calls to to qd_message_receive
- * will not result in a call to pn_link_receive to retrieve more data.
- *
- * @param msg A pointer to the message
- */
-bool qd_message_Q2_holdoff_should_block(qd_message_t *msg);
-
-/**
- * Test if a message that is blocked by Q2 input holdoff has enough room
- * to begin receiving again. This message has transmitted and disposed of
- * enough buffers to begin receiving more data from the underlying proton link.
- *
- * @param msg A pointer to the message
- */
-bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg);
-
-
-/**
  * Check if a message has hit its Q2 limit and is currently blocked.
  * When blocked no further message data will be read from the link.
  *

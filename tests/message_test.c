@@ -484,11 +484,11 @@ static char* test_q2_input_holdoff_sensing(void *context)
         qd_message_content_t *content = MSG_CONTENT(msg);
 
         set_content_bufs(content, nbufs);
-        if (qd_message_Q2_holdoff_should_block(msg) != (nbufs >= QD_QLIMIT_Q2_UPPER)) {
+        if (_Q2_holdoff_should_block_LH(content) != (nbufs >= QD_QLIMIT_Q2_UPPER)) {
             qd_message_free(msg);
             return "qd_message_holdoff_would_block was miscalculated";
         }
-        if (qd_message_Q2_holdoff_should_unblock(msg) != (nbufs < QD_QLIMIT_Q2_LOWER)) {
+        if (_Q2_holdoff_should_unblock_LH(content) != (nbufs < QD_QLIMIT_Q2_LOWER)) {
             qd_message_free(msg);
             return "qd_message_holdoff_would_unblock was miscalculated";
         }
@@ -1053,7 +1053,7 @@ static char *test_check_stream_data_append(void * context)
             // smaller lists that are no bigger than QD_QLIMIT_Q2_LOWER buffers
             // long
             body_buffers += qd_message_stream_data_buffer_count(stream_data);
-            if (qd_message_stream_data_buffer_count(stream_data) > QD_QLIMIT_Q2_LOWER) {
+            if (qd_message_stream_data_buffer_count(stream_data) >= QD_QLIMIT_Q2_LOWER) {
                 result = "Body data list length too long!";
                 goto exit;
             }
@@ -1449,6 +1449,90 @@ exit:
 }
 
 
+// Ensure that the Q2 calculation does not include header buffers.  Header
+// buffers are held until the message is freed, so they should not be a factor
+// in flow control (DISPATCH-2191).
+//
+static char *test_q2_ignore_headers(void *context)
+{
+    char *result = 0;
+    qd_message_t *msg = qd_message();
+    qd_message_content_t *content = MSG_CONTENT(msg);
+
+    // create a message and add a bunch of headers.  Put each header in its own
+    // buffer to increase the buffer count.
+
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(field);
+    qd_compose_insert_bool(field, 0);     // durable
+    qd_compose_insert_null(field);        // priority
+    qd_compose_end_list(field);
+    qd_buffer_list_t field_buffers;
+    qd_compose_take_buffers(field, &field_buffers);
+    qd_compose_free(field);
+    content->buffers = field_buffers;
+
+    const qd_amqp_performative_t plist[3] = {
+        QD_PERFORMATIVE_DELIVERY_ANNOTATIONS,
+        QD_PERFORMATIVE_MESSAGE_ANNOTATIONS,
+        QD_PERFORMATIVE_APPLICATION_PROPERTIES};
+
+    for (int i = 0; i < 3; ++i) {
+        field = qd_compose(plist[i], 0);
+        qd_compose_start_map(field);
+        qd_compose_insert_symbol(field, "Key");
+        qd_compose_insert_string(field, "Value");
+        qd_compose_end_map(field);
+        qd_compose_take_buffers(field, &field_buffers);
+        qd_compose_free(field);
+        DEQ_APPEND(content->buffers, field_buffers);
+    }
+
+    // validate the message - this will mark the buffers that contain header
+    // data
+    if (qd_message_check_depth(msg, QD_DEPTH_APPLICATION_PROPERTIES) != QD_MESSAGE_DEPTH_OK) {
+        result = "Unexpected depth check failure";
+        goto exit;
+    }
+
+    const size_t header_ct = DEQ_SIZE(content->buffers);
+    assert(header_ct);
+    assert(!_Q2_holdoff_should_block_LH(content));
+
+    // Now append buffers until Q2 blocks
+    while (!_Q2_holdoff_should_block_LH(content)) {
+        qd_buffer_t *buffy = qd_buffer();
+        qd_buffer_insert(buffy, qd_buffer_capacity(buffy));
+        DEQ_INSERT_TAIL(content->buffers, buffy);
+    }
+
+    // expect: block occurs when length == QD_QLIMIT_Q2_UPPER + header_ct
+    if (DEQ_SIZE(content->buffers) != QD_QLIMIT_Q2_UPPER + header_ct) {
+        result = "Wrong buffer length for Q2 activate!";
+        goto exit;
+    }
+
+    // now remove buffers until Q2 is relieved
+
+    while (!_Q2_holdoff_should_unblock_LH(content)) {
+        qd_buffer_t *buffy = DEQ_TAIL(content->buffers);
+        DEQ_REMOVE_TAIL(content->buffers);
+        qd_buffer_free(buffy);
+    }
+
+    // expect: Q2 deactivates when list length < QD_QDLIMIT_Q2_LOWER + header_ct
+    if (DEQ_SIZE(content->buffers) != (QD_QLIMIT_Q2_LOWER + header_ct) - 1) {
+        result = "Wrong buffer length for Q2 deactivate!";
+        goto exit;
+    }
+
+exit:
+
+    qd_message_free(msg);
+    return result;
+}
+
+
 int message_tests(void)
 {
     int result = 0;
@@ -1467,6 +1551,7 @@ int message_tests(void)
     TEST_CASE(test_check_stream_data_fanout, 0);
     TEST_CASE(test_check_stream_data_footer, 0);
     TEST_CASE(test_q2_callback_on_disable, 0);
+    TEST_CASE(test_q2_ignore_headers, 0);
 
     return result;
 }

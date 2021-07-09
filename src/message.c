@@ -646,7 +646,8 @@ typedef enum {
     QD_SECTION_NEED_MORE  // not enough data in the buffer chain - try again
 } qd_section_status_t;
 
-static qd_section_status_t message_section_check_LH(qd_buffer_t         **buffer,
+static qd_section_status_t message_section_check_LH(qd_message_content_t *content,
+                                                    qd_buffer_t         **buffer,
                                                     unsigned char       **cursor,
                                                     const unsigned char  *pattern,
                                                     int                   pattern_length,
@@ -770,6 +771,7 @@ static qd_section_status_t message_section_check_LH(qd_buffer_t         **buffer
         // the end.  And cursor + buffer will be null if the parsed section ends at
         // the end of the buffer chain, so be careful of that, too!
         //
+        bool buffers_protected = false;
         qd_buffer_t *start = *buffer;
         qd_buffer_t *last = test_buffer;
         if (last && last != start) {
@@ -781,9 +783,26 @@ static qd_section_status_t message_section_check_LH(qd_buffer_t         **buffer
 
         while (start) {
             qd_buffer_inc_fanout(start);
+            buffers_protected = true;
             if (start == last)
                 break;
             start = DEQ_NEXT(start);
+        }
+
+        // DISPATCH-2191: protected buffers are never released - even after
+        // being sent - because they are referenced by the content->section_xxx
+        // location fields and remain valid for the life of the content
+        // instance.  Since these buffers are never freed they must not be
+        // included in the Q2 threshold check!
+        if (buffers_protected) {
+            content->protected_buffers = 0;
+            start = DEQ_HEAD(content->buffers);
+            while (start) {
+                ++content->protected_buffers;
+                if (start == last)
+                    break;
+                start = DEQ_NEXT(start);
+            }
         }
     }
 
@@ -1036,7 +1055,7 @@ void qd_message_free(qd_message_t *in_msg)
         // may be released
         assert(DEQ_IS_EMPTY(msg->stream_data_list));
 
-        const bool was_blocked = !qd_message_Q2_holdoff_should_unblock(in_msg);
+        const bool was_blocked = !_Q2_holdoff_should_unblock_LH(content);
         qd_buffer_t *buf = msg->cursor.buffer;
         while (buf) {
             qd_buffer_t *next_buf = DEQ_NEXT(buf);
@@ -1053,7 +1072,7 @@ void qd_message_free(qd_message_t *in_msg)
         //
         if (content->q2_input_holdoff
             && was_blocked
-            && qd_message_Q2_holdoff_should_unblock(in_msg)) {
+            && _Q2_holdoff_should_unblock_LH(content)) {
             content->q2_input_holdoff = false;
             q2_unblock = content->q2_unblocker;
         }
@@ -1558,7 +1577,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                 qd_buffer_set_fanout(content->pending, content->fanout);
                 DEQ_INSERT_TAIL(content->buffers, content->pending);
                 content->pending = 0;
-                if (qd_message_Q2_holdoff_should_block((qd_message_t *)msg)) {
+                if (_Q2_holdoff_should_block_LH(content)) {
                     if (!qd_link_is_q2_limit_unbounded(qdl)) {
                         content->q2_input_holdoff = true;
                         UNLOCK(content->lock);
@@ -1944,7 +1963,7 @@ void qd_message_send(qd_message_t *in_msg,
                         // by freeing a buffer there now may be room to restart a
                         // stalled message receiver
                         if (content->q2_input_holdoff) {
-                            if (qd_message_Q2_holdoff_should_unblock((qd_message_t*) msg)) {
+                            if (_Q2_holdoff_should_unblock_LH(content)) {
                                 // wake up receive side
                                 // Note: clearing holdoff here is easy compared to
                                 // clearing it in the deferred callback. Tracing
@@ -2011,9 +2030,9 @@ static qd_message_depth_status_t message_check_depth_LH(qd_message_content_t *co
         return QD_MESSAGE_DEPTH_OK;
 
     qd_section_status_t rc;
-    rc = message_section_check_LH(&content->parse_buffer, &content->parse_cursor, short_pattern, SHORT, expected_tags, location, false, protect_buffer);
+    rc = message_section_check_LH(content, &content->parse_buffer, &content->parse_cursor, short_pattern, SHORT, expected_tags, location, false, protect_buffer);
     if (rc == QD_SECTION_NO_MATCH)  // try the alternative
-        rc = message_section_check_LH(&content->parse_buffer, &content->parse_cursor, long_pattern,  LONG,  expected_tags, location, false, protect_buffer);
+        rc = message_section_check_LH(content, &content->parse_buffer, &content->parse_cursor, long_pattern,  LONG,  expected_tags, location, false, protect_buffer);
 
     if (rc == QD_SECTION_MATCH || (optional && rc == QD_SECTION_NO_MATCH)) {
         content->parse_depth = depth;
@@ -2398,8 +2417,8 @@ int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field, bool *q2_bl
     DEQ_APPEND(content->buffers, (*buffers));
     count = DEQ_SIZE(content->buffers);
 
-    // buffers added - much check for Q2:
-    if (qd_message_Q2_holdoff_should_block(msg)) {
+    // buffers added - must check for Q2:
+    if (_Q2_holdoff_should_block_LH(content)) {
         content->q2_input_holdoff = true;
         if (q2_blocked)
             *q2_blocked = true;
@@ -2639,7 +2658,7 @@ void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
 
     LOCK(content->lock);
 
-    bool                      was_blocked = !qd_message_Q2_holdoff_should_unblock((qd_message_t*) pvt);
+    bool                      was_blocked = !_Q2_holdoff_should_unblock_LH(content);
     qd_message_q2_unblocker_t q2_unblock  = {0};
 
     if (pvt->is_fanout) {
@@ -2670,7 +2689,7 @@ void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
     //
     if (content->q2_input_holdoff
         && was_blocked
-        && qd_message_Q2_holdoff_should_unblock((qd_message_t*) pvt)) {
+        && _Q2_holdoff_should_unblock_LH(content)) {
         content->q2_input_holdoff = false;
         q2_unblock = content->q2_unblocker;
     }
@@ -2741,14 +2760,16 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
 
     LOCK(content->lock);
 
-    section_status = message_section_check_LH(&msg->body_buffer, &msg->body_cursor,
+    section_status = message_section_check_LH(content,
+                                              &msg->body_buffer, &msg->body_cursor,
                                               BODY_DATA_SHORT, 3, TAGS_BINARY,
                                               &location,
                                               true,  // allow duplicates
                                               false);  // do not inc buffer fanout
     if (section_status == QD_SECTION_NO_MATCH) {
         is_footer      = true;
-        section_status = message_section_check_LH(&msg->body_buffer, &msg->body_cursor,
+        section_status = message_section_check_LH(content,
+                                                  &msg->body_buffer, &msg->body_cursor,
                                                   FOOTER_SHORT, 3, TAGS_MAP,
                                                   &location, true, false);
     }
@@ -2907,18 +2928,19 @@ void qd_message_Q2_holdoff_disable(qd_message_t *msg)
 }
 
 
-bool qd_message_Q2_holdoff_should_block(qd_message_t *msg)
+bool _Q2_holdoff_should_block_LH(const qd_message_content_t *content)
 {
-    if (!msg)
-        return false;
-    qd_message_pvt_t *msg_pvt = (qd_message_pvt_t*) msg;
-    return !msg_pvt->content->disable_q2_holdoff && DEQ_SIZE(msg_pvt->content->buffers) >= QD_QLIMIT_Q2_UPPER;
+    const size_t buff_ct = DEQ_SIZE(content->buffers);
+    assert(buff_ct >= content->protected_buffers);
+    return !content->disable_q2_holdoff && (buff_ct - content->protected_buffers) >= QD_QLIMIT_Q2_UPPER;
 }
 
 
-bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg)
+bool _Q2_holdoff_should_unblock_LH(const qd_message_content_t *content)
 {
-    return DEQ_SIZE(((qd_message_pvt_t*)msg)->content->buffers) < QD_QLIMIT_Q2_LOWER;
+    const size_t buff_ct = DEQ_SIZE(content->buffers);
+    assert(buff_ct >= content->protected_buffers);
+    return content->disable_q2_holdoff || (buff_ct - content->protected_buffers) < QD_QLIMIT_Q2_LOWER;
 }
 
 
@@ -2963,13 +2985,16 @@ int qd_message_stream_data_append(qd_message_t *message, qd_buffer_list_t *data,
     if (length == 0)
         return rc;
 
-    // DISPATCH-1803: ensure no body data section can violate the Q2 threshold.
-    // This allows the egress router to wait for an entire body data section
-    // to arrive and be validated before sending it out to the endpoint.
+    // DISPATCH-1803: ensure no body data section can exceed the
+    // QD_QLIMIT_Q2_LOWER.  This allows the egress router to wait for an entire
+    // body data section to arrive and be validated before sending it out to
+    // the endpoint without preventing Q2 from being relieved (DISPATCH-2191).
     //
-    while (length > QD_QLIMIT_Q2_LOWER) {
+    const size_t buf_limit = QD_QLIMIT_Q2_LOWER - 2;  // reserve 1 extra for performative header
+    assert(buf_limit);
+    while (length > buf_limit) {
         qd_buffer_t *buf = DEQ_HEAD(*data);
-        for (int i = 0; i < QD_QLIMIT_Q2_LOWER; ++i) {
+        for (int i = 0; i < buf_limit; ++i) {
             buf = DEQ_NEXT(buf);
         }
 
@@ -2981,14 +3006,14 @@ int qd_message_stream_data_append(qd_message_t *message, qd_buffer_list_t *data,
         DEQ_TAIL(*data) = DEQ_PREV(buf);
         DEQ_NEXT(DEQ_TAIL(*data)) = 0;
         DEQ_PREV(buf) = 0;
-        DEQ_SIZE(trailer) = length - QD_QLIMIT_Q2_LOWER;
-        DEQ_SIZE(*data) = QD_QLIMIT_Q2_LOWER;
+        DEQ_SIZE(trailer) = length - buf_limit;
+        DEQ_SIZE(*data) = buf_limit;
 
         field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
         qd_compose_insert_binary_buffers(field, data);
 
         DEQ_MOVE(trailer, *data);
-        length -= QD_QLIMIT_Q2_LOWER;
+        length -= buf_limit;
     }
 
     field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
