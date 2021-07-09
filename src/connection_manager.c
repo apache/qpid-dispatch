@@ -993,6 +993,8 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
         config_sasl_plugin_free(cm, saslp);
         saslp = DEQ_HEAD(cm->config_sasl_plugins);
     }
+
+    free(cm);
 }
 
 
