@@ -20,11 +20,12 @@
 #ifndef QPID_DISPATCH_HELPERS_HPP
 #define QPID_DISPATCH_HELPERS_HPP
 
-#include <mutex>
-#include <memory>
-#include <fstream>
-#include <sstream>
 #include <cassert>
+#include <condition_variable>
+#include <fstream>
+#include <memory>
+#include <mutex>
+#include <sstream>
 
 // assertions without stack traces when running outside doctest
 #ifndef QDR_DOCTEST
@@ -51,29 +52,29 @@ std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
 extern "C" {
 #include "../../src/router_core/agent_config_auto_link.h"
 
-    // declarations that don't have .h file
-    void qd_router_setup_late(qd_dispatch_t *qd);
+// declarations that don't have .h file
+void qd_router_setup_late(qd_dispatch_t *qd);
 }
 
 // backport of C++14 feature
-template< class T >
-    using remove_const_t = typename std::remove_const<T>::type;
+template <class T>
+using remove_const_t = typename std::remove_const<T>::type;
 
 // https://stackoverflow.com/questions/27440953/stdunique-ptr-for-c-functions-that-need-free
-struct free_deleter{
+struct free_deleter {
     template <typename T>
-    void operator()(T *p) const {
-        std::free(const_cast<remove_const_t<T>*>(p));
+    void operator()(T *p) const
+    {
+        std::free(const_cast<remove_const_t<T> *>(p));
     }
 };
 template <typename T>
-using unique_C_ptr=std::unique_ptr<T,free_deleter>;
-static_assert(sizeof(char *)==
-sizeof(unique_C_ptr<char>),""); // ensure no overhead
+using unique_C_ptr = std::unique_ptr<T, free_deleter>;
+static_assert(sizeof(char *) == sizeof(unique_C_ptr<char>), "");  // ensure no overhead
 
 // https://stackoverflow.com/questions/65290961/can-i-succintly-declare-stdunique-ptr-with-custom-deleter
 template <typename T, typename Deleter>
-std::unique_ptr<T, Deleter> qd_make_unique(T* raw, Deleter deleter)
+std::unique_ptr<T, Deleter> qd_make_unique(T *raw, Deleter deleter)
 {
     return std::unique_ptr<T, Deleter>(raw, deleter);
 }
@@ -87,11 +88,14 @@ void set_content(qd_message_content_t *content, unsigned char *buffer, size_t le
 
 /// Redirects leak reports to a file, and fails the test if
 /// anything is reported (even suppressed leaks).
-class WithNoMemoryLeaks {
+class WithNoMemoryLeaks
+{
     bool fail;
+
    public:
-    unique_C_ptr<char> path_ptr {strdup("unittests_memory_debug_logs_XXXXXX")};
-    explicit WithNoMemoryLeaks(bool fail = true) {
+    unique_C_ptr<char> path_ptr{strdup("unittests_memory_debug_logs_XXXXXX")};
+    explicit WithNoMemoryLeaks(bool fail = true)
+    {
         this->fail = fail;
 #if QD_MEMORY_DEBUG
         int fd = mkstemp(path_ptr.get());
@@ -100,9 +104,10 @@ class WithNoMemoryLeaks {
 #endif  // QD_MEMORY_DEBUG
     }
 
-    ~WithNoMemoryLeaks() {
+    ~WithNoMemoryLeaks()
+    {
 #if QD_MEMORY_DEBUG
-        std::ifstream     f(path_ptr.get());
+        std::ifstream f(path_ptr.get());
         std::stringstream buffer;
         buffer << f.rdbuf();
         std::string leak_reports = buffer.str();
@@ -119,26 +124,33 @@ class WithNoMemoryLeaks {
 
 /// Submits an action to the router's action list. When action runs, we know router finished all previous actions.
 ///
-/// This can be used to detect the router finished starting (i.e., performing all previously scheduled actions).
-class RouterStartupLatch {
+/// This can be used to detect the router finished starting (i.e., performed all previously scheduled actions).
+class RouterStartupLatch
+{
    public:
     std::mutex mut;
-    void wait_for_qdr(qd_dispatch_t *qd) {
-        mut.lock();
-
-        qdr_action_handler_t handler = [](qdr_core_t *core, qdr_action_t *action, bool discard) {
-            static_cast<RouterStartupLatch *>(action->args.general.context_1)->mut.unlock();
+    std::condition_variable cv;
+    bool done = false;
+    void wait_for_qdr(qd_dispatch_t *qd)
+    {
+        qdr_action_handler_t action_handler = [](qdr_core_t *core, qdr_action_t *action, bool discard) {
+            auto that = static_cast<RouterStartupLatch *>(action->args.general.context_1);
+            std::lock_guard<std::mutex> lock(that->mut);
+            that->done = true;
+            that->cv.notify_one();
         };
-        qdr_action_t *action = qdr_action(handler, "RouterStartupLatch action");
+        qdr_action_t *action           = qdr_action(action_handler, "RouterStartupLatch action");
         action->args.general.context_1 = this;
         qdr_action_enqueue(qd->router->router_core, action);
 
-        mut.lock();  // wait for action_handler to do the unlock
+        std::unique_lock<std::mutex> lock(mut);
+        cv.wait(lock, [this] { return done; });  // wait for action_handler to notify us
     }
 };
 
-inline std::string get_env(std::string const & key) {
-    char * val = std::getenv(key.c_str());
+inline std::string get_env(std::string const &key)
+{
+    char *val = std::getenv(key.c_str());
     return val == nullptr ? std::string("") : std::string(val);
 }
 
@@ -156,13 +168,16 @@ inline std::string get_env(std::string const & key) {
  alloc pools declared as `extern __thread qd_alloc_pool_t *`. These will have wrong values
  the second time around, and there is no good way to hunt them all down and NULL them.
  */
-class QDR {
+class QDR
+{
     // protects global variables around router startup and pool leak dumping
     static std::mutex startup_shutdown_lock;
+
    public:
     qd_dispatch_t *qd;
     /// prepare the smallest amount of things that qd_dispatch_free needs to be present
-    void initialize(const std::string& config_path="") {
+    void initialize(const std::string &config_path = "")
+    {
         const std::lock_guard<std::mutex> lock(QDR::startup_shutdown_lock);
 
         qd = qd_dispatch(nullptr, false);
@@ -175,7 +190,8 @@ class QDR {
             REQUIRE(qd_dispatch_validate_config(config_path.c_str()) == QD_ERROR_NONE);
             REQUIRE(qd_dispatch_load_config(qd, config_path.c_str()) == QD_ERROR_NONE);
         } else {
-            // this is the abbreviated setup load_config() calls from Python, this way we can sometimes skip loading a config file
+            // this is the abbreviated setup load_config() calls from Python, this way we can sometimes skip loading a
+            // config file
             REQUIRE(qd_dispatch_prepare(qd) == QD_ERROR_NONE);
             qd_router_setup_late(qd);  // sets up e.g. qd->router->router_core
         }
@@ -183,7 +199,8 @@ class QDR {
 
     /// cleaning up too early after init will lead to leaks and other
     /// unpleasantries (I observed some invalid pointer accesses)
-    void wait() const {
+    void wait() const
+    {
         // give the router core thread an action; when that executes, we're done starting up
         RouterStartupLatch{}.wait_for_qdr(qd);
     }
@@ -191,16 +208,19 @@ class QDR {
     /// Runs the router in the current thread (+ any new threads router decides to spawn).
     ///
     /// This method blocks until stop() is called.
-    void run() const {
+    void run() const
+    {
         qd_server_run(qd);
     }
 
-    void stop() const {
+    void stop() const
+    {
         qd_server_stop(qd);
     }
 
     /// Frees the router and optionally checks for leaks.
-    void deinitialize(bool check_leaks = true) const {
+    void deinitialize(bool check_leaks = true) const
+    {
         const std::lock_guard<std::mutex> lock(QDR::startup_shutdown_lock);
         const WithNoMemoryLeaks wnml{check_leaks};
 
