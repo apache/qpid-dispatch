@@ -66,3 +66,4 @@ RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr && make install
 # Start the dispatch router
 #ENTRYPOINT ["qdrouterd"]
 CMD ["/bin/bash"]
+

@@ -455,10 +455,10 @@ int main(int argc, char** argv)
 
             time_t now = time(NULL);
             if ((now - last_log) >= 10) {
-                fprintf(stdout,
-                        "Sent:%"PRIu64" Accepted:%"PRIu64" Rejected:%"PRIu64
-                        " Released:%"PRIu64" Modified:%"PRIu64" Limit:%"PRIu64"\n",
-                        count, accepted, rejected, released, modified, limit);
+                    fprintf(stdout,
+                            "Sent:%"PRIu64" Accepted:%"PRIu64" Rejected:%"PRIu64
+                            " Released:%"PRIu64" Modified:%"PRIu64" Limit:%"PRIu64 "\n",
+                            count, accepted, rejected, released, modified, limit);
                 fflush(stdout);
                 last_log = now;
             }

@@ -76,7 +76,7 @@ static void free_all_connection_streams(qdr_http2_connection_t *http_conn, bool 
     // Free all the stream data associated with this connection/session.
     qdr_http2_stream_data_t *stream_data = DEQ_HEAD(http_conn->session_data->streams);
     while (stream_data) {
-        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Freeing stream in free_qdr_http2_connection", stream_data->session_data->conn->conn_id, stream_data->stream_id);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%" PRIu64 "][S%" PRId32 "] Freeing stream in free_qdr_http2_connection", stream_data->session_data->conn->conn_id, stream_data->stream_id);
         free_http2_stream_data(stream_data, on_shutdown);
         stream_data = DEQ_HEAD(http_conn->session_data->streams);
     }
@@ -1990,7 +1990,6 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
 		free_http2_stream_data(stream_data, false);
 	}
 	return disp;
-
 }
 
 

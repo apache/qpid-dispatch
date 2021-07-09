@@ -56,4 +56,6 @@ void qd_connection_manager_free(qd_connection_manager_t *cm);
  */
 void qd_connection_manager_start(qd_dispatch_t *qd);
 
+int qd_dispatch_get_http_listener_port(qd_dispatch_t *qd);
+
 #endif

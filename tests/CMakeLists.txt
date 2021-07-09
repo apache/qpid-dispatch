@@ -103,7 +103,7 @@ foreach(py_test_module
 endforeach()
 
 if(USE_LIBWEBSOCKETS)
-  set(SYSTEM_TESTS_HTTP system_tests_http)
+  set(SYSTEM_TESTS_HTTP system_tests_websockets system_tests_http)
 endif()
 
 if(USE_LIBNGHTTP2)
@@ -274,3 +274,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests)
 
 add_subdirectory(c_unittests)
+
+if(BUILD_BENCHMARKS)
+  add_subdirectory(c_benchmarks)
+endif()

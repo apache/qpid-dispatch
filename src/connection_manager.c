@@ -29,6 +29,7 @@
 #include "qpid/dispatch/threading.h"
 
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 
 #include <errno.h>
 #include <inttypes.h>
@@ -814,7 +815,7 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 
         // We need to go to the elements in the list to get to the
         // element that matches the connection index. This is the first
-        // url that the router will try to connect on ffailover.
+        // url that the router will try to connect on failover.
         if (conn_index == i) {
             num_items += 1;
             if (item->scheme) {
@@ -880,6 +881,52 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
     sys_mutex_unlock(connector->lock);
     free(failover_info);
     return qd_error_code();
+}
+
+/**
+ * Returns the port of the first configured listener. Useful when 0 was specified in a config.
+ * @return
+ */
+int qd_dispatch_get_listener_port(qd_dispatch_t *qd) {
+    qd_listener_t  *li = DEQ_HEAD(qd->connection_manager->listeners);
+
+    while (li) {
+        if (li->pn_listener) {
+            const pn_netaddr_t *na   = pn_listener_addr(li->pn_listener);
+            const struct sockaddr *s = pn_netaddr_sockaddr(na);
+            int port;
+            switch (s->sa_family) {
+                case AF_INET: {
+                    const struct sockaddr_in *sin = (const struct sockaddr_in *) s;
+                    port                          = htons(sin->sin_port);
+                    break;
+                }
+                case AF_INET6: {
+                    const struct sockaddr_in6 *sin = (const struct sockaddr_in6 *) s;
+                    port                           = htons(sin->sin6_port);
+                    break;
+                }
+                default: {
+                    port = 0;
+                    break;
+                }
+            }
+            return port;
+        }
+        li = DEQ_NEXT(li);
+    }
+    return 0;
+}
+
+int qd_dispatch_get_http_listener_port(qd_dispatch_t *qd) {
+    qd_listener_t  *li = DEQ_HEAD(qd->connection_manager->listeners);
+    while (li) {
+        if (li->http) {
+            return qd_lws_qd_listener(li->http);
+        }
+        li = DEQ_NEXT(li);
+    }
+    return 0;
 }
 
 
@@ -993,6 +1040,8 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
         config_sasl_plugin_free(cm, saslp);
         saslp = DEQ_HEAD(cm->config_sasl_plugins);
     }
+
+    free(cm);
 }
 
 
