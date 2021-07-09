@@ -381,6 +381,10 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     qd_python_finalize();
     qd_dispatch_set_router_id(qd, NULL);
     qd_dispatch_set_router_area(qd, NULL);
+    free(qd->timestamp_format);
+    free(qd->metadata);
+
+    free(qd);
 }
 
 
