@@ -20,11 +20,12 @@
  */
 
 #include "../c_unittests/helpers.hpp"
-
-#include "PracticalSocket.h"  // For Socket and SocketException
+#include "SocketException.h"
+#include "TCPSocket.h"
 #include "echo_server.h"
 
 #include <benchmark/benchmark.h>
+#include <sys/prctl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -35,63 +36,65 @@
 #include <cstring>
 #include <iostream>  // For cerr and cout
 #include <thread>
-#include <sys/prctl.h>
-
-using namespace std;
 
 extern "C" {
-#include "qpid/dispatch.h"
+#include "entity_cache.h"
 #include "log_private.h"
 #include "parse_tree.h"
-#include "entity_cache.h"
+
+#include "qpid/dispatch.h"
 
 // declarations that don't have .h file
 void qd_error_initialize();
 }
 
-class QDRMinimalEnv {
+class QDRMinimalEnv
+{
    public:
-    QDRMinimalEnv() {
+    QDRMinimalEnv()
+    {
         qd_alloc_initialize();
         qd_log_initialize();
         qd_error_initialize();
     }
 
-    ~QDRMinimalEnv() {
+    ~QDRMinimalEnv()
+    {
         qd_log_finalize();
         qd_alloc_finalize();
     }
 };
 
-
-void warmupIteration(TCPSocket &sock) {
+void warmupIteration(TCPSocket &sock)
+{
     std::string echoString = "baf";
-    int echoStringLen = echoString.length();
-    const int RCVBUFSIZE = 32;
+    int echoStringLen      = echoString.length();
+    const int RCVBUFSIZE   = 32;
 
     //        cout << "sending" << endl;
     // Send the string to the echo server
     sock.send(echoString.c_str(), echoStringLen);
 
-    char echoBuffer[RCVBUFSIZE + 1];    // Buffer for echo string + \0
-    int bytesReceived = 0;              // Bytes read on each recv()
-    int totalBytesReceived = 0;         // Total bytes read
+    char echoBuffer[RCVBUFSIZE + 1];  // Buffer for echo string + \0
+    int bytesReceived      = 0;       // Bytes read on each recv()
+    int totalBytesReceived = 0;       // Total bytes read
     // Receive the same string back from the server
-//            cout << "Received: ";               // Setup to print the echoed string
+    //            cout << "Received: ";               // Setup to print the echoed string
     while (totalBytesReceived < echoStringLen) {
         // Receive up to the buffer size bytes from the sender
         if ((bytesReceived = (sock.recv(echoBuffer, RCVBUFSIZE))) <= 0) {
-            cerr << "Unable to read";
+            std::cerr << "Unable to read";
             return;
         }
-        totalBytesReceived += bytesReceived;     // Keep tally of total bytes
-        echoBuffer[bytesReceived] = '\0';        // Terminate the string!
-//                cout << echoBuffer;                      // Print the echo buffer
+        totalBytesReceived += bytesReceived;  // Keep tally of total bytes
+        echoBuffer[bytesReceived] = '\0';     // Terminate the string!
+        //                cout << echoBuffer;                      // Print the echo buffer
     }
 }
 
-static void BM_AddRemovePattern(benchmark::State &state) {
-    std::thread([&state]{
+static void BM_AddRemoveSinglePattern(benchmark::State &state)
+{
+    std::thread([&state] {
         QDRMinimalEnv env{};
 
         qd_iterator_t *piter  = qd_iterator_string("I.am.Sam", ITER_VIEW_ALL);
@@ -108,12 +111,49 @@ static void BM_AddRemovePattern(benchmark::State &state) {
     }).join();
 }
 
-BENCHMARK(BM_AddRemovePattern)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_AddRemoveSinglePattern)->Unit(benchmark::kMicrosecond);
 
+static void BM_AddRemoveMultiplePatterns(benchmark::State &state)
+{
+    std::thread([&state] {
+        QDRMinimalEnv env{};
+
+        int batchSize = state.range(0);
+        std::vector<std::string> data(batchSize);
+        std::vector<qd_iterator_t *> piter(batchSize);
+        for (int i = 0; i < batchSize; ++i) {
+            data[i] = "I.am.Sam_" + std::to_string(i);
+            piter[i] = qd_iterator_string(data[i].c_str(), ITER_VIEW_ALL);
+        }
+        qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+        const void *payload;
+
+        for (auto _ : state) {
+            for (int i = 0; i < batchSize; ++i) {
+                qd_parse_tree_add_pattern(node, piter[i], &payload);
+            }
+            for (int i = 0; i < batchSize; ++i) {
+                qd_parse_tree_remove_pattern(node, piter[i]);
+            }
+        }
+
+        qd_parse_tree_free(node);
+        for (int i = 0; i < batchSize; ++i) {
+            qd_iterator_free(piter[i]);
+        }
+
+        state.SetComplexityN(batchSize);
+    }).join();
+}
+
+BENCHMARK(BM_AddRemoveMultiplePatterns)->Unit(benchmark::kMicrosecond)
+->Arg(1)->Arg(3)->Arg(10)->Arg(30)->Arg(100)->Arg(1000)->Arg(3000)->Arg(10000)->Arg(100000)
+    ->Complexity();
 
 // https://github.com/apache/qpid-dispatch/pull/732/files
-static void BM_RouterInitializeMinimalConfig(benchmark::State &state) {
-    for(auto _: state) {
+static void BM_RouterInitializeMinimalConfig(benchmark::State &state)
+{
+    for (auto _ : state) {
         std::thread([]() {
             QDR qdr{};
             qdr.initialize("minimal_silent.conf");
@@ -125,9 +165,10 @@ static void BM_RouterInitializeMinimalConfig(benchmark::State &state) {
 
 BENCHMARK(BM_RouterInitializeMinimalConfig)->Unit(benchmark::kMillisecond);
 
-static void BM_ZZZTCPEchoServerLatency1QDR(benchmark::State &state) {
-//    std::condition_variable cv;
-//    std::unique_lock<std::mutex> lk(cv);
+static void BM_ZZZTCPEchoServerLatency1QDR(benchmark::State &state)
+{
+    //    std::condition_variable cv;
+    //    std::unique_lock<std::mutex> lk(cv);
     std::mutex mx;
     mx.lock();
     std::mutex nx;
@@ -143,46 +184,44 @@ static void BM_ZZZTCPEchoServerLatency1QDR(benchmark::State &state) {
         qdr.deinitialize(false);
     });
 
-//    run_echo_server();
+    //    run_echo_server();
     auto u = std::thread([]() { run_echo_server(); });
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
+    const int RCVBUFSIZE = 32;  // Size of receive buffer
 
-    const int RCVBUFSIZE = 32;    // Size of receive buffer
-
-    string servAddress = "127.0.0.1"; // First arg: server address
-    const char *echoString = "baf";   // Second arg: string to echo
-    int echoStringLen = strlen(echoString);   // Determine input length
+    std::string servAddress     = "127.0.0.1";
+    const char *echoString      = "baf";
+    int echoStringLen           = strlen(echoString);
     unsigned short echoServPort = 5673;
-
 
     mx.lock();
 
     {
-    TCPSocket sock(servAddress, echoServPort);
+        TCPSocket sock(servAddress, echoServPort);
         warmupIteration(sock);
 
-    for(auto _: state) {
-//        cout << "sending" << endl;
-        // Send the string to the echo server
-        sock.send(echoString, echoStringLen);
+        for (auto _ : state) {
+            //        cout << "sending" << endl;
+            // Send the string to the echo server
+            sock.send(echoString, echoStringLen);
 
-        char echoBuffer[RCVBUFSIZE + 1];    // Buffer for echo string + \0
-        int bytesReceived = 0;              // Bytes read on each recv()
-        int totalBytesReceived = 0;         // Total bytes read
-        // Receive the same string back from the server
-//        cout << "Received: ";               // Setup to print the echoed string
-        while (totalBytesReceived < echoStringLen) {
-            // Receive up to the buffer size bytes from the sender
-            if ((bytesReceived = (sock.recv(echoBuffer, RCVBUFSIZE))) <= 0) {
-                cerr << "Unable to read";
-                state.SkipWithError("unable to read");
+            char echoBuffer[RCVBUFSIZE + 1];
+            int bytesReceived      = 0;
+            int totalBytesReceived = 0;
+            // Receive the same string back from the server
+            //        cout << "Received: ";               // Setup to print the echoed string
+            while (totalBytesReceived < echoStringLen) {
+                // Receive up to the buffer size bytes from the sender
+                if ((bytesReceived = (sock.recv(echoBuffer, RCVBUFSIZE))) <= 0) {
+                    std::cerr << "Unable to read";
+                    state.SkipWithError("unable to read");
+                }
+                totalBytesReceived += bytesReceived;  // Keep tally of total bytes
+                echoBuffer[bytesReceived] = '\0';     // Terminate the string!
+                //            cout << echoBuffer;                      // Print the echo buffer
             }
-            totalBytesReceived += bytesReceived;     // Keep tally of total bytes
-            echoBuffer[bytesReceived] = '\0';        // Terminate the string!
-//            cout << echoBuffer;                      // Print the echo buffer
         }
-    }
     }
 
     // if I kill dispatch first, this then may/will hang on socket recv (and dispatch leaks significantly more)
@@ -193,11 +232,12 @@ static void BM_ZZZTCPEchoServerLatency1QDR(benchmark::State &state) {
     t.join();
 }
 
-TCPSocket try_to_connect(const std::string& servAddress, int echoServPort) {
+TCPSocket try_to_connect(const std::string &servAddress, int echoServPort)
+{
     auto then = std::chrono::steady_clock::now();
-    while(std::chrono::steady_clock::now() - then < std::chrono::seconds(30)) {
+    while (std::chrono::steady_clock::now() - then < std::chrono::seconds(30)) {
         try {
-//            printf("trying to connect\n");
+            //            fprintf(stderr, "trying to connect\n");
             TCPSocket sock(servAddress, echoServPort);
             return sock;
         } catch (SocketException &e) {
@@ -206,9 +246,10 @@ TCPSocket try_to_connect(const std::string& servAddress, int echoServPort) {
     throw std::runtime_error("Failed to connect in time");
 }
 
-static void BM_TCPEchoServerLatency1QDRSubprocess(benchmark::State &state) {
-//    std::condition_variable cv;
-//    std::unique_lock<std::mutex> lk(cv);
+static void BM_TCPEchoServerLatency1QDRSubprocess(benchmark::State &state)
+{
+    //    std::condition_variable cv;
+    //    std::unique_lock<std::mutex> lk(cv);
     std::mutex mx;
     mx.lock();
     std::mutex nx;
@@ -221,48 +262,48 @@ static void BM_TCPEchoServerLatency1QDRSubprocess(benchmark::State &state) {
         // https://stackoverflow.com/questions/10761197/prctlpr-set-pdeathsig-signal-is-called-on-parent-thread-exit-not-parent-proc
         prctl(PR_SET_PDEATHSIG, SIGHUP);
         QDR qdr{};
-      qdr.initialize("tcp_benchmarks.conf");
-      qdr.wait();
+        qdr.initialize("tcp_benchmarks.conf");
+        qdr.wait();
 
-      qdr.run();
+        qdr.run();
 
-      exit(0);
+        exit(0);
     };
 
     auto u = std::thread([]() { run_echo_server(); });
-//    std::this_thread::sleep_for(std::chrono::seconds(1));
+    //    std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    const int RCVBUFSIZE = 32;    // Size of receive buffer
+    const int RCVBUFSIZE = 32;  // Size of receive buffer
 
-    string servAddress = "127.0.0.1"; // First arg: server address
-    const char *echoString = "baf";   // Second arg: string to echo
-    int echoStringLen = strlen(echoString);   // Determine input length
+    std::string servAddress     = "127.0.0.1";         // First arg: server address
+    const char *echoString      = "baf";               // Second arg: string to echo
+    int echoStringLen           = strlen(echoString);  // Determine input length
     unsigned short echoServPort = 5673;
 
     {
         TCPSocket sock = try_to_connect(servAddress, echoServPort);
-//        TCPSocket sock(servAddress, echoServPort);
+        //        TCPSocket sock(servAddress, echoServPort);
         warmupIteration(sock);
 
-        for(auto _: state) {
-//        cout << "sending" << endl;
+        for (auto _ : state) {
+            //        cout << "sending" << endl;
             // Send the string to the echo server
             sock.send(echoString, echoStringLen);
 
-            char echoBuffer[RCVBUFSIZE + 1];    // Buffer for echo string + \0
-            int bytesReceived = 0;              // Bytes read on each recv()
-            int totalBytesReceived = 0;         // Total bytes read
+            char echoBuffer[RCVBUFSIZE + 1];  // Buffer for echo string + \0
+            int bytesReceived      = 0;       // Bytes read on each recv()
+            int totalBytesReceived = 0;       // Total bytes read
             // Receive the same string back from the server
-//        cout << "Received: ";               // Setup to print the echoed string
+            //        cout << "Received: ";               // Setup to print the echoed string
             while (totalBytesReceived < echoStringLen) {
                 // Receive up to the buffer size bytes from the sender
                 if ((bytesReceived = (sock.recv(echoBuffer, RCVBUFSIZE))) <= 0) {
-                    cerr << "Unable to read";
+                    std::cerr << "Unable to read";
                     state.SkipWithError("unable to read");
                 }
-                totalBytesReceived += bytesReceived;     // Keep tally of total bytes
-                echoBuffer[bytesReceived] = '\0';        // Terminate the string!
-//            cout << echoBuffer;                      // Print the echo buffer
+                totalBytesReceived += bytesReceived;  // Keep tally of total bytes
+                echoBuffer[bytesReceived] = '\0';     // Terminate the string!
+                //            cout << echoBuffer;                      // Print the echo buffer
             }
         }
     }
@@ -298,9 +339,10 @@ BENCHMARK(BM_TCPEchoServerLatency1QDRSubprocess)->Unit(benchmark::kMillisecond);
  * both dispatches try to init Python; can let them run startup one after another, ... but that's not a good solution
  */
 
-static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
-//    std::condition_variable cv;
-//    std::unique_lock<std::mutex> lk(cv);
+static void BM_TCPEchoServerLatency2QDR(benchmark::State &state)
+{
+    //    std::condition_variable cv;
+    //    std::unique_lock<std::mutex> lk(cv);
     auto u = std::thread([]() { run_echo_server(); });
 
     std::mutex my;
@@ -311,53 +353,53 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     QDR qdr2{};
     int pid = fork();
     if (pid == 0) {
-//        auto t = std::thread([&mx, &qdr1]() {
-//        std::mutex mx;
-//        mx.lock();
+        //        auto t = std::thread([&mx, &qdr1]() {
+        //        std::mutex mx;
+        //        mx.lock();
         QDR qdr1{};
-            qdr1.initialize("./l1.conf");
-            qdr1.wait();
+        qdr1.initialize("./l1.conf");
+        qdr1.wait();
 
-//            mx.unlock();
-            qdr1.run();  // this never returns, until signal is sent, and then process dies
-            printf("Subprocess router died\n");
-            exit(0);
-//
-//            qdr1.stop();
-//        });
+        //            mx.unlock();
+        qdr1.run();  // this never returns, until signal is sent, and then process dies
+        printf("Subprocess router died\n");
+        exit(0);
+        //
+        //            qdr1.stop();
+        //        });
     }
-//    mx.lock();
+    //    mx.lock();
     // if this does not work, I can always fork...
-//    std::this_thread::sleep_for(std::chrono::seconds(3));
+    //    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     int pid2 = fork();
     if (pid2 == 0) {
-//    auto t2 = std::thread([&my, &qdr2]() {
+        //    auto t2 = std::thread([&my, &qdr2]() {
         qdr2.initialize("./l2.conf");
         qdr2.wait();
 
-//        my.unlock();
+        //        my.unlock();
         qdr2.run();
         printf("calling exit(0) on l2\n");
         exit(0);
 
-        qdr2.deinitialize();
-//    });
-//    my.lock();
+        qdr2.deinitialize(false);
+        //    });
+        //    my.lock();
     }
 
-//    run_echo_server();
+    //    run_echo_server();
 
-//    std::this_thread::sleep_for(std::chrono::seconds(1));
+    //    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // even more time to setup router network
     //    std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    const int RCVBUFSIZE = 32;    // Size of receive buffer
+    const int RCVBUFSIZE = 32;  // Size of receive buffer
 
-    string servAddress = "127.0.0.1"; // First arg: server address
-    const char *echoString = "baf";   // Second arg: string to echo
-    int echoStringLen = strlen(echoString);   // Determine input length
+    std::string servAddress     = "127.0.0.1";         // First arg: server address
+    const char *echoString      = "baf";               // Second arg: string to echo
+    int echoStringLen           = strlen(echoString);  // Determine input length
     unsigned short echoServPort = 5673;
 
     printf("going for the loop\n");
@@ -365,25 +407,25 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
         TCPSocket sock = try_to_connect(servAddress, echoServPort);
         warmupIteration(sock);
 
-        for(auto _: state) {
-//        cout << "sending" << endl;
+        for (auto _ : state) {
+            //        cout << "sending" << endl;
             // Send the string to the echo server
             sock.send(echoString, echoStringLen);
 
-            char echoBuffer[RCVBUFSIZE + 1];    // Buffer for echo string + \0
-            int bytesReceived = 0;              // Bytes read on each recv()
-            int totalBytesReceived = 0;         // Total bytes read
+            char echoBuffer[RCVBUFSIZE + 1];  // Buffer for echo string + \0
+            int bytesReceived      = 0;       // Bytes read on each recv()
+            int totalBytesReceived = 0;       // Total bytes read
             // Receive the same string back from the server
-//            cout << "Received: ";               // Setup to print the echoed string
+            //            cout << "Received: ";               // Setup to print the echoed string
             while (totalBytesReceived < echoStringLen) {
                 // Receive up to the buffer size bytes from the sender
                 if ((bytesReceived = (sock.recv(echoBuffer, RCVBUFSIZE))) <= 0) {
-                    cerr << "Unable to read";
+                    std::cerr << "Unable to read";
                     state.SkipWithError("unable to read");
                 }
-                totalBytesReceived += bytesReceived;     // Keep tally of total bytes
-                echoBuffer[bytesReceived] = '\0';        // Terminate the string!
-//                cout << echoBuffer;                      // Print the echo buffer
+                totalBytesReceived += bytesReceived;  // Keep tally of total bytes
+                echoBuffer[bytesReceived] = '\0';     // Terminate the string!
+                //                cout << echoBuffer;                      // Print the echo buffer
             }
         }
     }
@@ -411,83 +453,85 @@ static void BM_TCPEchoServerLatency2QDR(benchmark::State &state) {
     if (ret != pid2) {
         perror("Waiting for child2");
     }
-//    qdr1.stop_run();
-//    t.join();
-//    std::thread([&qdr2]() { qdr2.stop_run(); }).join();
-//    qdr2.stop_run();
-//    t2.join();
+    //    qdr1.stop_run();
+    //    t.join();
+    //    std::thread([&qdr2]() { qdr2.stop_run(); }).join();
+    //    qdr2.stop_run();
+    //    t2.join();
 }
 
-BENCHMARK(BM_TCPEchoServerLatency2QDR)->Unit(benchmark::kMillisecond);
-    //->MinTime(2);
-    //->Iterations(2000);
+// BENCHMARK(BM_TCPEchoServerLatency2QDR)->Unit(benchmark::kMillisecond);
+//->MinTime(2);
+//->Iterations(2000);
 
-static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state) {
-//    std::condition_variable cv;
-//    std::unique_lock<std::mutex> lk(cv);
+static void BM_TCPEchoServerLatencyWithoutQDR(benchmark::State &state)
+{
+    //    std::condition_variable cv;
+    //    std::unique_lock<std::mutex> lk(cv);
     std::mutex mx;
     mx.lock();
     std::mutex nx;
     nx.lock();
-//    QDR qdr{};
-//    auto t = std::thread([&mx, &qdr]() {
-//        qdr.start();
-//        qdr.wait();
-//
-//        mx.unlock();
-//        qdr.run();
-//
-//        qdr.stop();
-//    });
+    //    QDR qdr{};
+    //    auto t = std::thread([&mx, &qdr]() {
+    //        qdr.start();
+    //        qdr.wait();
+    //
+    //        mx.unlock();
+    //        qdr.run();
+    //
+    //        qdr.stop();
+    //    });
 
-//    run_echo_server();
+    //    run_echo_server();
     auto u = std::thread([]() { run_echo_server(); });
-//    std::this_thread::sleep_for(std::chrono::seconds(1));
+    //    std::this_thread::sleep_for(std::chrono::seconds(1));
 
+    const int RCVBUFSIZE = 32;  // Size of receive buffer
 
-    const int RCVBUFSIZE = 32;    // Size of receive buffer
-
-    string servAddress = "127.0.0.1"; // First arg: server address
-    const char *echoString = "baf";   // Second arg: string to echo
-    int echoStringLen = strlen(echoString);   // Determine input length
+    std::string servAddress     = "127.0.0.1";         // First arg: server address
+    const char *echoString      = "baf";               // Second arg: string to echo
+    int echoStringLen           = strlen(echoString);  // Determine input length
     unsigned short echoServPort = 5674;
 
-
-//    mx.lock();
+    //    mx.lock();
 
     {
+        //        fprintf(stderr, "aaa\n");
         TCPSocket sock = try_to_connect(servAddress, echoServPort);
+        //        fprintf(stderr, "bbb\n");
 
-        for(auto _: state) {
-//            cout << "sending" << endl;
+        for (auto _ : state) {
+            //            cout << "sending" << endl;
             // Send the string to the echo server
             sock.send(echoString, echoStringLen);
 
-            char echoBuffer[RCVBUFSIZE + 1];    // Buffer for echo string + \0
-            int bytesReceived = 0;              // Bytes read on each recv()
-            int totalBytesReceived = 0;         // Total bytes read
+            char echoBuffer[RCVBUFSIZE + 1];  // Buffer for echo string + \0
+            int bytesReceived      = 0;       // Bytes read on each recv()
+            int totalBytesReceived = 0;       // Total bytes read
             // Receive the same string back from the server
-//            cout << "Received: ";               // Setup to print the echoed string
+            //            cout << "Received: ";               // Setup to print the echoed string
             while (totalBytesReceived < echoStringLen) {
                 // Receive up to the buffer size bytes from the sender
                 if ((bytesReceived = (sock.recv(echoBuffer, RCVBUFSIZE))) <= 0) {
-                    cerr << "Unable to read";
+                    std::cerr << "Unable to read";
                     state.SkipWithError("unable to read");
                 }
-                totalBytesReceived += bytesReceived;     // Keep tally of total bytes
-                echoBuffer[bytesReceived] = '\0';        // Terminate the string!
-//                cout << echoBuffer;                      // Print the echo buffer
+                totalBytesReceived += bytesReceived;  // Keep tally of total bytes
+                echoBuffer[bytesReceived] = '\0';     // Terminate the string!
+                //                cout << echoBuffer;                      // Print the echo buffer
             }
         }
     }
-//    qdr.stop_run();
+    //    qdr.stop_run();
 
-//    t.join();
+    //    t.join();
 
     stop_echo_server();
     u.join();
 }
 
+// todo try this on nonlocalhost iface
 BENCHMARK(BM_TCPEchoServerLatencyWithoutQDR)->Unit(benchmark::kMillisecond);
 
 // breaks the two-router test if it runs before
