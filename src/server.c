@@ -919,12 +919,12 @@ static void qd_connection_free(qd_connection_t *qd_conn)
 
     sys_mutex_lock(qd_server->lock);
     DEQ_REMOVE(qd_server->conn_list, qd_conn);
+    sys_mutex_unlock(qd_server->lock);
 
     // If counted for policy enforcement, notify it has closed
     if (qd_conn->policy_counted) {
         qd_policy_socket_close(qd_server->qd->policy, qd_conn);
     }
-    sys_mutex_unlock(qd_server->lock);
 
     invoke_deferred_calls(qd_conn, true);  // Discard any pending deferred calls
     sys_mutex_free(qd_conn->deferred_call_lock);
