@@ -565,11 +565,13 @@ STATIC void connection_wake(qd_connection_t *ctx) {
     if (ctx->pn_conn) pn_connection_wake(ctx->pn_conn);
 }
 
-/* Construct a new qd_connection. Thread safe. */
-qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *config)
+/* Construct a new qd_connection. Thread safe.
+ * Does not allocate any managed objects and therefore
+ * does not take ENTITY_CACHE lock.
+ */
+qd_connection_t *qd_server_connection_impl(qd_server_t *server, qd_server_config_t *config, qd_connection_t *ctx)
 {
-    qd_connection_t *ctx = new_qd_connection_t();
-    if (!ctx) return NULL;
+    assert(ctx);
     ZERO(ctx);
     ctx->pn_conn       = pn_connection();
     ctx->deferred_call_lock = sys_mutex("CONN_DEFERRED_CALL");
@@ -578,7 +580,7 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
         if (ctx->pn_conn) pn_connection_free(ctx->pn_conn);
         if (ctx->deferred_call_lock) sys_mutex_free(ctx->deferred_call_lock);
         free(ctx->role);
-        free(ctx);
+        free_qd_connection_t(ctx);
         return NULL;
     }
     ctx->server = server;
@@ -595,6 +597,16 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     return ctx;
 }
 
+/* Construct a new qd_connection. Thread safe.
+ * Allocates a qd_connection_t object and therefore
+ * takes ENTITY_CACHE lock.
+ */
+qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *config)
+{
+    qd_connection_t *ctx = new_qd_connection_t();
+    if (!ctx) return NULL;
+    return qd_server_connection_impl(server, config, ctx);
+}
 
 STATIC void on_accept(pn_event_t *e, qd_listener_t *listener)
 {
@@ -1160,11 +1172,10 @@ STATIC qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
 
 
 /* Timer callback to try/retry connection open */
-STATIC void try_open_lh(qd_connector_t *connector)
+STATIC void try_open_lh(qd_connector_t *connector, qd_connection_t *connection)
 {
-    // Allocate a new connection. No other thread will touch this
     // connection until pn_proactor_connect is called below
-    qd_connection_t *qd_conn = qd_server_connection(connector->server, &connector->config);
+    qd_connection_t *qd_conn = qd_server_connection_impl(connector->server, &connector->config, connection);
     if (!qd_conn) {                 /* Try again later */
         qd_log(connector->server->log_source, QD_LOG_CRITICAL, "Allocation failure connecting to %s",
                connector->config.host_port);
@@ -1327,12 +1338,24 @@ STATIC void try_open_cb(void *context)
 {
     qd_connector_t *ct = (qd_connector_t*) context;
 
-    sys_mutex_lock(ct->lock);   /* TODO aconway 2017-05-09: this lock looks too big */
+    // Allocate connection before taking connector lock to avoid
+    // CONNECTOR - ENTITY_CACHE lock inversion deadlock window.
+    qd_connection_t *ctx = new_qd_connection_t();
+    if (!ctx) {
+        qd_log(ct->server->log_source, QD_LOG_CRITICAL, "Allocation failure connecting to %s",
+               ct->config.host_port);
+        ct->delay = 10000;
+        ct->state = CXTR_STATE_CONNECTING;
+        qd_timer_schedule(ct->timer, ct->delay);
+        return;
+    }
+
+    sys_mutex_lock(ct->lock);
 
     if (ct->state == CXTR_STATE_CONNECTING || ct->state == CXTR_STATE_INIT) {
         // else deleted or failed - on failed wait until after connection is freed
         // and state is set to CXTR_STATE_CONNECTING (timer is rescheduled then)
-        try_open_lh(ct);
+        try_open_lh(ct, ctx);
     }
 
     sys_mutex_unlock(ct->lock);
@@ -1588,7 +1611,16 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
     if (!conn)
         return;
 
-    qd_deferred_call_t *dc = new_qd_deferred_call_t();
+    qd_connection_invoke_deferred_impl(conn, call, context, new_qd_deferred_call_t());
+}
+
+
+void qd_connection_invoke_deferred_impl(qd_connection_t *conn, qd_deferred_t call, void *context, void *dct)
+{
+    if (!conn)
+        return;
+
+    qd_deferred_call_t *dc = (qd_deferred_call_t*)dct;
     DEQ_ITEM_INIT(dc);
     dc->call    = call;
     dc->context = context;
@@ -1600,6 +1632,18 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
     sys_mutex_lock(conn->server->conn_activation_lock);
     qd_server_activate(conn);
     sys_mutex_unlock(conn->server->conn_activation_lock);
+}
+
+
+void *qd_connection_new_qd_deferred_call_t()
+{
+    return new_qd_deferred_call_t();
+}
+
+
+void qd_connection_free_qd_deferred_call_t(void *dct)
+{
+    free_qd_deferred_call_t((qd_deferred_call_t *)dct);
 }
 
 
