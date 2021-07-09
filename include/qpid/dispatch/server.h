@@ -569,6 +569,35 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
 
 
 /**
+ * Schedule a call to be invoked on a thread that has ownership of this connection
+ * when it will be safe for the callback to perform operations related to this connection.
+ * A qd_deferred_call_t object has been allocated before hand to avoid taking
+ * the ENTITY_CACHE lock.
+ *
+ * @param conn Connection object
+ * @param call The function to be invoked on the connection's thread
+ * @param context The context to be passed back in the callback
+ * @param dct Pointer to preallocated qd_deferred_call_t object
+ */
+void qd_connection_invoke_deferred_impl(qd_connection_t *conn, qd_deferred_t call, void *context, void *dct);
+
+
+/**
+ * Allocate a qd_deferred_call_t object
+ */
+void *qd_connection_new_qd_deferred_call_t();
+
+
+/**
+ * Deallocate a qd_deferred_call_t object
+ *
+ * @param dct Pointer to preallocated qd_deferred_call_t object
+ */
+void qd_connection_free_qd_deferred_call_t(void *dct);
+
+
+
+/**
  * Listen for incoming connections, return true if listening succeeded.
  */
 bool qd_listener_listen(qd_listener_t *l);

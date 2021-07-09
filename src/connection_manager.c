@@ -1081,16 +1081,19 @@ void qd_connection_manager_delete_connector(qd_dispatch_t *qd, void *impl)
         // cannot free the timer while holding ct->lock since the
         // timer callback may be running during the call to qd_timer_free
         qd_timer_t *timer = 0;
+        void *dct = qd_connection_new_qd_deferred_call_t();
         sys_mutex_lock(ct->lock);
         timer = ct->timer;
         ct->timer = 0;
         ct->state = CXTR_STATE_DELETED;
         qd_connection_t *conn = ct->qd_conn;
         if (conn && conn->pn_conn) {
-            qd_connection_invoke_deferred(conn, deferred_close, conn->pn_conn);
+            qd_connection_invoke_deferred_impl(conn, deferred_close, conn->pn_conn, dct);
+            sys_mutex_unlock(ct->lock);
+        } else {
+            sys_mutex_unlock(ct->lock);
+            qd_connection_free_qd_deferred_call_t(dct);
         }
-        sys_mutex_unlock(ct->lock);
-
         qd_timer_free(timer);
         DEQ_REMOVE(qd->connection_manager->connectors, ct);
         qd_connector_decref(ct);
