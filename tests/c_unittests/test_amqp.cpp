@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "qdr_doctest.h"
+#include "qdr_doctest.hpp"
 
 extern "C" {
 #include "qpid/dispatch/amqp.h"

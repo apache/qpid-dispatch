@@ -54,6 +54,7 @@ jobs:
         -DUSE_BWRAP=ON
         -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
         -DSANITIZE_3RD_PARTY=ON
+        -DBUILD_BENCHMARKS=ON
 
       CCACHE_BASEDIR: ${{github.workspace}}
       CCACHE_DIR: ${{github.workspace}}/.ccache
@@ -107,7 +108,7 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt update; sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz
+          sudo apt update; sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz libbenchmark-dev
 
       - name: Zero ccache stats
         run: ccache -z
@@ -208,7 +209,7 @@ jobs:
       - name: Install Linux runtime/test dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt update; sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 pixz bubblewrap curl
+          sudo apt update; sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 libbenchmark1 pixz bubblewrap curl
 
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
