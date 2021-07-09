@@ -50,6 +50,10 @@
 #include <stdio.h>
 #include <string.h>
 
+// Define STATIC as blank to expose function names in backtraces to aid in debugging
+// This ought to go in globally to help out with debug allocation dumps as well.
+#define STATIC
+
 struct qd_server_t {
     qd_dispatch_t            *qd;
     const int                 thread_count; /* Immutable */
@@ -97,8 +101,8 @@ char *COMPONENT_SEPARATOR = ";";
 
 static const int BACKLOG = 50;  /* Listening backlog */
 
-static bool setup_ssl_sasl_and_open(qd_connection_t *ctx); // true if ssl, sasl, and open succeeded
-static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct);
+STATIC bool setup_ssl_sasl_and_open(qd_connection_t *ctx); // true if ssl, sasl, and open succeeded
+STATIC qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct);
 
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
@@ -142,7 +146,7 @@ qd_error_t qd_register_display_name_service(qd_dispatch_t *qd, void *displayname
  * Returns a char pointer to a user id which is constructed from components specified in the config->ssl_uid_format.
  * Parses through each component and builds a semi-colon delimited string which is returned as the user id.
  */
-static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tport)
+STATIC const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tport)
 {
     const qd_server_config_t *config =
             conn->connector ? &conn->connector->config : &conn->listener->config;
@@ -366,7 +370,7 @@ qd_error_t qd_entity_refresh_authServicePlugin(qd_entity_t* entity, void *impl)
 }
 
 
-static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_config_t *config, pn_transport_t *tport)
+STATIC qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_config_t *config, pn_transport_t *tport)
 {
     pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
     if (!domain) return qd_error(QD_ERROR_RUNTIME, "No SSL support");
@@ -428,7 +432,7 @@ static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_confi
 }
 
 
-static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, const qd_server_config_t *config)
+STATIC void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, const qd_server_config_t *config)
 {
     //
     // Set the container name
@@ -557,7 +561,7 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
 }
 
 /* Wake function for proactor-manaed connections */
-static void connection_wake(qd_connection_t *ctx) {
+STATIC void connection_wake(qd_connection_t *ctx) {
     if (ctx->pn_conn) pn_connection_wake(ctx->pn_conn);
 }
 
@@ -592,7 +596,7 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
 }
 
 
-static void on_accept(pn_event_t *e, qd_listener_t *listener)
+STATIC void on_accept(pn_event_t *e, qd_listener_t *listener)
 {
     assert(pn_event_type(e) == PN_LISTENER_ACCEPT);
     pn_listener_t *pn_listener = pn_event_listener(e);
@@ -637,7 +641,7 @@ void connect_fail(qd_connection_t *ctx, const char *name, const char *descriptio
 
 
 /* Get the host IP address for the remote end */
-static void set_rhost_port(qd_connection_t *ctx) {
+STATIC void set_rhost_port(qd_connection_t *ctx) {
     pn_transport_t *tport  = pn_connection_transport(ctx->pn_conn);
     const struct sockaddr* sa = pn_netaddr_sockaddr(pn_transport_remote_addr(tport));
     size_t salen = pn_netaddr_socklen(pn_transport_remote_addr(tport));
@@ -654,7 +658,7 @@ static void set_rhost_port(qd_connection_t *ctx) {
 
 
 /* Configure the transport once it is bound to the connection */
-static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
+STATIC void on_connection_bound(qd_server_t *server, pn_event_t *e) {
     pn_connection_t *pn_conn = pn_event_connection(e);
     qd_connection_t *ctx = pn_connection_get_context(pn_conn);
     pn_transport_t *tport  = pn_connection_transport(pn_conn);
@@ -773,7 +777,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
 }
 
 
-static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
+STATIC void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 {
     if (!conn)
         return;
@@ -796,19 +800,19 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *qd_conn);
 void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn, bool conn_closed);
 
-static void handle_event_with_context(pn_event_t *e, qd_server_t *qd_server, qd_handler_context_t *context)
+STATIC void handle_event_with_context(pn_event_t *e, qd_server_t *qd_server, qd_handler_context_t *context)
 {
     if (context && context->handler) {
         context->handler(e, qd_server, context->context);
     }
 }
 
-static void do_handle_raw_connection_event(pn_event_t *e, qd_server_t *qd_server)
+STATIC void do_handle_raw_connection_event(pn_event_t *e, qd_server_t *qd_server)
 {
     handle_event_with_context(e, qd_server, (qd_handler_context_t*) pn_raw_connection_get_context(pn_event_raw_connection(e)));
 }
 
-static void do_handle_listener(pn_event_t *e, qd_server_t *qd_server)
+STATIC void do_handle_listener(pn_event_t *e, qd_server_t *qd_server)
 {
     handle_event_with_context(e, qd_server, (qd_handler_context_t*) pn_listener_get_context(pn_event_listener(e)));
 }
@@ -818,7 +822,7 @@ pn_proactor_t *qd_server_proactor(qd_server_t *qd_server)
     return qd_server->proactor;
 }
 
-static void handle_listener(pn_event_t *e, qd_server_t *qd_server, void *context) {
+STATIC void handle_listener(pn_event_t *e, qd_server_t *qd_server, void *context) {
     qd_log_source_t *log = qd_server->log_source;
 
     qd_listener_t *li = (qd_listener_t*) context;
@@ -888,7 +892,7 @@ bool qd_connector_has_failover_info(qd_connector_t* ct)
 }
 
 
-static void qd_connection_free(qd_connection_t *qd_conn)
+STATIC void qd_connection_free(qd_connection_t *qd_conn)
 {
     qd_server_t    *qd_server = qd_conn->server;
     qd_connector_t *connector = qd_conn->connector;
@@ -941,7 +945,7 @@ static void qd_connection_free(qd_connection_t *qd_conn)
 }
 
 
-static void timeout_on_handhsake(void *context, bool discard)
+STATIC void timeout_on_handhsake(void *context, bool discard)
 {
     if (discard)
         return;
@@ -953,7 +957,7 @@ static void timeout_on_handhsake(void *context, bool discard)
 }
 
 
-static void startup_timer_handler(void *context)
+STATIC void startup_timer_handler(void *context)
 {
     //
     // This timer fires for a connection if it has not had a REMOTE_OPEN
@@ -966,7 +970,7 @@ static void startup_timer_handler(void *context)
     qd_connection_invoke_deferred(ctx, timeout_on_handhsake, context);
 }
 
-static void qd_increment_conn_index(qd_connection_t *ctx)
+STATIC void qd_increment_conn_index(qd_connection_t *ctx)
 {
     if (ctx->connector) {
         qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
@@ -987,7 +991,7 @@ static void qd_increment_conn_index(qd_connection_t *ctx)
 /* Events involving a connection or listener are serialized by the proactor so
  * only one event per connection / listener will be processed at a time.
  */
-static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_conn, qd_connection_t *ctx)
+STATIC bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_conn, qd_connection_t *ctx)
 {
     if (pn_conn && qdr_is_authentication_service_connection(pn_conn)) {
         qdr_handle_authentication_service_connection_event(e);
@@ -1098,7 +1102,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
     return true;
 }
 
-static void *thread_run(void *arg)
+STATIC void *thread_run(void *arg)
 {
     qd_server_t      *qd_server = (qd_server_t*)arg;
     bool running = true;
@@ -1142,7 +1146,7 @@ static void *thread_run(void *arg)
 }
 
 
-static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
+STATIC qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
 
     qd_failover_item_t *item = DEQ_HEAD(ct->conn_info_list);
 
@@ -1156,7 +1160,7 @@ static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
 
 
 /* Timer callback to try/retry connection open */
-static void try_open_lh(qd_connector_t *connector)
+STATIC void try_open_lh(qd_connector_t *connector)
 {
     // Allocate a new connection. No other thread will touch this
     // connection until pn_proactor_connect is called below
@@ -1205,7 +1209,7 @@ static void try_open_lh(qd_connector_t *connector)
 }
 
 
-static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
+STATIC bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
 {
     qd_connector_t *ct = ctx->connector;
     const qd_server_config_t *config = &ct->config;
@@ -1319,7 +1323,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
 
 // (re)connection timer callback used by connector
 //
-static void try_open_cb(void *context)
+STATIC void try_open_cb(void *context)
 {
     qd_connector_t *ct = (qd_connector_t*) context;
 
@@ -1448,9 +1452,9 @@ void qd_server_trace_all_connections()
 }
 
 
-static double normalize_memory_size(const uint64_t bytes, const char **suffix)
+STATIC double normalize_memory_size(const uint64_t bytes, const char **suffix)
 {
-    static const char * const units[] = {"B", "KiB", "MiB", "GiB", "TiB"};
+    STATIC const char * const units[] = {"B", "KiB", "MiB", "GiB", "TiB"};
     const int units_ct = 5;
     const double base = 1024.0;
 
@@ -1612,7 +1616,7 @@ qd_listener_t *qd_server_listener(qd_server_t *server)
     return li;
 }
 
-static bool qd_listener_listen_pn(qd_listener_t *li) {
+STATIC bool qd_listener_listen_pn(qd_listener_t *li) {
    li->pn_listener = pn_listener();
     if (li->pn_listener) {
         pn_listener_set_context(li->pn_listener, &li->type);
@@ -1627,7 +1631,7 @@ static bool qd_listener_listen_pn(qd_listener_t *li) {
     return li->pn_listener;
 }
 
-static bool qd_listener_listen_http(qd_listener_t *li) {
+STATIC bool qd_listener_listen_http(qd_listener_t *li) {
     if (li->server->http) {
         /* qd_lws_listener holds a reference to li, will decref when closed */
         qd_http_server_listen(li->server->http, li);
@@ -1664,7 +1668,7 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
     sys_atomic_init(&connector->ref_count, 1);
     DEQ_INIT(connector->conn_info_list);
 
-    connector->lock = sys_mutex("CONNECTOR");
+    connector->lock = sys_mutex("connector");
     if (!connector->lock)
         goto error;
     connector->timer = qd_timer(server->qd, try_open_cb, connector);

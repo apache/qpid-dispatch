@@ -31,8 +31,11 @@
 #include <errno.h>
 #include <pthread.h>
 #include <inttypes.h>
+#include <execinfo.h>
 
 typedef struct sys_mutex_debug_s sys_mutex_debug_t;
+
+#define BT_STACK_DEPTH 10
 
 struct sys_mutex_debug_s {
     char               *name;
@@ -60,12 +63,32 @@ struct sys_mutex_debug_s {
 // competing _dump functions may print timestamped lines out of order
 
 #define QD_THREAD_MAX_LOCKS   16  // simultaineously held locks
-#define PBUFSIZE 1000             // print buffer size
+#define PBUFSIZE 2000             // print buffer size
 static __thread sys_mutex_debug_t _held_locks[QD_THREAD_MAX_LOCKS];
 static __thread int _held_index;
 static char *PHONY_IDLE_LOCK_NAME = "CORE_IDLE";
 
-static void _dump_locks_lock()
+bool _should_bt()
+{
+    // lock-stacks.py blows up when the stack traces are present
+    // so make it easy to turn them on and off.
+#if 0
+    return false;
+#else
+    static const char *lock1 = "ENTITY_CACHE";
+    static const char *lock2 = "CONNECTOR";
+    static const char *lock3 = "connector";
+    for (int i = 0; i < _held_index; i++) {
+        if (strcmp(_held_locks[i].name, lock1) == 0 ||
+            strcmp(_held_locks[i].name, lock2) == 0 ||
+            strcmp(_held_locks[i].name, lock3) == 0)
+            return true;
+    }
+    return false;
+#endif
+}
+
+void _dump_locks_lock()
 {
     char buffer[PBUFSIZE];
     char *bufptr = buffer;
@@ -75,11 +98,23 @@ static void _dump_locks_lock()
     for (int i = 0; i < _held_index; i++) {
         aprintf(&bufptr, end, "%s%16s", i ? " " : "  LOCK ", _held_locks[i].name);
     }
-    aprintf(&bufptr, end, " ==> [ LOCK acquire_uS %ld ]\n", last_locked->acquire_granted - last_locked->acquire_start);
+    aprintf(&bufptr, end, " ==> [ LOCK acquire_uS %ld ", last_locked->acquire_granted - last_locked->acquire_start);
+
+    if (_should_bt()) {
+        void               *this_backtrace[BT_STACK_DEPTH];
+        int                 this_backtrace_size;
+        this_backtrace_size = backtrace(this_backtrace, BT_STACK_DEPTH);
+        char **strings      = backtrace_symbols(this_backtrace, this_backtrace_size);
+        for (size_t i = 0; i< this_backtrace_size; i++) {
+            aprintf(&bufptr, end, "stack_%d: %s, ", i, strings[i]);
+        }
+        free(strings);
+    }
+    aprintf(&bufptr, end, "]\n");
     fprintf(stderr, "%s", buffer);
 }
 
-static void _dump_locks_unlock()
+void _dump_locks_unlock()
 {
     char buffer[PBUFSIZE];
     char *bufptr = buffer;
@@ -93,11 +128,23 @@ static void _dump_locks_unlock()
     qd_timestamp_us_t use     = last_locked->acquire_released - last_locked->acquire_granted;
     qd_timestamp_us_t total   = last_locked->acquire_released - last_locked->acquire_start;
     assert(total < 1000000000);
-    aprintf(&bufptr, end, " <== [%p UNLOCK acquire_uS %ld use %ld total  %ld ]\n", last_locked->sys_mutex, acquire, use, total);
+    aprintf(&bufptr, end, " <== [%p UNLOCK acquire_uS %ld use %ld total  %ld ", last_locked->sys_mutex, acquire, use, total);
+
+    if (_should_bt()) {
+        void               *this_backtrace[BT_STACK_DEPTH];
+        int                 this_backtrace_size;
+        this_backtrace_size = backtrace(this_backtrace, BT_STACK_DEPTH);
+        char **strings      = backtrace_symbols(this_backtrace, this_backtrace_size);
+        for (size_t i = 0; i < this_backtrace_size; i++) {
+            aprintf(&bufptr, end, "stack_%d: %s, ", i, strings[i]);
+        }
+        free(strings);
+    }
+    aprintf(&bufptr, end, "]\n");
     fprintf(stderr, "%s", buffer);
 }
 
-static char *_current_lock_name()
+char *_current_lock_name()
 {
     return _held_locks[_held_index - 1].name;
 }
