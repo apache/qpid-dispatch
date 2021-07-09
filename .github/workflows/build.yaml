@@ -107,7 +107,7 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz
+          sudo apt update; sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz
 
       - name: Zero ccache stats
         run: ccache -z
@@ -208,7 +208,7 @@ jobs:
       - name: Install Linux runtime/test dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 pixz bubblewrap curl
+          sudo apt update; sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 pixz bubblewrap curl
 
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
@@ -475,12 +475,12 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y libqpid-proton-proactor1-dev python3-qpid-proton libpython3-dev libwebsockets-dev libnghttp2-dev ninja-build
+          sudo apt update; sudo apt install -y libqpid-proton-proactor1-dev python3-qpid-proton libpython3-dev libwebsockets-dev libnghttp2-dev ninja-build
 
       - name: Install Linux docs dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y asciidoc asciidoctor ruby-asciidoctor-pdf dblatex libxml2-utils
+          sudo apt update; sudo apt install -y asciidoc asciidoctor ruby-asciidoctor-pdf dblatex libxml2-utils
 
       - name: qpid-dispatch cmake configure
         working-directory: ${{env.DispatchBuildDir}}
