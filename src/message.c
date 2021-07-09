@@ -1584,7 +1584,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             recv_error = true;
         } else if (rc > 0) {
             //
-            // We have received a positive number of bytes for the message.  
+            // We have received a positive number of bytes for the message.
             // Advance the cursor in the buffer.
             //
             qd_buffer_insert(content->pending, rc);
