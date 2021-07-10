@@ -17,16 +17,21 @@
 ## under the License.
 ##
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD_FLAGS} ${SANITIZE_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD_FLAGS}")
+# DISPATCH-2196 Linking object files containing instances of the same C++ template fails on s390x with sanitizers enabled
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "s390x")
+    # set the sanitizer flags only for linking, not for compilation; this workarounds the failure
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${SANITIZE_FLAGS}")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZE_FLAGS}")
+endif()
+
 add_executable(c_unittests
-        c_unittests_main.cpp
-        doctest.h
-        qdr_doctest.hpp
         helpers.cpp
-        helpers.hpp
         test_amqp.cpp
-        test_router_startup.cpp
         test_terminus.cpp
+        test_router_startup.cpp
+        c_unittests_main.cpp
         $<TARGET_OBJECTS:qpid-dispatch>)
 target_link_libraries(c_unittests pthread qpid-dispatch-libraries)
 

@@ -23,6 +23,7 @@
 #include <cassert>
 #include <condition_variable>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <sstream>
@@ -30,7 +31,6 @@
 // assertions without stack traces when running outside doctest
 #ifndef QDR_DOCTEST
 // https://stackoverflow.com/questions/3767869/adding-message-to-assert
-#include <iostream>
 #define REQUIRE(condition) assert(condition)
 #define REQUIRE_MESSAGE(condition, message) \
 do { \
@@ -47,10 +47,12 @@ std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
 << " line " << __LINE__ << ": " << (message) << std::endl; \
 } \
 } while (false)
-#endif
+#endif  // QDR_DOCTEST
 
 extern "C" {
-#include "../../src/router_core/agent_config_auto_link.h"
+#include <dispatch_private.h>
+#include <qpid/dispatch/dispatch.h>
+#include <router_core/router_core_private.h>
 
 // declarations that don't have .h file
 void qd_router_setup_late(qd_dispatch_t *qd);
@@ -83,8 +85,6 @@ std::unique_ptr<T, Deleter> qd_make_unique(T *raw, Deleter deleter)
 std::unique_ptr<qdr_link_t, decltype(&free_qdr_link_t)> link{new_qdr_link_t(), free_qdr_link_t};
 auto link = qd_make_unique(new_qdr_link_t(), free_qdr_link_t);
 */
-
-void set_content(qd_message_content_t *content, unsigned char *buffer, size_t len);
 
 /// Redirects leak reports to a file, and fails the test if
 /// anything is reported (even suppressed leaks).

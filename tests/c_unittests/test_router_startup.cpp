@@ -20,11 +20,6 @@
 #include "./qdr_doctest.hpp"
 #include "./helpers.hpp"  // must come after ./qdr_doctest.hpp
 
-#include <cstddef>
-#include <cstdio>
-#include <fstream>
-#include <iostream>
-#include <sstream>
 #include <thread>
 
 TEST_CASE("Initialize and deinitialize router twice")
