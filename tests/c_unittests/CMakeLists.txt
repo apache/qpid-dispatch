@@ -27,11 +27,14 @@ else()
 endif()
 
 add_executable(c_unittests
-        helpers.cpp
-        test_amqp.cpp
-        test_terminus.cpp
-        test_router_startup.cpp
         c_unittests_main.cpp
+        doctest.h
+        qdr_doctest.hpp
+        helpers.cpp
+        helpers.hpp
+        test_amqp.cpp
+        test_router_startup.cpp
+        test_terminus.cpp
         $<TARGET_OBJECTS:qpid-dispatch>)
 target_link_libraries(c_unittests pthread qpid-dispatch-libraries)
 
