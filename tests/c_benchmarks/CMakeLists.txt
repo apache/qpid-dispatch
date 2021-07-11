@@ -37,4 +37,5 @@ target_link_libraries(c-benchmarks qpid-dispatch-libraries benchmark pthread)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/minimal_silent.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-add_test(NAME c-benchmarks COMMAND ${TEST_WRAP} $<TARGET_FILE:c-benchmarks>)
+# set short minimal run time, so that the benchmark loops run ~once
+add_test(NAME c-benchmarks COMMAND ${TEST_WRAP} $<TARGET_FILE:c-benchmarks> --benchmark_min_time=0.001)
