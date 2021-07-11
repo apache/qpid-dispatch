@@ -529,6 +529,7 @@ void qd_log_finalize(void) {
         qd_log_entry_free_lh(DEQ_HEAD(entries));
     while (DEQ_HEAD(sink_list))
         log_sink_free_lh(DEQ_HEAD(sink_list));
+    default_log_source = NULL;  // stale value would misconfigure new router started again in the same process
 }
 
 qd_error_t qd_log_entity(qd_entity_t *entity)

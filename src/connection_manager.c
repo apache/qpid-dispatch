@@ -814,7 +814,7 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 
         // We need to go to the elements in the list to get to the
         // element that matches the connection index. This is the first
-        // url that the router will try to connect on ffailover.
+        // url that the router will try to connect on failover.
         if (conn_index == i) {
             num_items += 1;
             if (item->scheme) {

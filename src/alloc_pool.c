@@ -584,6 +584,7 @@ void qd_alloc_finalize(void)
         free_stack_chunks(&desc->global_pool->free_list);
         free(desc->global_pool);
         desc->global_pool = 0;
+        desc->header = 0;  // reset header, so we can initialize again later in qd_alloc (in subsequent test)
 
         //
         // Reclaim the items on thread pools
@@ -673,6 +674,7 @@ void qd_alloc_finalize(void)
     if (debug_dump) {
         fclose(dump_file);
         free(debug_dump);
+        debug_dump = 0;
     }
 
 #ifdef QD_MEMORY_DEBUG
