@@ -70,8 +70,7 @@ static char *PHONY_IDLE_LOCK_NAME = "CORE_IDLE";
 
 bool _should_bt()
 {
-    // lock-stacks.py blows up when the stack traces are present
-    // so make it easy to turn them on and off.
+    // During experimentation, make it easy to turn on and off.
 #if 0
     return false;
 #else
@@ -90,6 +89,10 @@ bool _should_bt()
 
 void _dump_locks_lock()
 {
+#if 1
+    // Focus on unlock only.
+    return;
+#else
     char buffer[PBUFSIZE];
     char *bufptr = buffer;
     char *end = &buffer[PBUFSIZE];
@@ -112,6 +115,7 @@ void _dump_locks_lock()
     }
     aprintf(&bufptr, end, "]\n");
     fprintf(stderr, "%s", buffer);
+#endif
 }
 
 void _dump_locks_unlock()
@@ -150,7 +154,7 @@ char *_current_lock_name()
 }
 
 
-#define TAKE_LOCK(N, L, A_START, A_GRANTED)                      \
+#define TAKE_LOCK(N, L, A_START, A_GRANTED)                   \
     do {                                                      \
         assert(_held_index < QD_THREAD_MAX_LOCKS);            \
         sys_mutex_debug_t * mtxd = &_held_locks[_held_index]; \
