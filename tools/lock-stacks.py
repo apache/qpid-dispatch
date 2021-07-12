@@ -34,16 +34,57 @@ from collections import defaultdict
 from datetime import timedelta
 from datetime import datetime
 
-class Common():
+
+class Common:
     FLD_TIMESTAMP  = 0
     FLD_TID_TXT    = 1
     FLD_TID        = 2
     FLD_L_OR_UNL   = 3
     FLD_FIRST_LOCK = 4
-    FLD_LAST_LOCK  = -10
-    FLD_ACQUIRE    = -6
-    FLD_USE        = -4
-    FLD_CLOSE      = -1
+
+    STACK_CSV_SEP = "->"
+
+class Stats(object):
+    """
+    Store per-lock counts
+    """
+    def __init__(self, lock_stack):
+        self.lock_stack = lock_stack
+        self.total_locks = 0
+        self.total_acquire_us = 0
+        self.total_use_us = 0
+        self.acquire_min = 10000000
+        self.acquire_max = 0
+        self.use_min = 10000000
+        self.use_max = 0
+
+    def add(self, acquire, use):
+        self.total_locks += 1
+        self.total_acquire_us += acquire
+        self.total_use_us += use
+        if acquire < self.acquire_min:
+            self.acquire_min = acquire
+        if acquire > self.acquire_max:
+            self.acquire_max = acquire
+        if use < self.use_min:
+            self.use_min = use
+        if use > self.use_max:
+            self.use_max = use
+
+    @classmethod
+    def show_titles(cls):
+        print("lock stack                                          ,       total,  acquire,  acquire,     acquire,      use,      use,         use")
+        print("                                                    ,       count,  min(uS),  max(uS),   total(uS),  min(uS),  max(uS),   total(uS)")
+
+    def show(self):
+        print("%-52s, %11d, %8d, %8d, %11d, %8d, %8d, %11d" %
+              (self.lock_stack, self.total_locks,
+               self.acquire_min, self.acquire_max, self.total_acquire_us,
+               self.use_min, self.use_max, self.total_use_us))
+
+    def __str__(self):
+        return self.lock_stack
+
 
 #
 # Usage:
@@ -58,45 +99,44 @@ class Common():
 #  find . -name "*.out" | xargs grep UNLOCK | lock-stacks.py
 #
 
-def main_except(argv):
+def main_except():
     common = Common()
-
-    # lock inversion data is a set of lists where each list is a lock stack
-    lock_stacks = set()
-
-    # first instances helps a user find in which router the lock stack happens
-    first_instances = {}
-
-    # total instances indicates how many times the lock stack was seen
-    total_instances = defaultdict(lambda:0)
+    instance_data = {}
 
     n_lines = 0
-    n_lock_stacks_len_eq_1 = 0
-    n_lock_stacks_len_gt_1 = 0
     n_unlocks_processed = 0
+    n_deliveries_collapsed = 0
+    last_lock_range = common.FLD_FIRST_LOCK
     for line in sys.stdin:  # *.out UNLOCK only: 74 M lines, 15 Gb ...
         n_lines += 1
         if n_lines % 500000 == 0:
             print("Processing line %10d" % n_lines)
         fields = line.split(' ')
         fields = [x for x in fields if x]
+        if len(fields) < common.FLD_L_OR_UNL:
+            continue
         if fields[common.FLD_L_OR_UNL] == "UNLOCK":
             n_unlocks_processed += 1
             # last_lock constant is incorrect for lock output with stack traces
-            for last_lock in range(common.FLD_FIRST_LOCK, len(fields)):
-                if "==" in fields[last_lock]:
+            # search for last lock
+            for last_lock_range in range(common.FLD_FIRST_LOCK + 1, len(fields)):
+                if "==" in fields[last_lock_range]:
                     break
-            lock_stack = fields[common.FLD_FIRST_LOCK:last_lock]
-            if len(lock_stack) > 1:
-                n_lock_stacks_len_gt_1 += 1
-                lock_stack_str = ','.join(lock_stack)
-                lock_stacks.add(lock_stack_str)
-                if lock_stack_str not in first_instances:
-                    # store only first instance not every instance
-                    first_instances[lock_stack_str] = line.rstrip()
-                total_instances[lock_stack_str] += 1
-            else:
-                n_lock_stacks_len_eq_1 += 1
+            # HACK ALERT
+            # Having tens of thousands of delivery-NNNNN lock lines is not useful.
+            # Collapse them into a single lock stack named "delivery-N"
+            if fields[common.FLD_FIRST_LOCK].startswith("delivery-"):
+                fields[common.FLD_FIRST_LOCK] = "delivery-N"
+                n_deliveries_collapsed += 1
+            lock_stack = fields[common.FLD_FIRST_LOCK:last_lock_range]
+            T_ACQ = last_lock_range + 4
+            T_USE = last_lock_range + 6
+            acquire = fields[T_ACQ]
+            use = fields[T_USE]
+            lock_stack_str = common.STACK_CSV_SEP.join(lock_stack)
+            if lock_stack_str not in instance_data:
+                instance_data[lock_stack_str] = Stats(lock_stack_str)
+            instance_data[lock_stack_str].add(int(acquire), int(use))
 
     print()
     print("Lock stacks")
@@ -104,11 +144,12 @@ def main_except(argv):
     print()
     print("Found %10d lines total" % n_lines)
     print("Found %10d UNLOCK lines" % n_unlocks_processed)
-    print("Found %10d lock stacks len >= 2 to process" % len(lock_stacks))
-    print("Found %10d lock stacks len == 1 to ignore" % n_lock_stacks_len_eq_1)
+    print("Found %10d lock stacks" % len(instance_data))
+    print("Found %10d delivery-NNNN locks collapsed into one table row" % n_deliveries_collapsed)
     print()
-    for val in sorted(lock_stacks):
-        print("%-47s : n=%10d : %s" % (val, total_instances[val], first_instances[val]))
+    Stats.show_titles()
+    for val in sorted(instance_data):
+        instance_data[val].show()
 
     print()
     print("Possible deadlocks")
@@ -117,8 +158,8 @@ def main_except(argv):
 
     # Deadlock inversion detection. Create inversion database.
     lock_inversion_data = defaultdict(set)
-    for lock_stack_str in lock_stacks:
-        lock_stack = lock_stack_str.split(',')
+    for lock_stack_str in instance_data:
+        lock_stack = lock_stack_str.split(common.STACK_CSV_SEP)
         stack_len = len(lock_stack)
         # Add lock stack to inversion database
         for heldi in range(stack_len-1):
@@ -137,15 +178,14 @@ def main_except(argv):
                     print("Inversion %s and %s" % (k, locks))
 
 
-
-def main(argv):
+def main():
     try:
-        main_except(argv)
+        main_except()
         return 0
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())
