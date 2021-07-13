@@ -27,6 +27,8 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
+#include <stdexcept>
+
 void fillSockAddr(const std::string &address, unsigned short port, sockaddr_in &addr)
 {
     zero(addr);
@@ -42,6 +44,7 @@ void fillSockAddr(const std::string &address, unsigned short port, sockaddr_in &
         auto sin_addr = reinterpret_cast<struct in_addr *>(host->h_addr_list[0]);
         addr.sin_addr.s_addr = sin_addr->s_addr;
     } else if (host->h_addrtype == AF_INET6) {
+        throw std::invalid_argument("IPv6 addresses are not yet supported by the test");
         // auto sin_addr = reinterpret_cast<struct in6_addr *>(host->h_addr_list[0]);
     } else {
         throw SocketException("Name was not resolved to IPv4 (gethostbyname())");
