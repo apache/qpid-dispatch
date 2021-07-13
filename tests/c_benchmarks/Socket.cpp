@@ -135,7 +135,7 @@ int Socket::recv(void *buffer, int bufferLen) noexcept(false)
     return rtn;
 }
 
-std::string Socket::getForeignAddress() noexcept(false)
+std::string Socket::getRemoteAddress() noexcept(false)
 {
     sockaddr_in addr;
     unsigned int addr_len = sizeof(addr);
@@ -146,7 +146,7 @@ std::string Socket::getForeignAddress() noexcept(false)
     return inet_ntoa(addr.sin_addr);
 }
 
-unsigned short Socket::getForeignPort() noexcept(false)
+unsigned short Socket::getRemotePort() noexcept(false)
 {
     sockaddr_in addr;
     unsigned int addr_len = sizeof(addr);

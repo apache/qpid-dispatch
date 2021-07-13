@@ -49,8 +49,8 @@ class Socket
     void connect(const std::string &remoteAddress, unsigned short remotePort) noexcept(false);
     void send(const void *buffer, int bufferLen) noexcept(false);
     int recv(void *buffer, int bufferLen) noexcept(false);
-    std::string getForeignAddress() noexcept(false);
-    unsigned short getForeignPort() noexcept(false);
+    std::string getRemoteAddress() noexcept(false);
+    unsigned short getRemotePort() noexcept(false);
 };
 
 #endif  // QPID_DISPATCH_SOCKET_HPP
