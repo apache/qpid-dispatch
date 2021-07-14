@@ -174,11 +174,7 @@ jobs:
     before_install:
     - bash ./macports.sh
     - export COLUMNS=80
-    - yes | sudo port install cmake swig swig-python jsoncpp libwebsockets nghttp2 cyrus-sasl2 pkgconfig python37 py37-pip
-    # PROTON-2351: install libuv @1.40 because proton is broken with 1.41
-    #  https://trac.macports.org/wiki/howto/InstallingOlderPort
-    - git clone --single-branch https://github.com/macports/macports-ports.git
-    - pushd macports-ports/devel/libuv; git checkout 425dd6e31f6c31886fabd1f911b5f2aa96c4f27d; yes | sudo port install; popd
+    - yes | sudo port install cmake swig swig-python libuv jsoncpp libwebsockets nghttp2 cyrus-sasl2 pkgconfig python37 py37-pip
     # set aliases for CMake's PythonInterp and PythonLibs to find MacPort's `python` on the path first
     - sudo port select --set python python37
     - sudo port select --set python3 python37
