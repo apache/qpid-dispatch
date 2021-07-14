@@ -648,11 +648,14 @@ class SwitchoverTest(MessagingHandler):
         e_n_tx = self.n_tx
         e_tx_seq = self.tx_seq
         last_message = Message("None")
-        while self.sender.credit > 0 and self.n_tx < self.count:
+        while self.sender.credit > 0 and self.n_tx < self.count and not self.sender.drain_mode:
             last_message = Message("Msg %s %d %d" % (self.addr, self.tx_seq, self.n_tx))
             self.sender.send(last_message)
             self.n_tx += 1
             self.tx_seq += 1
+        if self.sender.drain_mode:
+            n_drained = self.sender.drained()
+            self.logger.log("%s sender.drained() drained %d credits" % (self.addr, n_drained))
         self.logger.log("%s send() exit: last sent '%s' phase=%d, credit=%3d->%3d, n_tx=%4d->%4d, tx_seq=%4d->%4d, n_rel=%4d" %
                         (self.addr, last_message.body, self.phase, e_credit, self.sender.credit,
                          e_n_tx, self.n_tx, e_tx_seq, self.tx_seq, self.n_rel))
