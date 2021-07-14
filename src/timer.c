@@ -27,9 +27,10 @@
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/atomic.h"
 
+#include <proton/proactor.h>
+
 #include <assert.h>
 #include <stdio.h>
-#include <time.h>
 
 
 // timer state machine
@@ -205,9 +206,7 @@ void qd_timer_free(qd_timer_t *timer)
 __attribute__((weak)) // permit replacement by dummy implementation in unit_tests
 qd_timestamp_t qd_timer_now()
 {
-    struct timespec tv;
-    clock_gettime(CLOCK_MONOTONIC, &tv);
-    return ((qd_timestamp_t)tv.tv_sec) * 1000 + tv.tv_nsec / 1000000;
+    return pn_proactor_now_64();
 }
 
 void qd_timer_schedule(qd_timer_t *timer, qd_duration_t duration)
