@@ -79,6 +79,7 @@ typedef struct log_sink_t {
     char *name;
     bool syslog;
     FILE *file;
+    sys_mutex_t *sink_lock;
     DEQ_LINKS(struct log_sink_t);
 } log_sink_t;
 
@@ -110,19 +111,14 @@ static const char* SINK_STDERR = "stderr";
 static const char* SINK_SYSLOG = "syslog";
 static const char* SOURCE_DEFAULT = "DEFAULT";
 
-static log_sink_t* find_log_sink_lh(const char* name) {
-    log_sink_t* sink = DEQ_HEAD(sink_list);
-    DEQ_FIND(sink, strcmp(sink->name, name) == 0);
-    return sink;
-}
-
-// Must hold the log_source_lock
-static void log_sink_free_lh(log_sink_t* sink) {
+static void log_sink_free(log_sink_t* sink) {
     if (!sink) return;
     assert(sink->ref_count);
 
     if (sys_atomic_dec(&sink->ref_count) == 1) {
+        sys_mutex_lock(sink->sink_lock);
         DEQ_REMOVE(sink_list, sink);
+        sys_mutex_unlock(sink->sink_lock);
         free(sink->name);
         if (sink->file && sink->file != stderr)
             fclose(sink->file);
@@ -132,8 +128,10 @@ static void log_sink_free_lh(log_sink_t* sink) {
     }
 }
 
-static log_sink_t* log_sink_lh(const char* name) {
-    log_sink_t* sink = find_log_sink_lh(name);
+static log_sink_t* log_sink(const char* name) {
+    // Find the named sink if it exists.
+    log_sink_t* sink = DEQ_HEAD(sink_list);
+    DEQ_FIND(sink, strcmp(sink->name, name) == 0);
     if (sink) {
         sys_atomic_inc(&sink->ref_count);
     }
@@ -170,8 +168,8 @@ static log_sink_t* log_sink_lh(const char* name) {
         sink->name = strdup(name);
         sink->syslog = syslog;
         sink->file = file;
+        sink->sink_lock = sys_mutex();
         DEQ_INSERT_TAIL(sink_list, sink);
-
     }
     return sink;
 }
@@ -308,6 +306,8 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
     log_sink_t* sink = log_source->sink ? log_source->sink : default_log_source->sink;
     if (!sink) return;
 
+    sys_mutex_lock(sink->sink_lock);
+
     char log_str[LOG_MAX];
     char *begin = log_str;
     char *end = log_str + LOG_MAX;
@@ -348,6 +348,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         if (syslog_level != -1)
             syslog(syslog_level, "%s", log_str);
     }
+    sys_mutex_unlock(sink->sink_lock);
 }
 
 /// Reset the log source to the default state
@@ -395,7 +396,7 @@ qd_log_source_t *qd_log_source_reset(const char *module)
 
 static void qd_log_source_free_lh(qd_log_source_t* src) {
     DEQ_REMOVE(source_list, src);
-    log_sink_free_lh(src->sink);
+    log_sink_free(src->sink);
     free(src->module);
     free(src);
 }
@@ -434,7 +435,8 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     // could free the log_source->sink from underneath you and replace it with a new sink.
     // Once we obtain this lock, we only release the lock once the log line is written to the sink.
     //
-    sys_mutex_lock(log_source_lock);
+    // Temporary comment: I think the global log_source_lock is no longer needed here,
+    // because the sink is protected by its own lock. which is held only in write_log().
     entry->module = source->module ? strdup(source->module) : 0;
     entry->level  = level;
     entry->file   = file ? strdup(file) : 0;
@@ -445,7 +447,6 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     DEQ_INSERT_TAIL(entries, entry);
     if (DEQ_SIZE(entries) > LIST_MAX)
         qd_log_entry_free_lh(DEQ_HEAD(entries));
-    sys_mutex_unlock(log_source_lock);
 }
 
 void qd_log_impl_v1(qd_log_source_t *source, qd_log_level_t level,  const char *file, int line, const char *fmt, ...)
@@ -518,7 +519,7 @@ void qd_log_initialize(void)
     default_log_source->mask = levels[INFO].mask;
     default_log_source->includeTimestamp = true;
     default_log_source->includeSource = 0;
-    default_log_source->sink = log_sink_lh(SINK_STDERR);
+    default_log_source->sink = log_sink(SINK_STDERR);
 }
 
 
@@ -528,7 +529,7 @@ void qd_log_finalize(void) {
     while (DEQ_HEAD(entries))
         qd_log_entry_free_lh(DEQ_HEAD(entries));
     while (DEQ_HEAD(sink_list))
-        log_sink_free_lh(DEQ_HEAD(sink_list));
+        log_sink_free(DEQ_HEAD(sink_list));
     default_log_source = NULL;  // stale value would misconfigure new router started again in the same process
 }
 
@@ -602,7 +603,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
         qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
 
         if (has_output_file) {
-            log_sink_t* sink = log_sink_lh(outputFile);
+            log_sink_t* sink = log_sink(outputFile);
             if (!sink) {
                 error_in_output = true;
                 sys_mutex_unlock(log_source_lock);
@@ -611,7 +612,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
 
             // DEFAULT source may already have a sink, so free the old sink first
             if (src->sink) {
-                log_sink_free_lh(src->sink);
+                log_sink_free(src->sink);
             }
 
             // Assign the new sink
