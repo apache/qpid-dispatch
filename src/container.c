@@ -355,9 +355,10 @@ static void cleanup_link(qd_link_t *link)
         link->pn_sess = 0;
 
         // cleanup any inbound message that has not been forwarded
-        qd_message_t *msg = link->incoming_msg.ptr;
-        if (msg && qd_alloc_sequence(msg) == link->incoming_msg.seq)
+        qd_message_t *msg = qd_alloc_deref_safe_ptr(&link->incoming_msg);
+        if (msg) {
             qd_message_free(msg);
+        }
     }
 }
 
