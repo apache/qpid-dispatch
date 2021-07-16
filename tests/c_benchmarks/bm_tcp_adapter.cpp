@@ -267,7 +267,7 @@ class DispatchRouterSubprocessTcpLatencyTest
             qdr.initialize(configName);
             qdr.wait();
 
-            qdr.run(); // this never returns until signal is sent, and then process dies
+            qdr.run();  // this never returns until signal is sent, and then process dies
         }
     }
 
@@ -291,7 +291,7 @@ static void BM_TCPEchoServerLatency1QDRThread(benchmark::State &state)
     unsigned short tcpConnectorPort = est->port();
     unsigned short tcpListenerPort  = findFreePort();
 
-    std::string configName = "BM_TCPEchoServerLatency1QDRThread";
+    std::string configName          = "BM_TCPEchoServerLatency1QDRThread";
     std::stringstream router_config = oneRouterTcpConfig(tcpConnectorPort, tcpListenerPort);
     writeRouterConfig(configName, router_config);
 
