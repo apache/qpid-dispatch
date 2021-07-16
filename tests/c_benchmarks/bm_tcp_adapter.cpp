@@ -144,7 +144,7 @@ tcpConnector {
     router_config << R"END(
 log {
     module: DEFAULT
-    enable: trace+
+    enable: warn+
 })END";
 
     return router_config;
@@ -228,14 +228,9 @@ class DispatchRouterThreadTCPLatencyTest
     std::thread mT;
 
    public:
-    DispatchRouterThreadTCPLatencyTest(const std::string configName, const unsigned short tcpConnectorPort,
-                                       const unsigned short tcpListenerPort)
+    DispatchRouterThreadTCPLatencyTest(const std::string configName)
     {
         Latch mx;
-
-        std::stringstream router_config;
-        router_config = oneRouterTcpConfig(tcpConnectorPort, tcpListenerPort);
-        writeRouterConfig(configName, router_config);
 
         mT = std::thread([&mx, this, &configName]() {
             mQdr.initialize(configName);
@@ -272,9 +267,7 @@ class DispatchRouterSubprocessTcpLatencyTest
             qdr.initialize(configName);
             qdr.wait();
 
-            qdr.run();
-
-            exit(0);
+            qdr.run(); // this never returns until signal is sent, and then process dies
         }
     }
 
@@ -298,7 +291,11 @@ static void BM_TCPEchoServerLatency1QDRThread(benchmark::State &state)
     unsigned short tcpConnectorPort = est->port();
     unsigned short tcpListenerPort  = findFreePort();
 
-    DispatchRouterThreadTCPLatencyTest drt{"BM_TCPEchoServerLatency1QDRThread", tcpConnectorPort, tcpListenerPort};
+    std::string configName = "BM_TCPEchoServerLatency1QDRThread";
+    std::stringstream router_config = oneRouterTcpConfig(tcpConnectorPort, tcpListenerPort);
+    writeRouterConfig(configName, router_config);
+
+    DispatchRouterThreadTCPLatencyTest drt{configName};
 
     {
         LatencyMeasure lm;
@@ -317,7 +314,34 @@ static void BM_TCPEchoServerLatency1QDRThread(benchmark::State &state)
     est.reset();
 }
 
-//BENCHMARK(BM_TCPEchoServerLatency1QDRThread)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_TCPEchoServerLatency1QDRThread)->Unit(benchmark::kMillisecond);
+
+static void BM_TCPEchoServerLatency2QDRThread(benchmark::State &state)
+{
+    auto est                     = make_unique<EchoServerThread>();
+    unsigned short listener_2    = findFreePort();
+    unsigned short tcpListener_2 = findFreePort();
+
+    std::string configName_1          = "BM_TCPEchoServerLatency2QDRThread_1.conf";
+    std::stringstream router_config_1 = multiRouterTcpConfig("QDRL1", {}, {listener_2}, est->port(), 0);
+    writeRouterConfig(configName_1, router_config_1);
+
+    std::string configName_2          = "BM_TCPEchoServerLatency2QDRThread_2.conf";
+    std::stringstream router_config_2 = multiRouterTcpConfig("QDRL2", {listener_2}, {}, 0, tcpListener_2);
+    writeRouterConfig(configName_2, router_config_2);
+
+    DispatchRouterThreadTCPLatencyTest drt_1(configName_1);
+    DispatchRouterThreadTCPLatencyTest drt_2(configName_2);
+
+    {
+        LatencyMeasure lm;
+        lm.latencyMeasureLoop(state, tcpListener_2);
+    }
+    // kill echo server first
+    est.reset();
+}
+
+//BENCHMARK(BM_TCPEchoServerLatency2QDRThread)->Unit(benchmark::kMillisecond);
 
 static void BM_TCPEchoServerLatency1QDRSubprocess(benchmark::State &state)
 {
@@ -343,7 +367,7 @@ static void BM_TCPEchoServerLatency2QDRSubprocess(benchmark::State &state)
 {
     EchoServerThread est;
 
-    unsigned short listener_2 = findFreePort();
+    unsigned short listener_2    = findFreePort();
     unsigned short tcpListener_2 = findFreePort();
 
     std::string configName_1          = "BM_TCPEchoServerLatency2QDRSubprocess_1.conf";
@@ -354,50 +378,12 @@ static void BM_TCPEchoServerLatency2QDRSubprocess(benchmark::State &state)
     std::stringstream router_config_2 = multiRouterTcpConfig("QDRL2", {listener_2}, {}, 0, tcpListener_2);
     writeRouterConfig(configName_2, router_config_2);
 
-    int pid = fork();
-    if (pid == 0) {
-        QDR qdr1{};
-        qdr1.initialize(configName_1);
-        qdr1.wait();
+    DispatchRouterSubprocessTcpLatencyTest qdr1{configName_1};
+    DispatchRouterSubprocessTcpLatencyTest qdr2{configName_2};
 
-        qdr1.run();  // this never returns, until signal is sent, and then process dies
-        exit(0);
-    }
-
-    int pid2 = fork();
-    if (pid2 == 0) {
-        QDR qdr2{};
-        qdr2.initialize(configName_2);
-        qdr2.wait();
-
-        qdr2.run();
-        exit(0);
-    }
-
-    printf("going for the loop\n");
     {
         LatencyMeasure lm;
         lm.latencyMeasureLoop(state, tcpListener_2);
-    }
-
-    printf("running teardown\n");
-
-    int ret = kill(pid, SIGTERM);
-    if (ret != 0) {
-        perror("Killing router 1");
-    }
-    int status;
-    ret = waitpid(pid, &status, 0);
-    if (ret != pid) {
-        perror("Waiting for child");
-    }
-    ret = kill(pid2, SIGTERM);
-    if (ret != 0) {
-        perror("Killing router 2");
-    }
-    ret = waitpid(pid2, &status, 0);
-    if (ret != pid2) {
-        perror("Waiting for child2");
     }
 }
 
