@@ -55,7 +55,7 @@ static TCPSocket try_to_connect(const std::string &servAddress, int echoServPort
 class LatencyMeasure
 {
     static const int RCVBUFSIZE = 32;
-    char echoBuffer[RCVBUFSIZE + 1];  // '\n'
+    char echoBuffer[RCVBUFSIZE + 1];  // '\0'
 
     std::string servAddress = "127.0.0.1";
     std::string echoString  = "echoString";

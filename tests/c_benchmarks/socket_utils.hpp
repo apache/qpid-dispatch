@@ -17,7 +17,7 @@
  * specific language governing permissions and limitations
  * under the License.
  *
-*/
+ */
 
 #ifndef QPID_DISPATCH_SOCKET_UTILS_HPP
 #define QPID_DISPATCH_SOCKET_UTILS_HPP

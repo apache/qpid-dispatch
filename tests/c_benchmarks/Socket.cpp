@@ -77,7 +77,7 @@ unsigned short Socket::getLocalPort()
 void Socket::setLocalPort(unsigned short localPort)
 {
     // Bind the socket to its port
-    sockaddr_in localAddr = {};
+    sockaddr_in localAddr     = {};
     localAddr.sin_family      = AF_INET;
     localAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     localAddr.sin_port        = htons(localPort);

@@ -27,6 +27,7 @@ class SocketException : public std::exception
 {
    private:
     std::string mMessage;
+
    public:
     explicit SocketException(std::string message, bool captureErrno = false) noexcept;
 
