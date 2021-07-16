@@ -355,9 +355,10 @@ static void cleanup_link(qd_link_t *link)
         link->pn_sess = 0;
 
         // cleanup any inbound message that has not been forwarded
-        qd_message_t *msg = link->incoming_msg.ptr;
-        if (msg && qd_alloc_sequence(msg) == link->incoming_msg.seq)
+        qd_message_t *msg = qd_alloc_deref_safe_ptr(&link->incoming_msg);
+        if (msg) {
             qd_message_free(msg);
+        }
     }
 }
 
@@ -1224,8 +1225,7 @@ void qd_session_cleanup(qd_connection_t *qd_conn)
 void qd_link_set_incoming_msg(qd_link_t *link, qd_message_t *msg)
 {
     if (msg) {
-        link->incoming_msg.ptr = (void*) msg;
-        link->incoming_msg.seq = qd_alloc_sequence(msg);
+        qd_alloc_set_safe_ptr(&link->incoming_msg, msg);
     } else {
         qd_nullify_safe_ptr(&link->incoming_msg);
     }
