@@ -316,33 +316,6 @@ static void BM_TCPEchoServerLatency1QDRThread(benchmark::State &state)
 
 BENCHMARK(BM_TCPEchoServerLatency1QDRThread)->Unit(benchmark::kMillisecond);
 
-static void BM_TCPEchoServerLatency2QDRThread(benchmark::State &state)
-{
-    auto est                     = make_unique<EchoServerThread>();
-    unsigned short listener_2    = findFreePort();
-    unsigned short tcpListener_2 = findFreePort();
-
-    std::string configName_1          = "BM_TCPEchoServerLatency2QDRThread_1.conf";
-    std::stringstream router_config_1 = multiRouterTcpConfig("QDRL1", {}, {listener_2}, est->port(), 0);
-    writeRouterConfig(configName_1, router_config_1);
-
-    std::string configName_2          = "BM_TCPEchoServerLatency2QDRThread_2.conf";
-    std::stringstream router_config_2 = multiRouterTcpConfig("QDRL2", {listener_2}, {}, 0, tcpListener_2);
-    writeRouterConfig(configName_2, router_config_2);
-
-    DispatchRouterThreadTCPLatencyTest drt_1(configName_1);
-    DispatchRouterThreadTCPLatencyTest drt_2(configName_2);
-
-    {
-        LatencyMeasure lm;
-        lm.latencyMeasureLoop(state, tcpListener_2);
-    }
-    // kill echo server first
-    est.reset();
-}
-
-//BENCHMARK(BM_TCPEchoServerLatency2QDRThread)->Unit(benchmark::kMillisecond);
-
 static void BM_TCPEchoServerLatency1QDRSubprocess(benchmark::State &state)
 {
     EchoServerThread est;
