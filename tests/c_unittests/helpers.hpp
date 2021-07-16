@@ -285,6 +285,7 @@ class QDRMinimalEnv
     {
         qd_log_finalize();
         qd_alloc_finalize();
+        qd_entity_cache_free_entries();
     }
 };
 
