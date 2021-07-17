@@ -1620,14 +1620,10 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      AMQP_inbound_opened_handler,
                                      AMQP_outbound_opened_handler,
                                      AMQP_closed_handler};
-static int type_registered = 0;
 
 qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)
 {
-    if (!type_registered) {
-        type_registered = 1;
-        qd_container_register_node_type(qd, &router_node);
-    }
+    qd_container_register_node_type(qd, &router_node);
 
     size_t dplen = 9 + strlen(area) + strlen(id);
     node_id = (char*) qd_malloc(dplen);
