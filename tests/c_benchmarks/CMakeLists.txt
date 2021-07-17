@@ -32,6 +32,14 @@ add_executable(c-benchmarks
         ../c_unittests/helpers.cpp
         c_benchmarks_main.cpp
         bm_router_initialization.cpp
+        bm_parse_tree.cpp
+        bm_tcp_adapter.cpp
+        echo_server.cpp echo_server.hpp
+        socket_utils.cpp socket_utils.hpp
+        Socket.cpp Socket.hpp
+        SocketException.cpp SocketException.hpp
+        TCPSocket.cpp TCPSocket.hpp
+        TCPServerSocket.cpp TCPServerSocket.hpp
         $<TARGET_OBJECTS:qpid-dispatch>)
 target_link_libraries(c-benchmarks qpid-dispatch-libraries benchmark pthread)
 
