@@ -2103,6 +2103,13 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         }
     }
 
+    //
+    // We had increased the ref_count if the link->no_route was true. Now reduce the ref_count
+    //
+    if (link->no_route && link->no_route_bound) {
+        addr->ref_count--;
+    }
+
     link->owning_addr = 0;
 
     if (link->detach_count == 1) {
