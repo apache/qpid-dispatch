@@ -927,7 +927,6 @@ static void qd_message_parse_priority(qd_message_t *in_msg)
     qd_iterator_t        *iter     = qd_message_field_iterator(in_msg, QD_FIELD_HEADER);
 
     content->priority_parsed  = true;
-    content->priority_present = false;
 
     if (!!iter) {
         qd_parsed_field_t *field = qd_parse(iter);
@@ -937,7 +936,6 @@ static void qd_message_parse_priority(qd_message_t *in_msg)
                 if (qd_parse_tag(priority_field) != QD_AMQP_NULL) {
                     uint32_t value = qd_parse_as_uint(priority_field);
                     content->priority = value > QDR_MAX_PRIORITY ? QDR_MAX_PRIORITY : (uint8_t) (value & 0x00ff);
-                    content->priority_present = true;
                 }
             }
         }
@@ -1025,6 +1023,7 @@ qd_message_t *qd_message()
     sys_atomic_init(&msg->content->ref_count, 1);
     sys_atomic_init(&msg->content->aborted, 0);
     msg->content->parse_depth = QD_DEPTH_NONE;
+    msg->content->priority    = QDR_DEFAULT_PRIORITY;
     return (qd_message_t*) msg;
 }
 
@@ -1307,7 +1306,7 @@ uint8_t qd_message_get_priority(qd_message_t *msg)
     if (!content->priority_parsed)
         qd_message_parse_priority(msg);
 
-    return content->priority_present ? content->priority : QDR_DEFAULT_PRIORITY;
+    return content->priority;
 }
 
 bool qd_message_receive_complete(qd_message_t *in_msg)

@@ -143,7 +143,6 @@ typedef struct {
     bool                 q2_input_holdoff;               // hold off calling pn_link_recv
     bool                 disable_q2_holdoff;             // Disable the Q2 flow control
     bool                 priority_parsed;
-    bool                 priority_present;
     bool                 oversize;                       // policy oversize handling in effect
     bool                 no_body;                        // Used for http2 messages. If no_body is true, the HTTP request had no body
     uint8_t              priority;                       // The priority of this message
