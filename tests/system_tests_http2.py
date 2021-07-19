@@ -19,7 +19,6 @@
 
 import os
 import sys
-import socket
 import unittest
 from time import sleep
 import system_test
@@ -144,7 +143,6 @@ class CommonHttp2Tests:
     def test_post_upload_large_image_jpg(self):
         # curl  -X POST -H "Content-Type: multipart/form-data"  -F "data=@/home/gmurthy/opensource/test.jpg"
         # http://127.0.0.1:9000/upload --http2-prior-knowledge
-        print (image_file('test.jpg'))
         address = self.router_qdra.http_addresses[0] + "/upload"
         out = self.run_curl(address, args=['-X', 'POST', '-H', 'Content-Type: multipart/form-data',
                                            '-F', 'data=@' + image_file('test.jpg')])

@@ -18,7 +18,6 @@
 #
 
 import socket
-from time import sleep
 import signal
 import sys
 import os
@@ -41,16 +40,11 @@ def send_response(event, conn):
     and closes the connection.
     """
     stream_id = event.stream_id
-    conn.send_headers(
-        stream_id=stream_id,
-        headers=[(u':status', u'200'), (u'server', u'h2_slow_q2_server/0.1.0')]
-    )
-    
-    conn.send_data(
-        stream_id=stream_id,
-        data=b'Success!',
-        end_stream=True
-    ) 
+    conn.send_headers(stream_id=stream_id,
+                      headers=[(u':status', u'200'), (u'server', u'h2_slow_q2_server/0.1.0')])
+    conn.send_data(stream_id=stream_id,
+                   data=b'Success!',
+                   end_stream=True)
 
 
 def handle_events(conn, events):
@@ -111,4 +105,3 @@ while True:
     # socket object, the second element is a tuple of the address the new
     # connection is from
     handle(sock.accept()[0])
-
