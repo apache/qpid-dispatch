@@ -679,8 +679,12 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
     // If this link is configured as no-route, don't create any functional linkage between the
     // link and the address beyond the owning_addr.
     //
-    if (link->no_route)
+    if (link->no_route) {
+    	link->owning_addr->ref_count++;
+    	// The no_route link's address has been bound. Set no_route_bound to true.
+    	link->no_route_bound = true;
         return;
+    }
 
     if (link->link_direction == QD_OUTGOING) {
         qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
