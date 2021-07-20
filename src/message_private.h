@@ -144,10 +144,10 @@ typedef struct {
     sys_atomic_t         receive_complete;               // Message has been completely received
     bool                 q2_input_holdoff;               // Q2 state: hold off calling pn_link_recv
     bool                 disable_q2_holdoff;             // Disable Q2 flow control
-    bool                 priority_parsed;                // Message priority has been parsed
+    sys_atomic_t         priority_parsed;                // Message priority has been parsed
     sys_atomic_t         oversize;                       // Policy oversize-message handling in effect
-    bool                 no_body;                        // HTTP2 request has no body
-    uint8_t              priority;                       // Message AMQP priority
+    sys_atomic_t         no_body;                        // HTTP2 request has no body
+    sys_atomic_t         priority;                       // Message AMQP priority
     sys_atomic_t         aborted;                        // Message has been aborted
 } qd_message_content_t;
 

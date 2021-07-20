@@ -926,7 +926,7 @@ static void qd_message_parse_priority(qd_message_t *in_msg)
     qd_message_content_t *content  = MSG_CONTENT(in_msg);
     qd_iterator_t        *iter     = qd_message_field_iterator(in_msg, QD_FIELD_HEADER);
 
-    content->priority_parsed  = true;
+    SET_ATOMIC_FLAG(&content->priority_parsed);
 
     if (!!iter) {
         qd_parsed_field_t *field = qd_parse(iter);
@@ -935,7 +935,8 @@ static void qd_message_parse_priority(qd_message_t *in_msg)
                 qd_parsed_field_t *priority_field = qd_parse_sub_value(field, 1);
                 if (qd_parse_tag(priority_field) != QD_AMQP_NULL) {
                     uint32_t value = qd_parse_as_uint(priority_field);
-                    content->priority = value > QDR_MAX_PRIORITY ? QDR_MAX_PRIORITY : (uint8_t) (value & 0x00ff);
+                    value = MIN(value, QDR_MAX_PRIORITY);
+                    sys_atomic_set(&content->priority, value);
                 }
             }
         }
@@ -1023,11 +1024,13 @@ qd_message_t *qd_message()
     sys_atomic_init(&msg->content->aborted, 0);
     sys_atomic_init(&msg->content->discard, 0);
     sys_atomic_init(&msg->content->ma_stream, 0);
+    sys_atomic_init(&msg->content->no_body, 0);
     sys_atomic_init(&msg->content->oversize, 0);
+    sys_atomic_init(&msg->content->priority, QDR_DEFAULT_PRIORITY);
+    sys_atomic_init(&msg->content->priority_parsed, 0);
     sys_atomic_init(&msg->content->receive_complete, 0);
     sys_atomic_init(&msg->content->ref_count, 1);
     msg->content->parse_depth = QD_DEPTH_NONE;
-    msg->content->priority    = QDR_DEFAULT_PRIORITY;
     return (qd_message_t*) msg;
 }
 
@@ -1109,7 +1112,10 @@ void qd_message_free(qd_message_t *in_msg)
         sys_atomic_destroy(&content->aborted);
         sys_atomic_destroy(&content->discard);
         sys_atomic_destroy(&content->ma_stream);
+        sys_atomic_destroy(&content->no_body);
         sys_atomic_destroy(&content->oversize);
+        sys_atomic_destroy(&content->priority);
+        sys_atomic_destroy(&content->priority_parsed);
         sys_atomic_destroy(&content->receive_complete);
         sys_atomic_destroy(&content->ref_count);
         free_qd_message_content_t(content);
@@ -1312,10 +1318,10 @@ uint8_t qd_message_get_priority(qd_message_t *msg)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
 
-    if (!content->priority_parsed)
+    if (!IS_ATOMIC_FLAG_SET(&content->priority_parsed))
         qd_message_parse_priority(msg);
 
-    return content->priority;
+    return sys_atomic_get(&content->priority);
 }
 
 bool qd_message_receive_complete(qd_message_t *in_msg)
@@ -1373,7 +1379,7 @@ void qd_message_set_no_body(qd_message_t *in_msg)
 {
     if (!!in_msg) {
         qd_message_content_t *content = MSG_CONTENT(in_msg);
-        content->no_body = true;
+        SET_ATOMIC_FLAG(&content->no_body);
     }
 }
 
@@ -1381,7 +1387,7 @@ bool qd_message_no_body(qd_message_t *in_msg)
 {
     if (!!in_msg) {
         qd_message_content_t *content = MSG_CONTENT(in_msg);
-        return content->no_body;
+        return IS_ATOMIC_FLAG_SET(&content->no_body);
     }
 
     return false;
