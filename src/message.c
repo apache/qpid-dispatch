@@ -1022,6 +1022,7 @@ qd_message_t *qd_message()
     msg->content->lock = sys_mutex();
     sys_atomic_init(&msg->content->ref_count, 1);
     sys_atomic_init(&msg->content->aborted, 0);
+    sys_atomic_init(&msg->content->ma_stream, 0);
     msg->content->parse_depth = QD_DEPTH_NONE;
     msg->content->priority    = QDR_DEFAULT_PRIORITY;
     return (qd_message_t*) msg;
@@ -1103,6 +1104,7 @@ void qd_message_free(qd_message_t *in_msg)
 
         sys_mutex_free(content->lock);
         sys_atomic_destroy(&content->aborted);
+        sys_atomic_destroy(&content->ma_stream);
         free_qd_message_content_t(content);
     }
 
@@ -1185,7 +1187,7 @@ void qd_message_message_annotations(qd_message_t *in_msg)
     }
 
     if (ma_pf_stream) {
-        content->ma_stream = qd_parse_as_int(ma_pf_stream);
+        sys_atomic_set(&content->ma_stream, (qd_parse_as_int(ma_pf_stream) ? 1 : 0));
         qd_parse_free(ma_pf_stream);
     }
 
@@ -1224,7 +1226,7 @@ int qd_message_get_phase_annotation(const qd_message_t *in_msg)
 void qd_message_set_stream_annotation(qd_message_t *in_msg, bool stream)
 {
     qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    msg->content->ma_stream = stream;
+    sys_atomic_set(&msg->content->ma_stream, (stream ? 1 : 0));
 }
 
 void qd_message_set_ingress_annotation(qd_message_t *in_msg, qd_composed_field_t *ingress_field)
@@ -1689,7 +1691,7 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
         !DEQ_IS_EMPTY(msg->ma_trace) ||
         !DEQ_IS_EMPTY(msg->ma_ingress) ||
         msg->ma_phase != 0 ||
-        msg->content->ma_stream) {
+        IS_ATOMIC_FLAG_SET(&msg->content->ma_stream)) {
 
         if (!map_started) {
             qd_compose_start_map(out_ma);
@@ -1720,9 +1722,9 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
             field_count++;
         }
 
-        if (msg->content->ma_stream) {
+        if (IS_ATOMIC_FLAG_SET(&msg->content->ma_stream)) {
             qd_compose_insert_symbol(field, QD_MA_STREAM);
-            qd_compose_insert_int(field, msg->content->ma_stream);
+            qd_compose_insert_int(field, 1);
             field_count++;
         }
         // pad out to N fields
@@ -2900,7 +2902,8 @@ int qd_message_get_phase_val(qd_message_t *msg)
 
 int qd_message_is_streaming(qd_message_t *msg)
 {
-    return ((qd_message_pvt_t*) msg)->content->ma_stream;
+    qd_message_pvt_t *msg_pvt = (qd_message_pvt_t *)msg;
+    return IS_ATOMIC_FLAG_SET(&msg_pvt->content->ma_stream);
 }
 
 

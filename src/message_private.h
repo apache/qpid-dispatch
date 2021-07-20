@@ -129,7 +129,7 @@ typedef struct {
     qd_parsed_field_t   *ma_pf_to_override;
     qd_parsed_field_t   *ma_pf_trace;
     int                  ma_int_phase;
-    bool                 ma_stream;                      // indicates whether this message is streaming
+    sys_atomic_t         ma_stream;                      // indicates whether this message is streaming
     uint64_t             max_message_size;               // configured max; 0 if no max to enforce
     uint64_t             bytes_received;                 // bytes returned by pn_link_recv() when enforcing max_message_size
     size_t               protected_buffers;              // count of permanent buffers that hold the message headers
