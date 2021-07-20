@@ -1022,6 +1022,7 @@ qd_message_t *qd_message()
     msg->content->lock = sys_mutex();
     sys_atomic_init(&msg->content->ref_count, 1);
     sys_atomic_init(&msg->content->aborted, 0);
+    sys_atomic_init(&msg->content->discard, 0);
     sys_atomic_init(&msg->content->ma_stream, 0);
     msg->content->parse_depth = QD_DEPTH_NONE;
     msg->content->priority    = QDR_DEFAULT_PRIORITY;
@@ -1105,6 +1106,7 @@ void qd_message_free(qd_message_t *in_msg)
         sys_mutex_free(content->lock);
         sys_atomic_destroy(&content->aborted);
         sys_atomic_destroy(&content->ma_stream);
+        sys_atomic_destroy(&content->discard);
         free_qd_message_content_t(content);
     }
 
@@ -1242,7 +1244,7 @@ bool qd_message_is_discard(qd_message_t *msg)
     if (!msg)
         return false;
     qd_message_pvt_t *pvt_msg = (qd_message_pvt_t*) msg;
-    return pvt_msg->content->discard;
+    return IS_ATOMIC_FLAG_SET(&pvt_msg->content->discard);
 }
 
 void qd_message_set_discard(qd_message_t *msg, bool discard)
@@ -1251,7 +1253,7 @@ void qd_message_set_discard(qd_message_t *msg, bool discard)
         return;
 
     qd_message_pvt_t *pvt_msg = (qd_message_pvt_t*) msg;
-    pvt_msg->content->discard = discard;
+    sys_atomic_set(&pvt_msg->content->discard, (discard ? 1 : 0));
 }
 
 
@@ -1500,7 +1502,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     // but not process the message for delivery.
     // Oversize messages are also discarded.
     //
-    if (msg->content->discard) {
+    if (IS_ATOMIC_FLAG_SET(&msg->content->discard)) {
         return discard_receive(delivery, link, (qd_message_t *)msg);
     }
 
@@ -1617,7 +1619,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                     qd_connection_t *conn = qd_link_connection(qdl);
                     qd_connection_log_policy_denial(qdl, "DENY AMQP Transfer maxMessageSize exceeded");
                     qd_policy_count_max_size_event(link, conn);
-                    content->discard = true;
+                    SET_ATOMIC_FLAG(&content->discard);
                     content->oversize = true;
                     return discard_receive(delivery, link, (qd_message_t*)msg);
                 }

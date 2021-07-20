@@ -140,7 +140,7 @@ typedef struct {
     qd_message_q2_unblocker_t q2_unblocker;              // Callback and context to signal Q2 unblocked to receiver
 
     bool                 ma_parsed;                      // Have parsed incoming message annotations message
-    bool                 discard;                        // Message is being discarded
+    sys_atomic_t         discard;                        // Message is being discarded
     bool                 receive_complete;               // Message has been completely received
     bool                 q2_input_holdoff;               // Q2 state: hold off calling pn_link_recv
     bool                 disable_q2_holdoff;             // Disable Q2 flow control
