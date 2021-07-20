@@ -70,7 +70,7 @@ class NodeTracker(object):
         """
         Run through the list of routers and check for expired conditions
         """
-        for node_id, node in self.nodes.items():
+        for node_id, node in list(self.nodes.items()):
             ##
             # If the node is a neighbor, check the neighbor refresh time to see
             # if we've waited too long for a refresh.  If so, disconnect the link

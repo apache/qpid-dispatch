@@ -1340,7 +1340,7 @@ void qd_dispatch_delete_tcp_connector(qd_dispatch_t *qd, void *impl)
     qd_tcp_connector_t *ct = (qd_tcp_connector_t*) impl;
     if (ct) {
         //need to close the pseudo-connection used for dispatching
-        //deliveries out to live connnections:
+        //deliveries out to live connections:
         qd_log(tcp_adaptor->log_source, QD_LOG_INFO,
                "Deleted TcpConnector for %s, %s:%s",
                ct->config->address, ct->config->host, ct->config->port);

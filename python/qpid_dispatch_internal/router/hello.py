@@ -61,7 +61,7 @@ class HelloProtocol(object):
         Expire local records of received hellos.  This is not involved in the
         expiration of neighbor status for routers.
         """
-        for key, last_seen in self.hellos.items():
+        for key, last_seen in list(self.hellos.items()):
             if now - last_seen > self.hello_max_age:
                 self.hellos.pop(key)
                 self.container.log_hello(LOG_TRACE, "HELLO peer expired: %s" % key)
