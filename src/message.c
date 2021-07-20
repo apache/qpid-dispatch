@@ -1046,6 +1046,8 @@ void qd_message_free(qd_message_t *in_msg)
     qd_buffer_list_free_buffers(&msg->ma_trace);
     qd_buffer_list_free_buffers(&msg->ma_ingress);
 
+    sys_atomic_destroy(&msg->send_complete);
+
     qd_message_content_t *content = msg->content;
 
     if (msg->is_fanout) {
@@ -1147,7 +1149,7 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     copy->sent_depth    = QD_DEPTH_NONE;
     copy->cursor.buffer = 0;
     copy->cursor.cursor = 0;
-    copy->send_complete = false;
+    sys_atomic_init(&copy->send_complete, 0);
     copy->tag_sent      = false;
     copy->is_fanout     = false;
 
@@ -1339,7 +1341,7 @@ bool qd_message_send_complete(qd_message_t *in_msg)
         return false;
 
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
-    return msg->send_complete;
+    return IS_ATOMIC_FLAG_SET(&msg->send_complete);
 }
 
 
@@ -1347,7 +1349,7 @@ void qd_message_set_send_complete(qd_message_t *in_msg)
 {
     if (!!in_msg) {
         qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-        msg->send_complete = true;
+        SET_ATOMIC_FLAG(&msg->send_complete);
     }
 }
 
@@ -1813,7 +1815,7 @@ void qd_message_send(qd_message_t *in_msg,
         if (IS_ATOMIC_FLAG_SET(&content->aborted)) {
             // Message is aborted before any part of it has been sent.
             // Declare the message to be sent,
-            msg->send_complete = true;
+            SET_ATOMIC_FLAG(&msg->send_complete);
             // If the outgoing delivery is not already aborted then abort it.
             if (!pn_delivery_aborted(pn_link_current(pnl))) {
                 pn_delivery_abort(pn_link_current(pnl));
@@ -1940,7 +1942,7 @@ void qd_message_send(qd_message_t *in_msg,
             // get a link detach event for this link
             //
             SET_ATOMIC_FLAG(&content->aborted);
-            msg->send_complete = true;
+            SET_ATOMIC_FLAG(&msg->send_complete);
             if (!pn_delivery_aborted(pn_link_current(pnl))) {
                 pn_delivery_abort(pn_link_current(pnl));
             }
@@ -1993,7 +1995,7 @@ void qd_message_send(qd_message_t *in_msg,
                     msg->cursor.buffer = next_buf;
                     msg->cursor.cursor = (next_buf) ? qd_buffer_base(next_buf) : 0;
 
-                    msg->send_complete = (complete && !next_buf);
+                    sys_atomic_set(&msg->send_complete, (complete && !next_buf) ? 1 : 0);
                 }
 
                 buf = next_buf;
@@ -2018,7 +2020,7 @@ void qd_message_send(qd_message_t *in_msg,
 
     if (IS_ATOMIC_FLAG_SET(&content->aborted)) {
         if (pn_link_current(pnl)) {
-            msg->send_complete = true;
+            SET_ATOMIC_FLAG(&msg->send_complete);
             if (!pn_delivery_aborted(pn_link_current(pnl))) {
                 pn_delivery_abort(pn_link_current(pnl));
             }

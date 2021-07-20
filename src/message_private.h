@@ -166,7 +166,7 @@ struct qd_message_pvt_t {
     unsigned char                 *body_cursor;     // Stream: tracks the point in the content buffer chain
     qd_buffer_t                   *body_buffer;     // Stream: to parse the next body data section, if any
     bool                           strip_annotations_in;
-    bool                           send_complete;   // Message has been been completely sent
+    sys_atomic_t                   send_complete;   // Message has been been completely sent
     bool                           tag_sent;        // Tags are sent
     bool                           is_fanout;       // Message is an outgoing fanout
 };
