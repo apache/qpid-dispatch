@@ -63,7 +63,7 @@ static void set_content(qd_message_content_t *content, unsigned char *buffer, si
         qd_buffer_insert(buf, segment);
         DEQ_INSERT_TAIL(content->buffers, buf);
     }
-    content->receive_complete = true;
+    SET_ATOMIC_FLAG(&content->receive_complete);
 }
 
 
@@ -593,7 +593,7 @@ static char *test_incomplete_annotations(void *context)
     msg = qd_message();
     qd_message_content_t *content = MSG_CONTENT(msg);
     set_content(content, buffer, 100);
-    content->receive_complete = false;   // more data coming!
+    CLEAR_ATOMIC_FLAG(&content->receive_complete);   // more data coming!
     if (qd_message_check_depth(msg, QD_DEPTH_MESSAGE_ANNOTATIONS) != QD_MESSAGE_DEPTH_INCOMPLETE) {
         result = "Error: incomplete message was not detected!";
         goto exit;
@@ -626,7 +626,7 @@ static char *test_check_weird_messages(void *context)
                               0xc1, 0x01, 0x00};
     // first test an incomplete pattern:
     set_content(MSG_CONTENT(msg), da_map, 4);
-    MSG_CONTENT(msg)->receive_complete = false;
+    CLEAR_ATOMIC_FLAG(&(MSG_CONTENT(msg)->receive_complete));
     qd_message_depth_status_t mc = qd_message_check_depth(msg, QD_DEPTH_DELIVERY_ANNOTATIONS);
     if (mc != QD_MESSAGE_DEPTH_INCOMPLETE) {
         result = "Expected INCOMPLETE status";
@@ -635,7 +635,7 @@ static char *test_check_weird_messages(void *context)
 
     // full pattern, but no tag
     set_content(MSG_CONTENT(msg), &da_map[4], 6);
-    MSG_CONTENT(msg)->receive_complete = false;
+    CLEAR_ATOMIC_FLAG(&(MSG_CONTENT(msg)->receive_complete));
     mc = qd_message_check_depth(msg, QD_DEPTH_DELIVERY_ANNOTATIONS);
     if (mc != QD_MESSAGE_DEPTH_INCOMPLETE) {
         result = "Expected INCOMPLETE status";
@@ -644,7 +644,7 @@ static char *test_check_weird_messages(void *context)
 
     // add tag, but incomplete field:
     set_content(MSG_CONTENT(msg), &da_map[10], 1);
-    MSG_CONTENT(msg)->receive_complete = false;
+    CLEAR_ATOMIC_FLAG(&(MSG_CONTENT(msg)->receive_complete));
     mc = qd_message_check_depth(msg, QD_DEPTH_DELIVERY_ANNOTATIONS);
     if (mc != QD_MESSAGE_DEPTH_INCOMPLETE) {
         result = "Expected INCOMPLETE status";
@@ -664,7 +664,7 @@ static char *test_check_weird_messages(void *context)
     qd_message_free(msg);
     msg = qd_message();
     set_content(MSG_CONTENT(msg), bad_hdr, sizeof(bad_hdr));
-    MSG_CONTENT(msg)->receive_complete = false;
+    CLEAR_ATOMIC_FLAG(&(MSG_CONTENT(msg)->receive_complete));
     mc = qd_message_check_depth(msg, QD_DEPTH_DELIVERY_ANNOTATIONS); // looking _past_ header!
     if (mc != QD_MESSAGE_DEPTH_INVALID) {
         result = "Bad tag not detected!";

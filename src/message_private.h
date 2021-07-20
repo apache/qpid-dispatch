@@ -141,7 +141,7 @@ typedef struct {
 
     bool                 ma_parsed;                      // Have parsed incoming message annotations message
     sys_atomic_t         discard;                        // Message is being discarded
-    bool                 receive_complete;               // Message has been completely received
+    sys_atomic_t         receive_complete;               // Message has been completely received
     bool                 q2_input_holdoff;               // Q2 state: hold off calling pn_link_recv
     bool                 disable_q2_holdoff;             // Disable Q2 flow control
     bool                 priority_parsed;                // Message priority has been parsed

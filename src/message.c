@@ -1020,10 +1020,11 @@ qd_message_t *qd_message()
 
     ZERO(msg->content);
     msg->content->lock = sys_mutex();
-    sys_atomic_init(&msg->content->ref_count, 1);
     sys_atomic_init(&msg->content->aborted, 0);
     sys_atomic_init(&msg->content->discard, 0);
     sys_atomic_init(&msg->content->ma_stream, 0);
+    sys_atomic_init(&msg->content->receive_complete, 0);
+    sys_atomic_init(&msg->content->ref_count, 1);
     msg->content->parse_depth = QD_DEPTH_NONE;
     msg->content->priority    = QDR_DEFAULT_PRIORITY;
     return (qd_message_t*) msg;
@@ -1105,8 +1106,10 @@ void qd_message_free(qd_message_t *in_msg)
 
         sys_mutex_free(content->lock);
         sys_atomic_destroy(&content->aborted);
-        sys_atomic_destroy(&content->ma_stream);
         sys_atomic_destroy(&content->discard);
+        sys_atomic_destroy(&content->ma_stream);
+        sys_atomic_destroy(&content->receive_complete);
+        sys_atomic_destroy(&content->ref_count);
         free_qd_message_content_t(content);
     }
 
@@ -1318,7 +1321,7 @@ bool qd_message_receive_complete(qd_message_t *in_msg)
     if (!in_msg)
         return false;
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
-    return msg->content->receive_complete;
+    return IS_ATOMIC_FLAG_SET(&msg->content->receive_complete);
 }
 
 
@@ -1349,7 +1352,7 @@ void qd_message_set_receive_complete(qd_message_t *in_msg)
 
         LOCK(content->lock);
 
-        content->receive_complete = true;
+        SET_ATOMIC_FLAG(&content->receive_complete);
         if (content->q2_input_holdoff) {
             content->q2_input_holdoff = false;
             q2_unblock = content->q2_unblocker;
@@ -2043,7 +2046,7 @@ static qd_message_depth_status_t message_check_depth_LH(qd_message_content_t *co
     }
 
     if (rc == QD_SECTION_NEED_MORE) {
-        if (!content->receive_complete)
+        if (!IS_ATOMIC_FLAG_SET(&content->receive_complete))
             return QD_MESSAGE_DEPTH_INCOMPLETE;
 
         // no more data is going to come. OK if at the end and optional:
@@ -2069,7 +2072,7 @@ static qd_message_depth_status_t qd_message_check_LH(qd_message_content_t *conte
 
     qd_buffer_t *buffer  = DEQ_HEAD(content->buffers);
     if (!buffer) {
-        return content->receive_complete ? QD_MESSAGE_DEPTH_INVALID : QD_MESSAGE_DEPTH_INCOMPLETE;
+        return IS_ATOMIC_FLAG_SET(&content->receive_complete) ? QD_MESSAGE_DEPTH_INVALID : QD_MESSAGE_DEPTH_INCOMPLETE;
     }
 
     if (content->parse_buffer == 0) {
@@ -2298,7 +2301,7 @@ void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *b
 {
     qd_composed_field_t  *field   = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_message_content_t *content = MSG_CONTENT(msg);
-    content->receive_complete     = true;
+    SET_ATOMIC_FLAG(&content->receive_complete);
 
     qd_compose_start_list(field);
     qd_compose_insert_bool(field, 0);     // durable
@@ -2350,7 +2353,7 @@ void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *field, bool co
     qd_buffer_list_t     *field_buffers = qd_compose_buffers(field);
 
     content->buffers          = *field_buffers;
-    content->receive_complete = complete;
+    sys_atomic_set(&content->receive_complete, (complete ? 1 : 0));
 
     DEQ_INIT(*field_buffers); // Zero out the linkage to the now moved buffers.
 }
@@ -2359,7 +2362,7 @@ void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *field, bool co
 void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, bool receive_complete)
 {
     qd_message_content_t *content        = MSG_CONTENT(msg);
-    content->receive_complete            = receive_complete;
+    sys_atomic_set(&content->receive_complete, (receive_complete ? 1 : 0));
     qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
     qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
 
@@ -2372,7 +2375,7 @@ void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_com
 void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, qd_composed_field_t *field3, bool receive_complete)
 {
     qd_message_content_t *content        = MSG_CONTENT(msg);
-    content->receive_complete            = receive_complete;
+    sys_atomic_set(&content->receive_complete, (receive_complete ? 1 : 0));
     qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
     qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
     qd_buffer_list_t     *field3_buffers = qd_compose_buffers(field3);
@@ -2386,7 +2389,7 @@ void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_com
 void qd_message_compose_5(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, qd_composed_field_t *field3, qd_composed_field_t *field4, bool receive_complete)
 {
     qd_message_content_t *content        = MSG_CONTENT(msg);
-    content->receive_complete            = receive_complete;
+    sys_atomic_set(&content->receive_complete, (receive_complete ? 1 : 0));
     qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
     qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
     qd_buffer_list_t     *field3_buffers = qd_compose_buffers(field3);
@@ -2806,10 +2809,8 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
         break;
 
     case QD_SECTION_NEED_MORE:
-        if (msg->content->receive_complete)
-            result = QD_MESSAGE_STREAM_DATA_NO_MORE;
-        else
-            result = QD_MESSAGE_STREAM_DATA_INCOMPLETE;
+        result = IS_ATOMIC_FLAG_SET(&msg->content->receive_complete) ?
+            QD_MESSAGE_STREAM_DATA_NO_MORE : QD_MESSAGE_STREAM_DATA_INCOMPLETE;
         break;
     }
 
