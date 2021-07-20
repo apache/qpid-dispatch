@@ -40,7 +40,6 @@ const char *STATUS = ":status";
 const char *CONTENT_TYPE = "content-type";
 const char *CONTENT_ENCODING = "content-encoding";
 static const int BACKLOG = 50;  /* Listening backlog */
-static const int PING_INTERVAL = 4;  // Send a ping every 4 seconds.
 
 #define DEFAULT_CAPACITY 250
 #define READ_BUFFERS 4
@@ -398,11 +397,6 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn, bool on_shutdo
     if (http_conn->activate_timer) {
         qd_timer_free(http_conn->activate_timer);
         http_conn->activate_timer = 0;
-    }
-
-    if (http_conn->ping_timer) {
-        qd_timer_free(http_conn->ping_timer);
-        http_conn->ping_timer = 0;
     }
 
     http_conn->context.context = 0;
@@ -895,14 +889,6 @@ static void create_settings_frame(qdr_http2_connection_t *conn)
         return;
     }
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Initial SETTINGS frame sent", conn->conn_id);
-}
-
-
-static void send_ping_frame(qdr_http2_connection_t *conn)
-{
-    qdr_http2_session_data_t *session_data = conn->session_data;
-    nghttp2_submit_ping(session_data->session, NGHTTP2_FLAG_NONE, 0);
-    nghttp2_session_send(session_data->session);
 }
 
 static void send_settings_frame(qdr_http2_connection_t *conn)
@@ -2267,62 +2253,6 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
 }
 
 
-static void egress_conn_ping_sender(void *context)
-{
-    qdr_http2_connection_t* conn = (qdr_http2_connection_t*) context;
-    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Running egress_conn_ping_sender", conn->conn_id);
-
-    //
-    // We don't currently sent pings on the client connection.
-    // We might do that if there is a need for it.
-    //
-    // For now, we send ping frames only on connections the router initiates
-    // to http2 servers.
-    //
-    //
-    if (!conn->connection_established || conn->ingress)
-        return;
-
-    time_t current = time(NULL);
-    bool can_send_ping_frame = true;
-
-    //
-    // If there was incoming traffic less that PING_INTERVAL ago, no need to send a ping again
-    //
-    if (conn->last_pn_raw_conn_read !=0 && (current - conn->last_pn_raw_conn_read < PING_INTERVAL) && (conn->last_pn_raw_conn_read != conn->prev_ping)) {
-        can_send_ping_frame = false;
-    }
-
-    //
-    // If there was no traffic on the wire, send the next ping only if the previous ping was sent PING_INTERVAL seconds ago.
-    //
-    if (can_send_ping_frame && (current - conn->prev_ping) < PING_INTERVAL) {
-        can_send_ping_frame = false;
-    }
-
-    if (can_send_ping_frame) {
-        send_ping_frame(conn);
-        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Sent PING frame", conn->conn_id);
-        conn->prev_ping = current;
-        if (conn->pn_raw_conn) {
-            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] egress_conn_ping_sender, calling pn_raw_connection_wake()", conn->conn_id);
-            pn_raw_connection_wake(conn->pn_raw_conn);
-        }
-    }
-
-    if (can_send_ping_frame) {
-        //
-        // A ping was just sent out, schedule next ping after PING_INTERVAL seconds
-        //
-        qd_timer_schedule(conn->ping_timer, PING_INTERVAL * 1000);
-    }
-    else {
-        time_t time_since_last_read = current - conn->last_pn_raw_conn_read;
-        qd_timer_schedule(conn->ping_timer, (PING_INTERVAL - time_since_last_read) * 1000);
-    }
-}
-
-
 static void egress_conn_timer_handler(void *context)
 {
     qdr_http2_connection_t* conn = (qdr_http2_connection_t*) context;
@@ -2376,7 +2306,6 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
     qdr_http2_connection_t* egress_http_conn = new_qdr_http2_connection_t();
     ZERO(egress_http_conn);
     egress_http_conn->activate_timer = qd_timer(http2_adaptor->core->qd, egress_conn_timer_handler, egress_http_conn);
-    egress_http_conn->ping_timer = qd_timer(http2_adaptor->core->qd, egress_conn_ping_sender, egress_http_conn);
 
     egress_http_conn->ingress = false;
     egress_http_conn->context.context = egress_http_conn;
@@ -2513,15 +2442,6 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     }
     case PN_RAW_CONNECTION_READ: {
         int read = handle_incoming_http(conn);
-        if (read > 0) {
-            if (!conn->ingress) {
-                //
-                // Save the time that we last received communication from the other side.
-                // This is done so we can send a ping frame only when is there is no traffic for PING_INTERVAL seconds.
-                //
-                conn->last_pn_raw_conn_read = time(NULL);
-            }
-        }
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes", conn->conn_id, read);
         break;
     }
@@ -2543,15 +2463,6 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                     free_qd_http2_buffer_t(qd_http2_buff);
                 }
             }
-        }
-
-        //
-        // Send the first PING only after the first real data has been written on the egress connection.
-        //
-        if (written > 0 && !conn->ingress && !conn->first_pinged) {
-            // Send a PING frame 4 seconds after opening an egress connection.
-            qd_timer_schedule(conn->ping_timer, PING_INTERVAL * 1000);
-            conn->first_pinged = true;
         }
 
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %zu bytes, DEQ_SIZE(session_data->buffs) = %zu", conn->conn_id, written, DEQ_SIZE(conn->session_data->buffs));
