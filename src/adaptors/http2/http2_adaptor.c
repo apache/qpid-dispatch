@@ -62,6 +62,7 @@ typedef struct qdr_http2_adaptor_t {
     qd_log_source_t             *protocol_log_source; // A log source for the protocol trace
     qdr_http2_connection_list_t  connections;
     sys_mutex_t                 *lock;  // protects connections, connectors, listener lists
+    sys_mutex_t                 *ping_lock;
 } qdr_http2_adaptor_t;
 
 
@@ -2260,19 +2261,19 @@ static void egress_conn_ping_sender(void *context)
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Running egress_conn_ping_sender", conn->conn_id);
 
     //
-    // We don't currently sent pings on the client connection.
-    // We might do that if there is a need for it.
+    // We don't currently send pings on the client connections.
     //
     // For now, we send ping frames only on connections the router initiates
     // to http2 servers.
     //
     //
-    if (!conn->connection_established || conn->ingress)
+    if (!conn->connection_established || conn->ingress || !conn->pn_raw_conn)
         return;
 
     time_t current = time(NULL);
     bool can_send_ping_frame = true;
 
+    sys_mutex_lock(http2_adaptor->ping_lock);
     //
     // If there was incoming traffic less that PING_INTERVAL ago, no need to send a ping again
     //
@@ -2280,31 +2281,32 @@ static void egress_conn_ping_sender(void *context)
         can_send_ping_frame = false;
     }
 
+    time_t time_since_last_read = 0;
+
     //
     // If there was no traffic on the wire, send the next ping only if the previous ping was sent PING_INTERVAL seconds ago.
     //
     if (can_send_ping_frame && (current - conn->prev_ping) < PING_INTERVAL) {
         can_send_ping_frame = false;
+        time_since_last_read = current - conn->last_pn_raw_conn_read;
     }
 
+    sys_mutex_unlock(http2_adaptor->ping_lock);
+
     if (can_send_ping_frame) {
+        // Queues up the ping frame ready to be sent.
         send_ping_frame(conn);
         qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Sent PING frame", conn->conn_id);
         conn->prev_ping = current;
-        if (conn->pn_raw_conn) {
-            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] egress_conn_ping_sender, calling pn_raw_connection_wake()", conn->conn_id);
-            pn_raw_connection_wake(conn->pn_raw_conn);
-        }
-    }
+        // Wake up the raw connection so the ping frame is actually sent out.
+        pn_raw_connection_wake(conn->pn_raw_conn);
 
-    if (can_send_ping_frame) {
         //
         // A ping was just sent out, schedule next ping after PING_INTERVAL seconds
         //
         qd_timer_schedule(conn->ping_timer, PING_INTERVAL * 1000);
     }
     else {
-        time_t time_since_last_read = current - conn->last_pn_raw_conn_read;
         qd_timer_schedule(conn->ping_timer, (PING_INTERVAL - time_since_last_read) * 1000);
     }
 }
@@ -2506,7 +2508,9 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                 // Save the time that we last received communication from the other side.
                 // This is done so we can send a ping frame only when is there is no traffic for PING_INTERVAL seconds.
                 //
+                sys_mutex_lock(http2_adaptor->ping_lock);
                 conn->last_pn_raw_conn_read = time(NULL);
+                sys_mutex_unlock(http2_adaptor->ping_lock);
             }
         }
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes", conn->conn_id, read);
@@ -2682,6 +2686,7 @@ static void qdr_http2_adaptor_final(void *adaptor_context)
     }
 
     sys_mutex_free(adaptor->lock);
+    sys_mutex_free(adaptor->ping_lock);
     nghttp2_session_callbacks_del(adaptor->callbacks);
     http2_adaptor =  NULL;
     free(adaptor);
@@ -2719,6 +2724,7 @@ static void qdr_http2_adaptor_init(qdr_core_t *core, void **adaptor_context)
     adaptor->log_source = qd_log_source(QD_HTTP_LOG_SOURCE);
     adaptor->protocol_log_source = qd_log_source("PROTOCOL");
     adaptor->lock = sys_mutex();
+    adaptor->ping_lock = sys_mutex();
     *adaptor_context = adaptor;
     DEQ_INIT(adaptor->listeners);
     DEQ_INIT(adaptor->connectors);
