@@ -1673,19 +1673,24 @@ class LinkRouteProxyTest(TestCase):
         while self._get_address(router, address):
             sleep(0.1)
 
-    def _test_traffic(self, sender, receiver, address, count=5):
+    def _test_traffic(self, sender, receiver, address, count=5, message=None):
         """Generate message traffic between two normal clients"""
+        error = None
         tr = AsyncTestReceiver(receiver, address)
-        ts = AsyncTestSender(sender, address, count)
+        ts = AsyncTestSender(sender, address, count,
+                             message=message)
         ts.wait()  # wait until all sent
         for i in range(count):
             try:
                 tr.queue.get()
             except AsyncTestReceiver.Empty:
-                return "Sender Stats=" + ts.get_msg_stats() + " Receiver Queue Stats=" + tr.get_queue_stats()
+                error = "Sender Stats=" + ts.get_msg_stats() + "\n Receiver Queue Stats=" + tr.get_queue_stats()
 
         tr.stop()
-        return None
+        if error:
+            tr.dump_log()
+            ts.dump_log()
+        return error
 
     def test_01_immedate_detach_reattach(self):
         if self.skip['test_01'] :
@@ -1850,10 +1855,15 @@ class LinkRouteProxyTest(TestCase):
                                  self.INT_B.listener,
                                  "Edge1/One",
                                  count=5)
-        self.assertIsNone(out, out)
         fs.join()
-        self.assertEqual(5, fs.in_count)
-        self.assertEqual(5, fs.out_count)
+
+        try:
+            self.assertIsNone(out, out)
+            self.assertEqual(5, fs.in_count)
+            self.assertEqual(5, fs.out_count)
+        except AssertionError:
+            fs.dump_log()
+            raise
 
         er.teardown()
         self._wait_address_gone(self.INT_B, "Edge1/*")
@@ -1933,6 +1943,7 @@ class LinkRouteProxyTest(TestCase):
             self.skipTest("Test skipped during development.")
 
         a_type = 'org.apache.qpid.dispatch.router.address'
+        test_msg = Message(body="test_51_link_route_proxy_configured")
 
         fs = FakeService(self.EA1.route_container)
         self.INT_B.wait_address("CfgLinkRoute1", count=2)
@@ -1940,11 +1951,17 @@ class LinkRouteProxyTest(TestCase):
         out = self._test_traffic(self.INT_B.listener,
                                  self.INT_B.listener,
                                  "CfgLinkRoute1/hi",
-                                 count=5)
-        self.assertIsNone(out, out)
+                                 count=5,
+                                 message=test_msg)
         fs.join()
-        self.assertEqual(5, fs.in_count)
-        self.assertEqual(5, fs.out_count)
+
+        try:
+            self.assertIsNone(out, out)
+            self.assertEqual(5, fs.in_count)
+            self.assertEqual(5, fs.out_count)
+        except AssertionError:
+            fs.dump_log()
+            raise
 
         # now that FakeService is gone, the link route should no longer be
         # active:
@@ -1958,12 +1975,13 @@ class LinkRouteProxyTest(TestCase):
         out = self._test_traffic(self.INT_A.listener,
                                  self.INT_A.listener,
                                  "MATCH.cfg.pattern",
-                                 count=5)
-        self.assertIsNone(out, out)
-
+                                 count=5,
+                                 message=test_msg)
         fs.join()
+        self.assertIsNone(out, out)
         self.assertEqual(5, fs.in_count)
         self.assertEqual(5, fs.out_count)
+
         self._wait_address_gone(self.INT_A, "*.cfg.pattern.#")
 
     def test_52_conn_link_route_proxy(self):

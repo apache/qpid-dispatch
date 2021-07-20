@@ -867,11 +867,15 @@ class AsyncTestReceiver(MessagingHandler):
         def get(self, timeout=TIMEOUT):
             self._async_receiver.num_queue_gets += 1
             msg = super(AsyncTestReceiver.MyQueue, self).get(timeout=timeout)
+            self._async_receiver._logger.log("message %d get"
+                                             % self._async_receiver.num_queue_gets)
             return msg
 
         def put(self, msg):
             self._async_receiver.num_queue_puts += 1
             super(AsyncTestReceiver.MyQueue, self).put(msg)
+            self._async_receiver._logger.log("message %d put"
+                                             % self._async_receiver.num_queue_puts)
 
     def __init__(self, address, source, conn_args=None, container_id=None,
                  wait=True, recover_link=False, msg_args=None):
@@ -891,6 +895,7 @@ class AsyncTestReceiver(MessagingHandler):
         self._recover_count = 0
         self._stop_thread = False
         self._thread = Thread(target=self._main)
+        self._logger = Logger(title="AsyncTestReceiver %s" % cid)
         self._thread.daemon = True
         self._thread.start()
         self.num_queue_puts = 0
@@ -905,16 +910,19 @@ class AsyncTestReceiver(MessagingHandler):
     def _main(self):
         self._container.timeout = 0.5
         self._container.start()
+        self._logger.log("Starting reactor")
         while self._container.process():
             if self._stop_thread:
                 if self._conn:
                     self._conn.close()
                     self._conn = None
+        self._logger.log("reactor thread done")
 
     def stop(self, timeout=TIMEOUT):
         self._stop_thread = True
         self._container.wakeup()
         self._thread.join(timeout=TIMEOUT)
+        self._logger.log("thread done")
         if self._thread.is_alive():
             raise Exception("AsyncTestReceiver did not exit")
         del self._conn
@@ -927,13 +935,16 @@ class AsyncTestReceiver(MessagingHandler):
         self._conn = event.container.connect(**kwargs)
 
     def on_connection_opened(self, event):
+        self._logger.log("Connection opened")
         kwargs = {'source': self.source}
         event.container.create_receiver(event.connection, **kwargs)
 
     def on_link_opened(self, event):
+        self._logger.log("link opened")
         self._ready.set()
 
     def on_link_closing(self, event):
+        self._logger.log("link closing")
         event.link.close()
         if self._recover_link and not self._stop_thread:
             # lesson learned: the generated link name will be the same as the
@@ -950,9 +961,13 @@ class AsyncTestReceiver(MessagingHandler):
     def on_disconnected(self, event):
         # if remote terminates the connection kill the thread else it will spin
         # on the cpu
+        self._logger.log("Disconnected")
         if self._conn:
             self._conn.close()
             self._conn = None
+
+    def dump_log(self):
+        self._logger.dump()
 
 
 class AsyncTestSender(MessagingHandler):
@@ -989,14 +1004,17 @@ class AsyncTestSender(MessagingHandler):
         self._link_name = "%s-%s" % (cid, "tx")
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
+        self._logger = Logger(title="AsyncTestSender %s" % cid)
         self._thread.start()
         self.msg_stats = "self.sent=%d, self.accepted=%d, self.released=%d, self.modified=%d, self.rejected=%d"
 
     def _main(self):
         self._container.timeout = 0.5
         self._container.start()
+        self._logger.log("Starting reactor")
         while self._container.process():
             self._check_if_done()
+        self._logger.log("reactor thread done")
 
     def get_msg_stats(self):
         return self.msg_stats % (self.sent, self.accepted, self.released, self.modified, self.rejected)
@@ -1004,6 +1022,7 @@ class AsyncTestSender(MessagingHandler):
     def wait(self):
         # don't stop it - wait until everything is sent
         self._thread.join(timeout=TIMEOUT)
+        self._logger.log("thread done")
         assert not self._thread.is_alive(), "sender did not complete"
         if self.error:
             raise AsyncTestSender.TestSenderException(self.error)
@@ -1015,6 +1034,7 @@ class AsyncTestSender(MessagingHandler):
         self._conn = self._container.connect(self.address)
 
     def on_connection_opened(self, event):
+        self._logger.log("Connection opened")
         option = AtMostOnce if self.presettle else AtLeastOnce
         self._sender = self._container.create_sender(self._conn,
                                                      target=self.target,
@@ -1025,6 +1045,7 @@ class AsyncTestSender(MessagingHandler):
         if self.sent < self.total:
             self._sender.send(self._message)
             self.sent += 1
+            self._logger.log("message %d sent" % self.sent)
 
     def _check_if_done(self):
         done = (self.sent == self.total
@@ -1036,10 +1057,12 @@ class AsyncTestSender(MessagingHandler):
                                             self.address)
             self._conn.close()
             self._conn = None
+            self._logger.log("Connection closed")
 
     def on_accepted(self, event):
         self.accepted += 1
         event.delivery.settle()
+        self._logger.log("message %d accepted" % self.accepted)
 
     def on_released(self, event):
         # for some reason Proton 'helpfully' calls on_released even though the
@@ -1048,17 +1071,21 @@ class AsyncTestSender(MessagingHandler):
             return self.on_modified(event)
         self.released += 1
         event.delivery.settle()
+        self._logger.log("message %d released" % self.released)
 
     def on_modified(self, event):
         self.modified += 1
         event.delivery.settle()
+        self._logger.log("message %d modified" % self.modified)
 
     def on_rejected(self, event):
         self.rejected += 1
         event.delivery.settle()
+        self._logger.log("message %d rejected" % self.rejected)
 
     def on_link_error(self, event):
         self.error = "link error:%s" % str(event.link.remote_condition)
+        self._logger.log(self.error)
         if self._conn:
             self._conn.close()
             self._conn = None
@@ -1067,9 +1094,13 @@ class AsyncTestSender(MessagingHandler):
         # if remote terminates the connection kill the thread else it will spin
         # on the cpu
         self.error = "connection to remote dropped"
+        self._logger.log(self.error)
         if self._conn:
             self._conn.close()
             self._conn = None
+
+    def dump_log(self):
+        self._logger.dump()
 
 
 class QdManager(object):
