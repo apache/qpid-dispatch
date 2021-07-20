@@ -1023,6 +1023,7 @@ qd_message_t *qd_message()
     sys_atomic_init(&msg->content->aborted, 0);
     sys_atomic_init(&msg->content->discard, 0);
     sys_atomic_init(&msg->content->ma_stream, 0);
+    sys_atomic_init(&msg->content->oversize, 0);
     sys_atomic_init(&msg->content->receive_complete, 0);
     sys_atomic_init(&msg->content->ref_count, 1);
     msg->content->parse_depth = QD_DEPTH_NONE;
@@ -1108,6 +1109,7 @@ void qd_message_free(qd_message_t *in_msg)
         sys_atomic_destroy(&content->aborted);
         sys_atomic_destroy(&content->discard);
         sys_atomic_destroy(&content->ma_stream);
+        sys_atomic_destroy(&content->oversize);
         sys_atomic_destroy(&content->receive_complete);
         sys_atomic_destroy(&content->ref_count);
         free_qd_message_content_t(content);
@@ -1431,7 +1433,7 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
             }
             pn_record_t *record = pn_delivery_attachments(delivery);
             pn_record_set(record, PN_DELIVERY_CTX, 0);
-            if (msg->content->oversize) {
+            if (IS_ATOMIC_FLAG_SET(&msg->content->oversize)) {
                 // Aborting the content disposes of downstream copies.
                 // This has no effect on the received message.
                 SET_ATOMIC_FLAG(&msg->content->aborted);
@@ -1623,7 +1625,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                     qd_connection_log_policy_denial(qdl, "DENY AMQP Transfer maxMessageSize exceeded");
                     qd_policy_count_max_size_event(link, conn);
                     SET_ATOMIC_FLAG(&content->discard);
-                    content->oversize = true;
+                    SET_ATOMIC_FLAG(&content->oversize);
                     return discard_receive(delivery, link, (qd_message_t*)msg);
                 }
             }
@@ -2974,7 +2976,7 @@ void qd_message_set_aborted(const qd_message_t *msg)
 bool qd_message_oversize(const qd_message_t *msg)
 {
     qd_message_content_t * mc = MSG_CONTENT(msg);
-    return mc->oversize;
+    return IS_ATOMIC_FLAG_SET(&mc->oversize);
 }
 
 
