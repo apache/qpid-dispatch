@@ -1525,11 +1525,14 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     //      have been processed and freed by outbound processing then
     //      message holdoff is cleared and receiving may continue.
     //
+    LOCK(msg->content->lock);
     if (!qd_link_is_q2_limit_unbounded(qdl) && !msg->content->disable_q2_holdoff) {
         if (msg->content->q2_input_holdoff) {
+            UNLOCK(msg->content->lock);
             return (qd_message_t*)msg;
         }
     }
+    UNLOCK(msg->content->lock);
 
     // Loop until msg is complete, error seen, or incoming bytes are consumed
     qd_message_content_t *content = msg->content;
@@ -2961,7 +2964,14 @@ bool _Q2_holdoff_should_unblock_LH(const qd_message_content_t *content)
 
 bool qd_message_is_Q2_blocked(const qd_message_t *msg)
 {
-    return ((const qd_message_pvt_t*)msg)->content->q2_input_holdoff;
+    qd_message_pvt_t     *msg_pvt = (qd_message_pvt_t*) msg;
+    qd_message_content_t *content = msg_pvt->content;
+
+    bool blocked;
+    LOCK(content->lock);
+    blocked = content->q2_input_holdoff;
+    UNLOCK(content->lock);
+    return blocked;
 }
 
 
