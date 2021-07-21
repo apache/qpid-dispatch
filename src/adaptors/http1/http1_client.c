@@ -763,12 +763,12 @@ static int _client_rx_request_cb(h1_codec_request_state_t *hrs,
     qd_compose_start_map(creq->request_props);
     {
         // OASIS specifies this value as "1.1" by default...
-        char version[64];
-        snprintf(version, 64, "%"PRIi32".%"PRIi32, version_major, version_minor);
-        qd_compose_insert_symbol(creq->request_props, REQUEST_HEADER_KEY);
-        qd_compose_insert_string(creq->request_props, version);
+        char temp[64];
+        snprintf(temp, sizeof(temp), "%"PRIi32".%"PRIi32, version_major, version_minor);
+        qd_compose_insert_string(creq->request_props, VERSION_PROP_KEY);
+        qd_compose_insert_string(creq->request_props, temp);
 
-        qd_compose_insert_symbol(creq->request_props, TARGET_HEADER_KEY);
+        qd_compose_insert_string(creq->request_props, PATH_PROP_KEY);
         qd_compose_insert_string(creq->request_props, target);
     }
 
@@ -870,7 +870,7 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
 
     qd_compose_insert_ulong(props, hreq->base.msg_id);    // message-id
     qd_compose_insert_null(props);                 // user-id
-    // @TODO(kgiusti) set to: to target?
+
     qd_compose_insert_string(props, hconn->cfg.address); // to
     qd_compose_insert_string(props, h1_codec_request_state_method(hrs));  // subject
     if (hconn->cfg.event_channel) {
@@ -1092,7 +1092,8 @@ static bool _get_multipart_content_length(_client_request_t *hreq, char *value)
                             got_body_length = true;
                             content_length += body_length;
                         }
-                    } else if (!qd_iterator_prefix(i_key, HTTP1_HEADER_PREFIX)) {
+                    } else if (!qd_iterator_prefix(i_key, ":")) {
+                        // ignore meta-data headers
                         qd_iterator_t *i_value = qd_parse_raw(value);
                         if (!i_value)
                             break;
@@ -1180,8 +1181,12 @@ static void _encode_multipart_response(_client_request_t *hreq)
                     if (!i_key)
                         break;
 
-                    // ignore the special headers added by the mapping and content-length field (TODO: case insensitive comparison for content-length)
-                    if (!qd_iterator_prefix(i_key, HTTP1_HEADER_PREFIX) && !qd_iterator_equal(i_key, (const unsigned char*) CONTENT_LENGTH_KEY)) {
+                    // ignore the special headers added by the mapping and
+                    // content-length field (TODO: case insensitive comparison
+                    // for content-length)
+                    if (!qd_iterator_prefix(i_key, ":")
+                        && !qd_iterator_equal(i_key, (const unsigned char*) CONTENT_LENGTH_KEY)) {
+
                         qd_iterator_t *i_value = qd_parse_raw(value);
                         if (!i_value)
                             break;
@@ -1404,21 +1409,24 @@ static bool _encode_response_headers(_client_request_t *hreq,
         qd_iterator_free(group_id_itr);
     }
 
-    qd_iterator_t *app_props_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
-    if (app_props_iter) {
-        qd_parsed_field_t *app_props = qd_parse(app_props_iter);
-        if (app_props && qd_parse_is_map(app_props)) {
-            qd_parsed_field_t *tmp = qd_parse_value_by_key(app_props, STATUS_HEADER_KEY);
-            if (tmp) {
-                int32_t status_code = qd_parse_as_int(tmp);
-                if (qd_parse_ok(tmp)) {
+    uint32_t status_code = 0;
+    qd_iterator_t *subject_iter = qd_message_field_iterator(msg, QD_FIELD_SUBJECT);
+    if (subject_iter) {
+        char *status_str = (char*) qd_iterator_copy(subject_iter);
+        if (status_str && sscanf(status_str, "%"PRIu32, &status_code) == 1) {
+
+            qd_iterator_t *app_props_iter = qd_message_field_iterator(msg,
+                                                                      QD_FIELD_APPLICATION_PROPERTIES);
+            if (app_props_iter) {
+                qd_parsed_field_t *app_props = qd_parse(app_props_iter);
+                if (app_props && qd_parse_is_map(app_props)) {
 
                     // the value for RESPONSE_HEADER_KEY is optional and is set
                     // to a string representation of the version of the server
                     // (e.g. "1.1")
                     uint32_t major = 1;
                     uint32_t minor = 1;
-                    tmp = qd_parse_value_by_key(app_props, RESPONSE_HEADER_KEY);
+                    qd_parsed_field_t *tmp = qd_parse_value_by_key(app_props, VERSION_PROP_KEY);
                     if (tmp) {
                         char *version_str = (char*) qd_iterator_copy(qd_parse_raw(tmp));
                         if (version_str) {
@@ -1427,7 +1435,7 @@ static bool _encode_response_headers(_client_request_t *hreq,
                         }
                     }
                     char *reason_str = 0;
-                    tmp = qd_parse_value_by_key(app_props, REASON_HEADER_KEY);
+                    tmp = qd_parse_value_by_key(app_props, REASON_PROP_KEY);
                     if (tmp) {
                         reason_str = (char*) qd_iterator_copy(qd_parse_raw(tmp));
                     }
@@ -1452,7 +1460,8 @@ static bool _encode_response_headers(_client_request_t *hreq,
                             break;
 
                         // ignore the special headers added by the mapping
-                        if (!qd_iterator_prefix(i_key, HTTP1_HEADER_PREFIX)) {
+                        if (!qd_iterator_prefix(i_key, ":")) {
+
                             qd_iterator_t *i_value = qd_parse_raw(value);
                             if (!i_value)
                                 break;
@@ -1485,12 +1494,14 @@ static bool _encode_response_headers(_client_request_t *hreq,
                         }
                     }
                 }
+
+                qd_parse_free(app_props);
+                qd_iterator_free(app_props_iter);
             }
         }
-        qd_parse_free(app_props);
-        qd_iterator_free(app_props_iter);
+        free(status_str);
+        qd_iterator_free(subject_iter);
     }
-
     return ok;
 }
 

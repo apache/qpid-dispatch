@@ -868,18 +868,18 @@ static int _server_rx_response_cb(h1_codec_request_state_t *hrs,
     rmsg->msg_props = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
     qd_compose_start_map(rmsg->msg_props);
     {
-        char version[64];
-        snprintf(version, 64, "%"PRIi32".%"PRIi32, version_major, version_minor);
-        qd_compose_insert_symbol(rmsg->msg_props, RESPONSE_HEADER_KEY);
-        qd_compose_insert_string(rmsg->msg_props, version);
-
-        qd_compose_insert_symbol(rmsg->msg_props, STATUS_HEADER_KEY);
-        qd_compose_insert_int(rmsg->msg_props, (int32_t)status_code);
+        char temp[64];
+        snprintf(temp, sizeof(temp), "%"PRIi32".%"PRIi32, version_major, version_minor);
+        qd_compose_insert_string(rmsg->msg_props, VERSION_PROP_KEY);
+        qd_compose_insert_string(rmsg->msg_props, temp);
 
         if (reason_phrase) {
-            qd_compose_insert_symbol(rmsg->msg_props, REASON_HEADER_KEY);
+            qd_compose_insert_string(rmsg->msg_props, REASON_PROP_KEY);
             qd_compose_insert_string(rmsg->msg_props, reason_phrase);
         }
+
+        qd_compose_insert_string(rmsg->msg_props, PATH_PROP_KEY);
+        qd_compose_insert_string(rmsg->msg_props, h1_codec_request_state_target(hrs));
     }
 
     hreq->response_complete = false;
@@ -954,8 +954,12 @@ static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     qd_compose_insert_null(props);     // message-id
     qd_compose_insert_null(props);     // user-id
     qd_compose_insert_string(props, hreq->base.response_addr); // to
-    // subject:
-    qd_compose_insert_string(props, h1_codec_request_state_method(hrs));
+    {
+        // subject:
+        char u32_str[64];
+        snprintf(u32_str, sizeof(u32_str), "%"PRIu32, h1_codec_request_state_response_code(hrs));
+        qd_compose_insert_string(props, u32_str);
+    }
     qd_compose_insert_null(props);   // reply-to
     qd_compose_insert_ulong(props, hreq->base.msg_id);  // correlation-id
     qd_compose_insert_null(props);                      // content-type
@@ -1339,7 +1343,7 @@ static uint64_t _send_request_headers(_server_request_t *hreq, qd_message_t *msg
         goto exit;
     }
 
-    qd_parsed_field_t *ref = qd_parse_value_by_key(app_props, TARGET_HEADER_KEY);
+    qd_parsed_field_t *ref = qd_parse_value_by_key(app_props, PATH_PROP_KEY);
     target_str = (char*) qd_iterator_copy(qd_parse_raw(ref));
     if (!target_str || *target_str == 0) {
         outcome = PN_REJECTED;
@@ -1348,7 +1352,7 @@ static uint64_t _send_request_headers(_server_request_t *hreq, qd_message_t *msg
 
 
     // Pull the version info from the app properties (e.g. "1.1")
-    ref = qd_parse_value_by_key(app_props, REQUEST_HEADER_KEY);
+    ref = qd_parse_value_by_key(app_props, VERSION_PROP_KEY);
     if (ref) {  // optional
         char *version_str = (char*) qd_iterator_copy(qd_parse_raw(ref));
         if (version_str)
@@ -1394,7 +1398,9 @@ static uint64_t _send_request_headers(_server_request_t *hreq, qd_message_t *msg
             ok = !h1_codec_tx_add_header(hreq->base.lib_rs, header_key, hconn->cfg.host_override);
 
             free(header_key);
-        } else if (!qd_iterator_prefix(i_key, HTTP1_HEADER_PREFIX)) {
+
+        } else if (!qd_iterator_prefix(i_key, ":")) {
+
             // ignore the special headers added by the mapping
             qd_iterator_t *i_value = qd_parse_raw(value);
             if (!i_value)

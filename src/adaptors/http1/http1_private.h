@@ -184,13 +184,12 @@ struct qdr_http1_connection_t {
 ALLOC_DECLARE(qdr_http1_connection_t);
 
 // special AMQP application properties keys for HTTP1 metadata headers
+// ':' prefix is illegal for HTTP headers, ensures no collisions with
+// HTTP headers
 //
-#define HTTP1_HEADER_PREFIX  "http:"          // reserved prefix
-#define REQUEST_HEADER_KEY   "http:request"   // request msg, value=version
-#define RESPONSE_HEADER_KEY  "http:response"  // response msg, value=version
-#define REASON_HEADER_KEY    "http:reason"    // from response (optional)
-#define TARGET_HEADER_KEY    "http:target"    // request target
-#define STATUS_HEADER_KEY    "http:status"    // response status (integer)
+#define VERSION_PROP_KEY     ":version"       // of msg (string, e.g. "1.1"
+#define PATH_PROP_KEY        ":path"          // URI target
+#define REASON_PROP_KEY      ":reason"        // response reason phrase
 
 
 // http1_adaptor.c

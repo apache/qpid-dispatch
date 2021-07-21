@@ -101,6 +101,7 @@ struct h1_codec_request_state_t {
     void                *context;
     h1_codec_connection_t *conn;
     char                *method;
+    char                *target;
     uint32_t             response_code;
 
     uint64_t in_octets;     // # encoded octets arriving from endpoint
@@ -218,6 +219,7 @@ static void h1_codec_request_state_free(h1_codec_request_state_t *hrs)
         assert(conn->encoder.hrs != hrs);
         DEQ_REMOVE(conn->hrs_queue, hrs);
         free(hrs->method);
+        free(hrs->target);
         free_h1_codec_request_state_t(hrs);
     }
 }
@@ -644,6 +646,7 @@ static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *de
                            strcmp((char*)method_str, "CONNECT") == 0);
 
     hrs->method = qd_strdup((char*) method_str);
+    hrs->target = qd_strdup((char*) target_str);
     hrs->in_octets += in_octets;
 
     decoder->hrs = hrs;
@@ -1412,6 +1415,11 @@ const char *h1_codec_request_state_method(const h1_codec_request_state_t *hrs)
     return hrs->method;
 }
 
+const char *h1_codec_request_state_target(const h1_codec_request_state_t *hrs)
+{
+    return hrs->target;
+}
+
 const uint32_t h1_codec_request_state_response_code(const h1_codec_request_state_t *hrs)
 {
     return hrs->response_code;
@@ -1449,6 +1457,7 @@ h1_codec_request_state_t *h1_codec_tx_request(h1_codec_connection_t *conn, const
     encoder->headers_sent = false;
 
     hrs->method = qd_strdup(method);
+    hrs->target = qd_strdup(target);
 
     // check for methods that do not support body content in the response:
     hrs->no_body_method = (strcmp((char*)method, "HEAD") == 0 ||
