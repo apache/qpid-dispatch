@@ -1352,9 +1352,12 @@ static void try_open_cb(void *context)
         // else deleted or failed - on failed wait until after connection is freed
         // and state is set to CXTR_STATE_CONNECTING (timer is rescheduled then)
         try_open_lh(ct, ctx);
+        ctx = 0;  // owned by ct
     }
 
     sys_mutex_unlock(ct->lock);
+
+    free_qd_connection_t(ctx);  // noop if ctx == 0
 }
 
 
