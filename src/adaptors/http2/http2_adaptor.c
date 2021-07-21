@@ -375,10 +375,9 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
         DEQ_REMOVE(session_data->streams, stream_data);
         nghttp2_session_set_stream_user_data(session_data->session, stream_data->stream_id, NULL);
     }
-    if (stream_data->method)
-    	free(stream_data->method);
-    if (stream_data->remote_site)
-    	free(stream_data->remote_site);
+
+    free(stream_data->method);
+    free(stream_data->remote_site);
 
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Freeing stream_data in free_http2_stream_data (%lx)", conn->conn_id,  stream_data->stream_id, (long) stream_data);
 
@@ -395,26 +394,21 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
     // all stream data (body data) objects need to be freed. We do this here.
     //
     if (stream_data->in_dlv && !stream_data->in_dlv_decrefed) {
-    	if (stream_data->curr_stream_data) {
-    		qd_message_stream_data_release(stream_data->curr_stream_data);
-    		stream_data->curr_stream_data = 0;
-    	}
-    	if (stream_data->next_stream_data) {
-    		qd_message_stream_data_release(stream_data->next_stream_data);
-    		stream_data->next_stream_data = 0;
-    	}
+        qd_message_stream_data_release(stream_data->curr_stream_data);
+        stream_data->curr_stream_data = 0;
+
+        qd_message_stream_data_release(stream_data->next_stream_data);
+        stream_data->next_stream_data = 0;
+
         qdr_delivery_decref(http2_adaptor->core, stream_data->in_dlv, "HTTP2 adaptor in_dlv - free_http2_stream_data");
     }
 
     if (stream_data->out_dlv && !stream_data->out_dlv_decrefed) {
-    	if (stream_data->curr_stream_data) {
-    		qd_message_stream_data_release(stream_data->curr_stream_data);
-    		stream_data->curr_stream_data = 0;
-    	}
-    	if (stream_data->next_stream_data) {
-    		qd_message_stream_data_release(stream_data->next_stream_data);
-    		stream_data->next_stream_data = 0;
-    	}
+        qd_message_stream_data_release(stream_data->curr_stream_data);
+        stream_data->curr_stream_data = 0;
+
+        qd_message_stream_data_release(stream_data->next_stream_data);
+        stream_data->next_stream_data = 0;
     	qdr_delivery_decref(http2_adaptor->core, stream_data->out_dlv, "HTTP2 adaptor out_dlv - free_http2_stream_data");
     }
 
@@ -547,7 +541,7 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
     	return 0;
 
     stream_data->bytes_in += len;
-    bool q2_blocked = false;
+
 
     //
     // DISPATCH-1868: If an in_dlv is present it means that the qdr_link_deliver() has already been called (delivery has already been routed)
@@ -562,29 +556,29 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
         qd_buffer_list_t buffers;
         DEQ_INIT(buffers);
         qd_buffer_list_append(&buffers, (uint8_t *)data, len);
-		// DISPATCH-1868: Part of the HTTP2 message body arrives *before* we can route the delivery. So we accumulated the body buffers
-		// in the stream_data->body_buffers. But before the rest of the HTTP2 data arrives, we got credit to send the delivery
-		// and we have an in_dlv object now. Now, we take the buffers that were added previously to stream_data->body_buffers and call qd_message_stream_data_append
+        // DISPATCH-1868: Part of the HTTP2 message body arrives *before* we can route the delivery. So we accumulated the body buffers
+        // in the stream_data->body_buffers. But before the rest of the HTTP2 data arrives, we got credit to send the delivery
+        // and we have an in_dlv object now. Now, we take the buffers that were added previously to stream_data->body_buffers and call qd_message_stream_data_append
+        bool q2_blocked1 = false;
+        if (DEQ_SIZE(stream_data->body_buffers) > 0) {
+            if (!stream_data->body_data_added_to_msg) {
+                qd_message_stream_data_append(stream_data->message, &stream_data->body_buffers, &q2_blocked1);
+            }
+        }
+        bool q2_blocked2 = false;
+        qd_message_stream_data_append(stream_data->message, &buffers, &q2_blocked2);
+        stream_data->body_data_added_to_msg = true;
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->message", conn->conn_id, stream_id);
+        conn->q2_blocked = conn->q2_blocked || q2_blocked1 || q2_blocked2;
 
-		if (DEQ_SIZE(stream_data->body_buffers) > 0) {
-			if (!stream_data->body_data_added_to_msg) {
-				qd_message_stream_data_append(stream_data->message, &stream_data->body_buffers, 0);
-			}
-		}
-
-		qd_message_stream_data_append(stream_data->message, &buffers, &q2_blocked);
-		stream_data->body_data_added_to_msg = true;
-		qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->message", conn->conn_id, stream_id);
-		conn->q2_blocked = conn->q2_blocked || q2_blocked;
-
-		if (conn->q2_blocked) {
-			qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] q2 is blocked on this connection", conn->conn_id);
-		}
+        if (conn->q2_blocked) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] q2 is blocked on this connection", conn->conn_id);
+        }
     }
     else {
-		// Keep inserting buffers at the end of the body
-		qd_buffer_list_append(&stream_data->body_buffers, (uint8_t *)data, len);
-		qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->body_buffers", conn->conn_id, stream_id);
+        // Keep inserting buffers to stream_data->body_buffers.
+        qd_buffer_list_append(&stream_data->body_buffers, (uint8_t *)data, len);
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->body_buffers", conn->conn_id, stream_id);
     }
 
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback data length %zu", conn->conn_id, stream_id, len);
@@ -1024,8 +1018,8 @@ static void send_ping_frame(qdr_http2_connection_t *conn)
 {
     qdr_http2_session_data_t *session_data = conn->session_data;
     if (session_data->session) {
-    	nghttp2_submit_ping(session_data->session, NGHTTP2_FLAG_NONE, 0);
-    	nghttp2_session_send(session_data->session);
+        nghttp2_submit_ping(session_data->session, NGHTTP2_FLAG_NONE, 0);
+        nghttp2_session_send(session_data->session);
     }
 }
 
@@ -2658,9 +2652,10 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     case PN_RAW_CONNECTION_WAKE: {
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WAKE Wake-up", conn->conn_id);
         if (IS_ATOMIC_FLAG_SET(&conn->q2_restart)) {
-        	conn->q2_blocked = false;
-        	qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] q2 is unblocked on this connection", conn->conn_id);
-        	handle_incoming_http(conn);
+            CLEAR_ATOMIC_FLAG(&conn->q2_restart);
+            conn->q2_blocked = false;
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] q2 is unblocked on this connection", conn->conn_id);
+            handle_incoming_http(conn);
         }
 
         while (qdr_connection_process(conn->qdr_conn)) {}

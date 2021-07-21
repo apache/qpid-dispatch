@@ -785,8 +785,8 @@ class Http2Q2OneRouterTest(Http2TestBase):
         self.assertIn('Success', out)
         num_blocked = 0
         num_unblocked = 0
-        blocked = "blocked"
-        unblocked = "unblocked"
+        blocked = "q2 is blocked"
+        unblocked = "q2 is unblocked"
         with open(self.router_qdra.logfile_path, 'r') as router_log:
             log_lines = router_log.read().split("\n")
             for log_line in log_lines:
@@ -852,8 +852,8 @@ class Http2Q2TwoRouterTest(Http2TestBase):
         self.assertIn('Success', out)
         num_blocked = 0
         num_unblocked = 0
-        blocked = "blocked"
-        unblocked = "unblocked"
+        blocked = "q2 is blocked"
+        unblocked = "q2 is unblocked"
         with open(self.router_qdra.logfile_path, 'r') as router_log:
             log_lines = router_log.read().split("\n")
             for log_line in log_lines:

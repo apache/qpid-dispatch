@@ -2991,9 +2991,6 @@ int qd_message_stream_data_footer_append(qd_message_t *message, qd_buffer_list_t
     // Stick the buffers into the footer compose field.
     qd_compose_insert_binary_buffers(field, footer_props);
 
-    // This is the footer, we don't care about q2 and will disable it.
-    qd_message_Q2_holdoff_disable(message);
-
     rc = qd_message_extend(message, field, 0);
 
     qd_compose_free(field);
