@@ -39,25 +39,24 @@
 
   HTTP Message                  AMQP Message Properties
   ------------                  -----------------------
-  Request Method                subject field
+  Request Method                subject field (request message)
+  Response Status code          subject field (response message)
 
   Application Properties Section:
 
   HTTP Message                  AMQP Message App Properties Map
   ------------                  -------------------------------
-  Request Version               "http:request": "<version|1.1 default>"
-  Response Version              "http:response": "<version|1.1 default>"
-  Response Status Code          "http:status": <int32>
-  Response Reason               "http:reason": <string>
-  Request Target                "http:target": <string>
+  Request Method                ":method": <string>
+  Message Version               ":version": <version|"1.1" by default>
+  Response Status Code          ":status": <string> (response only)
+  Response Reason               ":reason": <string> (response only)
+  Request Target                ":path": <string>
   *                             "<lowercase(key)>" <string>
 
   Notes:
-   - Message App Properties Keys that start with "http:" are reserved by the
+   - Message App Properties Keys that start with ":" are reserved by the
      adaptor for meta-data.
  */
-
-// @TODO(kgiusti): rx complete + abort ingress deliveries when endpoint dies while msg in flight
 
 
 ALLOC_DEFINE(qdr_http1_out_data_t);
