@@ -135,6 +135,7 @@ class RejectHigherVersionMARTest(MessagingHandler):
         self.receiver    = None
         self.hello_count = 0
         self.mar_count   = 0
+        self.finished    = False
 
     def timeout(self):
         self.error = "Timeout Expired - hello_count: %d, mar_count: %d" % (self.hello_count, self.mar_count)
@@ -168,6 +169,8 @@ class RejectHigherVersionMARTest(MessagingHandler):
             self.sender.target.capabilities.put_object(symbol("qd.router"))
 
     def on_message(self, event):
+        if self.finished:
+            return
         opcode = event.message.properties['opcode']
         body   = event.message.body
         rid    = body['id']
@@ -183,6 +186,7 @@ class RejectHigherVersionMARTest(MessagingHandler):
 
         elif opcode == 'RA':
             if self.mar_count > 2:
+                self.finished = True
                 self.fail(None)
                 return
 
