@@ -19,6 +19,7 @@
 
 import os
 import sys
+import hashlib
 import unittest
 from time import sleep
 import system_test
@@ -71,6 +72,24 @@ def skip_h2_test():
     if python_37_available() and h2hyper_installed and curl_available():
         return False
     return True
+
+
+def get_digest(file_path):
+    h = hashlib.sha256()
+
+    with open(file_path, 'rb') as file:
+        while True:
+            # Reading is buffered, so we can read smaller chunks.
+            chunk = file.read(h.block_size)
+            if not chunk:
+                break
+            h.update(chunk)
+
+    return h.hexdigest()
+
+
+def image_file(name):
+    return os.path.join(system_test.DIR, 'images', name)
 
 
 class Http2TestBase(TestCase):
@@ -172,28 +191,23 @@ class CommonHttp2Tests:
 
     @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     def test_get_image_png(self):
-        # Run curl 127.0.0.1:port --http2-prior-knowledge
-        passed = False
-        try:
-            address = self.router_qdra.http_addresses[0] + "/images/balanced-routing.png"
-            self.run_curl(address)
-        except UnicodeDecodeError as u:
-            if "codec can't decode byte 0x89" in str(u):
-                passed = True
-        self.assertTrue(passed)
+        # Run curl 127.0.0.1:port --output images/balanced-routing.png --http2-prior-knowledge
+        image_file_name = '/balanced-routing.png'
+        address = self.router_qdra.http_addresses[0] + "/images" + image_file_name
+        self.run_curl(address, args=['--output', self.router_qdra.outdir + image_file_name])
+        digest_of_server_file = get_digest(image_file(image_file_name[1:]))
+        digest_of_response_file = get_digest(self.router_qdra.outdir + image_file_name)
+        self.assertEqual(digest_of_server_file, digest_of_response_file)
 
     @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     def test_get_image_jpg(self):
-        # Run curl 127.0.0.1:port --http2-prior-knowledge
-        passed = False
-        try:
-            address = self.router_qdra.http_addresses[0] + "/images/apache.jpg"
-            self.run_curl(address)
-        except UnicodeDecodeError as u:
-            print(u)
-            if "codec can't decode byte 0xff" in str(u):
-                passed = True
-        self.assertTrue(passed)
+        # Run curl 127.0.0.1:port --output images/apache.jpg --http2-prior-knowledge
+        image_file_name = '/apache.jpg'
+        address = self.router_qdra.http_addresses[0] + "/images" + image_file_name
+        self.run_curl(address, args=['--output', self.router_qdra.outdir + image_file_name])
+        digest_of_server_file = get_digest(image_file(image_file(image_file_name[1:])))
+        digest_of_response_file = get_digest(self.router_qdra.outdir + image_file_name)
+        self.assertEqual(digest_of_server_file, digest_of_response_file)
 
     def check_connector_delete(self, client_addr, server_addr):
         # Run curl 127.0.0.1:port --http2-prior-knowledge
