@@ -205,10 +205,11 @@ static inline void sys_atomic_destroy(sys_atomic_t *ref)
 
 #endif
 
-#define    SET_ATOMIC_FLAG(flag)   sys_atomic_set(flag, 1)
-#define    CLEAR_ATOMIC_FLAG(flag) sys_atomic_set(flag, 0)
+#define    SET_ATOMIC_FLAG(flag)        sys_atomic_set((flag), 1)
+#define  CLEAR_ATOMIC_FLAG(flag)        sys_atomic_set((flag), 0)
+#define    SET_ATOMIC_BOOL(flag, value) sys_atomic_set((flag), ((value) ? 1 : 0))
 
-#define IS_ATOMIC_FLAG_SET(flag) (sys_atomic_get(flag) == 1)
+#define IS_ATOMIC_FLAG_SET(flag)       (sys_atomic_get(flag) == 1)
 
 /** Atomic increase: NOTE returns value *before* increase, like i++ */
 static inline uint32_t sys_atomic_inc(sys_atomic_t *ref) { return sys_atomic_add((ref), 1); }
