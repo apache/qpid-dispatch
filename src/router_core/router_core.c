@@ -680,9 +680,9 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
     // link and the address beyond the owning_addr.
     //
     if (link->no_route) {
-    	link->owning_addr->ref_count++;
-    	// The no_route link's address has been bound. Set no_route_bound to true.
-    	link->no_route_bound = true;
+        link->owning_addr->ref_count++;
+        // The no_route link's address has been bound. Set no_route_bound to true.
+        link->no_route_bound = true;
         return;
     }
 
