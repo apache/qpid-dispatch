@@ -51,13 +51,15 @@ import uuid
 
 import unittest
 
+import proton
+import proton.utils
 from proton import Message
 from proton import Delivery
 from proton.handlers import MessagingHandler
 from proton.reactor import AtLeastOnce, Container
 from proton.reactor import AtMostOnce
 from qpid_dispatch.management.client import Node
-
+from qpid_dispatch.management.error import NotFoundStatus
 
 # Optional modules
 MISSING_MODULES = []
@@ -704,7 +706,10 @@ class Qdrouterd(Process):
             # Meantime the following actually tests send-thru to the router.
             node = Node.connect(self.addresses[0], router_id, timeout=1)
             return retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))
-        except:
+        except (proton.ConnectionException, NotFoundStatus, proton.utils.LinkDetached):
+            # proton.ConnectionException: the router is not yet accepting connections
+            # NotFoundStatus: the queried router is not yet connected
+            # TODO(DISPATCH-2119) proton.utils.LinkDetached: should be removed, currently needed for DISPATCH-2033
             return False
         finally:
             if node:

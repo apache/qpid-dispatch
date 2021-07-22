@@ -100,7 +100,7 @@ class QdmanageTest(TestCase):
         return out
 
     def assert_entity_equal(self, expect, actual, copy=None):
-        """Copy keys in copy from actual to identity, then assert maps equal."""
+        """Copy keys in copy from actual to expect, then assert maps equal."""
         if copy:
             for k in copy:
                 expect[k] = actual[k]
