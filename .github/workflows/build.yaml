@@ -99,7 +99,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.6
           architecture: x64
 
       - name: Install Python build dependencies
@@ -200,11 +200,11 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.6
           architecture: x64
 
       - name: Install Python runtime/test dependencies
-        run: python -m pip install tox quart selectors h2 grpcio protobuf pytest
+        run: python -m pip install tox quart selectors h2 grpcio protobuf websockets pytest
 
       - name: Install Linux runtime/test dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -398,7 +398,7 @@ jobs:
         run: env -0 | sort -z | tr '\0' '\n'
 
       - name: Install Python runtime/test dependencies
-        run: python3 -m pip install tox quart selectors h2 protobuf pytest
+        run: python3 -m pip install tox quart selectors h2 protobuf websockets pytest
 
       - name: Install Python runtime/test dependencies (Fedora)
         if: ${{ matrix.container == 'fedora' }}

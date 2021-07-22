@@ -103,7 +103,7 @@ foreach(py_test_module
 endforeach()
 
 if(USE_LIBWEBSOCKETS)
-  set(SYSTEM_TESTS_HTTP system_tests_http)
+  set(SYSTEM_TESTS_HTTP system_tests_http system_tests_websockets)
 endif()
 
 if(USE_LIBNGHTTP2)

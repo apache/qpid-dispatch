@@ -68,6 +68,11 @@ The TCP system tests run only if Python selectors is available.
 To install quart, h2 and selectors
  - pip3 install --user quart h2 selectors
 
+Websocket system tests use the Python websockets asyncio module.
+
+To install websckets
+ - pip3 install --user websockets
+
 The gRPC system tests (tests/system_tests_grpc.py) use grpcio and protobuf modules.
 To install them use:
   - pip3 install --user grpcio protobuf
