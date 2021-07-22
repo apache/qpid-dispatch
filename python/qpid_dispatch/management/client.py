@@ -122,8 +122,13 @@ class Node(object):
             path = '_edge/%s/$management' % edge_router
         else:
             path = '$management'
-        return Node(Node.connection(url, router, timeout, ssl_domain, sasl,
-                                    edge_router=edge_router), path)
+        connection = Node.connection(url, router, timeout, ssl_domain, sasl, edge_router=edge_router)
+        try:
+            return Node(connection, path)
+        except Exception:
+            # ownership of connection has not been given to a new Node; close the connection
+            connection.close()
+            raise
 
     def __init__(self, connection, path, locales=None):
         """
