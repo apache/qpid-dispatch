@@ -2651,8 +2651,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     }
     case PN_RAW_CONNECTION_WAKE: {
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WAKE Wake-up", conn->conn_id);
-        if (IS_ATOMIC_FLAG_SET(&conn->q2_restart)) {
-            CLEAR_ATOMIC_FLAG(&conn->q2_restart);
+        if (CLEAR_ATOMIC_FLAG(&conn->q2_restart)) {
             conn->q2_blocked = false;
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] q2 is unblocked on this connection", conn->conn_id);
             handle_incoming_http(conn);
