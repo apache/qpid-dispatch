@@ -50,8 +50,7 @@ of the configuration:
 
 * `interior` - This mode is used for each router in the interior of a network
   of routers.  Interior routers are connected to each other using `connector`
-  and `listener` configurations in the `inter-router` role.  There is an upper
-  limit of 128 total interior routers in a network.  Interior routers that are
+  and `listener` configurations in the `inter-router` role. Interior routers that are
   connected together in an arbitrary topology automatically compute the lowest
   cost paths across the network.
 
@@ -62,10 +61,21 @@ of the configuration:
   `edge` role.  An edge router may be connected to more than one interior
   router but only one of the edge connections shall be active at one time.
   Edge routers may not establish connections to other edge routers.  They are
-  pure leaves in the overall network topology.  Because there are no limits to
-  the number of edge routers deployed, they may be proliferated in high
+  pure leaves in the overall network topology.  They may be proliferated in high
   numbers as sidecars in a container environment or one-per-host or
   one-per-virtual-machine in a data center.
+
+[NOTE]
+====
+Performance of your router network is determined by various factors:
+
+* topology
+* number of routers
+* underlying infrastructure (host resources, network speed, etc)
+
+It is recommended to implement an architecture that minimises the number 
+of routers to maintain satisfactory performance.
+====
 
 [id='network-topologies-security-{context}']
 == A Word About Security
