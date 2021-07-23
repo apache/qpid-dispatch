@@ -336,7 +336,7 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          yum install -y gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain swig python3-devel make libwebsockets-devel ccache libasan libubsan libtsan
+          yum install -y gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain swig python3-devel python3-pip make libwebsockets-devel ccache libasan libubsan libtsan
 
       - name: Install Python build dependencies
         run: python3 -m pip install setuptools wheel tox
