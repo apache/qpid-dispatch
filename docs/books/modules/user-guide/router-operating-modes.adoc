@@ -30,7 +30,17 @@ Standalone::
 The router operates as a single, standalone network node. A standalone router cannot be used in a router network - it does not establish connections with other routers, and only routes messages between directly-connected endpoints.
 
 Interior::
-The router is part of the interior of the router network. Interior routers establish connections with each other and automatically compute the lowest cost paths across the network. You can have up to 128 interior routers in the router network.
+The router is part of the interior of the router network. Interior routers establish connections with each other and automatically compute the lowest cost paths across the network.  
 
 Edge::
-The router maintains a single uplink connection to one or more interior routers. Edge routers do not participate in the routing protocol or route computation, but they enable you to efficiently scale the routing network. There are no limits to the number of edge routers you can deploy in a router network.
+The router maintains a single uplink connection to one or more interior routers. Edge routers do not participate in the routing protocol or route computation, but they enable you to efficiently scale the routing network.
+
+[NOTE]
+====
+Performance of your router network is determined by various factors:
+
+* topology
+* number of routers
+* underlying infrastructure (host resources, network speed, etc)
+
+====
