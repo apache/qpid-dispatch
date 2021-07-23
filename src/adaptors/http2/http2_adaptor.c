@@ -70,6 +70,7 @@ static qdr_http2_adaptor_t *http2_adaptor;
 static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void *context);
 static void _http_record_request(qdr_http2_connection_t *conn, qdr_http2_stream_data_t *stream_data);
 static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on_shutdown);
+static void clean_session_data_buffs(qdr_http2_connection_t* conn);
 
 static void free_all_connection_streams(qdr_http2_connection_t *http_conn, bool on_shutdown)
 {
@@ -387,6 +388,7 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn, bool on_shutdo
 {
     // Free all the stream data associated with this connection/session.
     free_all_connection_streams(http_conn, on_shutdown);
+    clean_session_data_buffs(http_conn);
 
     if(http_conn->remote_address) {
         free(http_conn->remote_address);
@@ -2187,17 +2189,8 @@ static void close_connections(qdr_http2_connection_t* conn)
     qdr_action_enqueue(http2_adaptor->core, action);
 }
 
-static void clean_session_data(qdr_http2_connection_t* conn)
+static void clean_session_data_buffs(qdr_http2_connection_t* conn)
 {
-    free_all_connection_streams(conn, false);
-
-    //
-    // This closes the nghttp2 session. Next time when a new connection is opened, a new nghttp2 session
-    // will be created by calling nghttp2_session_client_new
-    //
-    nghttp2_session_del(conn->session_data->session);
-    conn->session_data->session = 0;
-
     //
     // Free all the buffers on this session. This session is closed and any unsent buffers should be freed.
     //
@@ -2209,6 +2202,19 @@ static void clean_session_data(qdr_http2_connection_t* conn)
         buf = DEQ_HEAD(conn->session_data->buffs);
         free_qd_http2_buffer_t(curr_buf);
     }
+}
+
+static void clean_session_data(qdr_http2_connection_t* conn)
+{
+    free_all_connection_streams(conn, false);
+
+    //
+    // This closes the nghttp2 session. Next time when a new connection is opened, a new nghttp2 session
+    // will be created by calling nghttp2_session_client_new
+    //
+    nghttp2_session_del(conn->session_data->session);
+    conn->session_data->session = 0;
+    clean_session_data_buffs(conn);
 }
 
 
@@ -2663,6 +2669,7 @@ static void qdr_http2_adaptor_final(void *adaptor_context)
             http_conn->stream_dispatcher_stream_data = 0;
         }
         qd_log(http2_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Freeing http2 connection (calling free_qdr_http2_connection)", http_conn->conn_id);
+        clean_session_data_buffs(http_conn);
         free_qdr_http2_connection(http_conn, true);
         http_conn = DEQ_HEAD(adaptor->connections);
     }
