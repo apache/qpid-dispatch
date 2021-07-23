@@ -73,8 +73,6 @@ Performance of your router network is determined by various factors:
 * number of routers
 * underlying infrastructure (host resources, network speed, etc)
 
-It is recommended to implement an architecture that minimises the number 
-of routers to maintain satisfactory performance.
 ====
 
 [id='network-topologies-security-{context}']
