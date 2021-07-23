@@ -64,7 +64,7 @@ class AlertList extends React.Component {
 
   render() {
     return (
-      <div id="alert-list-container" aria-label="alert-list">
+      <div id="alert-list-container" role="alertdialog" aria-label="alert-list">
         {this.state.alerts.map((alert, i) => (
           <Alert
             key={`alert-${i}`}
