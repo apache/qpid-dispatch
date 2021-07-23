@@ -247,7 +247,7 @@ class Process(subprocess.Popen):
     def __init__(self, args, name=None, expect=EXIT_OK, **kwargs):
         """
         Takes same arguments as subprocess.Popen. Some additional/special args:
-        @param expect: Raise error if process staus not as expected at end of test:
+        @param expect: Raise error if process status not as expected at end of test:
             L{RUNNING} - expect still running.
             L{EXIT_OK} - expect process to have terminated with 0 exit status.
             L{EXIT_FAIL} - expect process to have terminated with exit status 1.
@@ -256,7 +256,8 @@ class Process(subprocess.Popen):
         @keyword stderr: Defaults to be the same as stdout
         """
         self.name = name or os.path.basename(args[0])
-        self.args, self.expect = args, expect
+        self.args = args
+        self.expect = expect
         self.outdir = os.getcwd()
         self.outfile = os.path.abspath(self.unique(self.name))
         self.torndown = False
