@@ -71,7 +71,8 @@ struct qdr_http2_stream_data_t {
     void                     *context;
     char                     *reply_to;
     char                     *remote_site; //for stats:
-    char                     *method; //for stats:
+    char                     *method; //for stats, also used in the subject field of AMQP request message.
+    char                     *request_status; //for stats, also used in the subject field of AMQP response message.
     qdr_delivery_t           *in_dlv;
     qdr_delivery_t           *out_dlv;
     uint64_t                  incoming_id;
@@ -114,7 +115,6 @@ struct qdr_http2_stream_data_t {
     bool                     in_dlv_decrefed;
     bool                     out_dlv_decrefed;
     bool                     body_data_added;
-    int                      request_status;
     int                      bytes_in;
     int                      bytes_out;
     qd_timestamp_t           start;
