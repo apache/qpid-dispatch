@@ -188,8 +188,6 @@ ALLOC_DECLARE(qdr_http1_connection_t);
 // HTTP headers
 //
 #define VERSION_PROP_KEY     ":version"       // of msg (string, e.g. "1.1"
-#define METHOD_PROP_KEY      ":method"        // request method (string)
-#define STATUS_PROP_KEY      ":status"        // response code (string)
 #define PATH_PROP_KEY        ":path"          // URI target
 #define REASON_PROP_KEY      ":reason"        // response reason phrase
 

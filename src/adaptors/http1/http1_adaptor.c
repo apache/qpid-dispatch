@@ -46,9 +46,7 @@
 
   HTTP Message                  AMQP Message App Properties Map
   ------------                  -------------------------------
-  Request Method                ":method": <string>
   Message Version               ":version": <version|"1.1" by default>
-  Response Status Code          ":status": <string> (response only)
   Response Reason               ":reason": <string> (response only)
   Request Target                ":path": <string>
   *                             "<lowercase(key)>" <string>

@@ -768,9 +768,6 @@ static int _client_rx_request_cb(h1_codec_request_state_t *hrs,
         qd_compose_insert_string(creq->request_props, VERSION_PROP_KEY);
         qd_compose_insert_string(creq->request_props, temp);
 
-        qd_compose_insert_string(creq->request_props, METHOD_PROP_KEY);
-        qd_compose_insert_string(creq->request_props, method);
-
         qd_compose_insert_string(creq->request_props, PATH_PROP_KEY);
         qd_compose_insert_string(creq->request_props, target);
     }
@@ -1412,22 +1409,24 @@ static bool _encode_response_headers(_client_request_t *hreq,
         qd_iterator_free(group_id_itr);
     }
 
-    qd_iterator_t *app_props_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
-    if (app_props_iter) {
-        qd_parsed_field_t *app_props = qd_parse(app_props_iter);
-        if (app_props && qd_parse_is_map(app_props)) {
-            qd_parsed_field_t *tmp = qd_parse_value_by_key(app_props, STATUS_PROP_KEY);
-            if (tmp) {
-                uint32_t status_code;
-                char *status_str = (char*) qd_iterator_copy(qd_parse_raw(tmp));
-                if (status_str && sscanf(status_str, "%"PRIu32, &status_code) == 1) {
+    uint32_t status_code = 0;
+    qd_iterator_t *subject_iter = qd_message_field_iterator(msg, QD_FIELD_SUBJECT);
+    if (subject_iter) {
+        char *status_str = (char*) qd_iterator_copy(subject_iter);
+        if (status_str && sscanf(status_str, "%"PRIu32, &status_code) == 1) {
+
+            qd_iterator_t *app_props_iter = qd_message_field_iterator(msg,
+                                                                      QD_FIELD_APPLICATION_PROPERTIES);
+            if (app_props_iter) {
+                qd_parsed_field_t *app_props = qd_parse(app_props_iter);
+                if (app_props && qd_parse_is_map(app_props)) {
 
                     // the value for RESPONSE_HEADER_KEY is optional and is set
                     // to a string representation of the version of the server
                     // (e.g. "1.1")
                     uint32_t major = 1;
                     uint32_t minor = 1;
-                    tmp = qd_parse_value_by_key(app_props, VERSION_PROP_KEY);
+                    qd_parsed_field_t *tmp = qd_parse_value_by_key(app_props, VERSION_PROP_KEY);
                     if (tmp) {
                         char *version_str = (char*) qd_iterator_copy(qd_parse_raw(tmp));
                         if (version_str) {
@@ -1495,13 +1494,14 @@ static bool _encode_response_headers(_client_request_t *hreq,
                         }
                     }
                 }
-                free(status_str);
+
+                qd_parse_free(app_props);
+                qd_iterator_free(app_props_iter);
             }
         }
-        qd_parse_free(app_props);
-        qd_iterator_free(app_props_iter);
+        free(status_str);
+        qd_iterator_free(subject_iter);
     }
-
     return ok;
 }
 

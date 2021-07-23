@@ -873,17 +873,10 @@ static int _server_rx_response_cb(h1_codec_request_state_t *hrs,
         qd_compose_insert_string(rmsg->msg_props, VERSION_PROP_KEY);
         qd_compose_insert_string(rmsg->msg_props, temp);
 
-        snprintf(temp, sizeof(temp), "%"PRIu32, (uint32_t)status_code);
-        qd_compose_insert_string(rmsg->msg_props, STATUS_PROP_KEY);
-        qd_compose_insert_string(rmsg->msg_props, temp);
-
         if (reason_phrase) {
             qd_compose_insert_string(rmsg->msg_props, REASON_PROP_KEY);
             qd_compose_insert_string(rmsg->msg_props, reason_phrase);
         }
-
-        qd_compose_insert_string(rmsg->msg_props, METHOD_PROP_KEY);
-        qd_compose_insert_string(rmsg->msg_props, h1_codec_request_state_method(hrs));
 
         qd_compose_insert_string(rmsg->msg_props, PATH_PROP_KEY);
         qd_compose_insert_string(rmsg->msg_props, h1_codec_request_state_target(hrs));
