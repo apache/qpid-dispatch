@@ -289,6 +289,7 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
 {
     sys_mutex_lock(stats_lock);
     n_connections--;
+    uint64_t nc = n_connections;
     assert (n_connections >= 0);
     sys_mutex_unlock(stats_lock);
     if (policy->enableVhostPolicy) {
@@ -319,7 +320,7 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
            "[C%"PRIu64"] Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d, "
            "sessions_denied=%"PRIu64", senders_denied=%"PRIu64", receivers_denied=%"PRIu64", max_message_size_denied:%"PRIu64", nConnections= %"PRIu64".",
             conn->connection_id, hostname, conn->n_sessions, conn->n_senders, conn->n_receivers,
-            qpdc->sessionDenied, qpdc->senderDenied, qpdc->receiverDenied, qpdc->maxSizeMessagesDenied, n_connections);
+            qpdc->sessionDenied, qpdc->senderDenied, qpdc->receiverDenied, qpdc->maxSizeMessagesDenied, nc);
     }
 }
 
