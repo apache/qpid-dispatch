@@ -17,12 +17,19 @@
 # under the License
 #
 
+import asyncio
 import unittest
+
+try:
+    import websockets
+except ImportError:
+    websockets = None
 
 from system_test import Qdrouterd
 from system_test import main_module, TestCase, Process
 
 
+@unittest.skipIf(websockets is None, "python test requirement package `websockets` is missing")
 class WebsocketsConsoleTest(TestCase):
     """Run websockets tests connecting to the console"""
 
@@ -43,11 +50,6 @@ class WebsocketsConsoleTest(TestCase):
         """Verify the shutdown sequence works when a client is connected to a websocket port.
 
         Previously, this was broken in DISPATCH-857, DISPATCH-945, DISPATCH-2098"""
-        import asyncio
-        try:
-            import websockets
-        except ImportError:
-            self.skipTest("python test requirement package `websockets` is missing")
 
         async def run():
             uri = f"ws://localhost:{self.http_port}"
