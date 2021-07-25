@@ -215,7 +215,7 @@ class ConnectionManager {
         resolve(context);
       };
       this.connection.once("sendable", sendable);
-      // Now actually createt the sender and receiver.
+      // Now actually create the sender and receiver.
       // register an event handler for when the receiver opens
       var receiver_open = () => {
         // once the receiver is open, create the sender
