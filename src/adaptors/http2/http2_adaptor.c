@@ -625,15 +625,17 @@ static int snd_data_callback(nghttp2_session *session,
         // Insert the framehd of length 9 bytes into the buffer
         memcpy(qd_http2_buffer_cursor(http2_buff), framehd, HTTP2_DATA_FRAME_HEADER_LENGTH);
         qd_http2_buffer_insert(http2_buff, HTTP2_DATA_FRAME_HEADER_LENGTH);
-        pn_raw_buffer_t pn_raw_buffs[stream_data->qd_buffers_to_send];
-        int written = qd_message_stream_data_buffers(stream_data->curr_stream_data, pn_raw_buffs, stream_data->curr_stream_data_qd_buff_offset, stream_data->qd_buffers_to_send);
+
+        size_t diff = qd_message_stream_data_buffer_count(stream_data->curr_stream_data) - stream_data->curr_stream_data_qd_buff_offset;
+        pn_raw_buffer_t pn_raw_buffs[diff];
+        int written = qd_message_stream_data_buffers(stream_data->curr_stream_data, pn_raw_buffs, stream_data->curr_stream_data_qd_buff_offset, diff);
         (void)written;
-        assert (written == stream_data->qd_buffers_to_send);
+        assert(diff == written);
 
         int idx = 0;
         size_t bytes_to_send = length;
 
-        while (idx < stream_data->qd_buffers_to_send) {
+        while (bytes_sent < length) {
             if (pn_raw_buffs[idx].size > 0) {
             	if (bytes_to_send < pn_raw_buffs[idx].size) {
             		int bytes_remaining_in_buffer = pn_raw_buffs[idx].size - stream_data->curr_stream_data_offset;
@@ -1203,24 +1205,6 @@ static int on_frame_recv_callback(nghttp2_session *session,
     return 0;
 }
 
-static void set_buffers_to_send(qdr_http2_stream_data_t *stream_data, size_t bytes_to_send)
-{
-	size_t diff = qd_message_stream_data_buffer_count(stream_data->curr_stream_data) - stream_data->curr_stream_data_qd_buff_offset;
-    pn_raw_buffer_t pn_raw_buffs[diff];
-    int written = qd_message_stream_data_buffers(stream_data->curr_stream_data, pn_raw_buffs, stream_data->curr_stream_data_qd_buff_offset, diff);
-    assert(diff == written);
-    int idx = 0;
-    int rolling_count = 0;
-    rolling_count -= stream_data->curr_stream_data_offset;
-    while (idx < written) {
-    	rolling_count += pn_raw_buffs[idx].size;
-    	idx+=1;
-    	if (rolling_count >= bytes_to_send)
-    		break;
-    }
-    stream_data->qd_buffers_to_send = idx;
-}
-
 ssize_t read_data_callback(nghttp2_session *session,
                       int32_t stream_id,
                       uint8_t *buf,
@@ -1330,14 +1314,12 @@ ssize_t read_data_callback(nghttp2_session *session,
                 if (remaining_payload_length <= QD_HTTP2_BUFFER_SIZE) {
                 	if (length < remaining_payload_length) {
                 		bytes_to_send = length;
-                		set_buffers_to_send(stream_data, bytes_to_send);
                 		stream_data->full_payload_handled = false;
                 	}
                 	else {
                 		bytes_to_send = remaining_payload_length;
-                        set_buffers_to_send(stream_data, bytes_to_send);
                 		stream_data->full_payload_handled = true;
-                		qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length (%i) <= QD_HTTP2_BUFFER_SIZE(16384), bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, remaining_payload_length, bytes_to_send, stream_data->qd_buffers_to_send);
+                		qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length (%i) <= QD_HTTP2_BUFFER_SIZE(16384), bytes_to_send=%zu", conn->conn_id, stream_data->stream_id, remaining_payload_length, bytes_to_send);
 
                         // Look ahead one body data
                         stream_data->next_stream_data_result = qd_message_next_stream_data(message, &stream_data->next_stream_data);
@@ -1357,14 +1339,12 @@ ssize_t read_data_callback(nghttp2_session *session,
                 else {
                 	if (length < remaining_payload_length) {
                 		bytes_to_send = length;
-                		set_buffers_to_send(stream_data, bytes_to_send);
                     }
                 	else {
 						// This means that there is more that 16k worth of payload in one body data.
 						// We want to send only 16k data per read_data_callback
 						bytes_to_send = QD_HTTP2_BUFFER_SIZE;
-						set_buffers_to_send(stream_data, bytes_to_send);
-						qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
+						qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send);
                 	}
                 	stream_data->full_payload_handled = false;
                 }
