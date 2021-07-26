@@ -627,7 +627,7 @@ static int snd_data_callback(nghttp2_session *session,
         qd_http2_buffer_insert(http2_buff, HTTP2_DATA_FRAME_HEADER_LENGTH);
         pn_raw_buffer_t pn_raw_buffs[stream_data->qd_buffers_to_send];
         int written = qd_message_stream_data_buffers(stream_data->curr_stream_data, pn_raw_buffs, stream_data->curr_stream_data_qd_buff_offset, stream_data->qd_buffers_to_send);
-
+        (void)written;
         assert (written == stream_data->qd_buffers_to_send);
 
         int idx = 0;
