@@ -96,7 +96,6 @@ struct qdr_http2_stream_data_t {
     int 						   payload_handled;
     int                            in_link_credit;   // provided by router
     int32_t                        stream_id;
-    size_t                         qd_buffers_to_send;
     qd_http2_stream_status_t       status;
     bool                     entire_footer_arrived;
     bool                     entire_header_arrived;

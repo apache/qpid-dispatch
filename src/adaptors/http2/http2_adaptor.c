@@ -627,47 +627,50 @@ static int snd_data_callback(nghttp2_session *session,
         qd_http2_buffer_insert(http2_buff, HTTP2_DATA_FRAME_HEADER_LENGTH);
 
         size_t diff = qd_message_stream_data_buffer_count(stream_data->curr_stream_data) - stream_data->curr_stream_data_qd_buff_offset;
-        pn_raw_buffer_t pn_raw_buffs[diff];
-        int written = qd_message_stream_data_buffers(stream_data->curr_stream_data, pn_raw_buffs, stream_data->curr_stream_data_qd_buff_offset, diff);
-        (void)written;
-        assert(diff == written);
 
-        int idx = 0;
-        size_t bytes_to_send = length;
+        if (diff) {
+            pn_raw_buffer_t pn_raw_buffs[diff];
+            int written = qd_message_stream_data_buffers(stream_data->curr_stream_data, pn_raw_buffs, stream_data->curr_stream_data_qd_buff_offset, diff);
+            (void)written;
+            assert(diff == written);
 
-        while (bytes_sent < length) {
-            if (pn_raw_buffs[idx].size > 0) {
-            	if (bytes_to_send < pn_raw_buffs[idx].size) {
-            		int bytes_remaining_in_buffer = pn_raw_buffs[idx].size - stream_data->curr_stream_data_offset;
-            		if (bytes_remaining_in_buffer < bytes_to_send) {
-            			memcpy(qd_http2_buffer_cursor(http2_buff), pn_raw_buffs[idx].bytes + stream_data->curr_stream_data_offset, bytes_remaining_in_buffer);
-            			qd_http2_buffer_insert(http2_buff, bytes_remaining_in_buffer);
-            			stream_data->curr_stream_data_offset = 0;
-            			bytes_to_send -= bytes_remaining_in_buffer;
-            			bytes_sent += bytes_remaining_in_buffer;
-            		}
-            		else {
-						memcpy(qd_http2_buffer_cursor(http2_buff), pn_raw_buffs[idx].bytes + stream_data->curr_stream_data_offset, bytes_to_send);
-						qd_http2_buffer_insert(http2_buff, bytes_to_send);
-						qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback memcpy bytes_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send);
-						stream_data->curr_stream_data_offset += bytes_to_send;
-						bytes_sent += bytes_to_send;
-						if (stream_data->curr_stream_data_offset == BUFFER_SIZE || stream_data->curr_stream_data_offset == pn_raw_buffs[idx].size) {
-							stream_data->curr_stream_data_offset = 0;
-							stream_data->curr_stream_data_qd_buff_offset += 1;
-						}
-            		}
-            	}
-            	else {
-                    memcpy(qd_http2_buffer_cursor(http2_buff), pn_raw_buffs[idx].bytes, pn_raw_buffs[idx].size);
-                    qd_http2_buffer_insert(http2_buff, pn_raw_buffs[idx].size);
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback memcpy pn_raw_buffs[%i].size=%u", conn->conn_id, stream_data->stream_id, idx, pn_raw_buffs[idx].size);
-                    stream_data->curr_stream_data_qd_buff_offset += 1;
-                    bytes_to_send -= pn_raw_buffs[idx].size;
-                    bytes_sent += pn_raw_buffs[idx].size;
-            	}
+            int idx = 0;
+            size_t bytes_to_send = length;
+
+            while (bytes_sent < length) {
+                if (pn_raw_buffs[idx].size > 0) {
+                    if (bytes_to_send < pn_raw_buffs[idx].size) {
+                        int bytes_remaining_in_buffer = pn_raw_buffs[idx].size - stream_data->curr_stream_data_offset;
+                        if (bytes_remaining_in_buffer < bytes_to_send) {
+                            memcpy(qd_http2_buffer_cursor(http2_buff), pn_raw_buffs[idx].bytes + stream_data->curr_stream_data_offset, bytes_remaining_in_buffer);
+                            qd_http2_buffer_insert(http2_buff, bytes_remaining_in_buffer);
+                            stream_data->curr_stream_data_offset = 0;
+                            bytes_to_send -= bytes_remaining_in_buffer;
+                            bytes_sent += bytes_remaining_in_buffer;
+                        }
+                        else {
+                            memcpy(qd_http2_buffer_cursor(http2_buff), pn_raw_buffs[idx].bytes + stream_data->curr_stream_data_offset, bytes_to_send);
+                            qd_http2_buffer_insert(http2_buff, bytes_to_send);
+                            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback memcpy bytes_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send);
+                            stream_data->curr_stream_data_offset += bytes_to_send;
+                            bytes_sent += bytes_to_send;
+                            if (stream_data->curr_stream_data_offset == BUFFER_SIZE || stream_data->curr_stream_data_offset == pn_raw_buffs[idx].size) {
+                                stream_data->curr_stream_data_offset = 0;
+                                stream_data->curr_stream_data_qd_buff_offset += 1;
+                            }
+                        }
+                    }
+                    else {
+                        memcpy(qd_http2_buffer_cursor(http2_buff), pn_raw_buffs[idx].bytes, pn_raw_buffs[idx].size);
+                        qd_http2_buffer_insert(http2_buff, pn_raw_buffs[idx].size);
+                        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback memcpy pn_raw_buffs[%i].size=%u", conn->conn_id, stream_data->stream_id, idx, pn_raw_buffs[idx].size);
+                        stream_data->curr_stream_data_qd_buff_offset += 1;
+                        bytes_to_send -= pn_raw_buffs[idx].size;
+                        bytes_sent += pn_raw_buffs[idx].size;
+                    }
+                }
+                idx += 1;
             }
-            idx += 1;
         }
     }
     else if (length == 0 && stream_data->out_msg_data_flag_eof) {
@@ -1390,7 +1393,6 @@ ssize_t read_data_callback(nghttp2_session *session,
                 return NGHTTP2_ERR_DEFERRED;
             }
             else {
-                stream_data->qd_buffers_to_send = 0;
                 *data_flags |= NGHTTP2_DATA_FLAG_EOF;
                 stream_data->out_msg_data_flag_eof = true;
                 if (stream_data->out_msg_has_footer) {
