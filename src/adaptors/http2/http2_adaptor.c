@@ -1337,7 +1337,7 @@ ssize_t read_data_callback(nghttp2_session *session,
                 		bytes_to_send = remaining_payload_length;
                         set_buffers_to_send(stream_data, bytes_to_send);
                 		stream_data->full_payload_handled = true;
-                		qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length (%zu) <= QD_HTTP2_BUFFER_SIZE(16384), bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, remaining_payload_length, bytes_to_send, stream_data->qd_buffers_to_send);
+                		qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length (%i) <= QD_HTTP2_BUFFER_SIZE(16384), bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, remaining_payload_length, bytes_to_send, stream_data->qd_buffers_to_send);
 
                         // Look ahead one body data
                         stream_data->next_stream_data_result = qd_message_next_stream_data(message, &stream_data->next_stream_data);
