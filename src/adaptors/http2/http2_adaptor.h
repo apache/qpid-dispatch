@@ -85,18 +85,16 @@ struct qdr_http2_stream_data_t {
     qd_composed_field_t      *footer_properties;
     qd_buffer_list_t          body_buffers;
     qd_message_stream_data_t *curr_stream_data;
+    qd_iterator_t            *curr_stream_data_iter; // points to the data contained in the stream_data/raw_buffers
     qd_message_stream_data_t *next_stream_data;
     qd_message_stream_data_t *footer_stream_data;
     DEQ_LINKS(qdr_http2_stream_data_t);
 
     qd_message_stream_data_result_t  curr_stream_data_result;
     qd_message_stream_data_result_t  next_stream_data_result;
-    int                            curr_stream_data_qd_buff_offset;
-    int                            curr_stream_data_offset; // The offset within the qd_buffer so we can jump there.
-    int 						   payload_handled;
+    int                            payload_handled;
     int                            in_link_credit;   // provided by router
     int32_t                        stream_id;
-    size_t                         qd_buffers_to_send;
     qd_http2_stream_status_t       status;
     bool                     entire_footer_arrived;
     bool                     entire_header_arrived;
