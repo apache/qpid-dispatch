@@ -29,13 +29,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04]
-        buildType: [RelWithDebInfo]
+        buildType: [Debug]
         runtimeCheck: [asan]
     env:
       BuildType: ${{matrix.buildType}}
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
+      VERBOSE: 1
 
       ProtonCMakeExtraArgs: >
         -DCMAKE_C_COMPILER_LAUNCHER=ccache
@@ -49,7 +50,6 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=ccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG
-        -DQD_ENABLE_ASSERTIONS=ON
         -DCONSOLE_INSTALL=OFF
         -DUSE_BWRAP=ON
         -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
@@ -173,7 +173,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04]
-        buildType: [RelWithDebInfo]
+        buildType: [Debug]
         runtimeCheck: [asan]
         shard: [1, 2]
         shards: [2]
@@ -302,7 +302,6 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=ccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         -DPython_EXECUTABLE=/usr/bin/python3
-        -DQD_ENABLE_ASSERTIONS=ON
         -DCONSOLE_INSTALL=OFF
         -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
 
@@ -311,6 +310,7 @@ jobs:
       CCACHE_COMPRESS: 'true'
       CCACHE_MAXSIZE: '400MB'
       QPID_SYSTEM_TEST_TIMEOUT: 300
+      VERBOSE: 1
 
     steps:
 
@@ -378,6 +378,14 @@ jobs:
       - name: Display ccache stats
         run: ccache -s
 
+      - name: enable asserts on asan build
+        if: matrix.runtimeCheck == 'asan' || matrix.runtimeCheck == 'OFF'
+        run: echo "DispatchCMakeAsserts=ON" >> $GITHUB_ENV
+
+      - name: disable asserts on tsan build
+        if: matrix.runtimeCheck == 'tsan'
+        run: echo "DispatchCMakeAsserts=OFF" >> $GITHUB_ENV
+
       - name: qpid-dispatch cmake configure
         working-directory: ${{env.DispatchBuildDir}}
         run: >
@@ -385,7 +393,7 @@ jobs:
             "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
             "-DCMAKE_BUILD_TYPE=${BuildType}" \
             "-DPYTHON_TEST_COMMAND='-m;pytest;-vs;--junit-prefix=pytest.\${py_test_module};--junit-xml=junitxmls/\${py_test_module}.xml;--pyargs;\${py_test_module}'" \
-            ${DispatchCMakeExtraArgs}
+            ${DispatchCMakeExtraArgs} -DQD_ENABLE_ASSERTIONS=${DispatchCMakeAsserts}
 
       - name: qpid-dispatch cmake build/install
         run: cmake --build "${DispatchBuildDir}" --config ${BuildType} --target install
