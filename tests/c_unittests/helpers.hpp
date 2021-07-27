@@ -73,6 +73,13 @@ void qd_error_initialize();
 template <class T>
 using remove_const_t = typename std::remove_const<T>::type;
 
+// https://stackoverflow.com/questions/17902405/how-to-implement-make-unique-function-in-c11
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args)
+{
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
 // https://stackoverflow.com/questions/27440953/stdunique-ptr-for-c-functions-that-need-free
 struct free_deleter {
     template <typename T>
@@ -278,6 +285,7 @@ class QDRMinimalEnv
     {
         qd_log_finalize();
         qd_alloc_finalize();
+        qd_entity_cache_free_entries();
     }
 };
 

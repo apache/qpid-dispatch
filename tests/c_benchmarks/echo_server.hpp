@@ -108,7 +108,7 @@ class EchoServerThread
         u.join();
     }
 
-    unsigned short port()
+    unsigned short port() const
     {
         return echoServerPort;
     }

@@ -69,6 +69,7 @@ void qd_python_finalize(void)
     dispatch_module = 0;
     PyGC_Collect();
     Py_Finalize();
+    dispatch = 0;
 }
 
 
