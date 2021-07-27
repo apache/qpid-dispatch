@@ -23,6 +23,7 @@ from system_test import unittest
 from system_test import Logger
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+import time
 
 
 class AddrTimer(object):
@@ -577,6 +578,11 @@ class SwitchoverTest(MessagingHandler):
         self.addr           = addr
         self.count          = 300
 
+        # DISPATCH-2213 back off on logging.
+        self.log_sends      = 100  # every 100th send
+        self.log_recvs      = 100  # every 100th receive
+        self.log_released   = 100  # every 100th sender released
+
         self.sender_conn    = None
         self.primary_conn   = None
         self.fallback_conn  = None
@@ -660,9 +666,10 @@ class SwitchoverTest(MessagingHandler):
         if self.sender.drain_mode:
             n_drained = self.sender.drained()
             self.logger.log("%s sender.drained() drained %d credits" % (self.log_prefix, n_drained))
-        self.logger.log("%s send() exit: last sent '%s' phase=%d, credit=%3d->%3d, n_tx=%4d->%4d, tx_seq=%4d->%4d, n_rel=%4d" %
-                        (self.log_prefix, last_message.body, self.phase, e_credit, self.sender.credit,
-                         e_n_tx, self.n_tx, e_tx_seq, self.tx_seq, self.n_rel))
+        if self.n_tx > e_n_tx and self.n_tx % self.log_sends == 0:  # if sent then log every Nth message
+            self.logger.log("%s send() exit: last sent '%s' phase=%d, credit=%3d->%3d, n_tx=%4d->%4d, tx_seq=%4d->%4d, n_rel=%4d" %
+                            (self.log_prefix, last_message.body, self.phase, e_credit, self.sender.credit,
+                             e_n_tx, self.n_tx, e_tx_seq, self.tx_seq, self.n_rel))
 
     def on_sendable(self, event):
         if event.sender == self.sender:
@@ -674,8 +681,9 @@ class SwitchoverTest(MessagingHandler):
         if event.receiver == self.primary_receiver:
             if self.phase == 0:
                 self.n_rx += 1
-                self.logger.log("%s Received phase 0 message '%s', n_rx=%d" %
-                                (self.log_prefix, event.message.body, self.n_rx))
+                if self.n_rx % self.log_recvs == 0:
+                    self.logger.log("%s Received phase 0 message '%s', n_rx=%d" %
+                                    (self.log_prefix, event.message.body, self.n_rx))
                 if self.n_rx == self.count:
                     self.logger.log("%s Triggering fallback by closing primary receiver on %s. Test phase 0->1." %
                                     (self.log_prefix, self.primary_name))
@@ -694,12 +702,15 @@ class SwitchoverTest(MessagingHandler):
                 self.n_rel += 1
                 self.n_tx -= 1
                 self.local_rel += 1
-                self.logger.log("%s Released phase 0 over fallback: msg:'%s', n_rx=%d, n_tx=%d, n_rel=%d, local_rel=%d" %
-                                (self.log_prefix, event.message.body, self.n_rx, self.n_tx, self.n_rel, self.local_rel))
+                if self.local_rel % self.log_recvs == 0:
+                    self.logger.log("%s Released phase 0 over fallback: msg:'%s', n_rx=%d, n_tx=%d, n_rel=%d, local_rel=%d" %
+                                    (self.log_prefix, event.message.body, self.n_rx, self.n_tx, self.n_rel, self.local_rel))
+                    time.sleep(0.02)
             else:
                 self.n_rx += 1
-                self.logger.log("%s Received phase 1 over fallback: msg:'%s', n_rx=%d" %
-                                (self.log_prefix, event.message.body, self.n_rx))
+                if self.n_rx % self.log_recvs == 0:
+                    self.logger.log("%s Received phase 1 over fallback: msg:'%s', n_rx=%d" %
+                                    (self.log_prefix, event.message.body, self.n_rx))
                 if self.n_rx == self.count:
                     self.logger.log("%s Success" % self.log_prefix)
                     self.fail(None)
@@ -710,8 +721,9 @@ class SwitchoverTest(MessagingHandler):
         # event type pn_delivery for sender
         self.n_rel += 1
         self.n_tx  -= 1
-        self.logger.log("%s on_released: sender delivery was released. Adjusted counts: n_rel=%d, n_tx=%d" %
-                        (self.log_prefix, self.n_rel, self.n_tx))
+        if self.n_rel % self.log_released == 0:
+            self.logger.log("%s on_released: sender delivery was released. Adjusted counts: n_rel=%d, n_tx=%d" %
+                            (self.log_prefix, self.n_rel, self.n_tx))
         if event.sender is None:
             self.fail("on_released event not related to sender")
 
