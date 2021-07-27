@@ -66,6 +66,7 @@ typedef struct qdr_http2_adaptor_t {
 
 static qdr_http2_adaptor_t *http2_adaptor;
 const int32_t WINDOW_SIZE = 65536;
+const int32_t MAX_FRAME_SIZE = 16384;
 
 static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void *context);
 static void _http_record_request(qdr_http2_connection_t *conn, qdr_http2_stream_data_t *stream_data);
@@ -1003,8 +1004,9 @@ static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_co
 static void create_settings_frame(qdr_http2_connection_t *conn)
 {
     qdr_http2_session_data_t *session_data = conn->session_data;
-    nghttp2_settings_entry iv[3] = {{NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, 100},
+    nghttp2_settings_entry iv[4] = {{NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, 100},
                                     {NGHTTP2_SETTINGS_INITIAL_WINDOW_SIZE, WINDOW_SIZE},
+                                    {NGHTTP2_SETTINGS_MAX_FRAME_SIZE, MAX_FRAME_SIZE},
                                     {NGHTTP2_SETTINGS_ENABLE_PUSH, 0}};
 
     // You must call nghttp2_session_send after calling nghttp2_submit_settings
@@ -1342,16 +1344,11 @@ ssize_t read_data_callback(nghttp2_session *session,
                 	}
                 }
                 else {
-                	if (length < remaining_payload_length) {
-                		bytes_to_send = length;
-                    }
-                	else {
-						// This means that there is more that 16k worth of payload in one body data.
-						// We want to send only 16k data per read_data_callback
-						bytes_to_send = QD_HTTP2_BUFFER_SIZE;
-						qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send);
-                	}
-                	stream_data->full_payload_handled = false;
+                    // This means that there is more that 16k worth of payload in one body data.
+                    // We want to send only 16k data per read_data_callback
+                    bytes_to_send = QD_HTTP2_BUFFER_SIZE;
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send);
+                    stream_data->full_payload_handled = false;
                 }
             }
 
