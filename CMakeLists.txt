@@ -275,7 +275,7 @@ install(PROGRAMS
 # Doc files
 install(FILES
   LICENSE
-  README
+  README.adoc
   DESTINATION ${QD_DOC_INSTALL_DIR})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/run.py)
