@@ -322,7 +322,7 @@ class TcpAdaptor(TestCase):
 
         # define logging levels
         cls.print_logs_server = False
-        cls.print_logs_client = True
+        cls.print_logs_client = False
         parent_path = os.path.dirname(os.getcwd())
         cls.logger = Logger(title="TcpAdaptor-testClass",
                             print_to_console=True,
@@ -505,6 +505,8 @@ class TcpAdaptor(TestCase):
 
         # wait for server addresses (mobile ES_<rtr>) to propagate to all interior routers
         interior_rtrs = [rtr for rtr in cls.router_order if rtr.startswith('I')]
+        poll_loops = 100
+        poll_loop_delay = 0.5  # seconds
         found_all = False
         while not found_all:
             found_all = True
@@ -528,6 +530,15 @@ class TcpAdaptor(TestCase):
                     unseen = [srv for srv in cls.router_order if "ES_" + srv not in seen]
                     cls.logger.log("TCP_TEST Router %s sees only %d of %d addresses. Waiting for %s" %
                                    (rtr, len(server_lines), len(cls.router_order), unseen))
+                if poll_loops == 1:
+                    # last poll loop
+                    for line in lines:
+                        cls.logger.log("TCP_TEST Router %s : %s" % (rtr, line))
+            poll_loops -= 1
+            if poll_loops == 0:
+                assert False, "TCP_TEST TCP_Adaptor test setup failed. Echo tests never executed."
+            else:
+                time.sleep(poll_loop_delay)
         cls.logger.log("TCP_TEST Done poll wait")
 
     @classmethod
