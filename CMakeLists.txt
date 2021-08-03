@@ -45,6 +45,11 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(CMAKE_MACOSX_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+if (POLICY CMP0069)
+    # INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+    cmake_policy (SET CMP0069 NEW)
+endif ()
+
 # https://bugzilla.redhat.com/show_bug.cgi?id=1850174 GCC 4.8 claims to support atomics, but it's missing stdatomic.h
 include(CheckIncludeFile)
 check_include_file("stdatomic.h" HAVE_STDATOMIC_H)
