@@ -407,27 +407,34 @@ static qd_iterator_t *router_annotate_message(qd_router_t   *router,
 
 static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_message_t *msg)
 {
-    if (!conn || !pn_link || !msg) return;
-    const qd_server_config_t *cf = qd_connection_config(conn);
-    if (!cf) return;
-    size_t repr_len = qd_message_repr_len();
-    char *buf = qd_malloc(repr_len);
-    const char *msg_str = qd_message_oversize(msg) ? "oversize message" :
-                          qd_message_aborted(msg) ? "aborted message" :
-                          qd_message_repr(msg, buf, repr_len, cf->log_bits);
-    if (msg_str) {
-        const char *src = pn_terminus_get_address(pn_link_source(pn_link));
-        const char *tgt = pn_terminus_get_address(pn_link_target(pn_link));
-        qd_log(qd_message_log_source(), QD_LOG_TRACE,
-               "[C%"PRIu64"]: %s %s on link '%s' (%s -> %s)",
-               qd_connection_connection_id(conn),
-               pn_link_is_sender(pn_link) ? "Sent" : "Received",
-               msg_str,
-               pn_link_name(pn_link),
-               src ? src : "",
-               tgt ? tgt : "");
+    assert(conn && pn_link && msg);
+    qd_log_source_t *logger = qd_message_log_source();
+
+    // the message processing is expensive as this is done for every message received.
+    // Do not bother if not tracing.
+
+    if (qd_log_enabled(logger, QD_LOG_TRACE)) {
+        const qd_server_config_t *cf = qd_connection_config(conn);
+        if (!cf) return;
+        size_t repr_len = qd_message_repr_len();
+        char *buf = qd_malloc(repr_len);
+        const char *msg_str = qd_message_oversize(msg) ? "oversize message" :
+            qd_message_aborted(msg) ? "aborted message" :
+            qd_message_repr(msg, buf, repr_len, cf->log_bits);
+        if (msg_str) {
+            const char *src = pn_terminus_get_address(pn_link_source(pn_link));
+            const char *tgt = pn_terminus_get_address(pn_link_target(pn_link));
+            qd_log(logger, QD_LOG_TRACE,
+                   "[C%"PRIu64"]: %s %s on link '%s' (%s -> %s)",
+                   qd_connection_connection_id(conn),
+                   pn_link_is_sender(pn_link) ? "Sent" : "Received",
+                   msg_str,
+                   pn_link_name(pn_link),
+                   src ? src : "",
+                   tgt ? tgt : "");
+        }
+        free(buf);
     }
-    free(buf);
 }
 
 /**
