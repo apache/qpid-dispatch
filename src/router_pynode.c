@@ -21,6 +21,7 @@
 #include "qpid/dispatch/python_embedded.h"
 
 #include "dispatch_private.h"
+#include "pythoncapi_compat.h"
 #include "router_private.h"
 
 #include "qpid/dispatch.h"
@@ -396,9 +397,7 @@ qd_error_t qd_router_python_setup(qd_router_t *router)
     PyType_Ready(&RouterAdapterType);
     QD_ERROR_PY_RET();
 
-    PyTypeObject *raType = &RouterAdapterType;
-    Py_INCREF(raType);
-    PyModule_AddObject(pDispatchModule, "RouterAdapter", (PyObject*) &RouterAdapterType);
+    PyModule_AddType(pDispatchModule, (PyTypeObject*) &RouterAdapterType);
 
     //
     // Attempt to import the Python Router module

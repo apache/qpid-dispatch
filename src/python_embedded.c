@@ -20,6 +20,8 @@
 #include "python_private.h"
 #include "qpid/dispatch/python_embedded.h"
 
+#include "pythoncapi_compat.h"
+
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/amqp.h"
 #include "qpid/dispatch/error.h"
@@ -162,7 +164,7 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
 {
     qd_python_check_lock();
     qd_error_clear();
-    if (value == Py_None) {
+    if (Py_IsNone(value)) {
         qd_compose_insert_null(field);
     }
     else if (PyBool_Check(value)) {
@@ -276,7 +278,7 @@ qd_error_t qd_py_to_pn_data(PyObject *value, pn_data_t *data)
 {
     qd_python_check_lock();
     qd_error_clear();
-    if (value == Py_None) {
+    if (Py_IsNone(value)) {
         pn_data_put_null(data);
     }
     else if (PyBool_Check(value)) {
@@ -858,9 +860,7 @@ static void qd_python_setup(void)
         //
         // Add LogAdapter
         //
-        PyTypeObject *laType = &LogAdapterType;
-        Py_INCREF(laType);
-        PyModule_AddObject(m, "LogAdapter", (PyObject*) &LogAdapterType);
+        PyModule_AddType(m, (PyTypeObject*) &LogAdapterType);
 
         qd_register_constant(m, "LOG_TRACE",    QD_LOG_TRACE);
         qd_register_constant(m, "LOG_DEBUG",    QD_LOG_DEBUG);
@@ -872,9 +872,7 @@ static void qd_python_setup(void)
 
         qd_register_constant(m, "LOG_STACK_LIMIT", 8); /* Limit stack traces for logging. */
 
-        PyTypeObject *ioaType = &IoAdapterType;
-        Py_INCREF(ioaType);
-        PyModule_AddObject(m, "IoAdapter", (PyObject*) &IoAdapterType);
+        PyModule_AddType(m, (PyTypeObject*) &IoAdapterType);
 
         qd_register_constant(m, "TREATMENT_MULTICAST_FLOOD",  QD_TREATMENT_MULTICAST_FLOOD);
         qd_register_constant(m, "TREATMENT_MULTICAST_ONCE",   QD_TREATMENT_MULTICAST_ONCE);
