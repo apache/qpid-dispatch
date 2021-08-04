@@ -2540,7 +2540,7 @@ class MobileAddressMulticastTest(MessagingHandler):
             self.sender = event.container.create_sender(self.sender_conn)
         else:
             self.sender = event.container.create_sender(self.sender_conn,
-                                                       self.address)
+                                                        self.address)
 
     def send_test_message(self):
         msg = Message(body="Test Message")
