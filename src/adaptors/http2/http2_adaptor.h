@@ -40,7 +40,6 @@ size_t MAX_BUFFERS = 16;
 size_t HTTP2_DATA_FRAME_HEADER_LENGTH = 9;
 
 
-typedef struct qdr_http2_session_data_t qdr_http2_session_data_t;
 typedef struct qdr_http2_stream_data_t  qdr_http2_stream_data_t;
 typedef struct qdr_http2_connection_t   qdr_http2_connection_t;
 typedef struct qd_http2_buffer_t        qd_http2_buffer_t;
@@ -59,15 +58,8 @@ DEQ_DECLARE(qdr_http2_stream_data_t, qd_http2_stream_data_list_t);
 DEQ_DECLARE(qd_http2_buffer_t,       qd_http2_buffer_list_t);
 DEQ_DECLARE(qdr_http2_connection_t,  qdr_http2_connection_list_t);
 
-struct qdr_http2_session_data_t {
-    qdr_http2_connection_t       *conn;       // Connection associated with the session_data
-    nghttp2_session             *session;    // A pointer to the nghttp2s' session object
-    qd_http2_stream_data_list_t  streams;    // A session can have many streams.
-    qd_http2_buffer_list_t       buffs;      // Buffers for writing
-};
-
 struct qdr_http2_stream_data_t {
-    qdr_http2_session_data_t *session_data;
+    qdr_http2_connection_t   *conn;
     void                     *context;
     char                     *reply_to;
     char                     *remote_site; //for stats:
@@ -129,7 +121,6 @@ struct qdr_http2_connection_t {
     qd_http_bridge_config_t *config;
     qd_server_t             *server;
     uint64_t                 conn_id;
-    qdr_http2_session_data_t *session_data;
     char                     *remote_address;
     qdr_link_t               *stream_dispatcher;
     qdr_http2_stream_data_t  *stream_dispatcher_stream_data;
@@ -138,6 +129,9 @@ struct qdr_http2_connection_t {
     qd_http2_buffer_list_t    granted_read_buffs; //buffers for reading
     time_t                    prev_ping; // Time the previous PING frame was sent on egress connection.
     time_t                    last_pn_raw_conn_read;  // The last time a PN_RAW_CONNECTION_READ event was invoked with more than zero bytes on an egress connection.
+    qd_http2_buffer_list_t    buffs;      // Buffers for writing
+    nghttp2_session          *session;    // A pointer to the nghttp2s' session object
+    qd_http2_stream_data_list_t  streams;    // A session can have many streams.
 
     bool                      connection_established;
     bool                      grant_initial_buffers;
@@ -210,7 +204,6 @@ static inline void qd_http2_buffer_insert(qd_http2_buffer_t *buf, size_t len)
     assert(buf->size <= QD_HTTP2_BUFFER_SIZE + HTTP2_DATA_FRAME_HEADER_LENGTH);
 }
 
-ALLOC_DECLARE(qdr_http2_session_data_t);
 ALLOC_DECLARE(qdr_http2_stream_data_t);
 ALLOC_DECLARE(qdr_http2_connection_t);
 ALLOC_DECLARE(qd_http2_buffer_t);
