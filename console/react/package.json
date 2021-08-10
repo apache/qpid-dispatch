@@ -8,7 +8,7 @@
     "@patternfly/react-core": "^4.135.0",
     "@patternfly/react-icons": "^4.11.0",
     "@patternfly/react-styles": "^4.11.0",
-    "@patternfly/react-table": "^4.29.0",
+    "@patternfly/react-table": "^4.29.37",
     "@patternfly/react-topology": "^4.9.6",
     "d3": "^3.5.17",
     "d3-queue": "^3.0.7",
