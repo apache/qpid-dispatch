@@ -37,17 +37,19 @@
 ################# Begin code #######
 
 # Get the latest Centos version from dockerhub
-FROM centos:7
+FROM quay.io/centos/centos:stream8
 
 MAINTAINER "dev@qpid.apache.org"
 
 # Install all the required packages. Some in this list were picked off from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/main/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/main/README)
 
-# For centos, some packages are found in the epel repo, so first install access to it
-RUN yum -y install epel-release
+# Enable additional package repositories for CentOS
+#  note: PowerTools is called CodeReady Linux Builder in RHEL 8
+RUN dnf -y install epel-release
+RUN dnf config-manager --set-enabled powertools
 
 # now install the rest of the packages
-RUN yum -y install gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig python-devel java-1.8.0-openjdk-devel git make doxygen valgrind emacs libuv libuv-devel libwebsockets-devel && yum clean all -y
+RUN dnf -y install gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig python3-devel java-11-openjdk-devel git make doxygen valgrind emacs libuv libuv-devel libwebsockets-devel && dnf clean all -y
 
 # Create a main directory and clone the qpid-proton repo from github
 RUN mkdir /main && cd /main && git clone https://github.com/apache/qpid-proton.git  && cd /main/qpid-proton && mkdir /main/qpid-proton/build
