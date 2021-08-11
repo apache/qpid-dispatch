@@ -316,4 +316,8 @@ Other options include `Debug` (disables optimizations) and `Coverage`.
 
 |`-DRUNTIME_CHECK=`
 |Enables C/C++ runtime checkers.See "Run Time Validation" chapter above.
+
+|`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`
+|With CMake 3.9+, compiles the project with LTO (Link Time Optimization) enabled.
+Older CMake will only honor this option with the Intel compiler on Linux.
 |===
