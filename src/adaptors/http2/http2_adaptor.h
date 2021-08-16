@@ -80,6 +80,7 @@ struct qdr_http2_stream_data_t {
     qd_iterator_t            *curr_stream_data_iter; // points to the data contained in the stream_data/raw_buffers
     qd_message_stream_data_t *next_stream_data;
     qd_message_stream_data_t *footer_stream_data;
+    qd_iterator_t            *footer_stream_data_iter;
     DEQ_LINKS(qdr_http2_stream_data_t);
 
     qd_message_stream_data_result_t  curr_stream_data_result;
@@ -146,6 +147,7 @@ struct qdr_http2_connection_t {
     sys_atomic_t 			  raw_closed_write;
     bool                      q2_blocked;      // send a connection level WINDOW_UPDATE frame to tell the client to stop sending data.
     sys_atomic_t              q2_restart;      // signal to resume receive
+    sys_atomic_t              delay_buffer_write;   // if true, buffers will not be written to proton.
     DEQ_LINKS(qdr_http2_connection_t);
  };
 
