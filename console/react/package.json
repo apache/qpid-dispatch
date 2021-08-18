@@ -63,7 +63,7 @@
     "@testing-library/react": "^12.0.0",
     "@types/jest": "^26.0.24",
     "body-parser": "^1.19.0",
-    "browserslist": "^4.16.6",
+    "browserslist": "^4.16.8",
     "jest-axe": "^5.0.1",
     "prettier": "^2.3.2",
     "react-scripts": "^4.0.3",
