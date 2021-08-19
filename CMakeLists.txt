@@ -109,7 +109,7 @@ if (NOT DEFINED Python_FIND_FRAMEWORK)
 endif ()
 find_package(Python 3.6.8 REQUIRED COMPONENTS Interpreter Development)
 find_package(Threads REQUIRED)
-find_package(Proton 0.34.0 REQUIRED COMPONENTS Core Proactor)
+find_package(Proton 0.34.0 REQUIRED COMPONENTS Core Proactor Tls)
 message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERSION}\")" )
 ##
 ## Optional dependencies

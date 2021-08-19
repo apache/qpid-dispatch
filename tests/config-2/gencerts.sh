@@ -29,6 +29,8 @@ keytool -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -al
 keytool -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -certreq -file server-request.pem
 keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-request.pem -outfile server-certificate.pem
 openssl pkcs12 -nocerts -passin pass:server-password -in server.pkcs12 -passout pass:server-password -out server-private-key.pem
+# Create a server private key without a password
+openssl pkcs12 -nocerts -passin pass:server-password -in server.pkcs12 -nodes -out server-private-key-no-pass.pem
 
 keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate -keypass client-password -genkey  -dname "O=Client,CN=$CLIENT" -validity 99999
 keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate -keypass client-password -certreq -file client-request.pem

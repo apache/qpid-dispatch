@@ -18,6 +18,7 @@
 #
 
 import socket
+import ssl
 import signal
 import sys
 import os
@@ -94,14 +95,32 @@ signal.signal(signal.SIGQUIT, receive_signal)
 signal.signal(signal.SIGILL, receive_signal)
 signal.signal(signal.SIGTERM, receive_signal)
 
-sock = socket.socket()
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-sock.bind(('0.0.0.0', int(os.getenv('SERVER_LISTEN_PORT'))))
-sock.listen(5)
+if os.getenv('SERVER_TLS') == "yes":
+    # TLS enabled
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_verify_locations(cafile=os.getenv('SERVER_CA_CERT'))
+    context.load_cert_chain(certfile=os.getenv('SERVER_CERTIFICATE'), keyfile=os.getenv('SERVER_PRIVATE_KEY'))
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
+        sock.bind(('0.0.0.0', int(os.getenv('SERVER_LISTEN_PORT'))))
+        sock.listen(5)
+        with context.wrap_socket(sock, server_side=True) as ssl_sock:
+            while True:
+                # The accept method blocks until someone attempts to connect to our TCP
+                # port: when they do, it returns a tuple: the first element is a new
+                # socket object, the second element is a tuple of the address the new
+                # connection is from
+                handle(ssl_sock.accept()[0])
 
-while True:
-    # The accept method blocks until someone attempts to connect to our TCP
-    # port: when they do, it returns a tuple: the first element is a new
-    # socket object, the second element is a tuple of the address the new
-    # connection is from
-    handle(sock.accept()[0])
+else:
+    # Clear non-TLS socket.
+    sock = socket.socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('0.0.0.0', int(os.getenv('SERVER_LISTEN_PORT'))))
+    sock.listen(5)
+
+    while True:
+        # The accept method blocks until someone attempts to connect to our TCP
+        # port: when they do, it returns a tuple: the first element is a new
+        # socket object, the second element is a tuple of the address the new
+        # connection is from
+        handle(sock.accept()[0])

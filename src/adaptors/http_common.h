@@ -41,6 +41,7 @@ typedef enum {
 } qd_http_aggregation_t;
 
 typedef struct qd_http_bridge_config_t {
+    qd_dispatch_t     *qpid_dispatch;
     char              *name;
     char              *host;
     char              *port;
@@ -51,6 +52,10 @@ typedef struct qd_http_bridge_config_t {
     qd_http_version_t  version;
     bool                  event_channel;
     qd_http_aggregation_t aggregation;
+    char              *ssl_profile_name;
+    bool               require_tls;
+    bool               authenticate_peer;
+    bool               verify_host_name;
 } qd_http_bridge_config_t;
 
 void qd_http_free_bridge_config(qd_http_bridge_config_t *config);

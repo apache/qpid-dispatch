@@ -1112,7 +1112,13 @@
                 "sslProfile": {
                     "type": "string",
                     "required": false,
-                    "description": "Name of the sslProfile..",
+                    "description": "Name of the sslProfile.",
+                    "create": true
+                },
+                "authenticatePeer": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "yes: Require the peer's identity to be authenticated; no: Do not require any authentication.",
                     "create": true
                 },
                 "protocolVersion": {
@@ -1171,6 +1177,12 @@
                     "create": true
 
                 },
+                "sslProfile": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Name of the sslProfile.",
+                    "create": true
+                },
                 "protocolVersion": {
                     "description": "The version of the HTTP protocol supported by this connector.",
                     "type": [
@@ -1194,6 +1206,13 @@
                     "type": "boolean",
                     "required": false,
                     "description": "Enables restricted event mode where no responses are sent to request and only post is allowed",
+                    "create": true
+                },
+                "verifyHostname": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "yes: Ensures that when initiating a connection (as a client) the host name in the URL to which this connector connects to matches the host name in the digital certificate that the peer sends back as part of the TLS connection; no: Does not perform host name verification",
+                    "deprecationName": "verifyHostName",
                     "create": true
                 },
                 "hostOverride": {

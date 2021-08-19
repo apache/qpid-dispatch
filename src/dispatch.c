@@ -438,3 +438,11 @@ uint64_t qd_router_memory_usage()
     fclose(status_fp);
     return (scanned == 1) ? my_mem_kb * 1024 : 0;
 }
+
+
+/**
+ * Return a reference to connection_manager
+ */
+qd_connection_manager_t *qd_dispatch_connection_manager(const qd_dispatch_t *qd) {
+    return qd->connection_manager;
+}

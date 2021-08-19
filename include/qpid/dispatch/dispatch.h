@@ -31,6 +31,7 @@
  */
 
 typedef struct qd_dispatch_t qd_dispatch_t;
+typedef struct qd_connection_manager_t qd_connection_manager_t;
 
 /**
  * Initialize the Dispatch library and prepare it for operation.
@@ -63,6 +64,14 @@ qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path);
  * @param config_path The path to the configuration file.
  */
 qd_error_t qd_dispatch_validate_config(const char *config_path);
+
+/**
+ * Return a reference to connection_manager
+ *
+ * @param qd The dispatch handle returned by qd_dispatch
+ */
+
+qd_connection_manager_t *qd_dispatch_connection_manager(const qd_dispatch_t *qd);
 
 /**
  * @}

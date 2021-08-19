@@ -20,6 +20,7 @@
 #include "http_common.h"
 
 #include <proton/listener.h>
+#include <proton/tls.h>
 
 #include <stdio.h>
 
@@ -37,16 +38,36 @@ static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_http_bridge_config_t 
     qd_error_clear();
     ZERO(config);
 
+    config->qpid_dispatch = qd;
+
 #define CHECK() if (qd_error_code()) goto error
     config->name    = qd_entity_get_string(entity, "name");            CHECK();
     config->host    = qd_entity_get_string(entity, "host");            CHECK();
     config->port    = qd_entity_get_string(entity, "port");            CHECK();
     config->address = qd_entity_get_string(entity, "address");         CHECK();
     config->site    = qd_entity_opt_string(entity, "siteId", 0);       CHECK();
-    version_str     = qd_entity_get_string(entity, "protocolVersion");  CHECK();
+    version_str     = qd_entity_get_string(entity, "protocolVersion"); CHECK();
     aggregation_str = qd_entity_opt_string(entity, "aggregation", 0);  CHECK();
-    config->event_channel = qd_entity_opt_bool(entity, "eventChannel", false); CHECK();
-    config->host_override  = qd_entity_opt_string(entity, "hostOverride", 0);   CHECK();
+    config->event_channel     = qd_entity_opt_bool(entity, "eventChannel", false);     CHECK();
+    config->host_override     = qd_entity_opt_string(entity, "hostOverride", 0);       CHECK();
+    config->ssl_profile_name  = qd_entity_opt_string(entity, "sslProfile", 0);         CHECK();
+    config->authenticate_peer = qd_entity_opt_bool(entity, "authenticatePeer", false); CHECK();
+    config->verify_host_name  = qd_entity_opt_bool(entity, "verifyHostname", false);   CHECK();
+
+    if (config->ssl_profile_name) {
+        qd_connection_manager_t *cm = qd_dispatch_connection_manager(qd);
+        assert(cm);
+        qd_config_ssl_profile_t *config_ssl_profile = qd_find_ssl_profile(cm, config->ssl_profile_name);
+
+        if(!config_ssl_profile) {
+            //
+            // The sslProfile was not found, we are going to terminate the router.
+            //
+            qd_log(qd_log_source(QD_HTTP_LOG_SOURCE), QD_LOG_CRITICAL, "sslProfile %s could not be found", config->ssl_profile_name);
+            exit(1);
+        }
+    }
+
 
     if (strcmp(version_str, "HTTP2") == 0) {
         config->version = VERSION_HTTP2;
@@ -70,6 +91,13 @@ static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_http_bridge_config_t 
     config->host_port = malloc(hplen);
     snprintf(config->host_port, hplen, "%s:%s", config->host, config->port);
 
+    if (config->ssl_profile_name && !pn_tls_present()) {
+        qd_error(QD_ERROR_CONFIG,
+                 "HTTP listener %s: sslProfile is specified but the underlying proton TLS support is absent", config->name);
+        qd_log(qd_log_source(QD_HTTP_LOG_SOURCE), QD_LOG_ERROR, "%s", qd_error_message());
+        return QD_ERROR_CONFIG;
+    }
+
     return QD_ERROR_NONE;
 
 error:
@@ -91,8 +119,8 @@ void qd_http_free_bridge_config(qd_http_bridge_config_t *config)
     free(config->site);
     free(config->host_override);
     free(config->host_port);
+    free(config->ssl_profile_name);
 }
-
 
 //
 // HTTP Listener Management (HttpListenerEntity)

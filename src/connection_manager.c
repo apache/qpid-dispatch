@@ -35,19 +35,6 @@
 #include <stdio.h>
 #include <string.h>
 
-struct qd_config_ssl_profile_t {
-    DEQ_LINKS(qd_config_ssl_profile_t);
-    char        *name;
-    char        *ssl_password;
-    char        *ssl_trusted_certificate_db;
-    char        *ssl_uid_format;
-    char        *uid_name_mapping_file;
-    char        *ssl_certificate_file;
-    char        *ssl_private_key_file;
-    char        *ssl_ciphers;
-    char        *ssl_protocols;
-};
-
 DEQ_DECLARE(qd_config_ssl_profile_t, qd_config_ssl_profile_list_t);
 
 struct qd_config_sasl_plugin_t {
@@ -92,12 +79,13 @@ const char *NONE = "none";
 
 /**
  * Search the list of config_ssl_profiles for an ssl-profile that matches the passed in name
+ * TODO: This function requires locking to improve tsan safety.
  */
-static qd_config_ssl_profile_t *qd_find_ssl_profile(qd_connection_manager_t *cm, char *name)
+qd_config_ssl_profile_t *qd_find_ssl_profile(const qd_connection_manager_t *cm, const char *ssl_profile_name)
 {
     qd_config_ssl_profile_t *ssl_profile = DEQ_HEAD(cm->config_ssl_profiles);
     while (ssl_profile) {
-        if (strcmp(ssl_profile->name, name) == 0)
+        if (strcmp(ssl_profile->name, ssl_profile_name) == 0)
             return ssl_profile;
         ssl_profile = DEQ_NEXT(ssl_profile);
     }

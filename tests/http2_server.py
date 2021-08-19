@@ -23,7 +23,6 @@ try:
     from quart.static import send_file
 except ImportError:
     from quart.helpers import send_file
-
 try:
     from quart.exceptions import HTTPStatusException
 except ImportError:
@@ -38,8 +37,6 @@ class MyInfo(object):
         self.fname = fname
         self.lname = lname
         self.id = id
-        #self.hobby = None
-        #self.style = None
 
 
 my_info = MyInfo(fname="John", lname="Doe")
@@ -115,6 +112,11 @@ async def process_upload_data():
         print(f'Processing {name}: {len(file.read())}')
     return "Success!"
 
+if os.getenv('SERVER_TLS') == "yes":
+    app.run(port=os.getenv('SERVER_LISTEN_PORT'),
+            certfile=os.getenv('SERVER_CERTIFICATE'),
+            keyfile=os.getenv('SERVER_PRIVATE_KEY'),
+            ca_certs=os.getenv('SERVER_CA_CERT'))
+else:
+    app.run(port=os.getenv('SERVER_LISTEN_PORT'))
 
-#app.run(port=5000, certfile='cert.pem', keyfile='key.pem')
-app.run(port=os.getenv('SERVER_LISTEN_PORT'))
