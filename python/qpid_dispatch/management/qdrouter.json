@@ -1112,7 +1112,13 @@
                 "sslProfile": {
                     "type": "string",
                     "required": false,
-                    "description": "Name of the sslProfile..",
+                    "description": "Name of the sslProfile.",
+                    "create": true
+                },
+                "requireSsl": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Require the use of SSL or TLS",
                     "create": true
                 },
                 "protocolVersion": {
@@ -1170,6 +1176,18 @@
                     "type": "string",
                     "create": true
 
+                },
+                "sslProfile": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Name of the sslProfile.",
+                    "create": true
+                },
+                "requireSsl": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Require the use of SSL or TLS",
+                    "create": true
                 },
                 "protocolVersion": {
                     "description": "The version of the HTTP protocol supported by this connector.",

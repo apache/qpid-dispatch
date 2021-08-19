@@ -148,10 +148,16 @@ struct qdr_http2_connection_t {
     bool                      first_pinged;
     bool                      delete_egress_connections;  // If set to true, the egress qdr_connection_t and qdr_http2_connection_t objects will be deleted
     bool                      goaway_received;
-    sys_atomic_t 		      raw_closed_read;
-    sys_atomic_t 			  raw_closed_write;
+    sys_atomic_t              raw_closed_read;
+    sys_atomic_t              raw_closed_write;
     bool                      q2_blocked;      // send a connection level WINDOW_UPDATE frame to tell the client to stop sending data.
     sys_atomic_t              q2_restart;      // signal to resume receive
+
+    bool                      require_ssl;
+    pn_tls_t                 *tls_session;
+    pn_tls_domain_t          *tls_domain;
+    bool                      tls_needs_output_processing;
+
     DEQ_LINKS(qdr_http2_connection_t);
  };
 

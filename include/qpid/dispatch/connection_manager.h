@@ -32,6 +32,19 @@ typedef struct qd_config_sasl_plugin_t qd_config_sasl_plugin_t;
 
 typedef void (*qd_connection_manager_handler_t) (void *context, qd_connection_t *conn);
 
+struct qd_config_ssl_profile_t {
+    DEQ_LINKS(qd_config_ssl_profile_t);
+    char        *name;
+    char        *ssl_password;
+    char        *ssl_trusted_certificate_db;
+    char        *ssl_uid_format;
+    char        *uid_name_mapping_file;
+    char        *ssl_certificate_file;
+    char        *ssl_private_key_file;
+    char        *ssl_ciphers;
+    char        *ssl_protocols;
+};
+
 /**
  * Allocate a connection manager
  *
@@ -55,5 +68,10 @@ void qd_connection_manager_free(qd_connection_manager_t *cm);
  * @param qd The dispatch handle returned by qd_dispatch.
  */
 void qd_connection_manager_start(qd_dispatch_t *qd);
+
+/**
+ * Find named qd_config_ssl_profile_t object
+ */
+qd_config_ssl_profile_t *qd_find_ssl_profile(const qd_connection_manager_t *cm, const char *name);
 
 #endif

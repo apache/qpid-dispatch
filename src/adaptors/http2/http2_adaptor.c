@@ -21,6 +21,8 @@
 #include "adaptors/http_common.h"
 
 #include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/dispatch.h"
+#include "qpid/dispatch/connection_manager.h"
 #include "qpid/dispatch/protocol_adaptor.h"
 
 #include <proton/condition.h>
@@ -473,6 +475,12 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn, bool on_shutdo
     sys_atomic_destroy(&http_conn->raw_closed_write);
     sys_atomic_destroy(&http_conn->q2_restart);
 
+    if (http_conn->tls_domain) {
+        pn_tls_domain_free(http_conn->tls_domain);
+    }
+    if (http_conn->tls_session) {
+        pn_tls_free(http_conn->tls_session);
+    }
     free_qdr_http2_connection_t(http_conn);
 }
 
@@ -1430,6 +1438,106 @@ qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_listener_t* listener
 {
     qdr_http2_connection_t* ingress_http_conn = new_qdr_http2_connection_t();
     ZERO(ingress_http_conn);
+
+    if (listener->config.require_ssl) {
+        do {
+            // find the ssl profile
+            qd_dispatch_t *qd = listener->config.qpid_dispatch;
+            assert(qd);
+            qd_connection_manager_t *cm = qd_dispatch_connection_manager(qd);
+            assert(cm);
+            qd_config_ssl_profile_t *config_ssl_profile = qd_find_ssl_profile(cm, listener->config.ssl_profile);
+            if (!config_ssl_profile) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                       "Listener %s unable to find ssl profile %s", listener->config.name, listener->config.ssl_profile);
+                break;
+            }
+
+            // set up the pn domain
+            ingress_http_conn->tls_domain = pn_tls_domain(PN_TLS_MODE_SERVER);
+            if (!ingress_http_conn->tls_domain) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                       "Listener %s unable to create tls domain", listener->config.name);
+                break;
+            }
+
+            // configure pn domain
+            int res;
+            res = pn_tls_domain_set_credentials(ingress_http_conn->tls_domain,
+                                                config_ssl_profile->ssl_certificate_file,
+                                                config_ssl_profile->ssl_private_key_file,
+                                                config_ssl_profile->ssl_password);
+            if (res != 0) {
+                assert(false);
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                       "Listener %s unable to set tls credentials (%d)", listener->config.name, res);
+                break;
+            }
+
+            res = pn_tls_domain_set_trusted_ca_db(ingress_http_conn->tls_domain,
+                                                  config_ssl_profile->ssl_trusted_certificate_db);
+            if (res != 0) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                       "Listener %s unable to set tls trusted certificates (%d)", listener->config.name, res);
+                break;
+            }
+
+            res = pn_tls_domain_set_peer_authentication(ingress_http_conn->tls_domain,
+                                                        PN_TLS_ANONYMOUS_PEER,    // TODO: ???
+                                                        0);
+            if (res != 0) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                       "Listener %s unable to set tls peer authentication (%d)", listener->config.name, res);
+                break;
+            }
+
+            if (!!config_ssl_profile->ssl_protocols) {
+                res = pn_tls_domain_set_protocols(ingress_http_conn->tls_domain,
+                                                  config_ssl_profile->ssl_protocols);
+                if (res != 0) {
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                        "Listener %s unable to set tls protocols (%d)", listener->config.name, res);
+                    break;
+                }
+            }
+
+            if (!!config_ssl_profile->ssl_ciphers) {
+                res = pn_tls_domain_set_ciphers(ingress_http_conn->tls_domain,
+                                                config_ssl_profile->ssl_ciphers);
+                if (res != 0) {
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                        "Listener %s unable to set tls ciphers (%d)", listener->config.name);
+                    break;
+                }
+            }
+#if 0
+stuck here...
+            // set up tls session
+            ingress_http_conn->tls_session = pn_tls(ingress_http_conn->tls_domain,
+                                                    "unused.localdomain",  // TODO What hostname?
+                                                    "fortytwo");
+            if (!ingress_http_conn->tls_session) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                    "Listener %s unable to create tls session", listener->config.name);
+                break;
+            }
+#endif
+            ingress_http_conn->require_ssl = true;
+        } while (0);
+
+        // Handle tls creation/setup failure
+        if (!ingress_http_conn->require_ssl) {
+            if (ingress_http_conn->tls_domain) {
+                pn_tls_domain_free(ingress_http_conn->tls_domain);
+            }
+            if (ingress_http_conn->tls_session) {
+                pn_tls_free(ingress_http_conn->tls_session);
+            }
+            free_qdr_http2_connection_t(ingress_http_conn);
+            return 0;
+        }
+    }
+
     ingress_http_conn->ingress = true;
     ingress_http_conn->context.context = ingress_http_conn;
     ingress_http_conn->context.handler = &handle_connection_event;
