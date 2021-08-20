@@ -17,6 +17,8 @@
 # under the License.
 #
 
+import os
+
 from proton import Message, symbol
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout
 from system_test import unittest
@@ -34,6 +36,14 @@ class AddrTimer(object):
         self.parent.check_address()
 
 
+def skip_switchover_tests():
+    skip_switchover_test = os.environ.get('QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST')
+    if skip_switchover_test is not None:
+        if skip_switchover_test.lower() in ['true', '1', 't', 'y', 'yes']:
+            return True
+    return False
+
+
 class RouterTest(TestCase):
 
     inter_router_port = None
@@ -49,8 +59,8 @@ class RouterTest(TestCase):
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
                 ('listener', {'port': cls.tester.get_port(), 'role': 'route-container', 'name': 'WP'}),
                 ('address',  {'prefix': 'dest', 'enableFallback': 'yes'}),
-                ('autoLink', {'connection': 'WP', 'address': 'dest.al', 'dir': 'out', 'fallback': 'yes'}),
-                ('autoLink', {'connection': 'WP', 'address': 'dest.al', 'dir': 'in',  'fallback': 'yes'}),
+                ('autoLink', {'connection': 'WP', 'address': 'dest.al', 'direction': 'out', 'fallback': 'yes'}),
+                ('autoLink', {'connection': 'WP', 'address': 'dest.al', 'direction': 'in',  'fallback': 'yes'}),
                 connection
             ]
 
@@ -259,6 +269,9 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    skip_reason = 'Test skipped until switchover use case resolved'
+
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_25_switchover_same_edge(self):
         test = SwitchoverTest([self.ROUTER_EA1, "EA1"],
                               [self.ROUTER_EA1, "EA1"],
@@ -267,6 +280,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_26_switchover_same_interior(self):
         test = SwitchoverTest([self.ROUTER_INTA, "INTA"],
                               [self.ROUTER_INTA, "INTA"],
@@ -275,6 +289,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_27_switchover_local_edge_alt_remote_interior(self):
         test = SwitchoverTest([self.ROUTER_EA1, "EA1"],
                               [self.ROUTER_INTA, "INTA"],
@@ -283,6 +298,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_28_switchover_local_edge_alt_remote_edge(self):
         test = SwitchoverTest([self.ROUTER_EA1, "EA1"],
                               [self.ROUTER_EB1, "EB1"],
@@ -291,6 +307,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_29_switchover_local_edge_pri_remote_interior(self):
         test = SwitchoverTest([self.ROUTER_EA1, "EA1"],
                               [self.ROUTER_EA1, "EA1"],
@@ -299,6 +316,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_30_switchover_local_interior_pri_remote_edge(self):
         test = SwitchoverTest([self.ROUTER_EA1, "EA1"],
                               [self.ROUTER_EA1, "EA1"],
@@ -307,6 +325,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_31_switchover_local_interior_alt_remote_interior(self):
         test = SwitchoverTest([self.ROUTER_INTB, "INTB"],
                               [self.ROUTER_INTA, "INTA"],
@@ -315,6 +334,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_32_switchover_local_interior_alt_remote_edge(self):
         test = SwitchoverTest([self.ROUTER_INTB, "INTB"],
                               [self.ROUTER_EA2, "EA2"],
@@ -323,6 +343,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_33_switchover_local_interior_pri_remote_interior(self):
         test = SwitchoverTest([self.ROUTER_INTB, "INTB"],
                               [self.ROUTER_INTB, "INTB"],
@@ -331,6 +352,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_34_switchover_local_interior_pri_remote_edge(self):
         test = SwitchoverTest([self.ROUTER_INTB, "INTB"],
                               [self.ROUTER_INTB, "INTB"],
@@ -339,6 +361,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_35_switchover_mix_1(self):
         test = SwitchoverTest([self.ROUTER_INTA, "INTA"],
                               [self.ROUTER_INTB, "INTB"],
@@ -347,6 +370,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_36_switchover_mix_2(self):
         test = SwitchoverTest([self.ROUTER_EA1, "EA1"],
                               [self.ROUTER_INTB, "INTB"],
@@ -355,6 +379,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_37_switchover_mix_3(self):
         test = SwitchoverTest([self.ROUTER_EA1, "EA1"],
                               [self.ROUTER_INTB, "INTB"],
@@ -363,6 +388,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @unittest.skipIf(skip_switchover_tests(), skip_reason)
     def test_38_switchover_mix_4(self):
         test = SwitchoverTest([self.ROUTER_EA1, "EA1"],
                               [self.ROUTER_EA2, "EA2"],
