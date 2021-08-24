@@ -334,9 +334,7 @@ static size_t write_buffers(qdr_http2_connection_t *conn)
     if (i >0) {
         size_t num_buffers_written = pn_raw_connection_write_buffers(conn->pn_raw_conn, raw_buffers, num_buffs);
         qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Written %zu buffer(s) and %i bytes in write_buffers() using pn_raw_connection_write_buffers()", conn->conn_id, num_buffers_written, total_bytes);
-        if (num_buffs != num_buffers_written) {
-            //TODO - This is not good.
-        }
+        assert(num_buffs == num_buffers_written);
         return num_buffers_written;
     }
 
