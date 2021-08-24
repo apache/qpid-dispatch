@@ -207,7 +207,9 @@ void *router_core_thread(void *arg)
             //
             // Block on the condition variable when there is no action to do
             //
+            core->sleeping = true;
             sys_cond_wait(core->action_cond, core->action_lock);
+            core->sleeping = false;
         }
 
         sys_mutex_unlock(core->action_lock);

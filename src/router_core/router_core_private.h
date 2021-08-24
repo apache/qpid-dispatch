@@ -829,11 +829,13 @@ struct qdr_core_t {
     qd_log_source_t   *log;
     qd_log_source_t   *agent_log;
     sys_thread_t      *thread;
-    bool               running;
-    qdr_action_list_t  action_list;
+
     qdr_action_list_t  action_list_background;  /// Actions processed only when the action_list is empty
+    qdr_action_list_t  action_list;
     sys_cond_t        *action_cond;
     sys_mutex_t       *action_lock;
+    bool               running;
+    bool               sleeping;
 
     sys_mutex_t             *work_lock;
     qdr_core_timer_list_t    scheduled_timers;
