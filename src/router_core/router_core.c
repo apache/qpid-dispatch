@@ -447,8 +447,8 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 {
     sys_mutex_lock(core->action_lock);
     DEQ_INSERT_TAIL(core->action_list, action);
-    sys_cond_signal(core->action_cond);
     sys_mutex_unlock(core->action_lock);
+    sys_cond_signal(core->action_cond);
 }
 
 
@@ -456,8 +456,8 @@ void qdr_action_background_enqueue(qdr_core_t *core, qdr_action_t *action)
 {
     sys_mutex_lock(core->action_lock);
     DEQ_INSERT_TAIL(core->action_list_background, action);
-    sys_cond_signal(core->action_cond);
     sys_mutex_unlock(core->action_lock);
+    sys_cond_signal(core->action_cond);
 }
 
 
