@@ -905,7 +905,9 @@ class Http2TestOneInteriorRouterTls(Http2TestBase, CommonHttp2Tests):
             'address': 'examples',
             'host': '127.0.0.1',
             'protocolVersion': 'HTTP2',
-            'name': cls.connector_name
+            'name': cls.connector_name,
+            'requireSsl': 'true',
+            'sslProfile': 'ssl-profile-tls-all'
         }
         config = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'QDR'}),

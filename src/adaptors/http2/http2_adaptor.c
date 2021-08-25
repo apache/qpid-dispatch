@@ -1447,7 +1447,8 @@ ssize_t read_data_callback(nghttp2_session *session,
  */
 static bool connection_configure_tls(qdr_http2_connection_t *conn,
                                      bool is_listener,
-                                     const qd_http_bridge_config_t *config)
+                                     const qd_http_bridge_config_t *config,
+                                     const char *hostname)
 {
     conn->require_ssl = false;
     const char *role = is_listener ? "listener" : "connector";
@@ -1528,11 +1529,11 @@ static bool connection_configure_tls(qdr_http2_connection_t *conn,
 
         // set up tls session
         conn->tls_session = pn_tls(conn->tls_domain,
-                                   0,  // TODO What hostname?
+                                   hostname,
                                    0);
         if (!conn->tls_session) {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                "HTTP2 % %s unable to create tls session", role, config->name);
+                "HTTP2 %s %s unable to create tls session with hostname: '%s'", role, config->name, hostname);
             break;
         }
 
@@ -1561,7 +1562,7 @@ qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_listener_t* listener
     ZERO(ingress_http_conn);
 
     if (listener->config.require_ssl) {
-        if (!connection_configure_tls(ingress_http_conn, true, &listener->config)) {
+        if (!connection_configure_tls(ingress_http_conn, true, &listener->config, 0)) {
             free_qdr_http2_connection_t(ingress_http_conn);
             return 0;
         }
@@ -2550,7 +2551,7 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
     ZERO(egress_http_conn);
 
     if (connector->config.require_ssl) {
-        if (!connection_configure_tls(egress_http_conn, false, &connector->config)) {
+        if (!connection_configure_tls(egress_http_conn, false, &connector->config, connector->config.host)) {
             free_qdr_http2_connection_t(egress_http_conn);
             return 0;
         }
