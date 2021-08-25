@@ -22,7 +22,7 @@
 #include "qpid/dispatch/timer.h"
 #include "qpid/dispatch/threading.h"
 
-void qd_timer_initialize(sys_mutex_t *server_lock);
+void qd_timer_initialize(void);
 void qd_timer_finalize(void);
 void qd_timer_visit();
 
