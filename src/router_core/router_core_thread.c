@@ -177,7 +177,7 @@ void qdr_adaptors_finalize(qdr_core_t *core)
 void *router_core_thread(void *arg)
 {
     qdr_core_t        *core = (qdr_core_t*) arg;
-    qdr_action_list_t  action_list;
+    qdr_action_list_t  action_list = DEQ_EMPTY;
     qdr_action_t      *bg_action = 0;
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
