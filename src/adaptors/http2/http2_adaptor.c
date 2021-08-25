@@ -1433,6 +1433,127 @@ ssize_t read_data_callback(nghttp2_session *session,
 }
 
 
+/**
+ * Configure a connection's pn_tls objects
+ *     Info log describes objects being configured
+ * On success:
+ *     conn->tls_domain and conn->tls_session are set up
+ *     conn->require_ssl is true
+ * On failure:
+ *     Error log is written
+ *     All in-progress pn_tls objects are destroyed
+ *     conn->tls_domain and conn->tls_session are zero
+ *     conn->require_ssl is false
+ */
+static bool connection_configure_tls(qdr_http2_connection_t *conn,
+                                     bool is_listener,
+                                     const qd_http_bridge_config_t *config)
+{
+    conn->require_ssl = false;
+    const char *role = is_listener ? "listener" : "connector";
+
+    qd_log(http2_adaptor->protocol_log_source, QD_LOG_INFO,
+           "HTTP2 %s %s configuring ssl profile %s", role, config->name, config->ssl_profile);
+
+    do {
+        // find the ssl profile
+        qd_dispatch_t *qd = config->qpid_dispatch;
+        assert(qd);
+        qd_connection_manager_t *cm = qd_dispatch_connection_manager(qd);
+        assert(cm);
+        qd_config_ssl_profile_t *config_ssl_profile = qd_find_ssl_profile(cm, config->ssl_profile);
+        if (!config_ssl_profile) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                    "HTTP2 %s %s unable to find ssl profile %s", config->name, config->ssl_profile);
+            break;
+        }
+
+        // create pn domain
+        conn->tls_domain = pn_tls_domain(is_listener ? PN_TLS_MODE_SERVER : PN_TLS_MODE_CLIENT);
+        if (!conn->tls_domain) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                    "HTTP2 %s %s unable to create tls domain", role, config->name);
+            break;
+        }
+
+        // configure pn domain
+        int res;
+        res = pn_tls_domain_set_credentials(conn->tls_domain,
+                                            config_ssl_profile->ssl_certificate_file,
+                                            config_ssl_profile->ssl_private_key_file,
+                                            config_ssl_profile->ssl_password);
+        if (res != 0) {
+            assert(false);
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                    "HTTP2 %s %s unable to set tls credentials (%d)", role, config->name, res);
+            break;
+        }
+
+        res = pn_tls_domain_set_trusted_ca_db(conn->tls_domain,
+                                              config_ssl_profile->ssl_trusted_certificate_db);
+        if (res != 0) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                    "HTTP2 %s %s unable to set tls trusted certificates (%d)", role, config->name, res);
+            break;
+        }
+
+        res = pn_tls_domain_set_peer_authentication(conn->tls_domain,
+                                                    PN_TLS_ANONYMOUS_PEER,    // TODO: ???
+                                                    0);
+        if (res != 0) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                    "HTTP2 %s %s unable to set tls peer authentication (%d)", role, config->name, res);
+            break;
+        }
+
+        if (!!config_ssl_profile->ssl_protocols) {
+            res = pn_tls_domain_set_protocols(conn->tls_domain,
+                                              config_ssl_profile->ssl_protocols);
+            if (res != 0) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                    "HTTP2 %s %s unable to set tls protocols (%d)", role, config->name, res);
+                break;
+            }
+        }
+
+        if (!!config_ssl_profile->ssl_ciphers) {
+            res = pn_tls_domain_set_ciphers(conn->tls_domain,
+                                            config_ssl_profile->ssl_ciphers);
+            if (res != 0) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                    "HTTP2 %s %s unable to set tls ciphers (%d)", role, config->name, res);
+                break;
+            }
+        }
+
+        // set up tls session
+        conn->tls_session = pn_tls(conn->tls_domain,
+                                   0,  // TODO What hostname?
+                                   0);
+        if (!conn->tls_session) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                "HTTP2 % %s unable to create tls session", role, config->name);
+            break;
+        }
+
+        conn->require_ssl = true;
+    } while (0);
+
+    // Handle tls creation/setup failure by deleting any pn domain or session objects
+    if (!conn->require_ssl) {
+        if (conn->tls_domain) {
+            pn_tls_domain_free(conn->tls_domain);
+            conn->tls_domain = 0;
+        }
+        if (conn->tls_session) {
+            pn_tls_free(conn->tls_session);
+            conn->tls_session = 0;
+        }
+    }
+
+    return conn->require_ssl;
+}
+
 
 qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_listener_t* listener)
 {
@@ -1440,101 +1561,7 @@ qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_listener_t* listener
     ZERO(ingress_http_conn);
 
     if (listener->config.require_ssl) {
-        do {
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_INFO,
-                    "HTTP2 listener %s using ssl profile %s", listener->config.name, listener->config.ssl_profile);
-
-            // find the ssl profile
-            qd_dispatch_t *qd = listener->config.qpid_dispatch;
-            assert(qd);
-            qd_connection_manager_t *cm = qd_dispatch_connection_manager(qd);
-            assert(cm);
-            qd_config_ssl_profile_t *config_ssl_profile = qd_find_ssl_profile(cm, listener->config.ssl_profile);
-            if (!config_ssl_profile) {
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                       "HTTP2 listener %s unable to find ssl profile %s", listener->config.name, listener->config.ssl_profile);
-                break;
-            }
-
-            // set up the pn domain
-            ingress_http_conn->tls_domain = pn_tls_domain(PN_TLS_MODE_SERVER);
-            if (!ingress_http_conn->tls_domain) {
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                       "HTTP2 listener %s unable to create tls domain", listener->config.name);
-                break;
-            }
-
-            // configure pn domain
-            int res;
-            res = pn_tls_domain_set_credentials(ingress_http_conn->tls_domain,
-                                                config_ssl_profile->ssl_certificate_file,
-                                                config_ssl_profile->ssl_private_key_file,
-                                                config_ssl_profile->ssl_password);
-            if (res != 0) {
-                assert(false);
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                       "HTTP2 listener %s unable to set tls credentials (%d)", listener->config.name, res);
-                break;
-            }
-
-            res = pn_tls_domain_set_trusted_ca_db(ingress_http_conn->tls_domain,
-                                                  config_ssl_profile->ssl_trusted_certificate_db);
-            if (res != 0) {
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                       "HTTP2 listener %s unable to set tls trusted certificates (%d)", listener->config.name, res);
-                break;
-            }
-
-            res = pn_tls_domain_set_peer_authentication(ingress_http_conn->tls_domain,
-                                                        PN_TLS_ANONYMOUS_PEER,    // TODO: ???
-                                                        0);
-            if (res != 0) {
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                       "HTTP2 listener %s unable to set tls peer authentication (%d)", listener->config.name, res);
-                break;
-            }
-
-            if (!!config_ssl_profile->ssl_protocols) {
-                res = pn_tls_domain_set_protocols(ingress_http_conn->tls_domain,
-                                                  config_ssl_profile->ssl_protocols);
-                if (res != 0) {
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                        "HTTP2 listener %s unable to set tls protocols (%d)", listener->config.name, res);
-                    break;
-                }
-            }
-
-            if (!!config_ssl_profile->ssl_ciphers) {
-                res = pn_tls_domain_set_ciphers(ingress_http_conn->tls_domain,
-                                                config_ssl_profile->ssl_ciphers);
-                if (res != 0) {
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                        "HTTP2 listener %s unable to set tls ciphers (%d)", listener->config.name);
-                    break;
-                }
-            }
-
-            // set up tls session
-            ingress_http_conn->tls_session = pn_tls(ingress_http_conn->tls_domain,
-                                                    0,  // TODO What hostname?
-                                                    0);
-            if (!ingress_http_conn->tls_session) {
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                    "HTTP2 listener %s unable to create tls session", listener->config.name);
-                break;
-            }
-
-            ingress_http_conn->require_ssl = true;
-        } while (0);
-
-        // Handle tls creation/setup failure
-        if (!ingress_http_conn->require_ssl) {
-            if (ingress_http_conn->tls_domain) {
-                pn_tls_domain_free(ingress_http_conn->tls_domain);
-            }
-            if (ingress_http_conn->tls_session) {
-                pn_tls_free(ingress_http_conn->tls_session);
-            }
+        if (!connection_configure_tls(ingress_http_conn, true, &listener->config)) {
             free_qdr_http2_connection_t(ingress_http_conn);
             return 0;
         }
@@ -2521,6 +2548,14 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
 {
     qdr_http2_connection_t* egress_http_conn = new_qdr_http2_connection_t();
     ZERO(egress_http_conn);
+
+    if (connector->config.require_ssl) {
+        if (!connection_configure_tls(egress_http_conn, false, &connector->config)) {
+            free_qdr_http2_connection_t(egress_http_conn);
+            return 0;
+        }
+    }
+
     egress_http_conn->activate_timer = qd_timer(http2_adaptor->core->qd, egress_conn_timer_handler, egress_http_conn);
 
     egress_http_conn->ingress = false;
