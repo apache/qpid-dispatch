@@ -1385,7 +1385,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->cond             = sys_cond();
     DEQ_INIT(qd_server->conn_list);
 
-    qd_timer_initialize(qd_server->lock);
+    qd_timer_initialize();
 
     qd_server->pause_requests         = 0;
     qd_server->threads_paused         = 0;
