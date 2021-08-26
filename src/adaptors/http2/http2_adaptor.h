@@ -156,7 +156,7 @@ struct qdr_http2_connection_t {
     bool                      require_ssl;
     pn_tls_t                 *tls_session;
     pn_tls_domain_t          *tls_domain;
-    bool                      tls_needs_output_processing;
+    bool                      tls_has_output;
 
     DEQ_LINKS(qdr_http2_connection_t);
  };

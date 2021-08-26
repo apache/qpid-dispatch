@@ -1537,6 +1537,10 @@ static bool connection_configure_tls(qdr_http2_connection_t *conn,
             break;
         }
 
+        // client side needs to generate output immediately
+        conn->tls_has_output = !is_listener;
+
+        // tls configured successfully
         conn->require_ssl = true;
     } while (0);
 
