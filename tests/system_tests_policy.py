@@ -21,7 +21,6 @@ import unittest as unittest
 import os
 import json
 import re
-import signal
 import sys
 import time
 
@@ -1144,15 +1143,19 @@ class VhostPolicyFromRouterConfig(TestCase):
 
         # Attempt to connect to all allowed target addresses
         for target_addr in target_addr_list:
-            sender = SenderAddressValidator("%s/%s" % (self.address(), target_addr))
-            self.assertFalse(sender.link_error,
-                             msg="target address must be allowed, but it was not [%s]" % target_addr)
+            sender = SenderAddressValidator("%s/%s" % (self.address(),
+                                                       target_addr))
+            sender.run()
+            self.assertIsNone(sender.link_error,
+                              msg="target address must be allowed, but it was not [%s]" % target_addr)
 
         # Attempt to connect to all allowed source addresses
         for source_addr in source_addr_list:
-            receiver = ReceiverAddressValidator("%s/%s" % (self.address(), source_addr))
-            self.assertFalse(receiver.link_error,
-                             msg="source address must be allowed, but it was not [%s]" % source_addr)
+            receiver = ReceiverAddressValidator("%s/%s" % (self.address(),
+                                                           source_addr))
+            receiver.run()
+            self.assertIsNone(receiver.link_error,
+                              msg="source address must be allowed, but it was not [%s]" % source_addr)
 
     def test_vhost_denied_addresses(self):
         target_addr_list = ['addr', 'simpleaddress1', 'queue.user']
@@ -1160,15 +1163,19 @@ class VhostPolicyFromRouterConfig(TestCase):
 
         # Attempt to connect to all not allowed target addresses
         for target_addr in target_addr_list:
-            sender = SenderAddressValidator("%s/%s" % (self.address(), target_addr))
-            self.assertTrue(sender.link_error,
-                            msg="target address must not be allowed, but it was [%s]" % target_addr)
+            sender = SenderAddressValidator("%s/%s" % (self.address(),
+                                                       target_addr))
+            sender.run()
+            self.assertEqual(sender.link_error, "Link open failed",
+                             msg="target address must not be allowed, but it was [%s]" % target_addr)
 
         # Attempt to connect to all not allowed source addresses
         for source_addr in source_addr_list:
-            receiver = ReceiverAddressValidator("%s/%s" % (self.address(), source_addr))
-            self.assertTrue(receiver.link_error,
-                            msg="source address must not be allowed, but it was [%s]" % source_addr)
+            receiver = ReceiverAddressValidator("%s/%s" % (self.address(),
+                                                           source_addr))
+            receiver.run()
+            self.assertEqual(receiver.link_error, "Link open failed",
+                             msg="source address must not be allowed, but it was [%s]" % source_addr)
 
 
 class VhostPolicyConnLimit(TestCase):
@@ -1253,21 +1260,20 @@ class ClientAddressValidator(MessagingHandler):
     Base client class used to validate vhost policies through
     receiver or clients based on allowed target and source
     addresses.
-    Implementing classes must provide on_start() implementation
+    Implementing classes must provide start_client() implementation
     and create the respective sender or receiver.
     """
-    TIMEOUT = 3
-
     def __init__(self, url):
         super(ClientAddressValidator, self).__init__()
         self.url = Url(url)
-        self.container = Container(self)
-        self.link_error = False
-        self.container.run()
-        signal.signal(signal.SIGALRM, self.timeout)
-        signal.alarm(ClientAddressValidator.TIMEOUT)
+        self.link_error = None
 
-    def timeout(self, signum, frame):
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.container = event.container
+        self.start_client(event)
+
+    def timeout(self):
         """
         In case router crashes or something goes wrong and client
         is unable to connect, this method will be invoked and
@@ -1276,7 +1282,7 @@ class ClientAddressValidator(MessagingHandler):
         :param frame:
         :return:
         """
-        self.link_error = True
+        self.link_error = "Timed out waiting for client to connect"
         self.container.stop()
 
     def on_link_error(self, event):
@@ -1285,9 +1291,9 @@ class ClientAddressValidator(MessagingHandler):
         :param event:
         :return:
         """
-        self.link_error = True
+        self.link_error = "Link open failed"
         event.connection.close()
-        signal.alarm(0)
+        self.timer.cancel()
 
     def on_link_opened(self, event):
         """
@@ -1296,7 +1302,10 @@ class ClientAddressValidator(MessagingHandler):
         :return:
         """
         event.connection.close()
-        signal.alarm(0)
+        self.timer.cancel()
+
+    def run(self):
+        Container(self).run()
 
 
 class ReceiverAddressValidator(ClientAddressValidator):
@@ -1308,7 +1317,7 @@ class ReceiverAddressValidator(ClientAddressValidator):
     def __init__(self, url):
         super(ReceiverAddressValidator, self).__init__(url)
 
-    def on_start(self, event):
+    def start_client(self, event):
         """
         Creates the receiver.
         :param event:
@@ -1326,7 +1335,7 @@ class SenderAddressValidator(ClientAddressValidator):
     def __init__(self, url):
         super(SenderAddressValidator, self).__init__(url)
 
-    def on_start(self, event):
+    def start_client(self, event):
         """
         Creates the sender
         :param event:
