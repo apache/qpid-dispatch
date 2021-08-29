@@ -34,8 +34,8 @@ DESCRIPTION
 An AMQP management client for use with the Dispatch router daemon 
 ('qdrouterd'). Sends AMQP management operations requests and prints 
 the response in JSON format. This is a generic AMQP management tool 
-and can be used with any standard AMQP managed endpoint, not just 
-with 'qdrouterd'.
+and can be used with any AMQP endpoint that follows the AMQP Management
+specification, not just with 'qdrouterd'.
 
 OPTIONS
 -------
