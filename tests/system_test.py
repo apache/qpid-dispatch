@@ -229,6 +229,14 @@ def message(**properties):
     return m
 
 
+def skip_test_in_ci(environment_var):
+    env_var = os.environ.get(environment_var)
+    if env_var is not None:
+        if env_var.lower() in ['true', '1', 't', 'y', 'yes']:
+            return True
+    return False
+
+
 class Process(subprocess.Popen):
     """
     Popen that can be torn down at the end of a TestCase and stores its output.
