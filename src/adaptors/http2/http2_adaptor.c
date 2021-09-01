@@ -2236,6 +2236,53 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
 }
 
 
+static bool push_rx_buffer_to_nghttp2(qdr_http2_connection_t *conn, uint8_t *buf, size_t size)
+{
+    // send a buffer to nghttp2
+    // return true if error was detected and logged, and connection should close
+    qd_log(http2_adaptor->log_source, QD_LOG_DEBUG,
+           "[C%"PRIu64"] handle_incoming_http - Calling nghttp2_session_mem_recv"
+           "qd_http2_buffer of size %"PRIu32" ", conn->conn_id, size);
+    bool close_conn = false; // return result
+    int rv = nghttp2_session_mem_recv(conn->session_data->session, buf, size);
+    if (rv < 0) {
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+               "[C%"PRIu64"] Error in nghttp2_session_mem_recv rv=%i", conn->conn_id, rv);
+        if (rv == NGHTTP2_ERR_FLOODED) {
+            // Flooding was detected in this HTTP/2 session, and it must be closed.
+            // This is most likely caused by misbehavior of peer.
+            // If the client magic is bad, we need to close the connection.
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                   "[C%"PRIu64"] HTTP NGHTTP2_ERR_FLOODED", conn->conn_id);
+            nghttp2_submit_goaway(conn->session_data->session, 0, 0,
+                                  NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Protocol Error", 14);
+        }
+        else if (rv == NGHTTP2_ERR_CALLBACK_FAILURE) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                   "[C%"PRIu64"] HTTP NGHTTP2_ERR_CALLBACK_FAILURE", conn->conn_id);
+            nghttp2_submit_goaway(conn->session_data->session, 0, 0,
+                                  NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Internal Error", 14);
+        }
+        else if (rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                   "[C%"PRIu64"] HTTP2 NGHTTP2_ERR_BAD_CLIENT_MAGIC, closing connection", conn->conn_id);
+            nghttp2_submit_goaway(conn->session_data->session, 0, 0,
+                                  NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Bad Client Magic", 16);
+        }
+        else {
+            nghttp2_submit_goaway(conn->session_data->session, 0, 0,
+                                  NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Protocol Error", 14);
+        }
+        nghttp2_session_send(conn->session_data->session);
+
+        //
+        // An error was received from nghttp2, the connection needs to be closed.
+        //
+        close_conn = true;
+    }
+    return close_conn;
+}
+
 static int handle_incoming_http(qdr_http2_connection_t *conn)
 {
     //
@@ -2260,7 +2307,6 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
     size_t n;
     int count = 0;
-    int rv = 0;
 
     if (!conn->pn_raw_conn)
         return 0;
@@ -2273,41 +2319,54 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
             DEQ_REMOVE(conn->granted_read_buffs, buf);
             uint32_t raw_buff_size = raw_buffers[i].size;
             qd_http2_buffer_insert(buf, raw_buff_size);
-            count += raw_buff_size;
 
             if (raw_buff_size > 0 && !close_conn) {
-                qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] handle_incoming_http - Calling nghttp2_session_mem_recv qd_http2_buffer of size %"PRIu32" ", conn->conn_id, raw_buff_size);
-                rv = nghttp2_session_mem_recv(conn->session_data->session, qd_http2_buffer_base(buf), qd_http2_buffer_size(buf));
-                if (rv < 0) {
-                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] Error in nghttp2_session_mem_recv rv=%i", conn->conn_id, rv);
-                    if (rv == NGHTTP2_ERR_FLOODED) {
-                        // Flooding was detected in this HTTP/2 session, and it must be closed. This is most likely caused by misbehavior of peer.
-                        // If the client magic is bad, we need to close the connection.
-                        qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP NGHTTP2_ERR_FLOODED", conn->conn_id);
-                        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Protocol Error", 14);
-                    }
-                    else if (rv == NGHTTP2_ERR_CALLBACK_FAILURE) {
-                        qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP NGHTTP2_ERR_CALLBACK_FAILURE", conn->conn_id);
-                        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Internal Error", 14);
-                    }
-                    else if (rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
-                        qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] HTTP2 Protocol error, NGHTTP2_ERR_BAD_CLIENT_MAGIC, closing connection", conn->conn_id);
-                        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Bad Client Magic", 16);
-                    }
-                    else {
-                        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Protocol Error", 14);
-                    }
-                    nghttp2_session_send(conn->session_data->session);
+                if (!conn->tls_session) {
+                    // unencrypted
+                    count += raw_buff_size;
+                    close_conn |= push_rx_buffer_to_nghttp2(conn,
+                                                            qd_http2_buffer_base(buf),
+                                                            qd_http2_buffer_size(buf));
+                } else {
+                    // encrypted - decrypt now
+                    // allocate and bind an http2/raw buffer pair
+                    pn_raw_buffer_t decrypted_raw_buffer;
+                    qd_http2_buffer_t *decrypted_http2_buf = qd_http2_buffer();
+                    decrypted_raw_buffer.bytes = (char*) qd_http2_buffer_base(buf);
+                    decrypted_raw_buffer.capacity = qd_http2_buffer_capacity(buf);
+                    decrypted_raw_buffer.size = 0;
+                    decrypted_raw_buffer.offset = 0;
+                    decrypted_raw_buffer.context = (uintptr_t) decrypted_http2_buf;
 
-                    //
-                    // An error was received from nghttp2, the connection needs to be closed.
-                    //
-                    close_conn = true;
+                    // push one connection_raw buffer into decryptor
+                    size_t consumed = pn_tls_decrypt(conn->tls_session, &raw_buffers[i], 1);
+                    assert (consumed == 1);
+                    (void)consumed;   // prevent unused variable warning
+
+                    // pull one decrypted buffer from decryptor
+                    // TODO: Keep pulling until no more decrypted data
+                    size_t result = pn_tls_give_result_buffers(conn->tls_session, &decrypted_raw_buffer, 1);
+                    (void)result;  // TODO: handle weird result;
+
+                    size_t decrypted_count = pn_tls_decrypted_result(conn->tls_session, &decrypted_raw_buffer, 1);
+                    if (decrypted_count > 0) {
+                        count += decrypted_raw_buffer.size;
+                        close_conn |= push_rx_buffer_to_nghttp2(conn,
+                                                                (uint8_t*)decrypted_raw_buffer.bytes,
+                                                                decrypted_raw_buffer.size);
+                    } else {
+                        // No decrypted data received from tls decryptor
+                        // TODO: Get the decrypted_raw_buffer back from tls and free it.
+                        // HACK ALERT: This is a buffer leak as it stands now.
+                    }
+                    free_qd_http2_buffer_t(decrypted_http2_buf);
                 }
             }
             free_qd_http2_buffer_t(buf);
         }
     }
+    // TLS input can generate non-application output.  Note that here.
+    conn->tls_has_output = pn_tls_encrypted_pending(conn->tls_session) > 0;
 
     if (close_conn) {
         pn_raw_connection_close(conn->pn_raw_conn);
