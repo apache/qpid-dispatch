@@ -51,7 +51,7 @@ listener {
 }
 ----
 `host`:: The IP address (IPv4 or IPv6) or hostname on which the router will listen.
-`port`:: The port number or symbolic service name on which the router will listen.
+`port`:: The port number or symbolic service name, defined in `/etc/services`, on which the router will listen.
 `role`:: The role of the connection. Specify `normal` to indicate that this connection is used for message delivery for AMQP clients.
 `failoverUrls` (optional):: A comma-separated list of backup URLs the client can use to reconnect if the established connection is lost. Each URL must use the following form:
 +
