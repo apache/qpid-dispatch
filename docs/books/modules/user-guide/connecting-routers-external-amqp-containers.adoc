@@ -52,7 +52,7 @@ connector {
 ----
 `name`:: The name of the `connector`. Specify a name that describes the entity to which the router will connect.
 `host`:: The IP address (IPv4 or IPv6) or hostname to which the router will connect.
-`port`:: The port number or symbolic service name to which the router will connect.
+`port`:: The port number or symbolic service name, defined in `/etc/services`, to which the router will connect.
 `role`:: The role of the connection. Specify `route-container` to indicate that this connection is for an AMQP container that holds known addresses.
 --
 

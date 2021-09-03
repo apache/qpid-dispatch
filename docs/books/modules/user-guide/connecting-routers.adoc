@@ -60,7 +60,7 @@ connector {
 ----
 
 `host`:: The IP address (IPv4 or IPv6) or hostname on which the router will connect.
-`port`:: The port number or symbolic service name on which the router will connect.
+`port`:: The port number or symbolic service name, defined in `/etc/services`, on which the router will connect.
 `role`:: The role of the connection. If the connection is between two interior routers, specify `inter-router`. If the connection is between an interior router and an edge router, specify `edge`.
 --
 
@@ -80,7 +80,7 @@ listener {
 ----
 
 `host`:: The IP address (IPv4 or IPv6) or hostname on which the router will listen.
-`port`:: The port number or symbolic service name on which the router will listen.
+`port`:: The port number or symbolic service name, defined in `/etc/services`, on which the router will listen.
 `role`:: The role of the connection. If the connection is between two interior routers, specify `inter-router`. If the connection is between an interior router and an edge router, specify `edge`.
 --
 
