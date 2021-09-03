@@ -317,7 +317,9 @@ static size_t write_buffers(qdr_http2_connection_t *conn)
 
     int i = 0;
     int total_bytes = 0;
-    while (i < num_buffs && qd_http2_buff != 0) {
+
+    while (i < num_buffs) {
+        assert (qd_http2_buff != 0);
         raw_buffers[i].bytes = (char *)qd_http2_buffer_base(qd_http2_buff);
         size_t buffer_size = qd_http2_buffer_size(qd_http2_buff);
         raw_buffers[i].capacity = buffer_size;
@@ -328,17 +330,12 @@ static size_t write_buffers(qdr_http2_connection_t *conn)
         DEQ_REMOVE_HEAD(conn->buffs);
         qd_http2_buff = DEQ_HEAD(conn->buffs);
         i ++;
-
     }
 
-    if (i >0) {
-        size_t num_buffers_written = pn_raw_connection_write_buffers(conn->pn_raw_conn, raw_buffers, num_buffs);
-        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Written %zu buffer(s) and %i bytes in write_buffers() using pn_raw_connection_write_buffers()", conn->conn_id, num_buffers_written, total_bytes);
-        assert(num_buffs == num_buffers_written);
-        return num_buffers_written;
-    }
-
-    return 0;
+    size_t num_buffers_written = pn_raw_connection_write_buffers(conn->pn_raw_conn, raw_buffers, num_buffs);
+    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Written %zu buffer(s) and %i bytes in write_buffers() using pn_raw_connection_write_buffers()", conn->conn_id, num_buffers_written, total_bytes);
+    assert(num_buffs == num_buffers_written);
+    return num_buffers_written;
 }
 
 
@@ -604,6 +601,11 @@ static int send_data_callback(nghttp2_session *session,
     if (length) {
         qd_http2_buffer_t *tail_buff = qd_http2_buffer_list_append(&(conn->buffs), framehd, HTTP2_DATA_FRAME_HEADER_LENGTH);
         size_t tail_buff_capacity = qd_http2_buffer_capacity(tail_buff);
+        if (tail_buff_capacity == 0) {
+            tail_buff = qd_http2_buffer();
+            DEQ_INSERT_TAIL(conn->buffs, tail_buff);
+            tail_buff_capacity = qd_http2_buffer_capacity(tail_buff);
+        }
         size_t bytes_to_write = length;
         while (bytes_to_write > 0) {
             uint32_t octets_remaining = qd_iterator_remaining(stream_data->curr_stream_data_iter);
