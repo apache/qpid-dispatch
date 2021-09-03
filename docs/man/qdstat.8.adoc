@@ -643,7 +643,7 @@ A list of source addresses from which users in this group may receive messages.
 To specify multiple addresses, separate the addresses with either a comma or
 a space. If you do not specify any addresses, users in this group are not
 allowed to receive messages from any addresses. You can use the substitution
-token '${user}' to specify an address that contains a user's authenticated
+token `${user}` to specify an address that contains a user's authenticated
 user name. You can use an 'asterisk \*' wildcard to match one or more
 characters in an address. However, this wildcard is only recognized if
 it is the last character in the address name. You may specify attributes
@@ -654,7 +654,7 @@ A list of target addresses to which users in this group may send messages.
 To specify multiple addresses, separate the addresses with either a comma or
 a space. If you do not specify any addresses, users in this group are not
 allowed to send messages to any addresses. You can use the substitution
-token '${user}' to specify an address that contains a user's authenticated
+token `${user}` to specify an address that contains a user's authenticated
 user name. You can use an 'asterisk \*' wildcard to match one or more
 characters in an address. However, this wildcard is only recognized if it
 is the last character in the address name. You may specify attributes
@@ -669,7 +669,7 @@ that do not include '/', 'asterisk \*', or 'hash \#'.  The 'asterisk \*' token m
 The 'hash \#' token matches zero or more tokens. 'asterisk \*' has higher precedence than 'hash \#',
 and exact match has the highest precedence. To specify multiple addresses,
 separate the addresses with either a comma or a space. You can use the
-text string '${user}' in a token to specify an address that contains a
+text string `${user}` in a token to specify an address that contains a
 user's authenticated user name. If you do not specify any addresses then
 users in this group are not allowed to receive messages from any addresses.
 You may specify attributes 'sources' or 'sourcePattern' but not both at
@@ -684,7 +684,7 @@ include "/", 'asterisk \*', or 'hash \#'.  The 'asterisk \*' token matches any s
 token matches zero or more tokens. 'asterisk \*' has higher precedence than 'hash \#',
 and exact match has the highest precedence. To specify multiple addresses,
 separate the addresses with either a comma or a space. You can use the
-text string '${user}' in a token to specify an address that contains a
+text string `${user}` in a token to specify an address that contains a
 user's authenticated user name. If you do not specify any addresses then
 users in this group are not allowed to send messages to any addresses.
 You may specify attributes 'targets' or 'targetPattern' but not both at
