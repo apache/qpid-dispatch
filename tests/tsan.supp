@@ -79,6 +79,9 @@ race:qdr_delivery_mcast_outbound_disposition_CT
 # DISPATCH-2157
 race:^qd_message_send$
 
+# DISPATCH-2245
+race:^qdr_link_process_deliveries$
+
 #
 # External libraries
 #
