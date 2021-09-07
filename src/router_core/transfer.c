@@ -300,16 +300,15 @@ void qdr_link_complete_sent_message(qdr_core_t *core, qdr_link_t *link)
     if (!!dlv && qdr_delivery_send_complete(dlv)) {
         DEQ_REMOVE_HEAD(link->undelivered);
         if (dlv->link_work) {
-            assert(dlv->link_work == link->work_list.head);
+            // ensure deliveries are sent in order:
+            assert(dlv->link_work == DEQ_HEAD(link->work_list));
             assert(dlv->link_work->value > 0);
-            dlv->link_work->value -= 1;
-
-            if (dlv->link_work->value == 0) {
+            if (--dlv->link_work->value == 0) {
                 DEQ_REMOVE_HEAD(link->work_list);
                 qdr_link_work_release(dlv->link_work);  // for work_list ref
-                qdr_link_work_release(dlv->link_work);  // for dlv ref
-                dlv->link_work = 0;
             }
+            qdr_link_work_release(dlv->link_work);  // for dlv ref
+            dlv->link_work = 0;
         }
 
         if (!dlv->settled && !qdr_delivery_oversize(dlv) && !qdr_delivery_is_aborted(dlv)) {
