@@ -229,13 +229,12 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
             // has no other deliveries associated with it, it can be removed
             // from the work list.
             //
-            assert(dlv->link_work);
-            if (dlv->link_work && (--dlv->link_work->value == 0)) {
+            if (--dlv->link_work->value == 0) {
                 DEQ_REMOVE(link->work_list, dlv->link_work);
                 qdr_link_work_release(dlv->link_work); // for work_list
-                qdr_link_work_release(dlv->link_work); // for dlv ref
-                dlv->link_work = 0;
             }
+            qdr_link_work_release(dlv->link_work); // for dlv ref
+            dlv->link_work = 0;
             dlv->disposition = PN_RELEASED;
             qdr_delivery_decref_CT(core, dlv, "qdr_forward_drop_presettled_CT_LH - remove from link-work list");
 
