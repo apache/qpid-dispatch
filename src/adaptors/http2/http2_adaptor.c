@@ -609,7 +609,6 @@ static int send_data_callback(nghttp2_session *session,
         size_t bytes_to_write = length;
         while (bytes_to_write > 0) {
             uint32_t octets_remaining = qd_iterator_remaining(stream_data->curr_stream_data_iter);
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] send_data_callback octets_remaining=%"PRId32", tail_buff_capacity=%zu, bytes_to_write==%zu", conn->conn_id, stream_data->stream_id, octets_remaining, tail_buff_capacity, bytes_to_write);
             size_t len = MIN(tail_buff_capacity, bytes_to_write);
             len = MIN(len, octets_remaining);
             int copied = qd_iterator_ncopy(stream_data->curr_stream_data_iter, qd_http2_buffer_cursor(tail_buff), len);
