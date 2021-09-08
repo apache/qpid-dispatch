@@ -331,12 +331,7 @@ class TcpAdaptor(TestCase):
         # Write a dummy log line for scraper.
         cls.logger.log("SERVER (info) Container Name: TCP_TEST")
 
-        # Allocate echo server ports first
-        for rtr in cls.router_order:
-            cls.tcp_server_listener_ports[rtr] = cls.tester.get_port()
-
-        # start echo servers immediately after the echo server
-        # ports are assigned.
+        # Start echo servers first, store their listening port numbers
         parent_path = os.path.dirname(os.getcwd())
         for rtr in cls.router_order:
             test_name = "TcpAdaptor"
@@ -347,12 +342,12 @@ class TcpAdaptor(TestCase):
                                    ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor_echo_server_%s.log" % rtr))
             cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
             server = TcpEchoServer(prefix=server_prefix,
-                                   port=cls.tcp_server_listener_ports[rtr],
+                                   port=0,
                                    logger=server_logger)
             assert server.is_running
+            cls.tcp_server_listener_ports[rtr] = server.port
             cls.echo_servers[rtr] = server
 
-        cls.EC2_conn_stall_connector_port = cls.tester.get_port()
         # start special naughty servers that misbehave on purpose
         server_prefix = "ECHO_SERVER TcpAdaptor NS_EC2_CONN_STALL"
         server_logger = Logger(title="TcpAdaptor",
@@ -361,10 +356,11 @@ class TcpAdaptor(TestCase):
                                ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor_echo_server_NS_CONN_STALL.log"))
         cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
         server = TcpEchoServer(prefix=server_prefix,
-                               port=cls.EC2_conn_stall_connector_port,
+                               port=0,
                                logger=server_logger,
                                conn_stall=Q2_DELAY_SECONDS)
         assert server.is_running
+        cls.EC2_conn_stall_connector_port = server.port
         cls.echo_server_NS_CONN_STALL = server
 
         # Allocate a sea of router ports
@@ -992,8 +988,6 @@ class TcpAdaptorManagementTest(TestCase):
         if DISABLE_SELECTOR_TESTS:
             return
 
-        cls.tcp_server_port = cls.tester.get_port()
-        cls.tcp_listener_port = cls.tester.get_port()
         cls.test_name = 'TCPMgmtTest'
 
         # Here we have a simple barebones standalone router config.
@@ -1015,10 +1009,13 @@ class TcpAdaptorManagementTest(TestCase):
                             save_for_dump=False,
                             ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor_echo_server.log"))
         cls.echo_server = TcpEchoServer(prefix=server_prefix,
-                                        port=cls.tcp_server_port,
+                                        port=0,
                                         logger=cls.logger)
         # The router and the echo server are running at this point.
         assert cls.echo_server.is_running
+
+        cls.tcp_server_port = cls.echo_server.port
+        cls.tcp_listener_port = cls.tester.get_port()
 
     @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_01_mgmt(self):
