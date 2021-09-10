@@ -673,6 +673,8 @@ struct qdr_connection_t {
     qdr_core_t                 *core;
     bool                        incoming;
     bool                        in_activate_list;
+    bool                        closed; // This bit is used in the case where a client is trying to force close this connection.
+    uint8_t                     next_pri;  // for incoming inter-router data links
     qdr_connection_role_t       role;
     int                         inter_router_cost;
     qdr_conn_identifier_t      *conn_id;
@@ -693,7 +695,6 @@ struct qdr_connection_t {
     qdr_conn_oper_status_t      oper_status;
     qdr_conn_admin_status_t     admin_status;
     qdr_error_t                *error;
-    bool                        closed; // This bit is used in the case where a client is trying to force close this connection.
     uint32_t                    conn_uptime; // Timestamp which can be used to calculate the number of seconds this connection has been up and running.
     uint32_t                    last_delivery_time; // Timestamp which can be used to calculate the number of seconds since the last delivery arrived on this connection.
     bool                        enable_protocol_trace; // Has trace level logging been turned on for this connection.
@@ -1010,7 +1011,8 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
                                qd_direction_t     dir,
                                qdr_terminus_t    *source,
                                qdr_terminus_t    *target,
-                               qd_session_class_t ssn_class);
+                               qd_session_class_t ssn_class,
+                               uint8_t priority);
 
 void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition, bool close);
 void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);

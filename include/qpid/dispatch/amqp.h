@@ -218,4 +218,11 @@ extern const char * const QD_AMQP_COND_MESSAGE_SIZE_EXCEEDED;
 #define QD_AMQP_LINK_ROLE_RECEIVER true
 /// @};
 
+/** @name AMQP Message priority. */
+/// @{
+#define QDR_N_PRIORITIES     10
+#define QDR_MAX_PRIORITY     (QDR_N_PRIORITIES - 1)
+#define QDR_DEFAULT_PRIORITY  4
+/// @};
+
 #endif

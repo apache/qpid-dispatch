@@ -1037,7 +1037,8 @@ void qdr_forward_link_direct_CT(qdr_core_t       *core,
     out_link->zero_credit_time = core->uptime_ticks;
     out_link->strip_annotations_in  = conn->strip_annotations_in;
     out_link->strip_annotations_out = conn->strip_annotations_out;
-    
+    out_link->priority       = in_link->priority;
+
     if (strip) {
         out_link->strip_prefix = strip;
     }

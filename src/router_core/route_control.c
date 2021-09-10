@@ -257,7 +257,7 @@ static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr
             } else
                 qdr_terminus_set_address(term, &key[2]); // truncate the "Mp" annotation (where p = phase)
             al->link = qdr_create_link_CT(core, conn, QD_LINK_ENDPOINT, al->dir, source, target,
-                                          QD_SSN_ENDPOINT);
+                                          QD_SSN_ENDPOINT, QDR_DEFAULT_PRIORITY);
             al->link->auto_link = al;
             al->link->phase     = al->phase;
             al->link->fallback  = al->fallback;
