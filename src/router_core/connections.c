@@ -618,6 +618,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->zero_credit_time = conn->core->uptime_ticks;
     link->terminus_survives_disconnect = qdr_terminus_survives_disconnect(local_terminus);
     link->no_route = no_route;
+    link->priority = QDR_DEFAULT_PRIORITY;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -630,9 +631,10 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
         tsan_reset_delivery_ids(initial_delivery, link->conn->identity, link->identity);
     }
 
-    if      (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_CONTROL))
+    if      (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_CONTROL)) {
         link->link_type = QD_LINK_CONTROL;
-    else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_DATA))
+        link->priority = QDR_MAX_PRIORITY;
+    } else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_DATA))
         link->link_type = QD_LINK_ROUTER;
     else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_EDGE_DOWNLINK)) {
         if (conn->core->router_mode == QD_ROUTER_MODE_INTERIOR &&
@@ -1120,7 +1122,8 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
                                qd_direction_t     dir,
                                qdr_terminus_t    *source,
                                qdr_terminus_t    *target,
-                               qd_session_class_t ssn_class)
+                               qd_session_class_t ssn_class,
+                               uint8_t            priority)
 {
     //
     // Create a new link, initiated by the router core.  This will involve issuing a first-attach outbound.
@@ -1148,6 +1151,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
     link->attach_count   = 1;
     link->core_ticks     = core->uptime_ticks;
     link->zero_credit_time = core->uptime_ticks;
+    link->priority       = priority;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -1407,15 +1411,23 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
                 // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for
                 // routed-message transfer.
                 //
-                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control(), QD_SSN_ROUTER_CONTROL);
-                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control(), QD_SSN_ROUTER_CONTROL);
+                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING,
+                                          qdr_terminus_router_control(), qdr_terminus_router_control(),
+                                          QD_SSN_ROUTER_CONTROL, QDR_MAX_PRIORITY);
+                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING,
+                                          qdr_terminus_router_control(), qdr_terminus_router_control(),
+                                          QD_SSN_ROUTER_CONTROL, QDR_MAX_PRIORITY);
                 STATIC_ASSERT((QD_SSN_ROUTER_DATA_PRI_9 - QD_SSN_ROUTER_DATA_PRI_0 + 1) == QDR_N_PRIORITIES, PRIORITY_SESSION_NOT_SAME);
 
                 for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
                     // a session is reserved for each priority link
                     qd_session_class_t sc = (qd_session_class_t)(QD_SSN_ROUTER_DATA_PRI_0 + priority);
-                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data(), sc);
-                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data(), sc);
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER, QD_INCOMING,
+                                              qdr_terminus_router_data(), qdr_terminus_router_data(),
+                                              sc, priority);
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING,
+                                              qdr_terminus_router_data(), qdr_terminus_router_data(),
+                                              sc, priority);
                 }
             }
         }
@@ -1462,12 +1474,12 @@ qdr_link_t *qdr_connection_new_streaming_link_CT(qdr_core_t *core, qdr_connectio
     case QDR_ROLE_INTER_ROUTER:
         out_link = qdr_create_link_CT(core, conn, QD_LINK_ROUTER, QD_OUTGOING,
                                       qdr_terminus_router_data(), qdr_terminus_router_data(),
-                                      QD_SSN_LINK_STREAMING);
+                                      QD_SSN_LINK_STREAMING, QDR_DEFAULT_PRIORITY);
         break;
     case QDR_ROLE_EDGE_CONNECTION:
         out_link = qdr_create_link_CT(core, conn, QD_LINK_ENDPOINT, QD_OUTGOING,
                                       qdr_terminus(0), qdr_terminus(0),
-                                      QD_SSN_LINK_STREAMING);
+                                      QD_SSN_LINK_STREAMING, QDR_DEFAULT_PRIORITY);
         break;
     default:
         assert(false);
@@ -1599,14 +1611,20 @@ static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     assert(link->link_type == QD_LINK_ROUTER);
-    // The first QDR_N_PRIORITIES (10) QDR_LINK_ROUTER links to attach over the
-    // connection are the shared priority links.  These links are attached in
-    // priority order starting at zero.
-    int next_pri = core->data_links_by_mask_bit[conn->mask_bit].count;
-    if (next_pri < QDR_N_PRIORITIES) {
-        link->priority = next_pri;
-        core->data_links_by_mask_bit[conn->mask_bit].links[next_pri] = link;
-        core->data_links_by_mask_bit[conn->mask_bit].count += 1;
+    // The first 2 x QDR_N_PRIORITIES (10) QDR_LINK_ROUTER links to attach over
+    // the inter-router connection are the shared priority links.  These links
+    // are attached in priority order starting at zero.
+    if (link->link_direction == QD_OUTGOING) {
+        int next_pri = core->data_links_by_mask_bit[conn->mask_bit].count;
+        if (next_pri < QDR_N_PRIORITIES) {
+            link->priority = next_pri;
+            core->data_links_by_mask_bit[conn->mask_bit].links[next_pri] = link;
+            core->data_links_by_mask_bit[conn->mask_bit].count += 1;
+        }
+    } else {
+        if (conn->next_pri < QDR_N_PRIORITIES) {
+            link->priority = conn->next_pri++;
+        }
     }
 }
 
@@ -1792,8 +1810,10 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             break;
         }
 
-        case QD_LINK_CONTROL:
         case QD_LINK_ROUTER:
+            qdr_attach_link_data_CT(core, conn, link);
+            // fall-through:
+        case QD_LINK_CONTROL:
             qdr_link_outbound_second_attach_CT(core, link, source, target);
             qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
@@ -1918,8 +1938,10 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                 qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
 
-        case QD_LINK_CONTROL:
         case QD_LINK_ROUTER:
+            qdr_attach_link_data_CT(core, conn, link);
+            // fall-through
+        case QD_LINK_CONTROL:
             qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
 

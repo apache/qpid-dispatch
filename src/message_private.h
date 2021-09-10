@@ -179,10 +179,6 @@ ALLOC_DECLARE(qd_message_content_t);
 /** Initialize logging */
 void qd_message_initialize();
 
-#define QDR_N_PRIORITIES     10
-#define QDR_MAX_PRIORITY     (QDR_N_PRIORITIES - 1)
-#define QDR_DEFAULT_PRIORITY  4
-
 // These expect content->lock to be locked.
 bool _Q2_holdoff_should_block_LH(const qd_message_content_t *content);
 bool _Q2_holdoff_should_unblock_LH(const qd_message_content_t *content);
