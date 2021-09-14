@@ -26,7 +26,8 @@ import socket
 import sys
 import time
 import traceback
-from threading import Thread
+from threading import Condition, Thread
+from typing import Union
 
 from system_test import Logger
 from system_test import TIMEOUT
@@ -81,7 +82,7 @@ def split_chunk_for_display(raw_bytes):
 
 class TcpEchoServer:
 
-    def __init__(self, prefix="ECHO_SERVER", port="0", echo_count=0, timeout=0.0, logger=None,
+    def __init__(self, prefix="ECHO_SERVER", port: Union[str, int] = "0", echo_count=0, timeout=0.0, logger=None,
                  conn_stall=0.0, close_on_conn=False, close_on_data=False):
         """
         Start echo server in separate thread
@@ -104,12 +105,29 @@ class TcpEchoServer:
         self.close_on_data = close_on_data
         self.keep_running = True
         self.HOST = '127.0.0.1'
-        self.is_running = False
+        self._cv = Condition()
+        self._is_running = None
         self.exit_status = None
         self.error = None
         self._thread = Thread(target=self.run)
         self._thread.daemon = True
         self._thread.start()
+
+    @property
+    def is_running(self):
+        with self._cv:
+            self._cv.wait_for(lambda: self._is_running is not None, timeout=10)
+            return self._is_running
+
+    @is_running.setter
+    def is_running(self, value):
+        with self._cv:
+            self._is_running = value
+            self._cv.notify_all()
+
+    def get_listening_port(self) -> int:
+        address, port, *_ = self.sock.getsockname()
+        return port
 
     def run(self):
         """
@@ -122,7 +140,6 @@ class TcpEchoServer:
         """
         try:
             # set up spontaneous exit settings
-            self.is_running = True
             start_time = time.time()
             total_echoed = 0
 
@@ -131,6 +148,8 @@ class TcpEchoServer:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.sock.bind((self.HOST, self.port))
                 self.sock.listen()
+                if self.port == 0:
+                    self.port = self.get_listening_port()
                 self.sock.setblocking(False)
                 self.logger.log('%s Listening on host:%s, port:%s' % (self.prefix, self.HOST, self.port))
             except Exception:
@@ -138,6 +157,9 @@ class TcpEchoServer:
                               (self.prefix, self.HOST, self.port, traceback.format_exc()))
                 self.logger.log(self.error)
                 return 1
+
+            # notify whoever is waiting on the condition variable for this
+            self.is_running = True
 
             # set up selector
             sel = selectors.DefaultSelector()
