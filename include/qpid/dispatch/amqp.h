@@ -176,6 +176,7 @@ extern const char * const QD_CONNECTION_PROPERTY_TCP_ADAPTOR_VALUE;
 /// @{
 extern const char * const QD_TERMINUS_EDGE_ADDRESS_TRACKING;
 extern const char * const QD_TERMINUS_ADDRESS_LOOKUP;
+extern const char * const QD_TERMINUS_HEARTBEAT;
 /// @}
 
 /** @name AMQP error codes. */

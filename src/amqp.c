@@ -70,6 +70,7 @@ const char * const QD_CONNECTION_PROPERTY_TCP_ADAPTOR_VALUE     = "tcp";
 
 const char * const QD_TERMINUS_EDGE_ADDRESS_TRACKING = "_$qd.edge_addr_tracking";
 const char * const QD_TERMINUS_ADDRESS_LOOKUP        = "_$qd.addr_lookup";
+const char * const QD_TERMINUS_HEARTBEAT             = "_$qd.edge_heartbeat";
 
 const qd_amqp_error_t QD_AMQP_OK = { 200, "OK" };
 const qd_amqp_error_t QD_AMQP_CREATED = { 201, "Created" };

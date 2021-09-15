@@ -1032,7 +1032,7 @@ void qdr_modules_finalize(qdr_core_t *core);
 void qdr_adaptors_finalize(qdr_core_t *core);
 
 /**
- * Create a new timer which will only be used inside the code thread.
+ * Create a new timer which will only be used inside the core thread.
  *
  * @param core Pointer to the core object returned by qd_core()
  * @callback Callback function to be invoked when timer fires.

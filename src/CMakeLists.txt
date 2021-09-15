@@ -110,6 +110,8 @@ set(qpid_dispatch_SOURCES
   router_core/modules/edge_addr_tracking/edge_addr_tracking.c
   router_core/modules/address_lookup_server/address_lookup_server.c
   router_core/modules/address_lookup_client/lookup_client.c
+  router_core/modules/heartbeat_edge/heartbeat_edge.c
+  router_core/modules/heartbeat_server/heartbeat_server.c
   router_core/modules/stuck_delivery_detection/delivery_tracker.c
   router_core/modules/mobile_sync/mobile.c
   router_core/modules/streaming_link_scrubber/streaming_link_scrubber.c
