@@ -472,29 +472,12 @@ void qd_compose_insert_string2(qd_composed_field_t *field, const char *value1, c
 
 void qd_compose_insert_string_iterator(qd_composed_field_t *field, qd_iterator_t *iter)
 {
-    uint32_t len = 0;
-
     qd_iterator_reset(iter);
-    while (!qd_iterator_end(iter)) {
-        qd_iterator_octet(iter);
-        len++;
-    }
 
-    qd_iterator_reset(iter);
-    if (len < 256) {
-        qd_insert_8(field, QD_AMQP_STR8_UTF8);
-        qd_insert_8(field, (uint8_t) len);
-    } else {
-        qd_insert_8(field, QD_AMQP_STR32_UTF8);
-        qd_insert_32(field, len);
-    }
-
-    while (!qd_iterator_end(iter)) {
-        uint8_t octet = qd_iterator_octet(iter);
-        qd_insert_8(field, octet);
-    }
-
-    bump_count(field);
+    char *as_str = (char *)qd_iterator_copy(iter);
+    const uint32_t len = as_str ? strlen(as_str) : 0;
+    qd_compose_insert_string_n(field, as_str, len);
+    free(as_str);
 }
 
 
