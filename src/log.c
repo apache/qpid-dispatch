@@ -143,7 +143,7 @@ static void log_sink_decref(const log_sink_t *sink) {
     if (!sink) return;
     sys_mutex_lock(log_sinks_lock);
     assert(sink->ref_count);
-    fprintf(stdout, "log_sink_decref: %s %d\n", sink->name, sink->ref_count);
+    fprintf( stdout, "log_sink_decref: %s %d\n", sink->name, sink->ref_count);
 
     log_sink_t *mutable_sink = (log_sink_t *)sink;
 
