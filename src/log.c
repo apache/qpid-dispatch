@@ -143,7 +143,6 @@ static void log_sink_decref(const log_sink_t *sink) {
     if (!sink) return;
     sys_mutex_lock(log_sinks_lock);
     assert(sink->ref_count);
-    fprintf( stdout, "log_sink_decref: %s %d\n", sink->name, sink->ref_count);
 
     log_sink_t *mutable_sink = (log_sink_t *)sink;
 
@@ -387,7 +386,6 @@ static void qd_log_source_defaults(qd_log_source_t *src) {
     src->mask = -1;
     src->includeTimestamp = -1;
     src->includeSource = -1;
-    fprintf(stdout, "qd_log_source_defaults calls log_sink_decref\n");
     log_sink_decref(src->sink);
     src->sink = 0;
     memset ( src->severity_histogram, 0, sizeof(uint64_t) * (N_LEVEL_INDICES) );
@@ -413,7 +411,6 @@ qd_log_source_t *qd_log_source_reset(const char *module)
 // This is called only during finalize, which does not hold locks.
 static void qd_log_source_free(qd_log_source_t *src) {
     DEQ_REMOVE(source_list, src);
-    fprintf(stdout, "qd_log_source_free calls log_sink_decref\n");
     log_sink_decref(src->sink);
     free(src->module);
     free(src->lock);
@@ -570,10 +567,8 @@ void qd_log_finalize(void) {
         qd_log_source_free(DEQ_HEAD(source_list));
     while (DEQ_HEAD(entries))
         qd_log_entry_free_lh(DEQ_HEAD(entries));
-    while (DEQ_HEAD(sink_list)) {
-        fprintf(stdout, "qd_log_finalize calls log_sink_decref\n");
+    while (DEQ_HEAD(sink_list))
         log_sink_decref(DEQ_HEAD(sink_list));
-    }
     default_log_source = NULL;  // stale value would misconfigure new router started again in the same process
 }
 
@@ -655,7 +650,6 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             }
 
             // DEFAULT source may already have a sink, so free the old sink first
-            fprintf(stdout, "qd_log_entity calls log_sink_decref\n");
             log_sink_decref(log_source->sink);
 
             // Assign the new sink
