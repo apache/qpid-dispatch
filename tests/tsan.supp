@@ -50,7 +50,7 @@ race:qdr_record_link_credit
 race:qdr_process_tick_CT
 
 # DISPATCH-2133 (harmless)
-race:qd_log_enabled
+#race:qd_log_enabled
 
 # DISPATCH-2134
 race:qdr_link_process_initial_delivery_CT
