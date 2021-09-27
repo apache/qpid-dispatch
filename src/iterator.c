@@ -287,6 +287,15 @@ static void view_initialize(qd_iterator_t *iter)
         return;
 
     //
+    // ITERN_VIEW_NODE_HASH has no scheme or leading slash - see iterator.h
+    // Do not walk the entire iterator trying to find one.
+    //
+    if (iter->view == ITER_VIEW_NODE_HASH) {
+        parse_node_view(iter);
+        return;
+    }
+
+    //
     // Advance to the node-id.
     //
     state_t               state = STATE_START;
@@ -365,11 +374,6 @@ static void view_initialize(qd_iterator_t *iter)
         parse_address_view(iter);
         if (iter->view == ITER_VIEW_ADDRESS_WITH_SPACE)
             adjust_address_with_space(iter);
-        return;
-    }
-
-    if (iter->view == ITER_VIEW_NODE_HASH) {
-        parse_node_view(iter);
         return;
     }
 }
