@@ -534,6 +534,26 @@ static inline bool iterator_field_equal(qd_iterator_t *iter, const unsigned char
 }
 
 
+// fast view-agnostic copy: copy out up to n bytes from the current location in
+// the iterator view, advance cursor
+//
+static inline size_t iterator_view_copy(qd_iterator_t *iter, uint8_t *buffer, size_t n)
+{
+    int i = 0;
+
+    assert(iter);
+
+    while (i < n && !iterator_at_end(iter)) {
+        if (!in_field_data(iter)) {
+            buffer[i++] = qd_iterator_octet(iter);
+        } else {
+            i += iterator_field_ncopy(iter, &buffer[i], n - i);
+            break;
+        }
+    }
+    return i;
+}
+
 static void qd_iterator_free_hash_segments(qd_iterator_t *iter)
 {
     qd_hash_segment_t *seg = DEQ_HEAD(iter->hash_segments);
@@ -945,22 +965,21 @@ int qd_iterator_length(const qd_iterator_t *iter)
 }
 
 
-int qd_iterator_ncopy(qd_iterator_t *iter, unsigned char* buffer, int n)
+size_t qd_iterator_ncopy(qd_iterator_t *iter, unsigned char* buffer, size_t n)
 {
     if (!iter)
         return 0;
 
     qd_iterator_reset(iter);
-    int i = 0;
-    while (i < n && !iterator_at_end(iter)) {
-        if (!in_field_data(iter)) {
-            buffer[i++] = qd_iterator_octet(iter);
-        } else {
-            i += iterator_field_ncopy(iter, &buffer[i], n - i);
-            break;
-        }
-    }
-    return i;
+    return iterator_view_copy(iter, (uint8_t *) buffer, n);
+}
+
+
+size_t qd_iterator_ncopy_octets(qd_iterator_t *iter, uint8_t *buffer, size_t n)
+{
+    if (!iter)
+        return 0;
+    return iterator_view_copy(iter, (uint8_t *) buffer, n);
 }
 
 
@@ -1051,10 +1070,14 @@ static void qd_insert_hash_segment(qd_iterator_t *iter, uint32_t *hash, int segm
 uint32_t qd_iterator_hash_view(qd_iterator_t *iter)
 {
     uint32_t hash = HASH_INIT;
+    uint8_t buffer[64];
 
     qd_iterator_reset(iter);
-    while (!iterator_at_end(iter))
-        hash = HASH_COMPUTE(hash, qd_iterator_octet(iter));
+    while (!iterator_at_end(iter)) {
+        size_t count = iterator_view_copy(iter, buffer, sizeof(buffer));
+        for (int i = 0; i < count; ++i)
+            hash = HASH_COMPUTE(hash, buffer[i]);
+    }
 
     return hash;
 }

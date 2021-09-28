@@ -1113,6 +1113,35 @@ static char *test_prefix_hash_with_space(void *context)
 }
 
 
+static char *test_iterator_copy_octet(void *context)
+{
+    // verify qd_iterator_ncopy_octets()
+
+    char *result = 0;
+    uint8_t buffer[4];
+    const char *expected[] = {"onl", "y/s", "ee/", "thi", "s"};
+
+    qd_iterator_t *iter = qd_iterator_string("amqp://my.host.com:666/only/see/this",
+                                             ITER_VIEW_ADDRESS_NO_HOST);
+    int i = 0;
+    while (!qd_iterator_end(iter)) {
+        memset(buffer, 0, sizeof(buffer));
+        size_t count = qd_iterator_ncopy_octets(iter, buffer, 3);
+        if (count != strlen(expected[i]) || memcmp(buffer, expected[i], count) != 0) {
+            fprintf(stderr, "qd_iterator_ncopy_octets failed,\n"
+                    "Expected %zu octets set to '%s' got %zu octets set to '%.3s'\n",
+                    strlen(expected[i]), expected[i],
+                    count, (char *)buffer);
+            result = "qd_iterator_ncopy_octets failed";
+            break;
+        }
+        ++i;
+    }
+    qd_iterator_free(iter);
+    return result;
+}
+
+
 int field_tests(void)
 {
     int result = 0;
@@ -1144,6 +1173,7 @@ int field_tests(void)
     TEST_CASE(test_qd_hash_retrieve_prefix_separator_exact_match_dot_at_end_1, 0);
     TEST_CASE(test_prefix_hash, 0);
     TEST_CASE(test_prefix_hash_with_space, 0);
+    TEST_CASE(test_iterator_copy_octet, 0);
 
     qd_iterator_set_address(true, "my-area", "my-router");
     TEST_CASE(test_view_address_hash_edge, 0);
