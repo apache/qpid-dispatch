@@ -419,7 +419,9 @@ static void qd_log_source_free(qd_log_source_t *src) {
 
 bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
     if (!source) return false;
+    sys_mutex_lock(source->lock);
     int mask = source->mask == -1 ? default_log_source->mask : source->mask;
+    sys_mutex_unlock(source->lock);
     return level & mask;
 }
 
@@ -637,8 +639,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             QD_ERROR_BREAK();
         }
 
-        qd_log_source_t *log_source = qd_log_source(module); /* The original(already existing) log source */
-
+        qd_log_source_t *log_source = qd_log_source(module);
         sys_mutex_lock(log_source->lock);
 
         if (has_output_file) {
@@ -674,7 +675,8 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
                 log_source->mask = mask;
             }
 
-            if (qd_log_enabled(log_source, QD_LOG_TRACE)) {
+            mask = log_source->mask == -1 ? default_log_source->mask : log_source->mask;
+            if (QD_LOG_TRACE & mask) {
                 trace_enabled = true;
             }
         }
@@ -688,8 +690,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             log_source->includeSource = include_source;
         }
 
-        sys_mutex_unlock(log_source->lock);
-
+    sys_mutex_unlock(log_source->lock);
     } while(0);
 
     if (error_in_output) {
