@@ -214,7 +214,7 @@ typedef enum {DEFAULT, NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICA
 struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
     char *module;
-    int mask;
+    sys_atomic_t mask;
     int includeTimestamp;       /* boolean or -1 means not set */
     int includeSource;          /* boolean or -1 means not set */
     bool syslog;
@@ -383,7 +383,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 
 /// Reset the log source to the default state
 static void qd_log_source_defaults(qd_log_source_t *src) {
-    src->mask = -1;
+    sys_atomic_set(&src->mask, (uint32_t) QD_LOG_UNDEFINED);
     src->includeTimestamp = -1;
     src->includeSource = -1;
     log_sink_decref(src->sink);
@@ -419,9 +419,10 @@ static void qd_log_source_free(qd_log_source_t *src) {
 
 bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
     if (!source) return false;
-    sys_mutex_lock(source->lock);
-    int mask = source->mask == -1 ? default_log_source->mask : source->mask;
-    sys_mutex_unlock(source->lock);
+    uint32_t mask = sys_atomic_get(&source->mask);
+    if (mask == QD_LOG_UNDEFINED) {
+        mask = sys_atomic_get(&default_log_source->mask);
+    } 
     return level & mask;
 }
 
@@ -519,6 +520,7 @@ static void _add_log_source (const char *module_name) {
     qd_log_source_t *log_source;
     log_source = NEW(qd_log_source_t);
     ZERO(log_source);
+    sys_atomic_init(&log_source->mask , QD_LOG_UNDEFINED);
     log_source->module = qd_strdup(module_name);
     qd_log_source_defaults(log_source);
     log_source->lock = sys_mutex();
@@ -557,7 +559,7 @@ void qd_log_initialize(void)
 
     entries_lock = sys_mutex();
 
-    default_log_source->mask = levels[INFO].mask;
+    sys_atomic_set(&default_log_source->mask, levels[INFO].mask);
     default_log_source->includeTimestamp = true;
     default_log_source->includeSource = 0;
     default_log_source->sink = log_sink(SINK_STDERR);
@@ -672,11 +674,10 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
                 break;
             }
             else {
-                log_source->mask = mask;
+                sys_atomic_set(&log_source->mask, mask);
             }
 
-            mask = log_source->mask == -1 ? default_log_source->mask : log_source->mask;
-            if (QD_LOG_TRACE & mask) {
+            if (qd_log_enabled(log_source, QD_LOG_TRACE)) {
                 trace_enabled = true;
             }
         }
