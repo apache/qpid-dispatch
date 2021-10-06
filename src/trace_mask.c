@@ -125,20 +125,29 @@ void qd_tracemask_remove_link(qd_tracemask_t *tm, int router_maskbit)
 }
 
 
-qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *tracelist, int *ingress_index)
+qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, const qd_amqp_field_t *trace_list, int *ingress_index)
 {
     qd_bitmask_t *bm    = qd_bitmask(0);
-    int           idx   = 0;
     bool          first = true;
+    uint32_t      count = trace_list->count;
+    qd_buffer_field_t node_list = trace_list->data;
 
-    assert(qd_parse_is_list(tracelist));
+    // the trace_list field holds the AMQP list of AMQP_STR-encoded router node ids.
+    // trace_list->buffer points to the first octet of the first encoded router id
 
     sys_rwlock_rdlock(tm->lock);
-    qd_parsed_field_t *item   = qd_parse_sub_value(tracelist, idx);
-    qdtm_router_t     *router = 0;
-    while (item) {
-        qd_iterator_t *iter = qd_parse_raw(item);
-        qd_iterator_reset_view(iter, ITER_VIEW_NODE_HASH);
+
+    qdtm_router_t *router = 0;
+    while (count--) {
+        qd_amqp_field_t node_id;
+        if (qd_buffer_field_get_amqp_data(&node_list, &node_id) == 0)
+            // todo: deal with invalid input
+            break;
+
+        qd_iterator_t *iter = qd_iterator_buffer(node_id.data.head,
+                                                 node_id.data.cursor - qd_buffer_base(node_id.data.head),
+                                                 node_id.data.length,
+                                                 ITER_VIEW_NODE_HASH);
         qd_hash_retrieve(tm->hash, iter, (void*) &router);
         if (router) {
             if (router->link_maskbit >= 0)
@@ -146,8 +155,7 @@ qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *traceli
             if (first)
                 *ingress_index = router->maskbit;
         }
-        idx++;
-        item = qd_parse_sub_value(tracelist, idx);
+        qd_iterator_free(iter);
         first = false;
     }
     sys_rwlock_unlock(tm->lock);

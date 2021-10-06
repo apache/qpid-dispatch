@@ -99,7 +99,6 @@ typedef struct {
     qd_field_location_t  section_application_properties;  // The application properties list
     qd_field_location_t  section_body;                    // The message body: Data
     qd_field_location_t  section_footer;                  // The footer
-    qd_field_location_t  field_user_annotations;          // Opaque user message annotations, not a real field.
 
     qd_field_location_t  field_message_id;                // The string value of the message-id
     qd_field_location_t  field_user_id;                   // The string value of the user-id
@@ -118,18 +117,21 @@ typedef struct {
     qd_buffer_t         *parse_buffer;                    // Buffer where parsing should resume
     unsigned char       *parse_cursor;                    // Octet in parse_buffer where parsing should resume
     qd_message_depth_t   parse_depth;                     // Depth to which message content has been parsed
-    qd_iterator_t       *ma_field_iter_in;                // Iter for msg.FIELD_MESSAGE_ANNOTATION
 
-    qd_iterator_pointer_t ma_user_annotation_blob;        // Original user annotations
-                                                          //  with router annotations stripped
-    uint32_t             ma_count;                        // Number of map elements in blob
-                                                          //  after router fields stripped
-    qd_parsed_field_t   *ma_pf_ingress;
-    qd_parsed_field_t   *ma_pf_phase;
-    qd_parsed_field_t   *ma_pf_to_override;
-    qd_parsed_field_t   *ma_pf_trace;
-    int                  ma_int_phase;
-    sys_atomic_t         ma_stream;                      // Message is streaming
+    // Inter-router Message Annotations handling: These reference the location
+    // of the data in the incoming message. Constant as they do not change -
+    // use qd_message_pvt_t to override these values.
+
+    qd_iterator_t    *ma_ingress_iter;
+    qd_amqp_field_t   ma_ingress;
+    qd_amqp_field_t   ma_to_override;
+    qd_amqp_field_t   ma_trace_list;  // original received trace list
+    qd_buffer_field_t ma_user_data;   // Original user annotations, raw sequence of key,value fields
+    uint32_t          ma_user_count;  // count of fields in ma_user_data
+    int               ma_phase;
+    bool              ma_streaming;   // streaming message
+    bool              ma_parsed;      // Have parsed out the above incoming message annotations
+
     uint64_t             max_message_size;               // Configured max; 0 if no max to enforce
     uint64_t             bytes_received;                 // Bytes returned by pn_link_recv()
                                                          //  when enforcing max_message_size
@@ -139,7 +141,6 @@ typedef struct {
 
     qd_message_q2_unblocker_t q2_unblocker;              // Callback and context to signal Q2 unblocked to receiver
 
-    bool                 ma_parsed;                      // Have parsed incoming message annotations message
     sys_atomic_t         discard;                        // Message is being discarded
     sys_atomic_t         receive_complete;               // Message has been completely received
     bool                 q2_input_holdoff;               // Q2 state: hold off calling pn_link_recv
@@ -157,10 +158,27 @@ struct qd_message_pvt_t {
     qd_message_depth_t             sent_depth;      // Depth of outgoing sent message
     qd_message_content_t          *content;         // Singleton content shared by reference between
                                                     //  incoming and all outgoing copies
-    qd_buffer_list_t               ma_to_override;  // To field in outgoing message annotations.
-    qd_buffer_list_t               ma_trace;        // Trace list in outgoing message annotations
-    qd_buffer_list_t               ma_ingress;      // Ingress field in outgoing message annotations
+
+    // Outgoing message annotations
+    bool                           skip_ma;
+    bool                           ma_composed;     // true blah
+    bool                           ma_filter_trace;   // skip the trace field (edge router)
+    bool                           ma_filter_ingress; // skip the ingress field (edge router)
+    bool                           ma_reset_trace;    // exchange bindings: trace is only local node
+    bool                           ma_reset_ingress;  // exchange bindings: local node is new ingress
+
+    uint8_t                        ma_header[12];    // 0x00,0x53,0x72,QD_AMQP_MAP32, 4byte size+count
+    uint8_t                        ma_trace_header[16 + 9];  // MA_TRACE key + list32 header
+
+    qd_buffer_list_t               ma_trailer;  // composed MA to send after trace
+    size_t                         ma_trailer_len;
+
+    // mutable MA: these can be set on a per message basis
+    char                          *ma_to_override;
     int                            ma_phase;        // Phase for override address
+    bool                           ma_streaming;    // true: msg classified as streaming
+
+
     qd_message_stream_data_list_t  stream_data_list;// Stream data parse structure
                                                     // TODO - move this to the content for one-time parsing (TLR)
     unsigned char                 *body_cursor;     // Stream: tracks the point in the content buffer chain

@@ -328,7 +328,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
     if (!conn->instream) {
         qd_message_t *msg = qd_message();
 
-        qd_message_set_stream_annotation(msg, true);
+        qd_message_set_streaming_annotation(msg);
 
         qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
         qd_compose_start_list(props);

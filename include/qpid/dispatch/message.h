@@ -153,7 +153,8 @@ qd_message_t *qd_message_copy(qd_message_t *msg);
  *
  * @param msg Pointer to a received message.
  */
-void qd_message_message_annotations(qd_message_t *msg);
+//void qd_message_message_annotations(qd_message_t *msg);
+const char *qd_message_parse_message_annotations(qd_message_t *msg);
 
 /**
  * Set the value for the QD_MA_TRACE field in the outgoing message annotations
@@ -169,7 +170,7 @@ void qd_message_message_annotations(qd_message_t *msg);
  * this field is transferred to the message.
  *
  */
-void qd_message_set_trace_annotation(qd_message_t *msg, qd_composed_field_t *trace_field);
+//void qd_message_set_trace_annotation(qd_message_t *msg, qd_composed_field_t *trace_field);
 
 /**
  * Set the value for the QD_MA_TO field in the outgoing message annotations for
@@ -185,7 +186,8 @@ void qd_message_set_trace_annotation(qd_message_t *msg, qd_composed_field_t *tra
  * this field is transferred to the message.
  *
  */
-void qd_message_set_to_override_annotation(qd_message_t *msg, qd_composed_field_t *to_field);
+qd_iterator_t *qd_message_get_to_override(const qd_message_t *msg);
+void qd_message_set_to_override_annotation(qd_message_t *msg, const char *to);
 
 /**
  * Set a phase for the phase annotation in the message.
@@ -194,8 +196,8 @@ void qd_message_set_to_override_annotation(qd_message_t *msg, qd_composed_field_
  * @param phase The phase of the address for the outgoing message.
  *
  */
+int  qd_message_get_phase(const qd_message_t *msg);
 void qd_message_set_phase_annotation(qd_message_t *msg, int phase);
-int  qd_message_get_phase_annotation(const qd_message_t *msg);
 
 /**
  * Indicate whether message should be considered to be streaming.
@@ -204,7 +206,9 @@ int  qd_message_get_phase_annotation(const qd_message_t *msg);
  * @param stream true if the message is streaming
  *
  */
-void qd_message_set_stream_annotation(qd_message_t *msg, bool stream);
+bool qd_message_is_streaming(const qd_message_t *msg);
+void qd_message_set_streaming_annotation(qd_message_t *msg);
+
 /**
  * Test whether received message should be considered to be streaming.
  *
@@ -212,7 +216,11 @@ void qd_message_set_stream_annotation(qd_message_t *msg, bool stream);
  * @return true if the received message has the streaming annotation set, else false.
  *
  */
-int qd_message_is_streaming(qd_message_t *msg);
+
+void qd_message_set_skip_ma(qd_message_t *msg);
+bool qd_message_skip_ma(const qd_message_t *msg);
+
+void qd_message_nuke_ma(qd_message_t *msg);
 
 /**
  * Set the value for the QD_MA_INGRESS field in the outgoing message
@@ -228,7 +236,14 @@ int qd_message_is_streaming(qd_message_t *msg);
  * Ownership of this field is transferred to the message.
  *
  */
-void qd_message_set_ingress_annotation(qd_message_t *msg, qd_composed_field_t *ingress_field);
+//void qd_message_set_ingress_annotation(qd_message_t *msg, char *ingress);
+qd_iterator_t *qd_message_get_ingress_node(const qd_message_t *msg);
+void qd_message_reset_ingress_annotation(qd_message_t *in_msg);
+void qd_message_disable_ingress_annotation(qd_message_t *msg);
+
+qd_amqp_field_t qd_message_get_trace_list(const qd_message_t *in_msg);
+void qd_message_reset_trace_annotation(qd_message_t *in_msg);
+void qd_message_disable_trace_annotation(qd_message_t *msg);
 
 /**
  * Receive message data frame by frame via a delivery.  This function may be called more than once on the same
@@ -457,7 +472,7 @@ qd_log_source_t* qd_message_log_source();
  * @param msg A pointer to the message
  * @return the parsed field
  */
-qd_parsed_field_t *qd_message_get_ingress(qd_message_t *msg);
+//qd_parsed_field_t *qd_message_get_ingress(qd_message_t *msg);
 
 /**
  * Accessor for message field phase
@@ -465,7 +480,7 @@ qd_parsed_field_t *qd_message_get_ingress(qd_message_t *msg);
  * @param msg A pointer to the message
  * @return the parsed field
  */
-qd_parsed_field_t *qd_message_get_phase(qd_message_t *msg);
+//qd_parsed_field_t *qd_message_get_phase(qd_message_t *msg);
 
 /**
  * Accessor for message field to_override
@@ -473,7 +488,7 @@ qd_parsed_field_t *qd_message_get_phase(qd_message_t *msg);
  * @param msg A pointer to the message
  * @return the parsed field
  */
-qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg);
+//qd_iterator_t *qd_message_get_to_override(qd_message_t *msg);
 
 /**
  * Accessor for message field trace
@@ -481,7 +496,7 @@ qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg);
  * @param msg A pointer to the message
  * @return the parsed field
  */
-qd_parsed_field_t *qd_message_get_trace(qd_message_t *msg);
+//qd_parsed_field_t *qd_message_get_trace(qd_message_t *msg);
 
 /**
  * Accessor for message field phase
@@ -489,7 +504,7 @@ qd_parsed_field_t *qd_message_get_trace(qd_message_t *msg);
  * @param msg A pointer to the message
  * @return the phase as an integer
  */
-int                qd_message_get_phase_val  (qd_message_t *msg);
+//int                qd_message_get_phase_val  (qd_message_t *msg);
 
 /**
  * Should the message be discarded.
@@ -617,5 +632,5 @@ uint8_t qd_message_get_priority(qd_message_t *msg);
 bool qd_message_oversize(const qd_message_t *msg);
 
 ///@}
-
+bool kag_get_message_annotations(qd_message_t *msg, qd_buffer_t **buffer, size_t *offset, size_t *length, size_t *hdr_length, uint8_t *tag);
 #endif

@@ -921,6 +921,7 @@ void iterator_pointer_move_cursor(qd_iterator_pointer_t *ptr, uint32_t length)
 }
 
 
+#if 0
 // bare bones copy of qd_iterator_prefix with no iterator baggage
 bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, const char *prefix)
 {
@@ -957,6 +958,7 @@ bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, con
 
     return *c == 0;
 }
+#endif
 
 
 int qd_iterator_length(const qd_iterator_t *iter)

@@ -186,7 +186,7 @@ qd_parsed_field_t *qd_parse(qd_iterator_t *iter)
     return qd_parse_internal(iter, 0);
 }
 
-
+#if 0
 const char *qd_parse_turbo(qd_iterator_t          *iter,
                            qd_parsed_turbo_list_t *annos,
                            uint32_t               *user_entries,
@@ -278,6 +278,7 @@ const char *qd_parse_turbo(qd_iterator_t          *iter,
     }
     return parse_error;
 }
+#endif
 
 
 void qd_parse_free(qd_parsed_field_t *field)
@@ -771,6 +772,7 @@ static inline int _turbo_copy(qd_iterator_pointer_t *ptr, char *buffer, int leng
 }
 
 
+#if 0
 const char *qd_parse_annotations_v1(
     bool                   strip_anno_in,
     qd_iterator_t         *ma_iter_in,
@@ -921,8 +923,10 @@ const char *qd_parse_annotations_v1(
     *blob_item_count = user_entries;
     return 0;
 }
+#endif
 
 
+#if 0
 void qd_parse_annotations(
     bool                   strip_annotations_in,
     qd_iterator_t         *ma_iter_in,
@@ -974,3 +978,4 @@ void qd_parse_annotations(
 
     return;
 }
+#endif

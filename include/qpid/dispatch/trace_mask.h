@@ -93,6 +93,6 @@ void qd_tracemask_remove_link(qd_tracemask_t *tm, int router_maskbit);
  * @return A new bit mask with a set-bit for each neighbor router in the list.  This must be freed
  *         by the caller when the caller is done with it.
  */
-qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *tracelist, int *ingress_index);
+qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, const qd_amqp_field_t *tracelist, int *ingress_index);
 
 #endif

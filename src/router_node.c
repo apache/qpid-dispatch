@@ -45,6 +45,8 @@ static char *container_role = "route-container";
 static char *edge_role      = "edge";
 static char *direct_prefix;
 static char *node_id;
+static const uint8_t *encoded_node_id;
+static size_t encoded_node_id_len;
 
 static void deferred_AMQP_rx_handler(void *context, bool discard);
 static bool parse_failover_property_list(qd_router_t *router, qd_connection_t *conn, pn_data_t *props);
@@ -301,6 +303,7 @@ static int AMQP_writable_conn_handler(void *type_context, qd_connection_t *conn,
 }
 
 
+#if 0
 static qd_iterator_t *router_annotate_message(qd_router_t   *router,
                                               qd_message_t  *msg,
                                               qd_bitmask_t **link_exclusions,
@@ -404,6 +407,52 @@ static qd_iterator_t *router_annotate_message(qd_router_t   *router,
     //
     return ingress_iter;
 }
+
+#else
+
+static qd_iterator_t *router_annotate_message(qd_router_t   *router,
+                                              qd_message_t  *msg,
+                                              qd_bitmask_t **link_exclusions,
+                                              uint32_t      *distance,
+                                              int           *ingress_index)
+{
+    qd_iterator_t *ingress_iter = 0;
+
+    *link_exclusions = 0;
+    *distance        = 0;
+    *ingress_index   = 0;
+
+    if (router->router_mode != QD_ROUTER_MODE_EDGE) {
+        // Edge routers do not process trace or ingress meta-data
+
+        qd_amqp_field_t in_trace = qd_message_get_trace_list(msg);
+        if (in_trace.count) {
+            *distance = in_trace.count;
+            *link_exclusions = qd_tracemask_create(router->tracemask, &in_trace, ingress_index);
+        }
+
+
+        ingress_iter = qd_message_get_ingress_node(msg);
+
+    } else {
+        // Disable sending ingress and trace message annotations
+        qd_message_disable_trace_annotation(msg);
+        qd_message_disable_ingress_annotation(msg);
+    }
+
+    // move any mutable message annotations from the incoming content
+    // to the local message meta-data
+
+    int phase = qd_message_get_phase(msg);
+    if (phase)
+        qd_message_set_phase_annotation(msg, phase);
+
+    if (qd_message_is_streaming(msg))
+        qd_message_set_streaming_annotation(msg);
+
+    return ingress_iter;
+}
+#endif
 
 static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_message_t *msg)
 {
@@ -730,7 +779,20 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
     }
 
-    qd_message_message_annotations(msg);
+    const char *parse_error = qd_message_parse_message_annotations(msg);
+    if (parse_error) {
+        qd_log(router->log_source, QD_LOG_DEBUG,
+               "[C%"PRIu64"][L%"PRIu64"] Rejecting invalid message annotations: %s",
+               conn->connection_id, qd_link_link_id(link), parse_error);
+        qd_message_set_discard(msg, true);
+        pn_link_flow(pn_link, 1);
+        pn_delivery_update(pnd, PN_REJECTED);
+        pn_delivery_settle(pnd);
+        qd_message_free(msg);
+        return next_delivery;
+    }
+    if (qdr_link_strip_annotations_in(rlink))
+        qd_message_nuke_ma(msg);
 
     //
     // Head of line blocking avoidance (DISPATCH-1545)
@@ -788,16 +850,14 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     }
 
     if (anonymous_link) {
-        qd_iterator_t *addr_iter = 0;
+        qd_iterator_t *addr_iter = qd_message_get_to_override(msg);
         int phase = 0;
 
         //
-        // If the message has delivery annotations, get the to-override field from the annotations.
+        // If the message has a to-override annotation, get the corresponding phase
         //
-        qd_parsed_field_t *ma_to = qd_message_get_to_override(msg);
-        if (ma_to) {
-            addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
-            phase = qd_message_get_phase_annotation(msg);
+        if (addr_iter) {
+            phase = qd_message_get_phase(msg);
         }
 
         //
@@ -813,9 +873,9 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             if (addr_iter && tenant_space) {
                 qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_WITH_SPACE);
                 qd_iterator_annotate_space(addr_iter, tenant_space, tenant_space_len);
-                qd_composed_field_t *to_override = qd_compose_subfield(0);
-                qd_compose_insert_string_iterator(to_override, addr_iter);
-                qd_message_set_to_override_annotation(msg, to_override);
+                unsigned char *to_override = qd_iterator_copy(addr_iter);
+                qd_message_set_to_override_annotation(msg, (char *) to_override);
+                free(to_override);
             }
         }
 
@@ -861,15 +921,15 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
 
         if (term_addr) {
-            qd_composed_field_t *to_override = qd_compose_subfield(0);
             if (tenant_space) {
                 qd_iterator_t *aiter = qd_iterator_string(term_addr, ITER_VIEW_ADDRESS_WITH_SPACE);
                 qd_iterator_annotate_space(aiter, tenant_space, tenant_space_len);
-                qd_compose_insert_string_iterator(to_override, aiter);
+                unsigned char *to_override = qd_iterator_copy(aiter);
+                qd_message_set_to_override_annotation(msg, (char *)to_override);
+                free(to_override);
                 qd_iterator_free(aiter);
             } else
-                qd_compose_insert_string(to_override, term_addr);
-            qd_message_set_to_override_annotation(msg, to_override);
+                qd_message_set_to_override_annotation(msg, term_addr);
             int phase = qdr_link_phase(rlink);
             if (phase != 0)
                 qd_message_set_phase_annotation(msg, phase);
@@ -1632,11 +1692,22 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 {
     qd_container_register_node_type(qd, &router_node);
 
-    size_t dplen = 9 + strlen(area) + strlen(id);
-    node_id = (char*) qd_malloc(dplen);
+    node_id = (char*) qd_malloc(strlen(area) + strlen(id) + 2);
     strcpy(node_id, area);
     strcat(node_id, "/");
     strcat(node_id, id);
+
+    // Node ID as an AMQP encoded str32 value
+    const uint32_t id_len = strlen(node_id);
+    encoded_node_id_len = id_len + 5;  // 5==type header
+    uint8_t *tmp = (uint8_t *) qd_malloc(encoded_node_id_len + 1);
+    tmp[0] = QD_AMQP_STR32_UTF8;
+    tmp[1] = id_len >> 24;
+    tmp[2] = (id_len >> 16) & 0x00FF;
+    tmp[3] = (id_len >> 8)  & 0x00FF;
+    tmp[4] = id_len & 0x00FF;
+    strcpy((char*) &tmp[5], node_id);
+    encoded_node_id = tmp;
 
     qd_router_t *router = NEW(qd_router_t);
     ZERO(router);
@@ -2171,12 +2242,20 @@ void qd_router_free(qd_router_t *router)
     free(router);
     free(node_id);
     free(direct_prefix);
+    free((void *)encoded_node_id);
 }
 
 
-const char *qd_router_id(const qd_dispatch_t *qd)
+const char *qd_router_id()
 {
     return node_id;
+}
+
+
+const uint8_t *qd_router_id_encoded(size_t *len)
+{
+    *len = encoded_node_id_len;
+    return encoded_node_id;
 }
 
 

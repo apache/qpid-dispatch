@@ -89,7 +89,8 @@ struct qd_router_forwarder_t {
 
 typedef void (*qd_router_message_cb_t)(void *context, qd_message_t *msg, int link_id);
 
-const char *qd_router_id(const qd_dispatch_t *qd);
+const char *qd_router_id(void);
+const uint8_t *qd_router_id_encoded(size_t *len);  // binary encoded AMQP STR32
 
 qdr_core_t *qd_router_core(qd_dispatch_t *qd);
 

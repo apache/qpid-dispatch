@@ -41,7 +41,7 @@ struct qdr_delivery_t {
     qdr_delivery_ref_t     *next_peer_ref;
     qd_message_t           *msg;
     qd_iterator_t          *to_addr;
-    qd_iterator_t          *origin;
+    qd_iterator_t          *origin;              ///< ingress router id, if 0 current router is ingress
     sys_mutex_t            *dispo_lock;          ///< lock disposition and local_state fields
     uint64_t                disposition;         ///< local disposition, will be pushed to remote endpoint
     uint64_t                remote_disposition;  ///< disposition as set by remote endpoint

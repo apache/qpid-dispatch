@@ -18,7 +18,7 @@
 #
 
 from .data import MessageHELLO
-from ..dispatch import LOG_TRACE, LOG_CRITICAL
+from ..dispatch import LOG_TRACE, LOG_CRITICAL, LOG_ERROR
 
 
 class HelloProtocol(object):
@@ -41,6 +41,9 @@ class HelloProtocol(object):
         self._expire_hellos(now)
         self.ticks += 1.0
         if self.ticks - self.last_hello_ticks >= self.hello_interval:
+            ##
+            self.container.log_hello(LOG_ERROR, "KAG: (%s) send HELLO" % self.id)
+            ##
             self.last_hello_ticks = self.ticks
             msg = MessageHELLO(None, self.id, list(self.hellos.keys()), self.container.instance)
             self.container.send('amqp:/_local/qdhello', msg)

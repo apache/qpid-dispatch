@@ -313,7 +313,7 @@ bool qd_iterator_prefix(qd_iterator_t *iter, const char *prefix);
  * @param prefix the prefix to be matched
  * @return true if all bytes of prefix match bytes in user string
  */
-bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, const char *prefix);
+//bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, const char *prefix);
 
 /**
  * Copy the iterator's view into buffer up to a maximum of n bytes.  View is
@@ -323,6 +323,16 @@ bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, con
  * @return number of bytes copied.
  */
 size_t qd_iterator_ncopy(qd_iterator_t *iter, uint8_t *buffer, size_t n);
+
+/**
+ * Copy the iterator's view into buffer up to a maximum of n octets.  Unlike
+ * qd_iterator_ncopy the view is not reset before the copy: copying begins at
+ * the current cursor position. The cursor is advanced by the number of bytes
+ * copied. There is no trailing '\0' added.
+ *
+ * @return number of bytes copied.
+ */
+size_t qd_iterator_ncopy_octets(qd_iterator_t *iter, uint8_t *buffer, size_t n);
 
 /**
  * Copy the iterator's view into buffer up to a maximum of n octets.  Unlike

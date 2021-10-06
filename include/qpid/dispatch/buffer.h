@@ -201,6 +201,265 @@ static inline unsigned char *qd_buffer_at(const qd_buffer_t *buf, size_t len)
 void qd_buffer_list_append(qd_buffer_list_t *buflist, const uint8_t *data, size_t len);
 
 
+#include <stdbool.h>
+
 ///@}
+/* descriptor for a sequence of bytes in a buffer list
+ */
+typedef struct qd_buffer_field_t qd_buffer_field_t;
+struct qd_buffer_field_t {
+    qd_buffer_t   *head;
+    const uint8_t *cursor;
+    size_t         length;
+};
+
+
+
+typedef struct qd_amqp_field_t qd_amqp_field_t;
+struct qd_amqp_field_t {
+    uint8_t tag;
+    uint32_t size;
+    uint32_t count;
+    qd_buffer_field_t data;
+};
+
+
+
+// copy up to n octets to dest, advance bfield by the number of octets copied
+static inline size_t qd_buffer_field_memcpy(qd_buffer_field_t *bfield, uint8_t *dest, size_t n)
+{
+    const uint8_t *start = dest;
+    size_t count = MIN(n, bfield->length);
+    while (count > 0) {
+        assert(bfield->cursor <= qd_buffer_cursor(bfield->head));
+        size_t avail = qd_buffer_cursor(bfield->head) - bfield->cursor;
+
+        if (count <= avail) {
+            memcpy(dest, bfield->cursor, count);
+            dest += count;
+            bfield->cursor += count;
+            bfield->length -= count;
+            break;
+        }
+
+        // count is > what is available in the current buffer, move to next
+        memcpy(dest, bfield->cursor, avail);
+        dest += avail;
+        count -= avail;
+        assert(DEQ_NEXT(bfield->head));
+        bfield->head = DEQ_NEXT(bfield->head);
+        bfield->cursor = (const uint8_t *)qd_buffer_base(bfield->head);
+        bfield->length -= avail;
+    }
+    return dest - start;
+}
+
+static inline size_t qd_buffer_field_advance(qd_buffer_field_t *bfield, size_t amount)
+{
+    size_t blen = bfield->length;
+    size_t count = MIN(amount, blen);
+    while (count > 0) {
+        size_t avail = qd_buffer_cursor(bfield->head) - bfield->cursor;
+
+        if (count <= avail) {
+            bfield->cursor += count;
+            bfield->length -= count;
+            break;
+        }
+
+        // count is > what is available in the current buffer, move to next
+        count -= avail;
+        bfield->length -= avail;
+        assert(DEQ_NEXT(bfield->head));
+        bfield->head = DEQ_NEXT(bfield->head);
+        bfield->cursor = qd_buffer_base(bfield->head);
+    }
+
+    return blen - bfield->length;
+}
+
+
+static inline bool qd_buffer_field_octet(qd_buffer_field_t *bfield, uint8_t *octet)
+{
+    if (bfield->length) {
+        bfield->length -= 1;
+        while (bfield->cursor == qd_buffer_cursor(bfield->head)) {
+            bfield->head = DEQ_NEXT(bfield->head);
+            assert(bfield->head);
+            bfield->cursor = qd_buffer_base(bfield->head);
+        }
+        *octet = *bfield->cursor++;
+        return true;
+    }
+    return false;
+}
+
+
+/* Parse out the AMQP data type pointed to by bfield, advance bfield past the data type.
+ * Return the total number of octets consumed, zero if unable to parse a valid AMQP field
+ */
+static inline size_t qd_buffer_field_get_amqp_data(qd_buffer_field_t *bfield, qd_amqp_field_t *afield)
+{
+    size_t size_len = 0;
+    int count_len = 0;
+    const qd_buffer_field_t save = *bfield;
+    uint8_t buf[8];
+    uint8_t octet;
+
+    ZERO(afield);
+
+    if (qd_buffer_field_octet(bfield, &afield->tag)) {
+
+        switch (afield->tag & 0xF0) {
+
+            // size encoded in tag
+        case 0x40:
+            afield->size = 0;
+            break;
+        case 0x50:
+            afield->size = 1;
+            break;
+        case 0x60:
+            afield->size = 2;
+            break;
+        case 0x70:
+            afield->size = 4;
+            break;
+        case 0x80:
+            afield->size = 8;
+            break;
+        case 0x90:
+            afield->size = 16;
+            break;
+
+        case 0xA0:
+            // one octet size
+            size_len = 1;
+            if (!qd_buffer_field_octet(bfield, &octet)) {
+                *bfield = save;
+                return 0;
+            }
+            afield->size = octet;
+            break;
+
+        case 0xB0:
+            // 4 byte size (uint32_t)
+            size_len = 4;
+            if (4 != qd_buffer_field_memcpy(bfield, buf, 4)) {
+                *bfield = save;
+                return 0;
+            }
+            afield->size = (((uint32_t) buf[0]) << 24)
+                | (((uint32_t) buf[1]) << 16)
+                | (((uint32_t) buf[2]) << 8)
+                | ((uint32_t) buf[3]);
+            break;
+
+        case 0xC0:
+        case 0xE0:
+            size_len = 1;
+            count_len = 1;
+            // one octet size and count
+            if (2 != qd_buffer_field_memcpy(bfield, buf, 2)) {
+                *bfield = save;
+                return 0;
+            }
+            afield->size = buf[0];
+            afield->count = buf[1];
+            break;
+
+        case 0xD0:
+        case 0xF0:
+            // 4 octet size and count
+            size_len = 4;
+            count_len = 4;
+            if (8 != qd_buffer_field_memcpy(bfield, buf, 8)) {
+                *bfield = save;
+                return 0;
+            }
+            afield->size = (((uint32_t) buf[0]) << 24)
+                | (((uint32_t) buf[1]) << 16)
+                | (((uint32_t) buf[2]) << 8)
+                | ((uint32_t) buf[3]);
+            afield->count = (((uint32_t) buf[4]) << 24)
+                | (((uint32_t) buf[5]) << 16)
+                | (((uint32_t) buf[6]) << 8)
+                | ((uint32_t) buf[7]);
+            break;
+
+        default:
+            *bfield = save;
+            return 0;
+        }
+
+        // bfield should now be pointing at the first byte of the field data
+        afield->data = *bfield;
+        afield->data.length = afield->size - count_len;
+        if (afield->data.length != qd_buffer_field_advance(bfield, afield->data.length))
+            return 0;
+
+        return 1 + size_len + afield->size;  // afield->size includes count_len
+    }
+    return 0;
+}
+
+
+static inline bool qd_buffer_field_equal(qd_buffer_field_t *bfield, const uint8_t *data, size_t count)
+{
+    if (bfield->length < count)
+        return false;
+
+    const qd_buffer_field_t save = *bfield;
+
+    while (count) {
+
+        size_t avail = qd_buffer_cursor(bfield->head) - bfield->cursor;
+        // optimized: early exit when no need to update iterators buffer pointers
+        if (count <= avail) {
+            if (memcmp(data, bfield->cursor, count) != 0) {
+                *bfield = save;
+                return false;
+            }
+            bfield->cursor += count;
+            bfield->length -= count;
+            return true;
+        }
+
+        // count is >= what is available in the current buffer
+        if (memcmp(data, bfield->cursor, avail) != 0) {
+            *bfield = save;
+            return false;
+        }
+
+        data += avail;
+        count -= avail;
+        bfield->length -= avail;
+
+        assert(DEQ_NEXT(bfield->head));
+        bfield->head = DEQ_NEXT(bfield->head);
+        bfield->cursor = qd_buffer_base(bfield->head);
+    } while (count);
+
+    return true;
+}
+
+
+static inline void qd_buffer_list_append_field(qd_buffer_list_t *buflist, qd_buffer_field_t *bfield)
+{
+    while (bfield->length) {
+        size_t avail = qd_buffer_cursor(bfield->head) - bfield->cursor;
+        size_t len = MIN(bfield->length, avail);
+
+        qd_buffer_list_append(buflist, bfield->cursor, len);
+        bfield->length -= len;
+        if (bfield->length) {
+            bfield->head = DEQ_NEXT(bfield->head);
+            assert(bfield->head);
+            bfield->cursor = qd_buffer_base(bfield->head);
+        } else {
+            bfield->cursor = qd_buffer_cursor(bfield->head);
+        }
+    }
+}
 
 #endif
