@@ -237,7 +237,7 @@ typedef struct level_t {
 #define LEVEL(name, QD_LOG, SYSLOG) { name, QD_LOG,  ALL_BITS & ~(QD_LOG-1), SYSLOG }
 
 static level_t levels[] = {
-    {"default", -1, -1, 0},
+    {"default", QD_LOG_UNDEFINED, QD_LOG_UNDEFINED, 0},
     {"none", 0, 0, 0},
     LEVEL("trace",    QD_LOG_TRACE, LOG_DEBUG), /* syslog has no trace level */
     LEVEL("debug",    QD_LOG_DEBUG, LOG_DEBUG),
@@ -273,7 +273,7 @@ static const level_t *level_for_name(const char *name, int len) {
 }
 
 /*
-  Return -1 and set qd_error if not a valid bit.
+  Return undefined and set qd_error if not a valid bit.
   Translate so that the min valid level index is 0.
 */
 static int level_index_for_bit(int bit) {
@@ -285,7 +285,7 @@ static int level_index_for_bit(int bit) {
     }
 
     qd_error(QD_ERROR_CONFIG, "'%d' is not a valid log level bit.", bit);
-    return -1;
+    return QD_LOG_UNDEFINED;
 }
 
 /// Return the name of log level or 0 if not found.
@@ -422,7 +422,7 @@ bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
     uint32_t mask = sys_atomic_get(&source->mask);
     if (mask == QD_LOG_UNDEFINED) {
         mask = sys_atomic_get(&default_log_source->mask);
-    } 
+    }
     return level & mask;
 }
 
@@ -433,7 +433,7 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     // We can always decide not to look at it later,
     // based on its used/unused status.
     int level_index = level_index_for_bit(level);
-    if (level_index < 0)
+    if (level_index == QD_LOG_UNDEFINED)
         qd_error_clear();
     else {
         sys_mutex_lock(source->lock);
