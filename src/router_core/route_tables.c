@@ -359,6 +359,9 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
 
 static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+    if (!!discard)
+        return;
+
     int router_maskbit = action->args.route_table.router_maskbit;
 
     if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
@@ -413,6 +416,9 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
 
 static void qdr_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+    if (!!discard)
+        return;
+
     int router_maskbit = action->args.route_table.router_maskbit;
     int conn_maskbit   = action->args.route_table.link_maskbit;  // "link" identifies a connection, not an amqp link
 
@@ -447,6 +453,9 @@ static void qdr_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard
 
 static void qdr_remove_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+    if (!!discard)
+        return;
+
     int router_maskbit = action->args.route_table.router_maskbit;
 
     if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
@@ -466,6 +475,9 @@ static void qdr_remove_link_CT(qdr_core_t *core, qdr_action_t *action, bool disc
 
 static void qdr_set_next_hop_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+    if (!!discard)
+        return;
+
     int router_maskbit    = action->args.route_table.router_maskbit;
     int nh_router_maskbit = action->args.route_table.nh_router_maskbit;
 
@@ -499,6 +511,9 @@ static void qdr_set_next_hop_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
 static void qdr_remove_next_hop_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+    if (!!discard)
+        return;
+
     int router_maskbit = action->args.route_table.router_maskbit;
 
     if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
@@ -513,6 +528,9 @@ static void qdr_remove_next_hop_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
 static void qdr_set_cost_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+    if (!!discard)
+        return;
+
     int router_maskbit = action->args.route_table.router_maskbit;
     int cost           = action->args.route_table.cost;
 
