@@ -299,6 +299,21 @@ static const struct lws_protocol_vhost_options mime_types[] = {
     { NULL, NULL, "*", "application/octet-stream" }
 };
 
+static int is_ipv6_address(qd_http_server_t *hs, const char* host, const char* port)
+{
+    int result = 0;
+    struct addrinfo *addr;
+    struct addrinfo hints = {0, AF_UNSPEC, SOCK_STREAM};
+    int code = getaddrinfo(host, port, &hints, &addr);
+    if (code) {
+        qd_log(hs->log, QD_LOG_ERROR, "getaddrinfo(%s, %s) failed with %s", host, port, gai_strerror(code));
+    } else {
+        result = addr->ai_family == AF_INET6;
+        freeaddrinfo(addr);
+    }
+    return result;
+}
+
 static void listener_start(qd_lws_listener_t *hl, qd_http_server_t *hs) {
     log_init();                 /* Update log flags at each listener */
 
@@ -346,6 +361,10 @@ static void listener_start(qd_lws_listener_t *hl, qd_http_server_t *hs) {
     info.keepalive_timeout = 1;
     info.ssl_cipher_list = CIPHER_LIST;
     info.options |= LWS_SERVER_OPTION_VALIDATE_UTF8;
+    if (!is_ipv6_address(hs, config->host, config->port)) {
+        qd_log(hs->log, QD_LOG_NOTICE, "Disabling ipv6 on %s", config->host_port);
+        info.options |= LWS_SERVER_OPTION_DISABLE_IPV6;
+    }
     if (config->ssl_profile) {
         info.ssl_cert_filepath = config->ssl_certificate_file;
         info.ssl_private_key_filepath = config->ssl_private_key_file;
