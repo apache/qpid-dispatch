@@ -43,7 +43,6 @@
 #define LOG_MAX (QD_LOG_TEXT_MAX+128)
 #define LIST_MAX 1000
 
-
 // log.c lock strategy ========================================
 //
 // log sources ----------------------
@@ -139,7 +138,7 @@ static const char* SINK_SYSLOG = "syslog";
 static const char* SOURCE_DEFAULT = "DEFAULT";
 
 // Hold the log_sinks_lock to prevent collision
-// with log_sink().
+// with log_sink() or any other use of a sink.
 static void log_sink_decref(const log_sink_t *sink) {
     if (!sink) return;
     sys_mutex_lock(log_sinks_lock);
@@ -366,6 +365,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 
     aprintf(&begin, end, "\n");
 
+    sys_mutex_lock(log_sinks_lock);
     if (sink->file) {
         if (fputs(log_str, sink->file) == EOF) {
             char msg[TEXT_MAX];
@@ -379,6 +379,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         if (syslog_level != -1)
             syslog(syslog_level, "%s", log_str);
     }
+    sys_mutex_unlock(log_sinks_lock);
     sys_mutex_unlock(log_source->lock);
 }
 
@@ -657,7 +658,9 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             log_sink_decref(log_source->sink);
 
             // Assign the new sink
+            sys_mutex_lock(log_sinks_lock);
             log_source->sink = sink;
+            sys_mutex_unlock(log_sinks_lock);
 
             if (log_source->sink->syslog) {
                 // Timestamp should be off for syslog.
