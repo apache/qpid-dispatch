@@ -43,7 +43,6 @@
 #define LOG_MAX (QD_LOG_TEXT_MAX+128)
 #define LIST_MAX 1000
 
-
 // log.c lock strategy ========================================
 //
 // log sources ----------------------
@@ -215,7 +214,7 @@ typedef enum {DEFAULT, NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICA
 struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
     char *module;
-    sys_atomic_t mask;
+    int mask;
     int includeTimestamp;       /* boolean or -1 means not set */
     int includeSource;          /* boolean or -1 means not set */
     bool syslog;
@@ -238,7 +237,7 @@ typedef struct level_t {
 #define LEVEL(name, QD_LOG, SYSLOG) { name, QD_LOG,  ALL_BITS & ~(QD_LOG-1), SYSLOG }
 
 static level_t levels[] = {
-    {"default", QD_LOG_UNDEFINED, QD_LOG_UNDEFINED, 0},
+    {"default", -1, -1, 0},
     {"none", 0, 0, 0},
     LEVEL("trace",    QD_LOG_TRACE, LOG_DEBUG), /* syslog has no trace level */
     LEVEL("debug",    QD_LOG_DEBUG, LOG_DEBUG),
@@ -274,7 +273,7 @@ static const level_t *level_for_name(const char *name, int len) {
 }
 
 /*
-  Return undefined and set qd_error if not a valid bit.
+  Return -1 and set qd_error if not a valid bit.
   Translate so that the min valid level index is 0.
 */
 static int level_index_for_bit(int bit) {
@@ -286,7 +285,7 @@ static int level_index_for_bit(int bit) {
     }
 
     qd_error(QD_ERROR_CONFIG, "'%d' is not a valid log level bit.", bit);
-    return QD_LOG_UNDEFINED;
+    return -1;
 }
 
 /// Return the name of log level or 0 if not found.
@@ -384,7 +383,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 
 /// Reset the log source to the default state
 static void qd_log_source_defaults(qd_log_source_t *src) {
-    sys_atomic_set(&src->mask, (uint32_t) QD_LOG_UNDEFINED);
+    src->mask = -1;
     src->includeTimestamp = -1;
     src->includeSource = -1;
     log_sink_decref(src->sink);
@@ -420,11 +419,8 @@ static void qd_log_source_free(qd_log_source_t *src) {
 
 bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
     if (!source) return false;
-    uint32_t mask = sys_atomic_get(&source->mask);
-    if (mask == QD_LOG_UNDEFINED) {
-        mask = sys_atomic_get(&default_log_source->mask);
-    }
-    return !!(level & mask);
+    int mask = source->mask == -1 ? default_log_source->mask : source->mask;
+    return level & mask;
 }
 
 void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_level, const char *file, int line, const char *fmt, va_list ap)
@@ -434,7 +430,7 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     // We can always decide not to look at it later,
     // based on its used/unused status.
     int level_index = level_index_for_bit(level);
-    if (level_index == QD_LOG_UNDEFINED)
+    if (level_index < 0)
         qd_error_clear();
     else {
         sys_mutex_lock(source->lock);
@@ -521,7 +517,6 @@ static void _add_log_source (const char *module_name) {
     qd_log_source_t *log_source;
     log_source = NEW(qd_log_source_t);
     ZERO(log_source);
-    sys_atomic_init(&log_source->mask , QD_LOG_UNDEFINED);
     log_source->module = qd_strdup(module_name);
     qd_log_source_defaults(log_source);
     log_source->lock = sys_mutex();
@@ -560,7 +555,7 @@ void qd_log_initialize(void)
 
     entries_lock = sys_mutex();
 
-    sys_atomic_set(&default_log_source->mask, QD_LOG_UNDEFINED);
+    default_log_source->mask = levels[INFO].mask;
     default_log_source->includeTimestamp = true;
     default_log_source->includeSource = 0;
     default_log_source->sink = log_sink(SINK_STDERR);
@@ -642,7 +637,8 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             QD_ERROR_BREAK();
         }
 
-        qd_log_source_t *log_source = qd_log_source(module);
+        qd_log_source_t *log_source = qd_log_source(module); /* The original(already existing) log source */
+
         sys_mutex_lock(log_source->lock);
 
         if (has_output_file) {
@@ -675,7 +671,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
                 break;
             }
             else {
-                sys_atomic_set(&log_source->mask, mask);
+                log_source->mask = mask;
             }
 
             if (qd_log_enabled(log_source, QD_LOG_TRACE)) {
@@ -692,7 +688,8 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
             log_source->includeSource = include_source;
         }
 
-    sys_mutex_unlock(log_source->lock);
+        sys_mutex_unlock(log_source->lock);
+
     } while(0);
 
     if (error_in_output) {
