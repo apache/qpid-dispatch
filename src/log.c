@@ -84,7 +84,6 @@ typedef struct log_sink_t {
 
 DEQ_DECLARE(log_sink_t, log_sink_list_t);
 
-static sys_mutex_t *log_sink_list_lock = 0;
 static log_sink_list_t sink_list = {0};
 
 const char *format = "%Y-%m-%d %H:%M:%S.%%06lu %z";
@@ -111,30 +110,30 @@ static const char* SINK_STDERR = "stderr";
 static const char* SINK_SYSLOG = "syslog";
 static const char* SOURCE_DEFAULT = "DEFAULT";
 
-static void log_sink_decref(const log_sink_t *sink) {
-    if (!sink) return;
-    sys_mutex_lock(log_sink_list_lock);
-    assert(sink->ref_count);
-
-    log_sink_t *mutable_sink = (log_sink_t *)sink;
-
-    if (sys_atomic_dec(&mutable_sink->ref_count) == 1) {
-        DEQ_REMOVE(sink_list, mutable_sink);
-        free(mutable_sink->name);
-        if (mutable_sink->file && mutable_sink->file != stderr)
-            fclose(mutable_sink->file);
-        if (mutable_sink->syslog)
-            closelog();
-        free(mutable_sink);
-    }
-    sys_mutex_unlock(log_sink_list_lock);
-}
-
-static const log_sink_t* log_sink(const char* name) {
-    sys_mutex_lock(log_sink_list_lock);
+static log_sink_t* find_log_sink_lh(const char* name) {
     log_sink_t* sink = DEQ_HEAD(sink_list);
     DEQ_FIND(sink, strcmp(sink->name, name) == 0);
+    return sink;
+}
 
+// Must hold the log_source_lock
+static void log_sink_free_lh(log_sink_t* sink) {
+    if (!sink) return;
+    assert(sink->ref_count);
+
+    if (sys_atomic_dec(&sink->ref_count) == 1) {
+        DEQ_REMOVE(sink_list, sink);
+        free(sink->name);
+        if (sink->file && sink->file != stderr)
+            fclose(sink->file);
+        if (sink->syslog)
+            closelog();
+        free(sink);
+    }
+}
+
+static log_sink_t* log_sink_lh(const char* name) {
+    log_sink_t* sink = find_log_sink_lh(name);
     if (sink) {
         sys_atomic_inc(&sink->ref_count);
     }
@@ -156,11 +155,12 @@ static const log_sink_t* log_sink(const char* name) {
             file = fopen(name, "a");
         }
 
+
+
         //If file is not there, return 0.
         // We are not logging an error here since we are already holding the log_source_lock
         // Writing a log message will try to re-obtain the log_source_lock lock and cause a deadlock.
         if (!file && !syslog) {
-            sys_mutex_unlock(log_sink_list_lock);
             return 0;
         }
 
@@ -173,8 +173,7 @@ static const log_sink_t* log_sink(const char* name) {
         DEQ_INSERT_TAIL(sink_list, sink);
 
     }
-    sys_mutex_unlock(log_sink_list_lock);
-    return (const log_sink_t *)sink;
+    return sink;
 }
 
 
@@ -191,7 +190,7 @@ struct qd_log_source_t {
     int includeTimestamp;       /* boolean or -1 means not set */
     int includeSource;          /* boolean or -1 means not set */
     bool syslog;
-    const log_sink_t *sink;
+    log_sink_t *sink;
     uint64_t severity_histogram[N_LEVEL_INDICES];
 };
 
@@ -306,13 +305,8 @@ static bool default_bool(int value, int default_value) {
 
 static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 {
-    // Don't let the sink list change while we are writing to one of them.
-    sys_mutex_lock(log_sink_list_lock);
-    const log_sink_t* sink = log_source->sink ? log_source->sink : default_log_source->sink;
-    if (!sink) {
-        sys_mutex_unlock(log_sink_list_lock);
-        return;
-    }
+    log_sink_t* sink = log_source->sink ? log_source->sink : default_log_source->sink;
+    if (!sink) return;
 
     char log_str[LOG_MAX];
     char *begin = log_str;
@@ -345,6 +339,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
             char msg[TEXT_MAX];
             snprintf(msg, sizeof(msg), "Cannot write log output to '%s'", sink->name);
             perror(msg);
+            exit(1);
         };
         fflush(sink->file);
     }
@@ -353,7 +348,6 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         if (syslog_level != -1)
             syslog(syslog_level, "%s", log_str);
     }
-    sys_mutex_unlock(log_sink_list_lock);
 }
 
 /// Reset the log source to the default state
@@ -401,7 +395,7 @@ qd_log_source_t *qd_log_source_reset(const char *module)
 
 static void qd_log_source_free_lh(qd_log_source_t* src) {
     DEQ_REMOVE(source_list, src);
-    log_sink_decref(src->sink);
+    log_sink_free_lh(src->sink);
     free(src->module);
     free(src);
 }
@@ -512,8 +506,6 @@ void qd_log_initialize(void)
     DEQ_INIT(source_list);
     DEQ_INIT(sink_list);
 
-    log_sink_list_lock = sys_mutex();
-
     // Set up level_names for use in error messages.
     char *begin = level_names, *end = level_names+sizeof(level_names);
     aprintf(&begin, end, "%s", levels[NONE].name);
@@ -526,7 +518,7 @@ void qd_log_initialize(void)
     default_log_source->mask = levels[INFO].mask;
     default_log_source->includeTimestamp = true;
     default_log_source->includeSource = 0;
-    default_log_source->sink = log_sink(SINK_STDERR);
+    default_log_source->sink = log_sink_lh(SINK_STDERR);
 }
 
 
@@ -536,7 +528,7 @@ void qd_log_finalize(void) {
     while (DEQ_HEAD(entries))
         qd_log_entry_free_lh(DEQ_HEAD(entries));
     while (DEQ_HEAD(sink_list))
-        log_sink_decref(DEQ_HEAD(sink_list));
+        log_sink_free_lh(DEQ_HEAD(sink_list));
     default_log_source = NULL;  // stale value would misconfigure new router started again in the same process
 }
 
@@ -610,7 +602,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
         qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
 
         if (has_output_file) {
-            const log_sink_t* sink = log_sink(outputFile);
+            log_sink_t* sink = log_sink_lh(outputFile);
             if (!sink) {
                 error_in_output = true;
                 sys_mutex_unlock(log_source_lock);
@@ -619,7 +611,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity)
 
             // DEFAULT source may already have a sink, so free the old sink first
             if (src->sink) {
-                log_sink_decref(src->sink);
+                log_sink_free_lh(src->sink);
             }
 
             // Assign the new sink
