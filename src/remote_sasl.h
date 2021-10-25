@@ -24,7 +24,7 @@
 #include <proton/ssl.h>
 #include <proton/types.h>
 
-void qdr_use_remote_authentication_service(pn_transport_t* transport, const char* address, const char* sasl_init_hostname, pn_ssl_domain_t* ssl_domain, pn_proactor_t* proactor);
+void qdr_use_remote_authentication_service(pn_transport_t* transport, const char* address, const char* hostname, const char* sasl_init_hostname, pn_ssl_domain_t* ssl_domain, pn_proactor_t* proactor);
 bool qdr_is_authentication_service_connection(pn_connection_t* conn);
 void qdr_handle_authentication_service_connection_event(pn_event_t *e);
 
