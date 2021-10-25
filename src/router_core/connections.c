@@ -102,8 +102,8 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
     conn->policy_spec           = policy_spec;
     conn->link_capacity         = link_capacity;
     conn->mask_bit              = -1;
-    conn->admin_status          = QDR_CONN_ADMIN_ENABLED;
-    conn->oper_status           = QDR_CONN_OPER_UP;
+    conn->admin_status          = QD_CONN_ADMIN_ENABLED;
+    conn->oper_status           = QD_CONN_OPER_UP;
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);
     DEQ_INIT(conn->streaming_link_pool);
@@ -279,7 +279,7 @@ void qdr_close_connection_CT(qdr_core_t *core, qdr_connection_t  *conn)
 {
     conn->closed = true;
     conn->error  = qdr_error(QD_AMQP_COND_CONNECTION_FORCED, "Connection forced-closed by management request");
-    conn->admin_status = QDR_CONN_ADMIN_DELETED;
+    conn->admin_status = QD_CONN_ADMIN_DELETED;
 
     //Activate the connection, so the I/O threads can finish the job.
     qdr_connection_activate_CT(core, conn);
