@@ -54,6 +54,7 @@ struct qd_config_sasl_plugin_t {
     DEQ_LINKS(qd_config_sasl_plugin_t);
     char        *name;
     char        *auth_service;
+    char        *hostname;
     char        *sasl_init_hostname;
     char        *auth_ssl_profile;
 };
@@ -184,6 +185,7 @@ void qd_server_config_free(qd_server_config_t *cf)
     if (cf->ssl_uid_name_mapping_file)  free(cf->ssl_uid_name_mapping_file);
 
     if (cf->sasl_plugin_config.auth_service)               free(cf->sasl_plugin_config.auth_service);
+    if (cf->sasl_plugin_config.hostname)                   free(cf->sasl_plugin_config.hostname);
     if (cf->sasl_plugin_config.sasl_init_hostname)         free(cf->sasl_plugin_config.sasl_init_hostname);
     if (cf->sasl_plugin_config.ssl_certificate_file)       free(cf->sasl_plugin_config.ssl_certificate_file);
     if (cf->sasl_plugin_config.ssl_private_key_file)       free(cf->sasl_plugin_config.ssl_private_key_file);
@@ -511,6 +513,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             qd_find_sasl_plugin(qd->connection_manager, config->sasl_plugin);
         if (sasl_plugin) {
             config->sasl_plugin_config.auth_service = SSTRDUP(sasl_plugin->auth_service);
+            config->sasl_plugin_config.hostname = SSTRDUP(sasl_plugin->hostname);
             config->sasl_plugin_config.sasl_init_hostname = SSTRDUP(sasl_plugin->sasl_init_hostname);
             qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "Using auth service %s from  SASL Plugin %s", config->sasl_plugin_config.auth_service, config->sasl_plugin);
 
@@ -581,6 +584,7 @@ static bool config_sasl_plugin_free(qd_connection_manager_t *cm, qd_config_sasl_
 
     free(sasl_plugin->name);
     free(sasl_plugin->auth_service);
+    free(sasl_plugin->hostname);
     free(sasl_plugin->sasl_init_hostname);
     free(sasl_plugin->auth_ssl_profile);
     free(sasl_plugin);
@@ -658,24 +662,23 @@ qd_config_sasl_plugin_t *qd_dispatch_configure_sasl_plugin(qd_dispatch_t *qd, qd
     DEQ_INSERT_TAIL(cm->config_sasl_plugins, sasl_plugin);
     sasl_plugin->name                       = qd_entity_opt_string(entity, "name", 0); CHECK();
 
-    char *auth_host = qd_entity_opt_string(entity, "host", 0);
+    sasl_plugin->hostname = qd_entity_opt_string(entity, "host", 0);
     char *auth_port = qd_entity_opt_string(entity, "port", 0);
 
-    if (auth_host && auth_port) {
-        int strlen_auth_host = strlen(auth_host);
+    if (sasl_plugin->hostname && auth_port) {
+        int strlen_auth_host = strlen(sasl_plugin->hostname);
         int strlen_auth_port = strlen(auth_port);
 
         if (strlen_auth_host > 0 && strlen_auth_port > 0) {
 
-            int hplen = strlen(auth_host) + strlen(auth_port) + 2;
+            int hplen = strlen_auth_host + strlen_auth_port + 2;
             if (hplen > 2) {
                 sasl_plugin->auth_service = malloc(hplen);
-                snprintf(sasl_plugin->auth_service, hplen, "%s:%s", auth_host, auth_port);
+                snprintf(sasl_plugin->auth_service, hplen, "%s:%s", sasl_plugin->hostname, auth_port);
             }
         }
     }
 
-    free(auth_host);
     free(auth_port);
 
     if (!sasl_plugin->auth_service) {
