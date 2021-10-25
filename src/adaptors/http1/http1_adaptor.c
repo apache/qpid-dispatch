@@ -405,7 +405,8 @@ void qdr_http1_q2_unblocked_handler(const qd_alloc_safe_ptr_t context)
 //
 
 
-// Invoked by the core thread to wake an I/O thread for the connection
+// Invoked by the core/mgmt thread to wake an I/O thread for the connection.
+// Must be thread safe.
 //
 static void _core_connection_activate_CT(void *context, qdr_connection_t *conn)
 {
@@ -670,20 +671,22 @@ static void qd_http1_adaptor_final(void *adaptor_context)
     qdr_http1_adaptor_t *adaptor = (qdr_http1_adaptor_t*) adaptor_context;
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
 
-    qd_http_listener_t *li = DEQ_HEAD(adaptor->listeners);
-    while (li) {
-        qd_http1_delete_listener(0, li);
-        li = DEQ_HEAD(adaptor->listeners);
-    }
-    qd_http_connector_t *ct = DEQ_HEAD(adaptor->connectors);
-    while (ct) {
-        qd_http1_delete_connector(0, ct);
-        ct = DEQ_HEAD(adaptor->connectors);
-    }
     qdr_http1_connection_t *hconn = DEQ_HEAD(adaptor->connections);
     while (hconn) {
         qdr_http1_connection_free(hconn);
         hconn = DEQ_HEAD(adaptor->connections);
+    }
+    qd_http_listener_t *li = DEQ_HEAD(adaptor->listeners);
+    while (li) {
+        DEQ_REMOVE_HEAD(qdr_http1_adaptor->listeners);
+        qd_http_listener_decref(li);
+        li = DEQ_HEAD(adaptor->listeners);
+    }
+    qd_http_connector_t *ct = DEQ_HEAD(adaptor->connectors);
+    while (ct) {
+        DEQ_REMOVE_HEAD(qdr_http1_adaptor->connectors);
+        qd_http_connector_decref(ct);
+        ct = DEQ_HEAD(adaptor->connectors);
     }
 
     sys_mutex_free(adaptor->lock);

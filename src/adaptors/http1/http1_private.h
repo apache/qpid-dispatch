@@ -105,6 +105,7 @@ struct qdr_http1_request_base_t {
 };
 DEQ_DECLARE(qdr_http1_request_base_t, qdr_http1_request_list_t);
 
+
 // A single HTTP adaptor connection.
 //
 struct qdr_http1_connection_t {
@@ -118,6 +119,8 @@ struct qdr_http1_connection_t {
     uint64_t               conn_id;
     qd_handler_context_t   handler_context;
     h1_codec_connection_type_t     type;
+    qd_conn_admin_status_t         admin_status;
+    qd_conn_oper_status_t          oper_status;
 
     struct {
         char *host;
@@ -194,9 +197,6 @@ ALLOC_DECLARE(qdr_http1_connection_t);
 
 // http1_adaptor.c
 //
-//int qdr_http1_write_out_data(qdr_http1_connection_t *hconn);
-//void qdr_http1_write_buffer_list(qdr_http1_request_t *hreq, qd_buffer_list_t *blist);
-
 void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn);
 void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_list_t *fifo, qd_buffer_list_t *blist, uintmax_t octets);
 void qdr_http1_enqueue_stream_data(qdr_http1_out_data_list_t *fifo, qd_message_stream_data_t *stream_data);
