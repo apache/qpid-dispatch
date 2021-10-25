@@ -654,17 +654,6 @@ ALLOC_DECLARE(qdr_connection_info_t);
 DEQ_DECLARE(qdr_link_route_t, qdr_link_route_list_t);
 
 
-typedef enum {
-    QDR_CONN_OPER_UP,
-} qdr_conn_oper_status_t;
-
-
-typedef enum {
-    QDR_CONN_ADMIN_ENABLED,
-    QDR_CONN_ADMIN_DELETED
-} qdr_conn_admin_status_t;
-
-
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
     DEQ_LINKS_N(ACTIVATE, qdr_connection_t);
@@ -692,8 +681,8 @@ struct qdr_connection_t {
     qdr_connection_info_t      *connection_info;
     void                       *user_context; /* Updated from IO thread, use work_lock */
     qdr_link_route_list_t       conn_link_routes;  // connection scoped link routes
-    qdr_conn_oper_status_t      oper_status;
-    qdr_conn_admin_status_t     admin_status;
+    qd_conn_oper_status_t       oper_status;
+    qd_conn_admin_status_t      admin_status;
     qdr_error_t                *error;
     uint32_t                    conn_uptime; // Timestamp which can be used to calculate the number of seconds this connection has been up and running.
     uint32_t                    last_delivery_time; // Timestamp which can be used to calculate the number of seconds since the last delivery arrived on this connection.

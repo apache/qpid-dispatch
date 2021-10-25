@@ -152,6 +152,8 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
 
     ZERO(hconn);
     hconn->type = HTTP1_CONN_SERVER;
+    hconn->admin_status = QD_CONN_ADMIN_ENABLED;
+    hconn->oper_status = QD_CONN_OPER_UP;
     hconn->qd_server = qd->server;
     hconn->adaptor = qdr_http1_adaptor;
     hconn->handler_context.handler = &_handle_connection_events;
@@ -216,6 +218,8 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
 
 // Management Agent API - Create
 //
+// Note that this runs on the Management Agent thread, which may be running concurrently with the
+// I/O and timer threads.
 qd_http_connector_t *qd_http1_configure_connector(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
 {
     qd_http_connector_t *c = qd_http_connector(qd->server);
@@ -257,6 +261,8 @@ qd_http_connector_t *qd_http1_configure_connector(qd_dispatch_t *qd, const qd_ht
 
 // Management Agent API - Delete
 //
+// Note that this runs on the Management Agent thread, which may be running concurrently with the
+// I/O and timer threads.
 void qd_http1_delete_connector(qd_dispatch_t *ignored, qd_http_connector_t *ct)
 {
     if (ct) {
@@ -265,15 +271,17 @@ void qd_http1_delete_connector(qd_dispatch_t *ignored, qd_http_connector_t *ct)
         sys_mutex_lock(qdr_http1_adaptor->lock);
         DEQ_REMOVE(qdr_http1_adaptor->connectors, ct);
         qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) ct->ctx;
+        qdr_connection_t *qdr_conn = 0;
         if (hconn) {
+            hconn->admin_status = QD_CONN_ADMIN_DELETED;
             hconn->server.connector = 0;
             ct->ctx = 0;
-            if (hconn->qdr_conn)
-                // have the core close this connection
-                qdr_core_close_connection(hconn->qdr_conn);
+            qdr_conn = hconn->qdr_conn;
         }
         sys_mutex_unlock(qdr_http1_adaptor->lock);
 
+        if (qdr_conn)
+            qdr_core_close_connection(qdr_conn);
         qd_http_connector_decref(ct);
     }
 }
@@ -435,25 +443,28 @@ static void _do_reconnect(void *context)
 
     _process_request((_server_request_t*) DEQ_HEAD(hconn->requests));
 
-    // Do not attempt to re-connect if the current request is still in
-    // progress. This happens when the server has closed the connection before
-    // the request message has fully arrived (!rx_complete).
-    // qdr_connection_process() will continue to invoke the
-    // qdr_http1_server_core_link_deliver callback until the request message is
-    // complete.
+    if (hconn->admin_status == QD_CONN_ADMIN_ENABLED) {
 
-    // false positive: head request is removed before it is freed, null is passed
-    /* coverity[pass_freed_arg] */
-    if (!_is_request_in_progress((_server_request_t*) DEQ_HEAD(hconn->requests))) {
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-               "[C%"PRIu64"] Connecting to HTTP server...", conn_id);
-        sys_mutex_lock(qdr_http1_adaptor->lock);
-        hconn->raw_conn = pn_raw_connection();
-        pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
-        // this next call may immediately reschedule the connection on another I/O
-        // thread. After this call hconn may no longer be valid!
-        pn_proactor_raw_connect(qd_server_proactor(hconn->qd_server), hconn->raw_conn, hconn->cfg.host_port);
-        sys_mutex_unlock(qdr_http1_adaptor->lock);
+        // Do not attempt to re-connect if the current request is still in
+        // progress. This happens when the server has closed the connection before
+        // the request message has fully arrived (!rx_complete).
+        // qdr_connection_process() will continue to invoke the
+        // qdr_http1_server_core_link_deliver callback until the request message is
+        // complete.
+
+        // false positive: head request is removed before it is freed, null is passed
+        /* coverity[pass_freed_arg] */
+        if (!_is_request_in_progress((_server_request_t*) DEQ_HEAD(hconn->requests))) {
+            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+                   "[C%"PRIu64"] Connecting to HTTP server...", conn_id);
+            sys_mutex_lock(qdr_http1_adaptor->lock);
+            hconn->raw_conn = pn_raw_connection();
+            pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
+            // this next call may immediately reschedule the connection on another I/O
+            // thread. After this call hconn may no longer be valid!
+            pn_proactor_raw_connect(qd_server_proactor(hconn->qd_server), hconn->raw_conn, hconn->cfg.host_port);
+            sys_mutex_unlock(qdr_http1_adaptor->lock);
+        }
     }
 }
 
@@ -584,7 +595,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         //
 
         bool reconnect = false;
-        if (hconn->qdr_conn) {
+        if (hconn->admin_status == QD_CONN_ADMIN_ENABLED && hconn->qdr_conn) {
             if (hconn->server.link_timeout == 0) {
                 hconn->server.link_timeout = qd_timer_now() + LINK_TIMEOUT_MSEC;
                 hconn->server.reconnect_pause = 0;
@@ -1722,8 +1733,10 @@ void qdr_http1_server_core_conn_close(qdr_http1_adaptor_t *adaptor,
     sys_mutex_unlock(qdr_http1_adaptor->lock);
     // the core thread can no longer activate this connection
 
+    hconn->oper_status = QD_CONN_OPER_DOWN;
+    _teardown_server_links(hconn);
     qdr_connection_closed(qdr_conn);
-    qdr_http1_close_connection(hconn, "Connection closed by management");
+    qdr_http1_close_connection(hconn, error);
 
     // it is expected that this callback is the final callback before returning
     // from qdr_connection_process(). Free hconn when qdr_connection_process returns.
