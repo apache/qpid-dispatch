@@ -132,6 +132,8 @@ static qdr_http1_connection_t *_create_client_connection(qd_http_listener_t *li)
 
     ZERO(hconn);
     hconn->type = HTTP1_CONN_CLIENT;
+    hconn->admin_status = QD_CONN_ADMIN_ENABLED;
+    hconn->oper_status = QD_CONN_OPER_DOWN;
     hconn->qd_server = li->server;
     hconn->adaptor = qdr_http1_adaptor;
     hconn->handler_context.handler = &_handle_connection_events;
@@ -219,8 +221,14 @@ static void _handle_listener_events(pn_event_t *e, qd_server_t *qd_server, void 
             } else {
                 qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
             }
+
+            sys_mutex_lock(qdr_http1_adaptor->lock);
             pn_listener_set_context(li->pn_listener, 0);
             li->pn_listener = 0;
+            DEQ_REMOVE(qdr_http1_adaptor->listeners, li);
+            sys_mutex_unlock(qdr_http1_adaptor->lock);
+
+            qd_http_listener_decref(li);
         }
         break;
     }
@@ -232,6 +240,9 @@ static void _handle_listener_events(pn_event_t *e, qd_server_t *qd_server, void 
 
 
 // Management Agent API - Create
+//
+// Note that this runs on the Management Agent thread, which may be running concurrently with the
+// I/O and timer threads.
 //
 qd_http_listener_t *qd_http1_configure_listener(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
 {
@@ -256,19 +267,20 @@ qd_http_listener_t *qd_http1_configure_listener(qd_dispatch_t *qd, const qd_http
 
 // Management Agent API - Delete
 //
+// Note that this runs on the Management Agent thread, which may be running concurrently with the
+// I/O and timer threads.
+//
 void qd_http1_delete_listener(qd_dispatch_t *ignore, qd_http_listener_t *li)
 {
     if (li) {
-        if (li->pn_listener) {
-            pn_listener_close(li->pn_listener);
-            li->pn_listener = 0;
-        }
+        qd_log(qdr_http1_adaptor->log, QD_LOG_INFO, "Deleting HttpListener for %s, %s:%s", li->config.address, li->config.host, li->config.port);
         sys_mutex_lock(qdr_http1_adaptor->lock);
-        DEQ_REMOVE(qdr_http1_adaptor->listeners, li);
+        if (li->pn_listener) {
+            // note that the proactor may immediately schedule the
+            // PN_LISTENER_CLOSED event on another thread...
+            pn_listener_close(li->pn_listener);
+        }
         sys_mutex_unlock(qdr_http1_adaptor->lock);
-
-        qd_log(qdr_http1_adaptor->log, QD_LOG_INFO, "Deleted HttpListener for %s, %s:%s", li->config.address, li->config.host, li->config.port);
-        qd_http_listener_decref(li);
     }
 }
 
@@ -317,6 +329,7 @@ static void _setup_client_connection(qdr_http1_connection_t *hconn)
                                             0,      // bind context
                                             0);     // bind token
     qdr_connection_set_context(hconn->qdr_conn, hconn);
+    hconn->oper_status = QD_CONN_OPER_UP;
 
     qd_log(hconn->adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP connection to client created", hconn->conn_id);
 
@@ -460,6 +473,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         sys_mutex_unlock(qdr_http1_adaptor->lock);
         // at this point the core can no longer activate this connection
 
+        hconn->oper_status = QD_CONN_OPER_DOWN;
         if (hconn->out_link) {
             qdr_link_set_context(hconn->out_link, 0);
             qdr_link_detach(hconn->out_link, QD_LOST, 0);

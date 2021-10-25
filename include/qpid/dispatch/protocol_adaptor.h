@@ -323,6 +323,18 @@ void qdr_protocol_adaptor_free(qdr_core_t *core, qdr_protocol_adaptor_t *adaptor
  */
 
 typedef enum {
+    QD_CONN_OPER_UP,
+    QD_CONN_OPER_DOWN,
+} qd_conn_oper_status_t;
+
+
+typedef enum {
+    QD_CONN_ADMIN_ENABLED,
+    QD_CONN_ADMIN_DELETED
+} qd_conn_admin_status_t;
+
+
+typedef enum {
     QD_LINK_ENDPOINT,      ///< A link to a connected endpoint
     QD_LINK_CONTROL,       ///< A link to a peer router for control messages
     QD_LINK_ROUTER,        ///< A link to a peer router for routed messages
