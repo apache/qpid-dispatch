@@ -101,6 +101,7 @@ static void init_permissions(permissions_t* permissions)
 typedef struct
 {
     char* authentication_service_address;
+    char* hostname;
     char* sasl_init_hostname;
     pn_ssl_domain_t* ssl_domain;
     pn_proactor_t* proactor;
@@ -135,13 +136,16 @@ static void copy_bytes(const pn_bytes_t* from, qdr_owned_bytes_t* to)
     memcpy(to->start, from->start, from->size);
 }
 
-static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* sasl_init_hostname, pn_proactor_t* proactor)
+static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* hostname, const char* sasl_init_hostname, pn_proactor_t* proactor)
 {
     qdr_sasl_relay_t* instance = NEW(qdr_sasl_relay_t);
     ZERO(instance);
-    instance->authentication_service_address = strdup(address);
+    instance->authentication_service_address = qd_strdup(address);
+    if (hostname) {
+        instance->hostname = qd_strdup(hostname);
+    }
     if (sasl_init_hostname) {
-        instance->sasl_init_hostname = strdup(sasl_init_hostname);
+        instance->sasl_init_hostname = qd_strdup(sasl_init_hostname);
     }
     instance->proactor = proactor;
     init_permissions(&instance->permissions);
@@ -152,6 +156,7 @@ static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* s
 static void delete_qdr_sasl_relay_t(qdr_sasl_relay_t* instance)
 {
     if (instance->authentication_service_address) free(instance->authentication_service_address);
+    if (instance->hostname) free(instance->hostname);
     if (instance->sasl_init_hostname) free(instance->sasl_init_hostname);
     if (instance->ssl_domain) pn_ssl_domain_free(instance->ssl_domain);
     if (instance->mechlist) free(instance->mechlist);
@@ -208,7 +213,7 @@ static bool remote_sasl_init_server(pn_transport_t* transport)
         pn_proactor_t* proactor = impl->proactor;
         if (!proactor) return false;
         impl->downstream = pn_connection();
-        pn_connection_set_hostname(impl->downstream, impl->authentication_service_address);
+        pn_connection_set_hostname(impl->downstream, impl->hostname);
         set_sasl_relay_context(impl->downstream, impl);
         //request permissions in response if supported by peer:
         pn_data_t* data = pn_connection_desired_capabilities(impl->downstream);
@@ -381,7 +386,7 @@ static bool remote_sasl_process_mechanisms(pn_transport_t *transport, const char
 {
     qdr_sasl_relay_t* impl = (qdr_sasl_relay_t*) pnx_sasl_get_context(transport);
     if (impl) {
-        impl->mechlist = strdup(mechs);
+        impl->mechlist = qd_strdup(mechs);
         if (notify_upstream(impl, DOWNSTREAM_MECHANISMS_RECEIVED)) {
             return true;
         } else {
@@ -440,7 +445,7 @@ static void remote_sasl_process_init(pn_transport_t *transport, const char *mech
 {
     qdr_sasl_relay_t* impl = (qdr_sasl_relay_t*) pnx_sasl_get_context(transport);
     if (impl) {
-        impl->selected_mechanism = strdup(mechanism);
+        impl->selected_mechanism = qd_strdup(mechanism);
         copy_bytes(recv, &(impl->response));
         if (!notify_downstream(impl, UPSTREAM_INIT_RECEIVED)) {
             pnx_sasl_set_desired_state(transport, SASL_ERROR);
@@ -501,10 +506,10 @@ static void set_remote_impl(pn_transport_t *transport, qdr_sasl_relay_t* context
     pnx_sasl_set_implementation(transport, &remote_sasl_impl, context);
 }
 
-void qdr_use_remote_authentication_service(pn_transport_t *transport, const char* address, const char* sasl_init_hostname, pn_ssl_domain_t* ssl_domain, pn_proactor_t* proactor)
+void qdr_use_remote_authentication_service(pn_transport_t *transport, const char* address, const char* hostname, const char* sasl_init_hostname, pn_ssl_domain_t* ssl_domain, pn_proactor_t* proactor)
 {
     auth_service_log = qd_log_source("AUTHSERVICE");
-    qdr_sasl_relay_t* context = new_qdr_sasl_relay_t(address, sasl_init_hostname, proactor);
+    qdr_sasl_relay_t* context = new_qdr_sasl_relay_t(address, hostname, sasl_init_hostname, proactor);
     context->ssl_domain = ssl_domain;
     set_remote_impl(transport, context);
 }
@@ -691,7 +696,7 @@ void qdr_handle_authentication_service_connection_event(pn_event_t *e)
         if (authid.start && authid.size) {
             context->username = strndup(authid.start, authid.size);
         } else {
-            context->username = strdup("");
+            context->username = qd_strdup("");
         }
         //notify upstream connection of successful authentication
         notify_upstream(context, DOWNSTREAM_OUTCOME_RECEIVED);

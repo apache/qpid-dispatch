@@ -752,7 +752,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
                     }
                 }
             }
-            qdr_use_remote_authentication_service(tport, config->sasl_plugin_config.auth_service, config->sasl_plugin_config.sasl_init_hostname, plugin_ssl_domain, server->proactor);
+            qdr_use_remote_authentication_service(tport, config->sasl_plugin_config.auth_service, config->sasl_plugin_config.hostname, config->sasl_plugin_config.sasl_init_hostname, plugin_ssl_domain, server->proactor);
         }
         pn_transport_require_auth(tport, config->requireAuthentication);
         pn_transport_require_encryption(tport, config->requireEncryption);

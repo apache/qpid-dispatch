@@ -182,6 +182,10 @@ typedef struct qd_server_config_t {
          */
         char *auth_service;
         /**
+         * Hostname to set on connection (used for SNI in TLS connections).
+         */
+        char *hostname;
+        /**
          * Hostname to set on sasl-init sent to authentication service.
          */
         char *sasl_init_hostname;
