@@ -20,6 +20,7 @@
 import io
 import json
 import os
+import socket
 import sys
 import time
 import traceback
@@ -996,39 +997,67 @@ class TcpAdaptorManagementTest(TestCase):
         cls.tcp_listener_port = cls.tester.get_port()
         cls.test_name = 'TCPMgmtTest'
 
-        # Here we have a simple barebones standalone router config.
-        config = [
-            ('router', {'mode': 'standalone',
-                        'id': cls.test_name}),
-            ('listener', {'role': 'normal',
-                          'port': cls.tester.get_port()}),
-        ]
-        config = Qdrouterd.Config(config)
-        cls.router = cls.tester.qdrouterd(cls.test_name, config, wait=True)
+        # create edge and interior routers.  The listener/connector will be on
+        # the edge router.  It is expected that the edge will create proxy
+        # links to the interior and remove them when the test is done.
 
-        # Start the echo server. This is the server that the tcpConnector
-        # will be connecting to.
-        server_prefix = "ECHO_SERVER ES_%s" % cls.test_name
-        parent_path = os.path.dirname(os.getcwd())
-        cls.logger = Logger(title="TcpAdaptor",
-                            print_to_console=True,
-                            save_for_dump=False,
-                            ofilename=os.path.join(parent_path, "setUpClass/TcpAdaptor_echo_server.log"))
-        cls.echo_server = TcpEchoServer(prefix=server_prefix,
-                                        port=cls.tcp_server_port,
-                                        logger=cls.logger)
-        # The router and the echo server are running at this point.
-        assert cls.echo_server.is_running
+        cls.interior_edge_port = cls.tester.get_port()
+        cls.interior_mgmt_port = cls.tester.get_port()
+        cls.edge_mgmt_port = cls.tester.get_port()
+
+        cls.tcp_server_port = cls.tester.get_port()
+        cls.tcp_listener_port = cls.tester.get_port()
+
+        i_config = [
+            ('router', {'mode': 'interior',
+                        'id': 'TCPMgmtTestInterior'}),
+            ('listener', {'role': 'normal',
+                          'port': cls.interior_mgmt_port}),
+            ('listener', {'role': 'edge', 'port': cls.interior_edge_port}),
+            ('address', {'prefix': 'closest',   'distribution': 'closest'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+        ]
+        config = Qdrouterd.Config(i_config)
+        cls.i_router = cls.tester.qdrouterd('TCPMgmtTestInterior', config, wait=False)
+
+        e_config = [
+            ('router', {'mode': 'edge',
+                        'id': 'TCPMgmtTestEdge'}),
+            ('listener', {'role': 'normal',
+                          'port': cls.edge_mgmt_port}),
+            ('connector', {'name': 'edge', 'role': 'edge',
+                           'port': cls.interior_edge_port}),
+            ('address', {'prefix': 'closest',   'distribution': 'closest'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+        ]
+        config = Qdrouterd.Config(e_config)
+        cls.e_router = cls.tester.qdrouterd('TCPMgmtTestEdge', config,
+                                            wait=False)
+
+        cls.i_router.wait_ready()
+        cls.e_router.wait_ready()
+
+    def _query_links_by_addr(self, router_mgmt, owning_addr):
+        oid = 'org.apache.qpid.dispatch.router.link'
+        attrs = ['owningAddr', 'linkDir']
+
+        links = []
+        rc = router_mgmt.query(type=oid, attribute_names=attrs).results
+        for link in rc:
+            if link[0] is not None and link[0].endswith(owning_addr):
+                links.append(link)
+        return links
 
     @unittest.skipIf(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_01_mgmt(self):
         """
-        Create and delete TCP connectors and listeners
+        Create and delete TCP connectors and listeners. Ensure that the service
+        address is properly removed on the interior router.
         """
         LISTENER_TYPE = 'org.apache.qpid.dispatch.tcpListener'
         CONNECTOR_TYPE = 'org.apache.qpid.dispatch.tcpConnector'
 
-        mgmt = self.router.management
+        mgmt = self.e_router.management
 
         # When starting out, there should be no tcpListeners or tcpConnectors.
         self.assertEqual(0, len(mgmt.query(type=LISTENER_TYPE).results))
@@ -1052,93 +1081,45 @@ class TcpAdaptorManagementTest(TestCase):
         self.assertEqual(1, len(mgmt.query(type=LISTENER_TYPE).results))
         self.assertEqual(1, len(mgmt.query(type=CONNECTOR_TYPE).results))
 
-        # Give a second for the tcpListener to start listening.
-        time.sleep(1)
-        # Start the echo client runner
-        client_runner_timeout = 3
-        runner = EchoClientRunner(self.test_name, 1, self.logger,
-                                  None, None, 100, 1,
-                                  timeout=client_runner_timeout,
-                                  port_override=self.tcp_listener_port)
-        result = None
+        # now verify that the interior router sees the service address
+        # and two proxy links are created
+        self.i_router.wait_address(self.test_name, subscribers=1)
+        while True:
+            links = self._query_links_by_addr(self.i_router.management,
+                                              self.test_name)
+            if links:
+                # expect a single consumer link that represents
+                # the connector
+                self.assertEqual(1, len(links))
+                self.assertEqual("out", links[0][1])
+                break
+            time.sleep(0.25)
 
-        # Give some time for the client runner to finish up.
-        time.sleep(client_runner_timeout + 1)
-
-        # Make sure servers are still up
-        if self.echo_server.error:
-            self.logger.log(
-                "TCP_TEST %s Server %s stopped with error: %s" %
-                (self.test_name, self.echo_server.prefix,
-                 self.echo_server.error))
-            result = self.echo_server.error
-
-        if self.echo_server.exit_status:
-            self.logger.log(
-                "TCP_TEST %s Server %s stopped with status: %s" %
-                (self.test_name, self.echo_server.prefix, self.echo_server.exit_status))
-            result = self.echo_server.exit_status
-
-        self.assertIsNone(result)
-
-        error = runner.client_error()
-        if error is not None:
-            self.logger.log("TCP_TEST %s Client %s stopped with error: %s" %
-                            (self.test_name, runner.name, error))
-
-        self.assertIsNone(error)
-        status = runner.client_exit_status()
-        if status is not None:
-            self.logger.log("TCP_TEST %s Client %s stopped with status: %s" %
-                            (self.test_name, runner.name, status))
-        self.assertIsNone(status)
-        self.assertFalse(runner.client_running())
-
-        # Delete the connector and make sure the echo client fails.
+        # Delete the connector and listener
         out = mgmt.delete(type=CONNECTOR_TYPE, name=connector_name)
         self.assertIsNone(out)
-
-        # Give some time for the connector to be deleted by the router.
-        # Deleting a connector also involves deleting existing connections
-        # that were made using the details from the connector.
-        # In this case, the router would have to drop the connection it
-        # already made to the echo server, so let's give it some time to
-        # do that.
-        time.sleep(2)
-
-        client_runner_timeout = 2
-        # Start the echo client runner
-        runner = EchoClientRunner(self.test_name, 1, self.logger,
-                                  None, None, 100, 1,
-                                  # Try for 2 seconds before timing out
-                                  timeout=client_runner_timeout,
-                                  port_override=self.tcp_listener_port)
-        time.sleep(client_runner_timeout + 1)
-        exit_status = runner.client_exit_status()
-
-        if exit_status is not None:
-            # The test is a success, the echo client sender timed out
-            # because it did not receive anything back from the
-            # echo server because the connector to the echo server
-            # got deleted
-            self.logger.log("TCP_TEST %s Client %s timedout with error: %s" %
-                            (self.test_name, runner.name, exit_status))
-        else:
-            self.logger.log("ERROR: Connector not deleted")
-        self.assertIsNotNone(exit_status)
-
-        # Now delete the tcpListener
+        self.assertEqual(0, len(mgmt.query(type=CONNECTOR_TYPE).results))
         out = mgmt.delete(type=LISTENER_TYPE, name=listener_name)
         self.assertIsNone(out)
+        self.assertEqual(0, len(mgmt.query(type=LISTENER_TYPE).results))
 
-        runner = EchoClientRunner(self.test_name, 1, self.logger,
-                                  None, None, 100, 1,
-                                  # Try for 2 seconds before timing out
-                                  timeout=client_runner_timeout,
-                                  port_override=self.tcp_listener_port)
-        time.sleep(client_runner_timeout + 1)
-        error = runner.client_error()
-        self.assertIn("ConnectionRefusedError", error)
+        # verify the service address and proxy links are no longer active on
+        # the interior router
+        self.i_router.wait_address_unsubscribed(self.test_name)
+        while True:
+            links = self._query_links_by_addr(self.i_router.management,
+                                              self.test_name)
+            if len(links) == 0:
+                break
+            time.sleep(0.25)
+
+        # verify that clients can no longer connect to the listener
+        client_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_conn.setblocking(True)
+        client_conn.settimeout(5)
+        with self.assertRaises(ConnectionRefusedError):
+            client_conn.connect(('127.0.0.1', self.tcp_listener_port))
+        client_conn.close()
 
 
 if __name__ == '__main__':
