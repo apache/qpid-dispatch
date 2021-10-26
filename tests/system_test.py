@@ -665,7 +665,7 @@ class Qdrouterd(Process):
 
         def check():
             addrs = self.management.query(a_type).get_dicts()
-            rc = [a for a in addrs if address in a['name']]
+            rc = [a for a in addrs if a['name'].endswith(address)]
             count = 0
             for a in rc:
                 count += a['subscriberCount']
