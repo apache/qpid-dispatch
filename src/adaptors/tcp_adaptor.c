@@ -140,6 +140,7 @@ static void handle_disconnected(qdr_tcp_connection_t* conn);
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* conn);
 static void free_bridge_config(qd_tcp_bridge_t *config);
 static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc);
+static void detach_links(qdr_tcp_connection_t *tc);
 
 
 // is the incoming byte window full
@@ -195,6 +196,7 @@ static void on_activate(void *context)
     qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] on_activate", conn->conn_id);
     while (qdr_connection_process(conn->qdr_conn)) {}
     if (conn->egress_dispatcher && conn->connector_closed) {
+        detach_links(conn);
         qdr_connection_set_context(conn->qdr_conn, 0);
         qdr_connection_closed(conn->qdr_conn);
         conn->qdr_conn = 0;
@@ -473,25 +475,18 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         qd_message_set_receive_complete(qdr_delivery_message(conn->instream));
         qdr_delivery_continue(tcp_adaptor->core, conn->instream, true);
         qdr_delivery_decref(tcp_adaptor->core, conn->instream, "tcp-adaptor.handle_disconnected - instream");
+        conn->instream = 0;
     }
     if (conn->outstream) {
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - close outstream",
                conn->conn_id, conn->outgoing_id);
         qdr_delivery_decref(tcp_adaptor->core, conn->outstream, "tcp-adaptor.handle_disconnected - outstream");
+        conn->outstream = 0;
     }
-    if (conn->incoming) {
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
-               "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - detach incoming",
-               conn->conn_id, conn->incoming_id);
-        qdr_link_detach(conn->incoming, QD_LOST, 0);
-    }
-    if (conn->outgoing) {
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
-               "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - detach outgoing",
-               conn->conn_id, conn->outgoing_id);
-        qdr_link_detach(conn->outgoing, QD_LOST, 0);
-    }
+
+    detach_links(conn);
+
     if (conn->initial_delivery) {
         qdr_delivery_remote_state_updated(tcp_adaptor->core, conn->initial_delivery, PN_RELEASED, true, 0, false);
         qdr_delivery_decref(tcp_adaptor->core, conn->initial_delivery, "tcp-adaptor.handle_disconnected - initial_delivery");
@@ -2058,5 +2053,24 @@ static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bo
                    DEQ_SIZE(tcp_adaptor->connections));
         }
         free_qdr_tcp_connection(conn);
+    }
+}
+
+
+static void detach_links(qdr_tcp_connection_t *conn)
+{
+    if (conn->incoming) {
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+               "[C%"PRIu64"][L%"PRIu64"] detaching incoming link",
+               conn->conn_id, conn->incoming_id);
+        qdr_link_detach(conn->incoming, QD_LOST, 0);
+        conn->incoming = 0;
+    }
+    if (conn->outgoing) {
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
+               "[C%"PRIu64"][L%"PRIu64"] detaching outgoing link",
+               conn->conn_id, conn->outgoing_id);
+        qdr_link_detach(conn->outgoing, QD_LOST, 0);
+        conn->outgoing = 0;
     }
 }
