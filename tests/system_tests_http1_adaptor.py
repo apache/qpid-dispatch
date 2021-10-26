@@ -233,7 +233,7 @@ class Http1AdaptorManagementTest(TestCase):
                     continue
                 raise  # assuming fatal...
             if len(conn.recv(10)) == 0:
-                break;
+                break
 
         conn.close()
 
