@@ -611,13 +611,15 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         // prevent core activation
         sys_mutex_lock(qdr_http1_adaptor->lock);
         hconn->raw_conn = 0;
-        if (reconnect && hconn->server.reconnect_timer)
+        if (reconnect && hconn->server.reconnect_timer) {
             qd_timer_schedule(hconn->server.reconnect_timer, hconn->server.reconnect_pause);
+            sys_mutex_unlock(qdr_http1_adaptor->lock);
+            // do not manipulate hconn further as it may now be processed by the
+            // timer thread
+            return;
+        }
         sys_mutex_unlock(qdr_http1_adaptor->lock);
-
-        // do not manipulate hconn further as it may now be processed by the
-        // timer thread
-        return;
+        break;
     }
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
         _send_request_message((_server_request_t*) DEQ_HEAD(hconn->requests));
