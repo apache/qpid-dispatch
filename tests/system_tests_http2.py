@@ -229,9 +229,7 @@ class CommonHttp2Tests:
         # Run a qdmanage query on connections to see how many qdr_connections are
         # there on the egress router
         qd_manager = QdManager(self, address=server_addr)
-
         connections = qd_manager.query('org.apache.qpid.dispatch.connection')
-
         self.assertGreaterEqual(len(connections), 2)
 
         server_conn_found = False
@@ -644,6 +642,130 @@ class Http2TestInteriorEdgeRouter(Http2TestBase, CommonHttp2Tests):
         cls.router_qdra = cls.tester.qdrouterd("interior-router", config_qdra, wait=True)
         cls.router_qdrb = cls.tester.qdrouterd("edge-router", config_edge)
         sleep(3)
+
+
+class Http2TestDoubleEdgeInteriorRouter(Http2TestBase):
+    """
+    There are two edge routers connecting to the same interior router. The two edge routers
+    connect to a HTTP2 server. The curl client connects to the interior router and makes
+    requests. Since the edge routers are each connected to the http2 server, one of the
+    edge router will receive the curl request. We then take down the connector of one of the
+    edge routers and make sure that a request is still routed via the the other edge router.
+    We will then take down the connector on the other edge router and make sure that
+    a curl request times out since the it has nowhere to go.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(Http2TestDoubleEdgeInteriorRouter, cls).setUpClass()
+        if skip_test():
+            return
+        cls.http2_server_name = "http2_server"
+        os.environ["QUART_APP"] = "http2server:app"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="http2_server.py")
+        inter_router_port = cls.tester.get_port()
+        cls.edge_a_connector_name = 'connectorFromEdgeAToIntA'
+        cls.edge_a_http_connector_name = 'httpConnectorFromEdgeAToHttpServer'
+        config_edgea = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'EDGE.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('httpConnector',
+             {'port': os.getenv('SERVER_LISTEN_PORT'),
+              'address': 'examples',
+              'name': cls.edge_a_http_connector_name,
+              'host': '127.0.0.1',
+              'protocolVersion': 'HTTP2'}),
+            ('connector', {'name': cls.edge_a_connector_name,
+                           'role': 'edge',
+                           'port': inter_router_port,
+                           'verifyHostname': 'no'})
+        ])
+
+        cls.edge_b_connector_name = 'connectorFromEdgeBToIntA'
+        cls.edge_b_http_connector_name = 'httpConnectorFromEdgeBToHttpServer'
+        config_edgeb = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'EDGE.B'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('httpConnector',
+             {'port': os.getenv('SERVER_LISTEN_PORT'),
+              'address': 'examples',
+              'name': cls.edge_b_http_connector_name,
+              'host': '127.0.0.1',
+              'protocolVersion': 'HTTP2'}),
+            ('connector', {'name': cls.edge_b_connector_name,
+                           'role': 'edge',
+                           'port': inter_router_port,
+                           'verifyHostname': 'no'})
+        ])
+
+        config_qdrc = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'QDR.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('listener', {'role': 'edge', 'port': inter_router_port}),
+            ('httpListener', {'port': cls.tester.get_port(),
+                              'address': 'examples',
+                              'host': '127.0.0.1',
+                              'protocolVersion': 'HTTP2'}),
+        ])
+
+        cls.router_qdrc = cls.tester.qdrouterd("interior-router", config_qdrc, wait=True)
+        cls.router_qdra = cls.tester.qdrouterd("edge-router-a", config_edgea, wait=True)
+        cls.router_qdrb = cls.tester.qdrouterd("edge-router-b", config_edgeb, wait=True)
+        sleep(3)
+
+    @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_check_connector_delete(self):
+        # We are first making sure that the http request goes thru successfully.
+        # We are making the http request on the interior router.
+        # The interior router will route this request to the http server via one of the edge routers.
+        # Run curl 127.0.0.1:port --http2-prior-knowledge --head
+
+        # There should be one proxy link for each edge router.
+        self.router_qdrc.wait_address("examples", subscribers=2)
+
+        address = self.router_qdrc.http_addresses[0]
+        out = self.run_curl(address, args=["--head"])
+        self.assertIn('HTTP/2 200', out)
+        self.assertIn('server: hypercorn-h2', out)
+        self.assertIn('content-type: text/html; charset=utf-8', out)
+
+        # Now delete the httpConnector on the edge router config_edgea
+        qd_manager = QdManager(self, address=self.router_qdra.addresses[0])
+        qd_manager.delete("org.apache.qpid.dispatch.httpConnector", name=self.edge_a_http_connector_name)
+        sleep(2)
+
+        # now check the interior router for the examples address. Since the httpConnector on one of the
+        # edge routers was deleted, the proxy link on that edge router must be gone leaving us with just one proxy
+        # link on the other edge router.
+        self.router_qdrc.wait_address("examples", subscribers=1)
+
+        # Run the curl command again to make sure that the request completes again. The request is now routed thru
+        # edge router B since the connector on  edge router A is gone
+        address = self.router_qdrc.http_addresses[0]
+        out = self.run_curl(address, args=["--head"])
+        self.assertIn('HTTP/2 200', out)
+        self.assertIn('server: hypercorn-h2', out)
+        self.assertIn('content-type: text/html; charset=utf-8', out)
+
+        # Now delete the httpConnector on the edge router config_edgeb
+        qd_manager = QdManager(self, address=self.router_qdrb.addresses[0])
+        qd_manager.delete("org.apache.qpid.dispatch.httpConnector", name=self.edge_b_http_connector_name)
+        sleep(2)
+
+        # Now, run a curl client GET request with a timeout.
+        # Since both connectors on both edge routers are gone, the curl client will time out
+        # The curl client times out instead of getting a 503 because the credit is not given on the interior
+        # router to create an AMQP message because there is no destination for the router address.
+        request_timed_out = False
+        try:
+            out = self.run_curl(address, args=["--head"], timeout=3)
+            print(out)
+        except Exception as e:
+            request_timed_out = True
+        self.assertTrue(request_timed_out)
 
 
 class Http2TestEdgeToEdgeViaInteriorRouter(Http2TestBase, CommonHttp2Tests):
