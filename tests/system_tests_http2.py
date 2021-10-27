@@ -650,7 +650,7 @@ class Http2TestDoubleEdgeInteriorRouter(Http2TestBase):
     connect to a HTTP2 server. The curl client connects to the interior router and makes
     requests. Since the edge routers are each connected to the http2 server, one of the
     edge router will receive the curl request. We then take down the connector of one of the
-    edge routers and makes sure that a request is still routed via the the other edge router.
+    edge routers and make sure that a request is still routed via the the other edge router.
     We will then take down the connector on the other edge router and make sure that
     a curl request times out since the it has nowhere to go.
     """
@@ -722,6 +722,10 @@ class Http2TestDoubleEdgeInteriorRouter(Http2TestBase):
         # We are making the http request on the interior router.
         # The interior router will route this request to the http server via one of the edge routers.
         # Run curl 127.0.0.1:port --http2-prior-knowledge --head
+
+        # There should be one proxy link for each edge router.
+        self.router_qdrc.wait_address("examples", subscribers=2)
+
         address = self.router_qdrc.http_addresses[0]
         out = self.run_curl(address, args=["--head"])
         self.assertIn('HTTP/2 200', out)
@@ -732,6 +736,11 @@ class Http2TestDoubleEdgeInteriorRouter(Http2TestBase):
         qd_manager = QdManager(self, address=self.router_qdra.addresses[0])
         qd_manager.delete("org.apache.qpid.dispatch.httpConnector", name=self.edge_a_http_connector_name)
         sleep(2)
+
+        # now check the interior router for the examples address. Since the httpConnector on one of the
+        # edge routers was deleted, the proxy link on that edge router must be gone leaving us with just one proxy
+        # link on the other edge router.
+        self.router_qdrc.wait_address("examples", subscribers=1)
 
         # Run the curl command again to make sure that the request completes again. The request is now routed thru
         # edge router B since the connector on  edge router A is gone
@@ -746,7 +755,7 @@ class Http2TestDoubleEdgeInteriorRouter(Http2TestBase):
         qd_manager.delete("org.apache.qpid.dispatch.httpConnector", name=self.edge_b_http_connector_name)
         sleep(2)
 
-        # Now, run a curl client GET request with a timeout.
+            # Now, run a curl client GET request with a timeout.
         # Since both connectors on both edge routers are gone, the curl client will time out
         # The curl client times out instead of getting a 503 because the credit is not given on the interior
         # router to create an AMQP message because there is no destination for the router address.
