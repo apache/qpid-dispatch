@@ -221,6 +221,43 @@ class CommonHttp2Tests:
         digest_of_response_file = get_digest(self.router_qdra.outdir + image_file_name)
         self.assertEqual(digest_of_server_file, digest_of_response_file)
 
+    def check_listener_delete(self, client_addr, server_addr):
+        # Run curl 127.0.0.1:port --http2-prior-knowledge
+        # We are first making sure that the http request goes thru successfully.
+        out = self.run_curl(client_addr)
+        ret_string = ""
+        i = 0
+        while (i < 1000):
+            ret_string += str(i) + ","
+            i += 1
+        self.assertIn(ret_string, out)
+
+        qd_manager = QdManager(self, address=server_addr)
+        http_listeners = qd_manager.query('org.apache.qpid.dispatch.httpListener')
+        self.assertEqual(len(http_listeners), 1)
+
+        # Run a qdmanage DELETE on the httpListener
+        qd_manager.delete("org.apache.qpid.dispatch.httpListener", name=self.listener_name)
+
+        # Make sure the listener is gone
+        http_listeners  = qd_manager.query('org.apache.qpid.dispatch.httpListener')
+        self.assertEqual(len(http_listeners), 0)
+
+        # Try running a curl command against the listener to make sure it times out
+        request_timed_out = False
+        try:
+            out = self.run_curl(client_addr, timeout=3)
+        except Exception as e:
+            request_timed_out = True
+        self.assertTrue(request_timed_out)
+
+        # Add back the listener and run a curl command to make sure that the newly added listener is
+        # back up and running.
+        create_result = qd_manager.create("org.apache.qpid.dispatch.httpListener", self.http_listener_props)
+        sleep(2)
+        out = self.run_curl(client_addr)
+        self.assertIn(ret_string, out)
+
     def check_connector_delete(self, client_addr, server_addr):
         # Run curl 127.0.0.1:port --http2-prior-knowledge
         # We are first making sure that the http request goes thru successfully.
@@ -469,12 +506,20 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
                                                   server_file="http2_server.py")
         name = "http2-test-router"
         inter_router_port = cls.tester.get_port()
+        cls.http_listener_port = cls.tester.get_port()
+        cls.listener_name = 'listenerToBeDeleted'
+        cls.http_listener_props = {
+            'port': cls.http_listener_port,
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.listener_name
+        }
 
         config_qdra = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'QDR.A'}),
             ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
-            ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
-                              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('httpListener', cls.http_listener_props),
             ('listener', {'role': 'inter-router', 'port': inter_router_port})
         ])
 
@@ -552,6 +597,11 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
         self.assertEqual(stats_b[0].get('direction'), 'out')
         self.assertEqual(stats_b[0].get('bytesOut'), 24)
         self.assertEqual(stats_b[0].get('bytesIn'), 3944)
+
+    @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_yyy_http_listener_delete(self):
+        self.check_listener_delete(client_addr=self.router_qdra.http_addresses[0],
+                                   server_addr=self.router_qdra.addresses[0])
 
     @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     def test_zzz_http_connector_delete(self):
