@@ -755,7 +755,7 @@ class Http2TestDoubleEdgeInteriorRouter(Http2TestBase):
         qd_manager.delete("org.apache.qpid.dispatch.httpConnector", name=self.edge_b_http_connector_name)
         sleep(2)
 
-            # Now, run a curl client GET request with a timeout.
+        # Now, run a curl client GET request with a timeout.
         # Since both connectors on both edge routers are gone, the curl client will time out
         # The curl client times out instead of getting a 503 because the credit is not given on the interior
         # router to create an AMQP message because there is no destination for the router address.
