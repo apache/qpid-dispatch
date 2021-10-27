@@ -2648,9 +2648,25 @@ static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server, void *c
         }
         break;
 
-        case PN_LISTENER_CLOSE:
-            qd_log(log, QD_LOG_INFO, "Closing HTTP connection on %s", host_port);
-            break;
+        case PN_LISTENER_CLOSE: {
+            if (li->pn_listener) {
+                pn_condition_t *cond = pn_listener_condition(li->pn_listener);
+                if (pn_condition_is_set(cond)) {
+                    qd_log(log, QD_LOG_ERROR, "Listener error on %s: %s (%s)", host_port, pn_condition_get_description(cond), pn_condition_get_name(cond));
+                }
+                else {
+                    qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
+                }
+            }
+
+            sys_mutex_lock(http2_adaptor->lock);
+            pn_listener_set_context(li->pn_listener, 0);
+            li->pn_listener = 0;
+            DEQ_REMOVE(http2_adaptor->listeners, li);
+            sys_mutex_unlock(http2_adaptor->lock);
+            qd_http_listener_decref(li);
+        }
+        break;
 
         default:
             break;
@@ -2682,18 +2698,13 @@ void qd_http2_delete_connector(qd_dispatch_t *qd, qd_http_connector_t *connector
  */
 void qd_http2_delete_listener(qd_dispatch_t *qd, qd_http_listener_t *li)
 {
+    sys_mutex_lock(http2_adaptor->lock);
     if (li) {
         if (li->pn_listener) {
             pn_listener_close(li->pn_listener);
-            li->pn_listener = 0;
         }
-        sys_mutex_lock(http2_adaptor->lock);
-        DEQ_REMOVE(http2_adaptor->listeners, li);
-        sys_mutex_unlock(http2_adaptor->lock);
-
-        qd_log(http2_adaptor->log_source, QD_LOG_INFO, "Deleted HttpListener for %s, %s:%s", li->config.address, li->config.host, li->config.port);
-        qd_http_listener_decref(li);
     }
+    sys_mutex_unlock(http2_adaptor->lock);
 }
 
 
@@ -2750,14 +2761,16 @@ static void qdr_http2_adaptor_final(void *adaptor_context)
     // Free all http listeners
     qd_http_listener_t *li = DEQ_HEAD(adaptor->listeners);
     while (li) {
-        qd_http2_delete_listener(0, li);
+        DEQ_REMOVE_HEAD(adaptor->listeners);
+        qd_http_listener_decref(li);
         li = DEQ_HEAD(adaptor->listeners);
     }
 
     // Free all http connectors
     qd_http_connector_t *ct = DEQ_HEAD(adaptor->connectors);
     while (ct) {
-        qd_http2_delete_connector(0, ct);
+        DEQ_REMOVE_HEAD(adaptor->connectors);
+        qd_http_connector_decref(ct);
         ct = DEQ_HEAD(adaptor->connectors);
     }
 
