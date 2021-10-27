@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from proton import Message, symbol
+from proton import Message
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -101,7 +101,7 @@ class ReceiverRejectTest(MessagingHandler):
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
-            if event.receiver.remote_source.address != None:
+            if event.receiver.remote_source.address is not None:
                 self.fail('Heartbeat receiver was unexpectedly opened')
 
     def run(self):
