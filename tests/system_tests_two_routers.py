@@ -199,12 +199,14 @@ class TwoRouterTest(TestCase):
         self.assertIsNone(test.error)
 
     def test_10_propagated_disposition(self):
-        test = PropagatedDisposition(self, self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test = PropagatedDisposition(self, self.routers[0].addresses[0], self.routers[1].addresses[0],
+                                     "unsettled/one")
         test.run()
         self.assertTrue(test.passed)
 
     def test_10a_propagated_disposition_data(self):
-        test = PropagatedDispositionData(self, self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test = PropagatedDispositionData(self, self.routers[0].addresses[0], self.routers[1].addresses[0],
+                                         "unsettled/two")
         test.run()
         self.assertTrue(test.passed)
 
@@ -1547,10 +1549,11 @@ class PropagatedDisposition(MessagingHandler):
     Verify outcomes are properly sent end-to-end
     """
 
-    def __init__(self, test, address1, address2):
+    def __init__(self, test, sender_addr, receiver_addr, dest):
         super(PropagatedDisposition, self).__init__(auto_accept=False)
-        self.address1 = address1
-        self.address2 = address2
+        self.sender_addr = sender_addr
+        self.receiver_addr = receiver_addr
+        self.dest = dest
         self.settled = []
         self.test = test
         self.sender = None
@@ -1561,17 +1564,18 @@ class PropagatedDisposition(MessagingHandler):
         self.dispos = ['accept', 'modified', 'reject']
         self.dispos_index = 0
         self.trackers = {}
-        self.addr = "unsettled/2"
+        self.timer = None
+        self.error = None
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.sender_conn = event.container.connect(self.address1)
-        self.receiver_conn = event.container.connect(self.address2)
+        self.sender_conn = event.container.connect(self.sender_addr)
+        self.receiver_conn = event.container.connect(self.receiver_addr)
 
         self.receiver = event.container.create_receiver(self.receiver_conn,
-                                                        self.addr)
+                                                        self.dest)
         self.sender = event.container.create_sender(self.sender_conn,
-                                                    self.addr)
+                                                    self.dest)
 
     def on_sendable(self, event):
         # This function is called when the sender has credit to send
