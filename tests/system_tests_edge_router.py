@@ -1886,18 +1886,30 @@ class LinkRouteProxyTest(TestCase):
         if self.skip['test_51'] :
             self.skipTest("Test skipped during development.")
 
-        a_type = 'org.apache.qpid.dispatch.router.address'
+        # We are logging each step of this test as we go. The log statements will print to console
+        logger = Logger(title="test_51_link_route_proxy_configured",
+                        print_to_console=True)
         test_msg = Message(body="test_51_link_route_proxy_configured")
 
         fs = FakeService(self.EA1.route_container)
+
+        logger.log("test_51_link_route_proxy_configured Created FakeService")
+
         self.INT_B.wait_address("CfgLinkRoute1", count=2)
+
+        logger.log("test_51_link_route_proxy_configured Wait done on CfgLinkRoute1")
 
         out = self._test_traffic(self.INT_B.listener,
                                  self.INT_B.listener,
                                  "CfgLinkRoute1/hi",
                                  count=5,
                                  message=test_msg)
+
+        logger.log("test_51_link_route_proxy_configured _test_traffic done on CfgLinkRoute1/hi")
+
         fs.join()
+
+        logger.log("test_51_link_route_proxy_configured _test_traffic first join() completed")
 
         try:
             self.assertIsNone(out, out)
@@ -1911,22 +1923,33 @@ class LinkRouteProxyTest(TestCase):
         # active:
         self._wait_address_gone(self.INT_A, "CfgLinkRoute1")
 
+        logger.log("test_51_link_route_proxy_configured CfgLinkRoute1 _wait_address_gone")
+
         # repeat test, but this time with patterns:
 
         fs = FakeService(self.EB1.route_container)
         self.INT_A.wait_address("*.cfg.pattern.#", count=2)
+
+        logger.log("test_51_link_route_proxy_configured wait_address pattern *.cfg.pattern.#")
 
         out = self._test_traffic(self.INT_A.listener,
                                  self.INT_A.listener,
                                  "MATCH.cfg.pattern",
                                  count=5,
                                  message=test_msg)
+
+        logger.log("test_51_link_route_proxy_configured _test_traffic MATCH.cfg.pattern")
+
         fs.join()
+
+        logger.log("test_51_link_route_proxy_configured _test_traffic second join() completed")
+
         self.assertIsNone(out, out)
         self.assertEqual(5, fs.in_count)
         self.assertEqual(5, fs.out_count)
 
         self._wait_address_gone(self.INT_A, "*.cfg.pattern.#")
+        logger.log("test_51_link_route_proxy_configured *.cfg.pattern.# _wait_address_gone")
 
     def test_52_conn_link_route_proxy(self):
         """
