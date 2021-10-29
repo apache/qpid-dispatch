@@ -603,15 +603,17 @@ static void _core_conn_close(void *context, qdr_connection_t *conn, qdr_error_t 
     qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) qdr_connection_get_context(conn);
     if (hconn) {
         assert(hconn->qdr_conn == conn);
-        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-               "[C%"PRIu64"] HTTP/1.x closing connection", hconn->conn_id);
+        char *desc = error ? qdr_error_description(error) : 0;
 
-        char *qdr_error = error ? qdr_error_description(error) : 0;
+        qd_log(qdr_http1_adaptor->log, QD_LOG_INFO,
+               "[C%"PRIu64"] HTTP/1.x %s", hconn->conn_id,
+               desc ? desc : "connection closed by management");
+
         if (hconn->type == HTTP1_CONN_SERVER)
-            qdr_http1_server_core_conn_close(qdr_http1_adaptor, hconn, qdr_error);
+            qdr_http1_server_core_conn_close(qdr_http1_adaptor, hconn);
         else
-            qdr_http1_client_core_conn_close(qdr_http1_adaptor, hconn, qdr_error);
-        free(qdr_error);
+            qdr_http1_client_core_conn_close(qdr_http1_adaptor, hconn);
+        free(desc);
     }
 }
 

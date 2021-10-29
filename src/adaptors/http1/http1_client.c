@@ -24,6 +24,7 @@
 
 #include <proton/listener.h>
 #include <proton/proactor.h>
+#include <proton/netaddr.h>
 
 
 //
@@ -201,7 +202,7 @@ static void _handle_listener_events(pn_event_t *e, qd_server_t *qd_server, void 
     }
 
     case PN_LISTENER_ACCEPT: {
-        qd_log(log, QD_LOG_INFO, "Accepting HTTP/1.x connection on %s", host_port);
+        qd_log(log, QD_LOG_DEBUG, "Accepting HTTP/1.x connection on %s", host_port);
         qdr_http1_connection_t *hconn = _create_client_connection(li);
         if (hconn) {
             // Note: the proactor may schedule the hconn on another thread
@@ -450,6 +451,16 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
 
     case PN_RAW_CONNECTION_CONNECTED: {
         _setup_client_connection(hconn);
+
+        const struct pn_netaddr_t *na = pn_raw_connection_remote_addr(hconn->raw_conn);
+        if (na) {
+            char buf[128];
+            if (pn_netaddr_str(na, buf, sizeof(buf)) > 0) {
+                qd_log(log, QD_LOG_INFO,
+                       "[C%"PRIu64"] HTTP/1.x client connection established from %s",
+                       hconn->conn_id, buf);
+            }
+        }
         break;
     }
     case PN_RAW_CONNECTION_CLOSED_READ: {
@@ -463,7 +474,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
-        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Disconnected", hconn->conn_id);
+        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] HTTP/1.x client disconnected", hconn->conn_id);
         pn_raw_connection_set_context(hconn->raw_conn, 0);
 
         // prevent core from waking this connection
@@ -621,7 +632,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     }
 
     if (need_close)
-        qdr_http1_close_connection(hconn, "Connection: close");
+        qdr_http1_close_connection(hconn, 0);
     else {
         hreq = (_client_request_t*) DEQ_HEAD(hconn->requests);
         if (hreq) {
@@ -1792,14 +1803,13 @@ void qdr_http1_client_conn_cleanup(qdr_http1_connection_t *hconn)
 // handle connection close request from management
 //
 void qdr_http1_client_core_conn_close(qdr_http1_adaptor_t *adaptor,
-                                      qdr_http1_connection_t *hconn,
-                                      const char *error)
+                                      qdr_http1_connection_t *hconn)
 {
     // initiate close of the raw conn.  the adaptor will call
     // qdr_connection_close() and clean up once the DISCONNECT
     // event is processed
     //
-    qdr_http1_close_connection(hconn, error);
+    qdr_http1_close_connection(hconn, 0);
 }
 
 static void _deliver_request(qdr_http1_connection_t *hconn, _client_request_t *hreq)
