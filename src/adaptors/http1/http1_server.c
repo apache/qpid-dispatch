@@ -153,7 +153,7 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
     ZERO(hconn);
     hconn->type = HTTP1_CONN_SERVER;
     hconn->admin_status = QD_CONN_ADMIN_ENABLED;
-    hconn->oper_status = QD_CONN_OPER_UP;
+    hconn->oper_status = QD_CONN_OPER_DOWN;  // until TCP connection ready
     hconn->qd_server = qd->server;
     hconn->adaptor = qdr_http1_adaptor;
     hconn->handler_context.handler = &_handle_connection_events;
@@ -542,6 +542,11 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     switch (pn_event_type(e)) {
 
     case PN_RAW_CONNECTION_CONNECTED: {
+        if (hconn->oper_status == QD_CONN_OPER_DOWN) {
+            hconn->oper_status = QD_CONN_OPER_UP;
+            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] HTTP/1.x server %s connection established",
+                   hconn->conn_id, hconn->cfg.host_port);
+        }
         hconn->server.link_timeout = 0;
         _setup_server_links(hconn);
         while (qdr_connection_process(hconn->qdr_conn)) {}
@@ -571,8 +576,6 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
-        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connection closed", hconn->conn_id);
-
         pn_raw_connection_set_context(hconn->raw_conn, 0);
 
         // Check for a request that is in-progress - it needs to be cancelled.
@@ -600,8 +603,16 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 hconn->server.link_timeout = qd_timer_now() + LINK_TIMEOUT_MSEC;
                 hconn->server.reconnect_pause = 0;
             } else {
-                if ((qd_timer_now() - hconn->server.link_timeout) >= 0)
+                if ((qd_timer_now() - hconn->server.link_timeout) >= 0) {
                     _teardown_server_links(hconn);
+                    // at this point we've unbound the service address so no
+                    // more messages will be sent to us. Notify meatspace:
+                    if (hconn->oper_status == QD_CONN_OPER_UP) {
+                        hconn->oper_status = QD_CONN_OPER_DOWN;
+                        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] HTTP/1.x server %s disconnected",
+                               hconn->conn_id, hconn->cfg.host_port);
+                    }
+                }
                 if (hconn->server.reconnect_pause < RETRY_MAX_PAUSE_MSEC)
                     hconn->server.reconnect_pause += RETRY_PAUSE_MSEC;
             }
@@ -677,8 +688,8 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     } else {
         bool need_close = _process_request((_server_request_t*) DEQ_HEAD(hconn->requests));
         if (need_close) {
-            qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closing connection!", hconn->conn_id);
-            qdr_http1_close_connection(hconn, "HTTP Request requires connection close");
+            qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP Request requires connection close", hconn->conn_id);
+            qdr_http1_close_connection(hconn, 0);
         }
     }
 }
@@ -1723,13 +1734,11 @@ static void _cancel_request(_server_request_t *hreq)
 // handle connection close request from management
 //
 void qdr_http1_server_core_conn_close(qdr_http1_adaptor_t *adaptor,
-                                      qdr_http1_connection_t *hconn,
-                                      const char *error)
+                                      qdr_http1_connection_t *hconn)
 {
-    qdr_connection_t *qdr_conn = hconn->qdr_conn;
-
     // prevent activation by core thread
     sys_mutex_lock(qdr_http1_adaptor->lock);
+    qdr_connection_t *qdr_conn = hconn->qdr_conn;
     qdr_connection_set_context(hconn->qdr_conn, 0);
     hconn->qdr_conn = 0;
     sys_mutex_unlock(qdr_http1_adaptor->lock);
@@ -1738,7 +1747,7 @@ void qdr_http1_server_core_conn_close(qdr_http1_adaptor_t *adaptor,
     hconn->oper_status = QD_CONN_OPER_DOWN;
     _teardown_server_links(hconn);
     qdr_connection_closed(qdr_conn);
-    qdr_http1_close_connection(hconn, error);
+    qdr_http1_close_connection(hconn, 0);
 
     // it is expected that this callback is the final callback before returning
     // from qdr_connection_process(). Free hconn when qdr_connection_process returns.
