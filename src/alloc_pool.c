@@ -395,7 +395,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
             DEQ_ITEM_INIT(item);
 #endif
             if (!push_stack(&pool->free_list, item)) {
-                free(item);
+                FREE_CACHE_ALIGNED(item);
                 break;
             }
             item->sequence = 0;
@@ -457,7 +457,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
     // thread-local pool for this type.
     //
     if (*tpool == 0) {
-        *tpool = NEW(qd_alloc_pool_t);
+        NEW_CACHE_ALIGNED(qd_alloc_pool_t, *tpool);
         DEQ_ITEM_INIT(*tpool);
         init_stack(&(*tpool)->free_list);
         sys_mutex_lock(desc->lock);
@@ -469,7 +469,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
 
     item->sequence++;
     if (!push_stack(&pool->free_list, item)) {
-        free(item);
+        FREE_CACHE_ALIGNED(item);
     }
 
     if (DEQ_SIZE(pool->free_list) < desc->config->local_free_list_max)
@@ -492,7 +492,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
     if (desc->config->global_free_list_max != 0) {
         while (DEQ_SIZE(desc->global_pool->free_list) > desc->config->global_free_list_max) {
             item = pop_stack(&desc->global_pool->free_list);
-            free(item);
+            FREE_CACHE_ALIGNED(item);
             desc->stats->total_free_to_heap++;
         }
     }
@@ -564,7 +564,7 @@ void qd_alloc_finalize(void)
         //
         item = pop_stack(&desc->global_pool->free_list);
         while (item) {
-            free(item);
+            FREE_CACHE_ALIGNED(item);
             desc->stats->total_free_to_heap++;
             item = pop_stack(&desc->global_pool->free_list);
         }
@@ -580,13 +580,13 @@ void qd_alloc_finalize(void)
         while (tpool) {
             item = pop_stack(&tpool->free_list);
             while (item) {
-                free(item);
+                FREE_CACHE_ALIGNED(item);
                 desc->stats->total_free_to_heap++;
                 item = pop_stack(&tpool->free_list);
             }
             DEQ_REMOVE_HEAD(desc->tpool_list);
             free_stack_chunks(&tpool->free_list);
-            free(tpool);
+            FREE_CACHE_ALIGNED(tpool);
             tpool = DEQ_HEAD(desc->tpool_list);
         }
 
@@ -632,7 +632,7 @@ void qd_alloc_finalize(void)
                 // Since this is a custom heap ASAN will dump the first
                 // malloc() of the object - not the last time it was allocated
                 // from the pool.
-                free(item);
+                FREE_CACHE_ALIGNED(item);
                 item = DEQ_HEAD(qtype->allocated);
             }
 #endif

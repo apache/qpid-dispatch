@@ -48,7 +48,7 @@ sys_mutex_t *sys_mutex(void)
 void sys_mutex_free(sys_mutex_t *mutex)
 {
     pthread_mutex_destroy(&(mutex->mutex));
-    free(mutex);
+    FREE_CACHE_ALIGNED(mutex);
 }
 
 
