@@ -90,19 +90,11 @@ static inline void qd_session_link_pn(qd_session_t *qd_ssn, pn_session_t *pn_ssn
     pn_session_set_context(pn_ssn, qd_ssn);
 }
 
-#ifdef QD_NULL_SESSION_CONTEXT
-static inline void qd_session_unlink_pn(qd_session_t *qd_ssn, pn_session_t *pn_ssn)
-{
-    assert(qd_ssn);
-    pn_session_set_context(pn_ssn, QD_NULL_SESSION_CONTEXT);
-}
-#else
 static inline void qd_session_unlink_pn(qd_session_t *qd_ssn, pn_session_t *pn_ssn)
 {
     assert(qd_ssn);
     pn_session_set_context(pn_ssn, 0);
 }
-#endif
 
 ALLOC_DECLARE(qd_session_t);
 ALLOC_DEFINE(qd_session_t);
