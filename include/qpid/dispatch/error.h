@@ -21,6 +21,8 @@
 
 #include "qpid/dispatch/enum.h"
 
+#include <qpid/dispatch/internal/export.h>
+
 #include <stdarg.h>
 
 /** @file
@@ -78,12 +80,12 @@ qd_error_t qd_error_clear();
 /**
  * @return Thread local error message. Includes text for error code.
  */
-const char* qd_error_message();
+QD_EXPORT const char* qd_error_message();
 
 /**
  *@return Thread local error code
  */
-qd_error_t qd_error_code();
+QD_EXPORT qd_error_t qd_error_code();
 
 /** Maximum length of a qd_error_message, useful for temporary buffers. */
 extern const int QD_ERROR_MAX;

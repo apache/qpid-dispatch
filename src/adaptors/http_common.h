@@ -90,12 +90,12 @@ void qd_http_connector_decref(qd_http_connector_t* c);
 // Management Entity Interfaces (see HttpListenerEntity and HttpConnectorEntity in agent.py)
 //
 
-qd_http_listener_t *qd_dispatch_configure_http_listener(qd_dispatch_t *qd, qd_entity_t *entity);
-void qd_dispatch_delete_http_listener(qd_dispatch_t *qd, void *impl);
+QD_EXPORT qd_http_listener_t *qd_dispatch_configure_http_listener(qd_dispatch_t *qd, qd_entity_t *entity);
+QD_EXPORT void qd_dispatch_delete_http_listener(qd_dispatch_t *qd, void *impl);
 qd_error_t qd_entity_refresh_httpListener(qd_entity_t* entity, void *impl);
 
-qd_http_connector_t *qd_dispatch_configure_http_connector(qd_dispatch_t *qd, qd_entity_t *entity);
-void qd_dispatch_delete_http_connector(qd_dispatch_t *qd, void *impl);
+QD_EXPORT qd_http_connector_t *qd_dispatch_configure_http_connector(qd_dispatch_t *qd, qd_entity_t *entity);
+QD_EXPORT void qd_dispatch_delete_http_connector(qd_dispatch_t *qd, void *impl);
 qd_error_t qd_entity_refresh_httpConnector(qd_entity_t* entity, void *impl);
 
 // Management interfaces for retrieval of HttpRequestInfo entities

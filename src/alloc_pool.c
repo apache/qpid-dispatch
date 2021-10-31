@@ -668,7 +668,8 @@ void qd_alloc_finalize(void)
 }
 
 
-qd_error_t qd_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
+QD_EXPORT qd_error_t qd_entity_refresh_allocator(qd_entity_t* entity, void *impl)
+{
     qd_alloc_type_t *alloc_type = (qd_alloc_type_t*) impl;
     if (qd_entity_set_string(entity, "typeName", alloc_type->desc->type_name) == 0 &&
         qd_entity_set_long(entity, "typeSize", alloc_type->desc->total_size) == 0 &&

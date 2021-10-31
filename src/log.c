@@ -467,7 +467,7 @@ void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file
 static PyObject *inc_none() { Py_INCREF(Py_None); return Py_None; }
 
 /// Return the log buffer up to limit as a python list. Called by management agent.
-PyObject *qd_log_recent_py(long limit) {
+QD_EXPORT PyObject *qd_log_recent_py(long limit) {
     if (PyErr_Occurred()) return NULL;
     PyObject *list = PyList_New(0);
     PyObject *py_entry = NULL;
@@ -532,7 +532,7 @@ void qd_log_finalize(void) {
     default_log_source = NULL;  // stale value would misconfigure new router started again in the same process
 }
 
-qd_error_t qd_log_entity(qd_entity_t *entity)
+QD_EXPORT qd_error_t qd_log_entity(qd_entity_t *entity)
 {
     qd_error_clear();
 
@@ -689,8 +689,7 @@ void qd_format_string(char* buf, int buf_size, const char *fmt, ...)
     va_end(args);
 }
 
-
-qd_error_t qd_entity_refresh_logStats(qd_entity_t* entity, void *impl)
+QD_EXPORT qd_error_t qd_entity_refresh_logStats(qd_entity_t* entity, void *impl)
 {
     qd_log_source_t *log = (qd_log_source_t*)impl;
     char identity_str[TEXT_MAX];

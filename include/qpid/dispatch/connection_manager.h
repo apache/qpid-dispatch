@@ -54,6 +54,6 @@ void qd_connection_manager_free(qd_connection_manager_t *cm);
  *
  * @param qd The dispatch handle returned by qd_dispatch.
  */
-void qd_connection_manager_start(qd_dispatch_t *qd);
+QD_EXPORT void qd_connection_manager_start(qd_dispatch_t *qd);
 
 #endif

@@ -75,7 +75,7 @@ qd_dispatch_t *qd_dispatch_get_dispatch();
  * @param qd The dispatch handle returned by qd_dispatch.
  * @param entity The configuration entity.
  */
-qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity);
+QD_EXPORT qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Prepare Dispatch for operation.  This must be called prior to
@@ -83,12 +83,12 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity);
  *
  * @param qd The dispatch handle returned by qd_dispatch
  */
-qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd);
+QD_EXPORT qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd);
 
 /**
  * Configure an address, must be called after qd_dispatch_prepare
  */
-qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity);
+QD_EXPORT qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Configure a route, must be called after qd_dispatch_prepare
@@ -98,17 +98,17 @@ qd_error_t qd_dispatch_configure_route(qd_dispatch_t *qd, qd_entity_t *entity);
 /**
  * Configure security policy, must be called after qd_dispatch_prepare
  */
-qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity);
+QD_EXPORT qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Configure security policy manager, must be called after qd_dispatch_prepare
  */
-qd_error_t qd_dispatch_register_policy_manager(qd_dispatch_t *qd, qd_entity_t *entity);
+QD_EXPORT qd_error_t qd_dispatch_register_policy_manager(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Configure display name service, must be called after qd_dispatch_prepare
  */
-qd_error_t qd_dispatch_register_display_name_service(qd_dispatch_t *qd, void *object);
+QD_EXPORT qd_error_t qd_dispatch_register_display_name_service(qd_dispatch_t *qd, void *object);
 
 /**
  * \brief Configure the logging module from the
@@ -128,7 +128,7 @@ void qd_dispatch_register_entity(qd_dispatch_t *qd, const char *type, void *impl
 void qd_dispatch_unregister_entity(qd_dispatch_t *qd, void *impl);
 
 /** Set the agent */
-void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent);
+QD_EXPORT void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent);
 
 qdr_core_t* qd_dispatch_router_core(qd_dispatch_t *qd);
 

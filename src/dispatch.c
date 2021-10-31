@@ -241,25 +241,25 @@ qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity)
     return qd_error_code();
 }
 
-qd_error_t qd_dispatch_configure_link_route(qd_dispatch_t *qd, qd_entity_t *entity) {
+QD_EXPORT qd_error_t qd_dispatch_configure_link_route(qd_dispatch_t *qd, qd_entity_t *entity) {
     if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
     qd_router_configure_link_route(qd->router, entity);
     return qd_error_code();
 }
 
-qd_error_t qd_dispatch_configure_auto_link(qd_dispatch_t *qd, qd_entity_t *entity) {
+QD_EXPORT qd_error_t qd_dispatch_configure_auto_link(qd_dispatch_t *qd, qd_entity_t *entity) {
     if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
     qd_router_configure_auto_link(qd->router, entity);
     return qd_error_code();
 }
 
-qd_error_t qd_dispatch_configure_exchange(qd_dispatch_t *qd, qd_entity_t *entity) {
+QD_EXPORT qd_error_t qd_dispatch_configure_exchange(qd_dispatch_t *qd, qd_entity_t *entity) {
     if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
     qd_router_configure_exchange(qd->router, entity);
     return qd_error_code();
 }
 
-qd_error_t qd_dispatch_configure_binding(qd_dispatch_t *qd, qd_entity_t *entity) {
+QD_EXPORT qd_error_t qd_dispatch_configure_binding(qd_dispatch_t *qd, qd_entity_t *entity) {
     if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
     qd_router_configure_binding(qd->router, entity);
     return qd_error_code();
@@ -287,23 +287,23 @@ qd_error_t qd_dispatch_register_display_name_service(qd_dispatch_t *qd, void *ob
 }
 
 
-long qd_dispatch_policy_c_counts_alloc()
+QD_EXPORT long qd_dispatch_policy_c_counts_alloc()
 {
     return qd_policy_c_counts_alloc();
 }
 
 
-void qd_dispatch_policy_c_counts_free(long ccounts)
+QD_EXPORT void qd_dispatch_policy_c_counts_free(long ccounts)
 {
     qd_policy_c_counts_free(ccounts);
 }
 
-void qd_dispatch_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
+QD_EXPORT void qd_dispatch_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
 {
     qd_policy_c_counts_refresh(ccounts, entity);
 }
 
-bool qd_dispatch_policy_host_pattern_add(qd_dispatch_t *qd, void *py_obj)
+QD_EXPORT bool qd_dispatch_policy_host_pattern_add(qd_dispatch_t *qd, void *py_obj)
 {
     char *hostPattern = py_string_2_c(py_obj);
     bool rc = qd_policy_host_pattern_add(qd->policy, hostPattern);
@@ -311,14 +311,14 @@ bool qd_dispatch_policy_host_pattern_add(qd_dispatch_t *qd, void *py_obj)
     return rc;
 }
 
-void qd_dispatch_policy_host_pattern_remove(qd_dispatch_t *qd, void *py_obj)
+QD_EXPORT void qd_dispatch_policy_host_pattern_remove(qd_dispatch_t *qd, void *py_obj)
 {
     char *hostPattern = py_string_2_c(py_obj);
     qd_policy_host_pattern_remove(qd->policy, hostPattern);
     free(hostPattern);
 }
 
-char * qd_dispatch_policy_host_pattern_lookup(qd_dispatch_t *qd, void *py_obj)
+QD_EXPORT char * qd_dispatch_policy_host_pattern_lookup(qd_dispatch_t *qd, void *py_obj)
 {
     char *hostPattern = py_string_2_c(py_obj);
     char *rc = qd_policy_host_pattern_lookup(qd->policy, hostPattern);
@@ -387,8 +387,8 @@ void qd_dispatch_free(qd_dispatch_t *qd)
 }
 
 
-void qd_dispatch_router_lock(qd_dispatch_t *qd) { sys_mutex_lock(qd->router->lock); }
-void qd_dispatch_router_unlock(qd_dispatch_t *qd) { sys_mutex_unlock(qd->router->lock); }
+QD_EXPORT void qd_dispatch_router_lock(qd_dispatch_t *qd) { sys_mutex_lock(qd->router->lock); }
+QD_EXPORT void qd_dispatch_router_unlock(qd_dispatch_t *qd) { sys_mutex_unlock(qd->router->lock); }
 
 qdr_core_t* qd_dispatch_router_core(qd_dispatch_t *qd) {
     return qd->router->router_core;

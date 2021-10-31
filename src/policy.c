@@ -224,7 +224,7 @@ qd_error_t qd_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
 /** Update the statistics in qdrouterd.conf["policy"]
  * @param[in] entity pointer to the policy management object
  **/
-qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *unused) {
+QD_EXPORT qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *unused) {
     // Return global stats
     uint64_t np, nd, nc, nl, nm, nt;
     sys_mutex_lock(stats_lock);

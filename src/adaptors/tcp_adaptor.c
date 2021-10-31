@@ -1231,7 +1231,7 @@ static bool tcp_listener_listen(qd_tcp_listener_t *li) {
     return li->pn_listener;
 }
 
-qd_tcp_listener_t *qd_dispatch_configure_tcp_listener(qd_dispatch_t *qd, qd_entity_t *entity)
+QD_EXPORT qd_tcp_listener_t *qd_dispatch_configure_tcp_listener(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_tcp_listener_t *li = qd_tcp_listener(qd->server);
     if (!li || load_bridge_config(qd, li->config, entity, true) != QD_ERROR_NONE) {
@@ -1246,7 +1246,7 @@ qd_tcp_listener_t *qd_dispatch_configure_tcp_listener(qd_dispatch_t *qd, qd_enti
     return li;
 }
 
-void qd_dispatch_delete_tcp_listener(qd_dispatch_t *qd, void *impl)
+QD_EXPORT void qd_dispatch_delete_tcp_listener(qd_dispatch_t *qd, void *impl)
 {
     qd_tcp_listener_t *li = (qd_tcp_listener_t*) impl;
     if (li) {
@@ -1304,7 +1304,7 @@ void qd_tcp_connector_decref(qd_tcp_connector_t* c)
     }
 }
 
-qd_tcp_connector_t *qd_dispatch_configure_tcp_connector(qd_dispatch_t *qd, qd_entity_t *entity)
+QD_EXPORT qd_tcp_connector_t *qd_dispatch_configure_tcp_connector(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_tcp_connector_t *c = qd_tcp_connector(qd->server);
     if (!c || load_bridge_config(qd, c->config, entity, true) != QD_ERROR_NONE) {
@@ -1326,7 +1326,7 @@ static void close_egress_dispatcher(qdr_tcp_connection_t *context)
     qd_timer_schedule(context->activate_timer, 0);
 }
 
-void qd_dispatch_delete_tcp_connector(qd_dispatch_t *qd, void *impl)
+QD_EXPORT void qd_dispatch_delete_tcp_connector(qd_dispatch_t *qd, void *impl)
 {
     qd_tcp_connector_t *ct = (qd_tcp_connector_t*) impl;
     if (ct) {
