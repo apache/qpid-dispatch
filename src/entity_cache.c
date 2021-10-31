@@ -89,7 +89,7 @@ qd_error_t qd_entity_refresh_begin(PyObject *list) {
     sys_mutex_lock(event_lock);
     entity_event_t *event = DEQ_HEAD(event_list);
     while (event) {
-        PyObject *tuple = Py_BuildValue("(isl)", (int)event->action, event->type, (long)event->object);
+        PyObject *tuple = Py_BuildValue("(isN)", (int)event->action, event->type, PyLong_FromVoidPtr(event->object));
         if (!tuple) { qd_error_py(); break; }
         int err = PyList_Append(list, tuple);
         Py_DECREF(tuple);

@@ -116,10 +116,6 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks)
     return qd;
 }
 
-
-// We pass pointers as longs via the python interface, make sure this is safe.
-STATIC_ASSERT(sizeof(long) >= sizeof(void*), pointer_is_bigger_than_long);
-
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
     // `dlopen(NULL, ...)` opens the current executable; qdrouterd used to dlopen libqpid-dispatch.so here before
@@ -131,7 +127,9 @@ qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.management.config");
     PyObject *configure_dispatch = module ? PyObject_GetAttrString(module, "configure_dispatch") : NULL;
     Py_XDECREF(module);
-    PyObject *result = configure_dispatch ? PyObject_CallFunction(configure_dispatch, "(lls)", (long)qd, qd->dl_handle, config_path) : NULL;
+    PyObject *result = configure_dispatch ? PyObject_CallFunction(configure_dispatch, "(NNs)", PyLong_FromVoidPtr(qd),
+                                                                  PyLong_FromVoidPtr(qd->dl_handle), config_path)
+                                          : NULL;
     Py_XDECREF(configure_dispatch);
     if (!result) qd_error_py();
     Py_XDECREF(result);
