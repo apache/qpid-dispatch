@@ -26,21 +26,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <proton/version.h>
-#if PN_VERSION_MAJOR==0 && PN_VERSION_MINOR>32
-#define USE_NEW_PNX_SASL_API
-#endif
 #include <proton/engine.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
-#ifdef USE_NEW_PNX_SASL_API
 #include <proton/sasl_plugin.h>
-#else
-#include <proton/sasl-plugin.h>
-#define pnx_sasl_set_succeeded(X, Y, Z)  pnx_sasl_succeed_authentication(X, Y)
-#define pnx_sasl_set_failed(X)  pnx_sasl_fail_authentication(X)
-#define remote_sasl_process_outcome(X, Y) remote_sasl_process_outcome(X)
-#endif
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/log.h"
 
