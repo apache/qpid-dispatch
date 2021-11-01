@@ -75,6 +75,26 @@ typedef struct {
     qdr_address_list_t         deleted_addrs;
 } qdrm_mobile_sync_t;
 
+/**
+ * Gets the router id from the parsed field and prints the relevant error message.
+ */
+static void print_error_log(qdrm_mobile_sync_t *msync, qd_parsed_field_t *id_field, bool mau)
+{
+    char *r_id = 0;
+    if (id_field) {
+        qd_iterator_t *id_iter = qd_parse_raw(id_field);
+        if (id_iter) {
+            r_id = (char *)qd_iterator_copy(id_iter);
+        }
+    }
+    //
+    // There is a possibility here that router_id is null but that is fine. We want to print it out either way
+    // which will help us in debugging.
+    //
+    qd_log(msync->log, QD_LOG_ERROR, "Received %s from an unknown router with router id %s", mau? "MAU": "MAR", r_id);
+    free(r_id);
+}
+
 static void qcm_mobile_sync_on_router_advanced_CT(qdrm_mobile_sync_t *msync, qdr_node_t *router);
 
 //================================================================================
@@ -457,8 +477,9 @@ static void qcm_mobile_sync_on_mar_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                 //
                 qd_log(msync->log, QD_LOG_DEBUG, "Sent MAU to requestor: mobile_seq=%"PRIu64, msync->mobile_seq);
             }
-        } else
-            qd_log(msync->log, QD_LOG_ERROR, "Received MAR from an unknown router");
+        } else {
+            print_error_log(msync, id_field, false);
+        }
     }
 }
 
@@ -690,8 +711,9 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
             // Tell the python router about the new mobile sequence
             //
             qdr_post_set_mobile_seq_CT(msync->core, router->mask_bit, mobile_seq);
-        } else
-            qd_log(msync->log, QD_LOG_ERROR, "Received MAU from an unknown router");
+        } else {
+            print_error_log(msync, id_field, true);
+        }
     }
 }
 
