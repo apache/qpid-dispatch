@@ -47,6 +47,7 @@ set(qpid_dispatch_SOURCES
   adaptors/http1/http1_server.c
   adaptors/http1/http1_request_info.c
   adaptors/tcp_adaptor.c
+  adaptors/test_adaptor.c
   alloc.c
   alloc_pool.c
   aprintf.c
@@ -85,6 +86,7 @@ set(qpid_dispatch_SOURCES
   platform.c
   router.c
   router_core.c
+  router_core/address_watch.c
   router_core/agent.c
   router_core/agent_address.c
   router_core/agent_config_address.c

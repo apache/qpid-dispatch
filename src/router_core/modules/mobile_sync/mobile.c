@@ -639,6 +639,8 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                             qdrc_event_addr_raise(msync->core, QDRC_EVENT_ADDR_BECAME_DEST, addr);
                         else if (qd_bitmask_cardinality(addr->rnodes) == 1 && DEQ_SIZE(addr->rlinks) == 1)
                             qdrc_event_addr_raise(msync->core, QDRC_EVENT_ADDR_TWO_DEST, addr);
+
+                        qdr_trigger_address_watch_CT(msync->core, addr);
                     }
                 } while (false);
 
@@ -671,6 +673,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                             else if (qd_bitmask_cardinality(addr->rnodes) == 0 && DEQ_SIZE(addr->rlinks) == 1)
                                 qdrc_event_addr_raise(msync->core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
 
+                            qdr_trigger_address_watch_CT(msync->core, addr);
                             qdr_check_addr_CT(msync->core, addr);
                         }
                     }
@@ -701,6 +704,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                         else if (qd_bitmask_cardinality(addr->rnodes) == 0 && DEQ_SIZE(addr->rlinks) == 1)
                             qdrc_event_addr_raise(msync->core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
 
+                        qdr_trigger_address_watch_CT(msync->core, addr);
                         qdr_check_addr_CT(msync->core, addr);
                     }
                     addr = next_addr;
@@ -826,6 +830,7 @@ static void qcm_mobile_sync_on_router_flush_CT(qdrm_mobile_sync_t *msync, qdr_no
             else if (qd_bitmask_cardinality(addr->rnodes) == 0 && DEQ_SIZE(addr->rlinks) == 1)
                 qdrc_event_addr_raise(msync->core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
 
+            qdr_trigger_address_watch_CT(msync->core, addr);
             qdr_check_addr_CT(msync->core, addr);
         }
         addr = next_addr;

@@ -178,6 +178,7 @@ foreach(py_test_module
     system_tests_http1_over_tcp
     system_tests_tcp_adaptor
     system_tests_heartbeats
+    system_tests_address_watch
     )
 
   string(CONFIGURE "${PYTHON_TEST_COMMAND}" CONFIGURED_PYTHON_TEST_COMMAND)

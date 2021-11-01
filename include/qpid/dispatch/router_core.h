@@ -68,6 +68,15 @@ void qdr_process_tick(qdr_core_t *core);
 
 
 /**
+ * Return true iff the test hooks option is enabled for this process.
+ * 
+ * @param core Pointer to the core object returned by qd_core()
+ * @return true iff test hooks are enabled
+ */
+bool qdr_core_test_hooks_enabled(const qdr_core_t *core);
+
+
+/**
  ******************************************************************************
  * Route table maintenance functions (Router Control)
  ******************************************************************************
@@ -159,6 +168,64 @@ void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_iterator_t *addr,
 void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr,
                   bool exclude_inprocess, bool control);
 
+
+/**
+ ******************************************************************************
+ * Address watch functions
+ ******************************************************************************
+ */
+
+typedef uint32_t qdr_watch_handle_t;
+
+/**
+ * Handler for updates on watched addresses.  This function shall be invoked on an IO thread.
+ * 
+ * Note:  This function will be invoked when a watched address has a change in reachability.
+ * It is possible that the function may be called when no change occurs, particularly when an
+ * address is removed from the core address table.
+ *
+ * @param context The opaque context supplied in the call to qdr_core_watch_address
+ * @param local_consumers Number of consuming (outgoing) links for this address on this router
+ * @param in_proc_consumers Number of in-process consumers for this address on this router
+ * @param remote_consumers Number of remote routers with consumers for this address
+ * @param local_producers Number of producing (incoming) links for this address on this router
+ */
+typedef void (*qdr_address_watch_update_t)(void     *context,
+                                           uint32_t  local_consumers,
+                                           uint32_t  in_proc_consumers,
+                                           uint32_t  remote_consumers,
+                                           uint32_t  local_producers);
+
+/**
+ * qdr_core_watch_address
+ *
+ * Subscribe to watch for changes in the reachability for an address.  It is safe to invoke this
+ * function from an IO thread.
+ * 
+ * @param core Pointer to the core module
+ * @param address The address to be watched
+ * @param aclass Address class character
+ * @param phase Address phase character ('0' .. '9')
+ * @param on_watch The handler function
+ * @param context The opaque context sent to the handler on all invocations
+ * @return Watch handle to be used when canceling the watch
+ */
+qdr_watch_handle_t qdr_core_watch_address(qdr_core_t                 *core,
+                                          const char                 *address,
+                                          char                        aclass,
+                                          char                        phase,
+                                          qdr_address_watch_update_t  on_watch,
+                                          void                       *context);
+
+/**
+ * qdr_core_unwatch_address
+ * 
+ * Cancel an address watch subscription.  It is safe to invoke this function from an IO thread.
+ * 
+ * @param core Pointer to the core module
+ * @param handle Watch handle returned by qdr_core_watch_address
+ */
+void qdr_core_unwatch_address(qdr_core_t *core, qdr_watch_handle_t handle);
 
 /**
  ******************************************************************************

@@ -392,11 +392,13 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     //
     qdr_address_t *addr = DEQ_HEAD(core->addrs);
     while (addr && rnode->ref_count > 0) {
-        if (qd_bitmask_clear_bit(addr->rnodes, router_maskbit))
+        if (qd_bitmask_clear_bit(addr->rnodes, router_maskbit)) {
             //
             // If the cleared bit was originally set, decrement the ref count
             //
             rnode->ref_count--;
+            qdr_trigger_address_watch_CT(core, addr);
+        }
         addr = DEQ_NEXT(addr);
     }
     assert(rnode->ref_count == 0);
