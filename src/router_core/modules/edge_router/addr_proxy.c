@@ -318,15 +318,6 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
             const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
             if (*key == QD_ITER_HASH_PREFIX_MOBILE) {
                 //
-                // Nullify the edge link references in case there are any left over from an earlier
-                // instance of an edge connection.
-                //
-                assert(addr->edge_inlink  == 0);
-                addr->edge_inlink  = 0;
-                assert(addr->edge_outlink == 0);
-                addr->edge_outlink = 0;
-
-                //
                 // If the address has more than zero attached destinations, create an
                 // incoming link from the interior to signal the presence of local consumers.
                 //
