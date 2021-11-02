@@ -308,9 +308,6 @@ Other options include `Debug` (disables optimizations) and `Coverage`.
 |`-DQD_ENABLE_ASSERTIONS=`
 |Seting this to `ON` enables asserts irrespective of `CMAKE_BUILD_TYPE`.
 
-|`-DQD_MEMORY_STATS=`
-|Dispatch will track memory pool usage statistics if this is enabled.
-
 |`-DCONSOLE_INSTALL=`
 |Web console will not be built if this is set to `OFF`.
 

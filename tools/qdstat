@@ -731,7 +731,12 @@ class BusManager(object):
             self.display_datetime_router_id()
 
         pooled_total = 0
+        memory_stats_enabled = True
         for t in objects:
+            # t.totalAllocFromHeap is None *only* if memory stats is disabled.
+            if t.totalAllocFromHeap is None:
+                memory_stats_enabled = False
+                break
             row = []
             row.append(self._identity_clean(t.identity))
             row.append(PlainNum(t.typeSize))
@@ -743,10 +748,12 @@ class BusManager(object):
             row.append(PlainNum(t.batchesRebalancedToGlobal))
             rows.append(row)
             pooled_total += (t.typeSize * t.totalAllocFromHeap)
-        if not rows:
+
+        if not rows or not memory_stats_enabled:
             # router built w/o memory pools:
             print("No memory statistics available")
             return
+
         title = "Memory Pools"
         sorter = Sorter(heads, rows, 'type', 0, True)
         dispRows = sorter.getSorted()

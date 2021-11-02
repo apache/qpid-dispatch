@@ -88,7 +88,6 @@ DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 // -DQD_MEMORY_DEBUG=1 from RuntimeChecks.cmake and .travis.yml when doing
 // RUNTIME=asan testing
 //
-#if QD_MEMORY_STATS
 static const char *leaking_types[] = {
     "qd_hash_handle_t",       // DISPATCH-1696
 
@@ -114,7 +113,6 @@ static const char *leaking_types[] = {
     "qdr_delivery_ref_t", // DISPATCH-1702
 
     0};
-#endif
 
 //128 has been chosen because many CPUs arch use an
 //adjacent line prefetching optimization that load
@@ -290,10 +288,8 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
         init_stack(&desc->global_pool->free_list);
         desc->lock = sys_mutex();
         DEQ_INIT(desc->tpool_list);
-#if QD_MEMORY_STATS
         desc->stats = NEW(qd_alloc_stats_t);
         ZERO(desc->stats);
-#endif
 
         qd_alloc_type_t *type_item = NEW(qd_alloc_type_t);
         DEQ_ITEM_INIT(type_item);
@@ -306,6 +302,7 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
 
         desc->header  = PATTERN_FRONT;
         desc->trailer = PATTERN_BACK;
+
         qd_entity_cache_add(QD_ALLOCATOR_TYPE, type_item);
     }
 
@@ -375,10 +372,8 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         const int moved = unordered_move_stack(&desc->global_pool->free_list, &pool->free_list,
                                                desc->config->transfer_batch_size);
         assert(moved == desc->config->transfer_batch_size);
-#if QD_MEMORY_STATS
         desc->stats->batches_rebalanced_to_threads++;
         desc->stats->held_by_threads += moved;
-#endif
     } else {
         //
         // Allocate a full batch from the heap and put it on the thread list.
@@ -405,10 +400,8 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
             }
             item->sequence = 0;
             ASAN_POISON_MEMORY_REGION(&item[1], desc->total_size);
-#if QD_MEMORY_STATS
             desc->stats->held_by_threads++;
             desc->stats->total_alloc_from_heap++;
-#endif
         }
     }
     sys_mutex_unlock(desc->lock);
@@ -490,10 +483,8 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
     const int moved = unordered_move_stack(&pool->free_list, &desc->global_pool->free_list,
                                            desc->config->transfer_batch_size);
     assert(moved == desc->config->transfer_batch_size);
-#if QD_MEMORY_STATS
     desc->stats->batches_rebalanced_to_global++;
     desc->stats->held_by_threads -= moved;
-#endif
     //
     // If there's a global_free_list size limit, remove items until the limit is
     // not exceeded.
@@ -502,9 +493,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
         while (DEQ_SIZE(desc->global_pool->free_list) > desc->config->global_free_list_max) {
             item = pop_stack(&desc->global_pool->free_list);
             free(item);
-#if QD_MEMORY_STATS
             desc->stats->total_free_to_heap++;
-#endif
         }
     }
 
@@ -576,9 +565,7 @@ void qd_alloc_finalize(void)
         item = pop_stack(&desc->global_pool->free_list);
         while (item) {
             free(item);
-#if QD_MEMORY_STATS
             desc->stats->total_free_to_heap++;
-#endif
             item = pop_stack(&desc->global_pool->free_list);
         }
         free_stack_chunks(&desc->global_pool->free_list);
@@ -594,9 +581,7 @@ void qd_alloc_finalize(void)
             item = pop_stack(&tpool->free_list);
             while (item) {
                 free(item);
-#if QD_MEMORY_STATS
                 desc->stats->total_free_to_heap++;
-#endif
                 item = pop_stack(&tpool->free_list);
             }
             DEQ_REMOVE_HEAD(desc->tpool_list);
@@ -608,7 +593,6 @@ void qd_alloc_finalize(void)
         //
         // Check the stats for lost items
         //
-#if QD_MEMORY_STATS
         if (dump_file && desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap) {
             bool suppressed = false;
             for (int i = 0; leaking_types[i]; ++i) {
@@ -653,14 +637,11 @@ void qd_alloc_finalize(void)
             }
 #endif
         }
-#endif
 
         //
         // Reclaim the descriptor components
         //
-#if QD_MEMORY_STATS
         free(desc->stats);
-#endif
         sys_mutex_free(desc->lock);
         desc->lock = 0;
         desc->trailer = 0;
@@ -694,13 +675,11 @@ qd_error_t qd_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
         qd_entity_set_long(entity, "transferBatchSize", alloc_type->desc->config->transfer_batch_size) == 0 &&
         qd_entity_set_long(entity, "localFreeListMax", alloc_type->desc->config->local_free_list_max) == 0 &&
         qd_entity_set_long(entity, "globalFreeListMax", alloc_type->desc->config->global_free_list_max) == 0
-#if QD_MEMORY_STATS
         && qd_entity_set_long(entity, "totalAllocFromHeap", alloc_type->desc->stats->total_alloc_from_heap) == 0 &&
         qd_entity_set_long(entity, "totalFreeToHeap", alloc_type->desc->stats->total_free_to_heap) == 0 &&
         qd_entity_set_long(entity, "heldByThreads", alloc_type->desc->stats->held_by_threads) == 0 &&
         qd_entity_set_long(entity, "batchesRebalancedToThreads", alloc_type->desc->stats->batches_rebalanced_to_threads) == 0 &&
         qd_entity_set_long(entity, "batchesRebalancedToGlobal", alloc_type->desc->stats->batches_rebalanced_to_global) == 0
-#endif
         )
         return QD_ERROR_NONE;
     return qd_error_code();

@@ -243,9 +243,6 @@ class QdstatTest(QdstatTestBase):
 
     def test_memory(self):
         out = self.run_qdstat(['--memory'])
-        if out.strip() == "No memory statistics available":
-            # router built w/o memory pools enabled]
-            return self.skipTest("Router's memory pools disabled")
         self.assertIn("QDR.A", out)
         self.assertIn("UTC", out)
         regexp = r'qdr_address_t\s+[0-9]+'
@@ -253,9 +250,6 @@ class QdstatTest(QdstatTestBase):
 
     def test_memory_csv(self):
         out = self.run_qdstat(['--memory', '--csv'])
-        if out.strip() == "No memory statistics available":
-            # router built w/o memory pools enabled]
-            return self.skipTest("Router's memory pools disabled")
         self.assertIn("QDR.A", out)
         self.assertIn("UTC", out)
         regexp = r'qdr_address_t","[0-9]+'
