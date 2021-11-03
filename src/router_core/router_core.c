@@ -675,6 +675,7 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link)
 {
     const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+    assert(link->owning_addr == 0);
     link->owning_addr = addr;
     if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE))
         link->phase = (int) (key[1] - '0');
