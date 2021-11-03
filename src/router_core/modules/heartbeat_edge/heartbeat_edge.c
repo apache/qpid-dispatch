@@ -141,28 +141,17 @@ static qdrc_endpoint_desc_t descriptor = {
 static void on_timer(qdr_core_t *core, void *context)
 {
     qcm_heartbeat_edge_t *client = (qcm_heartbeat_edge_t*) context;
-    qdr_core_timer_schedule_CT(client->core, client->timer, 1);
+    qdr_core_timer_schedule_CT(client->core, client->timer, 2);
     if (client->link_credit > 0) {
         client->link_credit--;
 
-        qd_composed_field_t *fld = qd_compose(QD_PERFORMATIVE_HEADER, 0);
-        qd_compose_start_list(fld);
-        qd_compose_insert_bool(fld, 0); // durable
-        qd_compose_end_list(fld);
-
-        fld = qd_compose(QD_PERFORMATIVE_PROPERTIES, fld);
-        qd_compose_start_list(fld);
-        qd_compose_insert_int(fld, client->next_msg_id);  // message-id
-        client->next_msg_id++;
-        qd_compose_end_list(fld);
-
         qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
-        qd_compose_insert_null(body);
+        qd_compose_insert_int(body, client->next_msg_id);
+        client->next_msg_id++;
 
         qd_message_t *msg = qd_message();
-        qd_message_compose_3(msg, fld, body, true);
+        qd_message_compose_2(msg, body, true);
 
-        qd_compose_free(fld);
         qd_compose_free(body);
 
         qdr_delivery_t *dlv = qdrc_endpoint_delivery_CT(client->core, client->endpoint, msg);

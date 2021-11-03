@@ -144,7 +144,7 @@ class ConnectionCloseTest(MessagingHandler):
 
     def send_heartbeat(self):
         if self.sender.credit > 0 and self.pending:
-            msg = Message(body=None, properties={'message_id': self.n_tx})
+            msg = Message(body=self.n_tx)
             self.sender.send(msg)
             self.n_tx += 1
             self.pending = False
