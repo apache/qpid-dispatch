@@ -247,7 +247,7 @@ script:
 - popd
 # Workaround on macOS for PROTON-808 Binaries have their library locations stripped
 - if [[ "${OSTYPE}" == "darwin"* ]]; then install_name_tool -add_rpath $PREFIX/lib/. $PREFIX/lib/proton/bindings/python/_cproton.so; fi
-- ctest --timeout 1200 -V ${DISPATCH_CTEST_EXTRA} && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
+- while true; do ctest --timeout 1200 -V -I 27,27 ${DISPATCH_CTEST_EXTRA} && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi; done
 
 after_success:
 - cd ${TRAVIS_BUILD_DIR}/build
