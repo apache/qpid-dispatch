@@ -244,7 +244,9 @@ void qdr_core_free(qdr_core_t *core)
             link_work = DEQ_HEAD(link->work_list);
         }
         sys_mutex_unlock(link->conn->work_lock);
-
+        if (link->user_context) {
+            qdr_link_set_context(link, 0);
+        }
         free_qdr_link_t(link);
         link = DEQ_HEAD(core->open_links);
     }

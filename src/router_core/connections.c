@@ -488,14 +488,39 @@ int qdr_connection_process(qdr_connection_t *conn)
 
 void qdr_link_set_context(qdr_link_t *link, void *context)
 {
-    if (link)
-        link->user_context = context;
+    if (link) {
+        if (context == 0) {
+            if (link->user_context) {
+                qd_nullify_safe_ptr((qd_alloc_safe_ptr_t *)link->user_context);
+                free(link->user_context);
+                link->user_context = 0;
+            }
+        }
+        else {
+            if (link->user_context) {
+                qd_nullify_safe_ptr((qd_alloc_safe_ptr_t *)link->user_context);
+                free(link->user_context);
+            }
+
+            qd_link_t_sp *safe_ptr = NEW(qd_alloc_safe_ptr_t);
+            set_safe_ptr_qd_link_t(context, safe_ptr);
+            link->user_context = safe_ptr;
+        }
+    }
 }
 
 
 void *qdr_link_get_context(const qdr_link_t *link)
 {
-    return link ? link->user_context : 0;
+    if (link) {
+        if (link->user_context) {
+            qd_link_t_sp *safe_qdl = (qd_link_t_sp*) link->user_context;
+            if (safe_qdl)
+                return safe_deref_qd_link_t(*safe_qdl);
+        }
+    }
+
+    return 0;
 }
 
 
@@ -1090,7 +1115,9 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
 
     if (link->reported_as_blocked)
         core->links_blocked--;
-
+    if (link->user_context) {
+        qdr_link_set_context(link, 0);
+    }
     free_qdr_link_t(link);
 }
 
