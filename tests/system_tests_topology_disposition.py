@@ -24,6 +24,7 @@ import unittest
 from subprocess import PIPE, STDOUT
 
 from proton import Message, Timeout
+from proton import VERSION as PROTON_VERSION
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from qpid_dispatch_internal.compat import UNICODE
@@ -406,6 +407,9 @@ class TopologyDispositionTests (TestCase):
             self.assertIsNone(error)
 
     def test_04_scraper_tool(self):
+        if PROTON_VERSION > (0, 36, 0):
+            self.skipTest("Test skipped - see DISPATCH-2276")
+
         name = 'test_04'
         error = str(None)
         if self.skip[name] :
