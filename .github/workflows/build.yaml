@@ -255,7 +255,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         container: ['fedora']
-        containerTag: ['34']
+        containerTag: ['35']
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan, tsan]
         shard: [ 1, 2 ]
