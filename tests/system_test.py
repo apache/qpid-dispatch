@@ -896,7 +896,7 @@ class AsyncTestReceiver(MessagingHandler):
                                              % self._async_receiver.num_queue_puts)
 
     def __init__(self, address, source, conn_args=None, container_id=None,
-                 wait=True, recover_link=False, msg_args=None):
+                 wait=True, recover_link=False, msg_args=None, print_to_console=False):
         if msg_args is None:
             msg_args = {}
         super(AsyncTestReceiver, self).__init__(**msg_args)
@@ -913,7 +913,7 @@ class AsyncTestReceiver(MessagingHandler):
         self._recover_count = 0
         self._stop_thread = False
         self._thread = Thread(target=self._main)
-        self._logger = Logger(title="AsyncTestReceiver %s" % cid)
+        self._logger = Logger(title="AsyncTestReceiver %s" % cid, print_to_console=print_to_console)
         self._thread.daemon = True
         self._thread.start()
         self.num_queue_puts = 0
@@ -998,7 +998,7 @@ class AsyncTestSender(MessagingHandler):
             super(AsyncTestSender.TestSenderException, self).__init__(error)
 
     def __init__(self, address, target, count=1, message=None,
-                 container_id=None, presettle=False):
+                 container_id=None, presettle=False, print_to_console=False):
         super(AsyncTestSender, self).__init__(auto_accept=False,
                                               auto_settle=False)
         self.address = address
@@ -1012,7 +1012,6 @@ class AsyncTestSender(MessagingHandler):
         self.sent = 0
         self.error = None
         self.link_stats = None
-
         self._conn = None
         self._sender = None
         self._message = message or Message(body="test")
@@ -1022,7 +1021,7 @@ class AsyncTestSender(MessagingHandler):
         self._link_name = "%s-%s" % (cid, "tx")
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
-        self._logger = Logger(title="AsyncTestSender %s" % cid)
+        self._logger = Logger(title="AsyncTestSender %s" % cid, print_to_console=print_to_console)
         self._thread.start()
         self.msg_stats = "self.sent=%d, self.accepted=%d, self.released=%d, self.modified=%d, self.rejected=%d"
 
@@ -1039,14 +1038,16 @@ class AsyncTestSender(MessagingHandler):
 
     def wait(self):
         # don't stop it - wait until everything is sent
+        self._logger.log("AsyncTestSender wait: about to join thread")
         self._thread.join(timeout=TIMEOUT)
-        self._logger.log("thread done")
+        self._logger.log("AsyncTestSender wait: thread done")
         assert not self._thread.is_alive(), "sender did not complete"
         if self.error:
             raise AsyncTestSender.TestSenderException(self.error)
         del self._sender
         del self._conn
         del self._container
+        self._logger.log("AsyncTestSender wait: no errors in wait")
 
     def on_start(self, event):
         self._conn = self._container.connect(self.address)
