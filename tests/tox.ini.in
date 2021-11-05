@@ -18,7 +18,7 @@
 #
 
 [tox]
-envlist = py36,py37,py38,py39
+envlist = py36,py37,py38,py39,py310
 skipsdist = True
 minversion = ${TOX_VERSION}
 skip_missing_interpreters = True
@@ -46,6 +46,9 @@ basepython = python3.8
 
 [testenv:py39]
 basepython = python3.9
+
+[testenv:py310]
+basepython = python3.10
 
 [flake8]
 # TODO(DISPATCH-1974) decrease the limit
