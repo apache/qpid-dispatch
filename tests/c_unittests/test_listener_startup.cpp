@@ -64,7 +64,7 @@ void check_amqp_listener_startup_log_message(qd_server_config_t config, std::str
                   stop, " not found in ", logging);
 }
 
-void check_http_listener_startup_log_message(qd_server_config_t config, std::string listen, std::string stop)
+void check_http_listener_startup_log_message(qd_server_config_t config, std::string listen, std::string stop, std::string failed)
 {
     QDR qdr{};
     CaptureCStream css(&stderr);
@@ -73,7 +73,9 @@ void check_http_listener_startup_log_message(qd_server_config_t config, std::str
     qd_listener_t *li = qd_server_listener(qdr.qd->server);
     li->config = config;
 
-    CHECK(qd_listener_listen(li));
+    const bool http_supported = qd_server_http(qdr.qd->server) != nullptr;
+
+    CHECK(qd_listener_listen(li) == http_supported);
     qdr.wait();
     qd_lws_listener_close(li->http);
     qd_listener_decref(li);
@@ -85,10 +87,17 @@ void check_http_listener_startup_log_message(qd_server_config_t config, std::str
     qdr.deinitialize();
 
     std::string logging = css.str();
-    CHECK_MESSAGE(std::regex_search(logging, std::regex(listen)),
-                  listen, " not found in ", logging);
-    CHECK_MESSAGE(std::regex_search(logging, std::regex(stop)),
-                  stop, " not found in ", logging);
+    CHECK_MESSAGE((logging.find("SERVER (warning) HTTP support is not available") == std::string::npos) == http_supported,
+                  listen, " (not) found in ", logging);
+
+    CHECK_MESSAGE(std::regex_search(logging, std::regex(listen)) == http_supported,
+                  listen, " (not) found in ", logging);
+    CHECK_MESSAGE(std::regex_search(logging, std::regex(stop)) == http_supported,
+                  stop, " (not) found in ", logging);
+
+    CHECK_MESSAGE(std::regex_search(logging, std::regex(failed)) != http_supported,
+                  stop, " (not) found in ", logging);
+
 }
 
 TEST_CASE("Start AMQP listener with zero port" * doctest::skip(regex_is_broken()))
@@ -136,7 +145,9 @@ TEST_CASE("Start HTTP listener with zero port" * doctest::skip(regex_is_broken()
         check_http_listener_startup_log_message(
             config,
             R"EOS(SERVER \(notice\) Listening for HTTP on localhost:(\d\d+))EOS",
-            R"EOS(SERVER \(notice\) Stopped listening for HTTP on localhost:0)EOS"
+            R"EOS(SERVER \(notice\) Stopped listening for HTTP on localhost:0)EOS",
+
+            R"EOS(SERVER \(error\) No HTTP support to listen on localhost:0)EOS"
         );
     }).join();
 }
@@ -154,7 +165,9 @@ TEST_CASE("Start HTTP listener with zero port and a name" * doctest::skip(regex_
         check_http_listener_startup_log_message(
             config,
             R"EOS(SERVER \(notice\) Listening for HTTP on localhost:(\d\d+))EOS",
-            R"EOS(SERVER \(notice\) Stopped listening for HTTP on localhost:0)EOS"
+            R"EOS(SERVER \(notice\) Stopped listening for HTTP on localhost:0)EOS",
+
+            R"EOS(SERVER \(error\) No HTTP support to listen on localhost:0)EOS"
         );
     }).join();
 }
