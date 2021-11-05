@@ -59,13 +59,13 @@ jobs:
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.35.0 BUILD_TYPE=Coverage
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.36.0 BUILD_TYPE=Coverage
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on xenial)"
     os: linux
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.35.0 BUILD_TYPE=RelWithDebInfo
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.36.0 BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     os: linux
@@ -151,7 +151,7 @@ jobs:
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.35.0
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.36.0
   - name: "qdrouterd:TSAN"
     os: linux
     dist: focal
@@ -170,7 +170,7 @@ jobs:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
     - QPID_SYSTEM_TEST_SKIP_HTTP2_LARGE_IMAGE_UPLOAD_TEST=True
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.35.0
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.36.0
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on macOS)"
     os: osx
