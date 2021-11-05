@@ -1617,20 +1617,29 @@ class LinkRouteProxyTest(TestCase):
         while self._get_address(router, address):
             sleep(0.1)
 
-    def _test_traffic(self, sender, receiver, address, count=5, message=None):
+    def _test_traffic(self, sender, receiver, address, count=5, message=None, logger=None):
         """Generate message traffic between two normal clients"""
         error = None
-        tr = AsyncTestReceiver(receiver, address)
+        if logger:
+            logger.log("_test_traffic begin")
+        tr = AsyncTestReceiver(receiver, address, print_to_console=True)
+        if logger:
+            logger.log("_test_traffic AsyncTestReceiver created")
         ts = AsyncTestSender(sender, address, count,
-                             message=message)
+                             message=message, print_to_console=True)
+        if logger:
+            logger.log("_test_traffic AsyncTestSender created")
         ts.wait()  # wait until all sent
+        if logger:
+            logger.log("_test_traffic sender wait done")
         for i in range(count):
             try:
                 tr.queue.get()
             except AsyncTestReceiver.Empty:
                 error = "Sender Stats=" + ts.get_msg_stats() + "\n Receiver Queue Stats=" + tr.get_queue_stats()
-
         tr.stop()
+        if logger:
+            logger.log("_test_traffic receiver queue get done")
         if error:
             tr.dump_log()
             ts.dump_log()
@@ -1903,7 +1912,8 @@ class LinkRouteProxyTest(TestCase):
                                  self.INT_B.listener,
                                  "CfgLinkRoute1/hi",
                                  count=5,
-                                 message=test_msg)
+                                 message=test_msg,
+                                 logger=logger)
 
         logger.log("test_51_link_route_proxy_configured _test_traffic done on CfgLinkRoute1/hi")
 
