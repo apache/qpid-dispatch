@@ -17,17 +17,16 @@
 # under the License.
 #
 
-import sys
 from system_test import TestCase, Qdrouterd, main_module
-from system_test import unittest
-from proton.utils import BlockingConnection
+from system_test import unittest, TIMEOUT, TestTimeout
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
 
 
 class MaxFrameMaxSessionFramesTest(TestCase):
     """System tests setting proton negotiated size max-frame-size and incoming-window"""
     @classmethod
     def setUpClass(cls):
-        """Start a router"""
         super(MaxFrameMaxSessionFramesTest, cls).setUpClass()
         name = "MaxFrameMaxSessionFrames"
         config = Qdrouterd.Config([
@@ -39,29 +38,17 @@ class MaxFrameMaxSessionFramesTest(TestCase):
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
 
-    def test_max_frame_max_session_frames__max_sessions_default(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # max-frame is from the config
-            self.assertIn(' max-frame-size=2048,', open_lines[0])
-            # channel-max is default
-            self.assertIn(" channel-max=32767", open_lines[0])
-            begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window is from the config
-            self.assertIn(" incoming-window=10,", begin_lines[0])
+    def test_max_frame_max_session_frames_max_sessions_default(self):
+        sniffer = ProtocolSettingsSniffer(self.router.addresses[0], "xxx")
+        sniffer.run()
+        self.assertEqual(2048, sniffer.remote_max_frame)
+        self.assertEqual(32767, sniffer.remote_channel_max)
 
 
 class MaxSessionsTest(TestCase):
     """System tests setting proton channel-max"""
     @classmethod
     def setUpClass(cls):
-        """Start a router and a messenger"""
         super(MaxSessionsTest, cls).setUpClass()
         name = "MaxSessions"
         config = Qdrouterd.Config([
@@ -74,22 +61,15 @@ class MaxSessionsTest(TestCase):
         cls.address = cls.router.addresses[0]
 
     def test_max_sessions(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # channel-max is 9
-            self.assertIn(" channel-max=9", open_lines[0])
+        sniffer = ProtocolSettingsSniffer(self.router.addresses[0], "xxx")
+        sniffer.run()
+        self.assertEqual(9, sniffer.remote_channel_max)
 
 
 class MaxSessionsZeroTest(TestCase):
     """System tests setting proton channel-max"""
     @classmethod
     def setUpClass(cls):
-        """Start a router and a messenger"""
         super(MaxSessionsZeroTest, cls).setUpClass()
         name = "MaxSessionsZero"
         config = Qdrouterd.Config([
@@ -102,22 +82,15 @@ class MaxSessionsZeroTest(TestCase):
         cls.address = cls.router.addresses[0]
 
     def test_max_sessions_zero(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # channel-max is 0. Should get proton default 32767
-            self.assertIn(" channel-max=32767", open_lines[0])
+        sniffer = ProtocolSettingsSniffer(self.router.addresses[0], "xxx")
+        sniffer.run()
+        self.assertEqual(32767, sniffer.remote_channel_max)
 
 
 class MaxSessionsLargeTest(TestCase):
     """System tests setting proton channel-max"""
     @classmethod
     def setUpClass(cls):
-        """Start a router and a messenger"""
         super(MaxSessionsLargeTest, cls).setUpClass()
         name = "MaxSessionsLarge"
         config = Qdrouterd.Config([
@@ -130,15 +103,9 @@ class MaxSessionsLargeTest(TestCase):
         cls.address = cls.router.addresses[0]
 
     def test_max_sessions_large(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # channel-max is 0. Should get proton default 32767
-            self.assertIn(" channel-max=32767", open_lines[0])
+        sniffer = ProtocolSettingsSniffer(self.router.addresses[0], "xxx")
+        sniffer.run()
+        self.assertEqual(32767, sniffer.remote_channel_max)
 
 
 class MaxFrameSmallTest(TestCase):
@@ -158,22 +125,15 @@ class MaxFrameSmallTest(TestCase):
         cls.address = cls.router.addresses[0]
 
     def test_max_frame_small(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # if frame size <= 512 proton set min of 512
-            self.assertIn(" max-frame-size=512", open_lines[0])
+        sniffer = ProtocolSettingsSniffer(self.router.addresses[0], "xxx")
+        sniffer.run()
+        self.assertEqual(512, sniffer.remote_max_frame)
 
 
 class MaxFrameDefaultTest(TestCase):
     """System tests setting proton max-frame-size"""
     @classmethod
     def setUpClass(cls):
-        """Start a router and a messenger"""
         super(MaxFrameDefaultTest, cls).setUpClass()
         name = "MaxFrameDefault"
         config = Qdrouterd.Config([
@@ -186,91 +146,9 @@ class MaxFrameDefaultTest(TestCase):
         cls.address = cls.router.addresses[0]
 
     def test_max_frame_default(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # if frame size not set then a default is used
-            self.assertIn(" max-frame-size=16384", open_lines[0])
-
-
-class MaxSessionFramesDefaultTest(TestCase):
-    """System tests setting proton max-frame-size"""
-    @classmethod
-    def setUpClass(cls):
-        """Start a router and a messenger"""
-        super(MaxSessionFramesDefaultTest, cls).setUpClass()
-        name = "MaxSessionFramesDefault"
-        config = Qdrouterd.Config([
-            ('router', {'mode': 'standalone', 'id': 'QDR'}),
-
-            ('listener', {'host': '0.0.0.0', 'port': cls.tester.get_port()}),
-        ])
-        cls.router = cls.tester.qdrouterd(name, config)
-        cls.router.wait_ready()
-        cls.address = cls.router.addresses[0]
-
-    def test_max_session_frames_default(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # if frame size not set then a default is used
-            self.assertIn(" max-frame-size=16384", open_lines[0])
-            begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window should be 2^31-1 (64-bit) or
-            # (2^31-1) / max-frame-size (32-bit)
-            is_64bits = sys.maxsize > 2 ** 32
-            expected = " incoming-window=2147483647," if is_64bits else \
-                (" incoming-window=%d," % int(2147483647 / 16384))
-            #self.assertIn(expected, begin_lines[0], "Expected:'%s' not found in '%s'" % (expected, begin_lines[0]))
-            self.assertIn(expected, begin_lines[0])
-
-
-class MaxFrameMaxSessionFramesZeroTest(TestCase):
-    """
-    System tests setting proton negotiated size max-frame-size and incoming-window
-    when they are both zero. Frame size is bumped up to the minimum and capacity is
-    bumped up to have an incoming window of 1
-    """
-    @classmethod
-    def setUpClass(cls):
-        """Start a router"""
-        super(MaxFrameMaxSessionFramesZeroTest, cls).setUpClass()
-        name = "MaxFrameMaxSessionFramesZero"
-        config = Qdrouterd.Config([
-            ('router', {'mode': 'standalone', 'id': 'QDR'}),
-
-            ('listener', {'host': '0.0.0.0', 'port': cls.tester.get_port(), 'maxFrameSize': '0', 'maxSessionFrames': '0'}),
-        ])
-        cls.router = cls.tester.qdrouterd(name, config)
-        cls.router.wait_ready()
-        cls.address = cls.router.addresses[0]
-
-    def test_max_frame_max_session_zero(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-
-        with open(self.router.logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # max-frame gets set to protocol min
-            self.assertIn(' max-frame-size=512,', open_lines[0])
-            begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window should be 2^31-1 (64-bit) or
-            # (2^31-1) / max-frame-size (32-bit)
-            is_64bits = sys.maxsize > 2 ** 32
-            expected = " incoming-window=2147483647," if is_64bits else \
-                (" incoming-window=%d," % int(2147483647 / 512))
-            self.assertIn(expected, begin_lines[0])
+        sniffer = ProtocolSettingsSniffer(self.router.addresses[0], "xxx")
+        sniffer.run()
+        self.assertEqual(16384, sniffer.remote_max_frame)
 
 
 class ConnectorSettingsDefaultTest(TestCase):
@@ -279,19 +157,12 @@ class ConnectorSettingsDefaultTest(TestCase):
     is common code. This test makes sure that defaults in the connector
     config make it to the wire.
     """
-    inter_router_port = None
-
-    @staticmethod
-    def ssl_config(client_server, connection):
-        return []  # Over-ridden by RouterTestSsl
-
     @classmethod
     def setUpClass(cls):
-        """Start two routers"""
         super(ConnectorSettingsDefaultTest, cls).setUpClass()
 
         def router(name, client_server, connection):
-            config = cls.ssl_config(client_server, connection) + [
+            config = [
                 ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
 
                 ('listener', {'port': cls.tester.get_port()}),
@@ -300,55 +171,34 @@ class ConnectorSettingsDefaultTest(TestCase):
 
             config = Qdrouterd.Config(config)
 
-            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=False))
 
         cls.routers = []
 
-        inter_router_port = cls.tester.get_port()
+        cls.connector_port = cls.tester.get_port()
 
         router('A', 'server',
-               ('listener', {'role': 'inter-router', 'port': inter_router_port}))
-        router('B', 'client',
-               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}))
-
-        cls.routers[0].wait_router_connected('QDR.B')
-        cls.routers[1].wait_router_connected('QDR.A')
+               ('connector', {'name': 'testconnector', 'role': 'route-container', 'port': cls.connector_port}))
 
     def test_connector_default(self):
-        with open(self.routers[0].logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "<- @open" in s]
-            # defaults
-            self.assertIn(' max-frame-size=16384,', open_lines[0])
-            self.assertIn(' channel-max=32767,', open_lines[0])
-            begin_lines = [s for s in log_lines if "<- @begin" in s]
-            # incoming-window should be 2^31-1 (64-bit) or
-            # (2^31-1) / max-frame-size (32-bit)
-            is_64bits = sys.maxsize > 2 ** 32
-            expected = " incoming-window=2147483647," if is_64bits else \
-                (" incoming-window=%d," % int(2147483647 / 16384))
-            self.assertIn(expected, begin_lines[0])
+        sniffer = ConnectorSettingsSniffer(self.routers[0].connector_addresses[0])
+        sniffer.run()
+        self.assertEqual(16384, sniffer.remote_max_frame)
+        self.assertEqual(32767, sniffer.remote_channel_max)
 
 
 class ConnectorSettingsNondefaultTest(TestCase):
     """
     The internal logic for protocol settings in listener and connector
     is common code. This test makes sure that settings in the connector
-    config make it to the wire. The listener tests test the setting logic.
+    config make it to the wire.
     """
-    inter_router_port = None
-
-    @staticmethod
-    def ssl_config(client_server, connection):
-        return []  # Over-ridden by RouterTestSsl
-
     @classmethod
     def setUpClass(cls):
-        """Start two routers"""
         super(ConnectorSettingsNondefaultTest, cls).setUpClass()
 
         def router(name, client_server, connection):
-            config = cls.ssl_config(client_server, connection) + [
+            config = [
                 ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
 
                 ('listener', {'port': cls.tester.get_port()}),
@@ -357,41 +207,84 @@ class ConnectorSettingsNondefaultTest(TestCase):
 
             config = Qdrouterd.Config(config)
 
-            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=False))
 
         cls.routers = []
 
-        inter_router_port = cls.tester.get_port()
+        cls.connector_port = cls.tester.get_port()
 
         router('A', 'server',
-               ('listener', {'role': 'inter-router', 'port': inter_router_port}))
-        router('B', 'client',
-               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
+               ('connector', {'name': 'testconnector', 'role': 'route-container', 'port': cls.connector_port,
                               'maxFrameSize': '2048', 'maxSessionFrames': '10', 'maxSessions': '20'}))
 
-        cls.routers[0].wait_router_connected('QDR.B')
-        cls.routers[1].wait_router_connected('QDR.A')
-
     def test_connector_default(self):
-        with open(self.routers[0].logfile_path, 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "<- @open" in s]
-            # nondefaults
-            self.assertIn(' max-frame-size=2048,', open_lines[0])
-            self.assertIn(' channel-max=19,', open_lines[0])
-            begin_lines = [s for s in log_lines if "<- @begin" in s]
-            # nondefaults
-            SEARCH_STRING = " incoming-window=10,"
-            # Sometimes, the begin frame we are looking for might not be
-            # the first in the list. We just need to make sure that
-            # it is somewhere in the list
-            line_found = False
-            for begin_line in begin_lines:
-                if SEARCH_STRING in begin_line:
-                    line_found = True
-                    break
+        sniffer = ConnectorSettingsSniffer(self.routers[0].connector_addresses[0])
+        sniffer.run()
+        self.assertEqual(2048, sniffer.remote_max_frame)
+        self.assertEqual(19, sniffer.remote_channel_max)
 
-            self.assertTrue(line_found)
+
+class ProtocolSettingsSniffer(MessagingHandler):
+    """Create a Connection/Session/Link and capture the various protocol
+    settings sent by the peer.
+    """
+    def __init__(self, router_addr, source_addr="xxx", **kwargs):
+        super(ProtocolSettingsSniffer, self).__init__(**kwargs)
+        self.router_addr = router_addr
+        self.source_addr = source_addr
+        self.conn = None
+        self.remote_max_frame = None
+        self.remote_channel_max = None
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.conn = event.container.connect(self.router_addr)
+        self.receiver = event.container.create_receiver(self.conn, self.source_addr)
+
+    def timeout(self):
+        self.error = "Timeout Expired - could not connect to router"
+        self.conn.close()
+
+    def on_link_opened(self, event):
+        tport = event.transport
+        self.remote_max_frame = tport.remote_max_frame_size
+        self.remote_channel_max = tport.remote_channel_max
+        self.conn.close()
+        self.timer.cancel()
+
+    def run(self):
+        Container(self).run()
+
+
+class ConnectorSettingsSniffer(MessagingHandler):
+    """Similar to ProtocolSettingsSniffer, but for router-initiated connections
+    """
+    def __init__(self, url, **kwargs):
+        super(ConnectorSettingsSniffer, self).__init__(**kwargs)
+        self.listener_addr = url
+        self.acceptor = None
+        self.remote_max_frame = None
+        self.remote_channel_max = None
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.acceptor = event.container.listen(self.listener_addr)
+
+    def timeout(self):
+        self.error = "Timeout Expired - router not connecting"
+        if self.acceptor:
+            self.acceptor.close()
+
+    def on_connection_opened(self, event):
+        tport = event.transport
+        self.remote_max_frame = tport.remote_max_frame_size
+        self.remote_channel_max = tport.remote_channel_max
+        event.connection.close()
+        self.acceptor.close()
+        self.timer.cancel()
+
+    def run(self):
+        Container(self).run()
 
 
 if __name__ == '__main__':
