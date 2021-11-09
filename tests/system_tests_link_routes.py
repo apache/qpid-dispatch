@@ -1906,11 +1906,8 @@ class EmptyTransferTest(TestCase):
                 if not incoming:
                     break
                 data += incoming
-            except TimeoutError:
+            except OSError:  # timeout
                 break
-            except Exception as exc:
-                print("KAG: TEST %s" % str(exc), flush=True)
-                raise
         sock.settimeout(old_timeout)
         return data
 
