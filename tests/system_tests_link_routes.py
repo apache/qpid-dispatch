@@ -21,7 +21,7 @@ from time import sleep, time
 from threading import Event
 from subprocess import PIPE, STDOUT
 import socket
-from typing import Optional
+from typing import Optional, Any
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout, \
     AsyncTestSender, AsyncTestReceiver, MgmtMsgProxy, unittest, QdManager
@@ -1814,7 +1814,7 @@ class EmptyTransferTest(TestCase):
         self.router.wait_connectors()
         return fake_broker
 
-    def _find_frame(self, data, code) -> Optional[list]:
+    def _find_frame(self, data: bytes, code: int) -> Optional[list[Any]]:
         """Scan a byte sequence for performatives that match code.
         Return the frame body (list) if match else None
         """
@@ -1892,11 +1892,31 @@ class EmptyTransferTest(TestCase):
                 outcome = dispo_frame[4].descriptor
         return outcome
 
+    def _read_socket(self, sock: socket.socket,
+                     timeout: float = 1.0) -> bytes:
+        """Read all available data from the socket, waiting up to 1 second for
+        data to arrive
+        """
+        old_timeout = sock.gettimeout()
+        sock.settimeout(timeout)
+        data = b''
+        while True:
+            try:
+                incoming = sock.recv(4096)
+                if not incoming:
+                    break
+                data += incoming
+            except TimeoutError:
+                break
+        sock.settimeout(old_timeout)
+        return data
+
     def test_DISPATCH_1988(self):
         fake_broker = self._fake_broker(FakeBroker)
 
         self.router.wait_ready()
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(TIMEOUT)
         # Connect to the router listening port and send an amqp, open,
         # begin, attach. The attach is sent on the link
         # routed address, "examples"
@@ -1959,14 +1979,14 @@ class EmptyTransferTest(TestCase):
         for frame in [open_frame, begin_frame, attach_frame]:
             self._send_frame(frame, s)
 
-        # Give a second for the attach to propagate to the broker and
+        # Give time for the attach to propagate to the broker and
         # for the broker to send a response attach and flow:
-        sleep(1)
-        data = s.recv(4096)
+        data = self._read_socket(s, timeout=2.0)
+        self.assertTrue(len(data) > 8)
         self.assertEqual(data[:8], b'AMQP\x00\x01\x00\x00')
         # expect that the connection was accepted: check for a flow frame:
         flow_frame = self._find_frame(data[8:], self.FLOW_DESCRIPTOR)
-        self.assertIsNotNone(flow_frame)
+        self.assertIsNotNone(flow_frame, "no flow frame received: %s" % data)
 
         # First send a message on link routed address "examples" with a small
         # message body. Verify the the sent message has been accepted.
@@ -1974,14 +1994,17 @@ class EmptyTransferTest(TestCase):
         self._send_frame(t1_frame, s)
 
         # We expect to get a disposition frame that accepted the message
-        sleep(0.5)
-        data = s.recv(1024)
+        data = self._read_socket(s)
+        self.assertTrue(len(data) > 0)
         dispo_frame = self._find_frame(data, self.DISPO_DESCRIPTOR)
-        self.assertIsNotNone(dispo_frame, "expected a disposition (none arrived!)")
+        self.assertIsNotNone(dispo_frame,
+                             "expected a disposition (none arrived!): %s"
+                             % data)
 
         outcome = self._get_outcome(dispo_frame)
         self.assertEqual(self.ACCEPTED_OUTCOME, outcome,
-                         "Transfer not accepted (unexpected!)")
+                         "Transfer not accepted (unexpected!) actual=%s"
+                         % outcome)
 
         # Test case 1
         #
@@ -1995,13 +2018,16 @@ class EmptyTransferTest(TestCase):
         t2_frame = self._construct_transfer(1, b'\x02')
         self._send_frame(t2_frame, s)
 
-        sleep(0.5)
-        data = s.recv(1024)
+        data = self._read_socket(s)
+        self.assertTrue(len(data) > 0)
         dispo_frame = self._find_frame(data, self.DISPO_DESCRIPTOR)
-        self.assertIsNotNone(dispo_frame, "expected a disposition (none arrived!)")
+        self.assertIsNotNone(dispo_frame,
+                             "expected a disposition (none arrived!): %s"
+                             % data)
         outcome = self._get_outcome(dispo_frame)
         self.assertEqual(self.REJECTED_OUTCOME, outcome,
-                         "Transfer not rejected (unexpected!)")
+                         "Transfer not rejected (unexpected!) actual=%s"
+                         % outcome)
 
         # Test case 2
         # Now, send two empty transfer frames, first transfer has more=true and
@@ -2013,25 +2039,31 @@ class EmptyTransferTest(TestCase):
         t4_frame = self._construct_transfer(2, b'\x03')
         self._send_frame(t4_frame, s)
 
-        sleep(0.5)
-        data = s.recv(1024)
+        data = self._read_socket(s)
+        self.assertTrue(len(data) > 0)
         dispo_frame = self._find_frame(data, self.DISPO_DESCRIPTOR)
-        self.assertIsNotNone(dispo_frame, "expected a disposition (none arrived!)")
+        self.assertIsNotNone(dispo_frame,
+                             "expected a disposition (none arrived!): %s"
+                             % data)
         outcome = self._get_outcome(dispo_frame)
         self.assertEqual(self.REJECTED_OUTCOME, outcome,
-                         "Transfer not rejected (unexpected!)")
+                         "Transfer not rejected (unexpected!) actual: %s"
+                         % outcome)
 
         # Now send a good transfer and ensure the router accepts it
         t5_frame = self._construct_transfer(3, b'\x04', add_ma=True, add_body=True)
         self._send_frame(t5_frame, s)
 
-        sleep(0.5)
-        data = s.recv(1024)
+        data = self._read_socket(s)
+        self.assertTrue(len(data) > 0)
         dispo_frame = self._find_frame(data, self.DISPO_DESCRIPTOR)
-        self.assertIsNotNone(dispo_frame, "expected a disposition (none arrived!)")
+        self.assertIsNotNone(dispo_frame,
+                             "expected a disposition (none arrived!): %s"
+                             % data)
         outcome = self._get_outcome(dispo_frame)
         self.assertEqual(self.ACCEPTED_OUTCOME, outcome,
-                         "Transfer not accepted (unexpected!)")
+                         "Transfer not accepted (unexpected!) actual: %s"
+                         % outcome)
 
         s.close()
         fake_broker.join()
