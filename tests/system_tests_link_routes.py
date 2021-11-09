@@ -21,7 +21,7 @@ from time import sleep, time
 from threading import Event
 from subprocess import PIPE, STDOUT
 import socket
-from typing import Optional, Any
+from typing import Optional
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout, \
     AsyncTestSender, AsyncTestReceiver, MgmtMsgProxy, unittest, QdManager
@@ -1814,7 +1814,7 @@ class EmptyTransferTest(TestCase):
         self.router.wait_connectors()
         return fake_broker
 
-    def _find_frame(self, data: bytes, code: int) -> Optional[list[Any]]:
+    def _find_frame(self, data: bytes, code: int) -> Optional[list]:
         """Scan a byte sequence for performatives that match code.
         Return the frame body (list) if match else None
         """
@@ -1908,6 +1908,9 @@ class EmptyTransferTest(TestCase):
                 data += incoming
             except TimeoutError:
                 break
+            except Exception as exc:
+                print("KAG: TEST %s" % str(exc), flush=True)
+                raise
         sock.settimeout(old_timeout)
         return data
 
