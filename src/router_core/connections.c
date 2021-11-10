@@ -1133,6 +1133,20 @@ static void qdr_link_cleanup_protected_CT(qdr_core_t *core, qdr_connection_t *co
         // Cannot cleanup link because I/O thread is currently processing it
         // Mark it so the I/O thread will notify the core when processing is complete
         link->ready_to_free = true;
+
+        //
+        // If there is a second attach work that is pending in the conn->work_list, remove and free that work before
+        // freeing the link. This is done as a fix for DISPATCH-2206
+        //
+        qdr_connection_work_t *work = DEQ_HEAD(conn->work_list);
+        while (work) {
+            if (work->work_type == QDR_CONNECTION_WORK_SECOND_ATTACH && work->link == link) {
+                DEQ_REMOVE(conn->work_list, work);
+                qdr_connection_work_free_CT(work);
+                break;
+            }
+            work = DEQ_NEXT(work);
+        }
     }
     else
         do_cleanup = true;
