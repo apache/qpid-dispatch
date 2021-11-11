@@ -82,22 +82,6 @@ static void on_flow(void *link_context,
 }
 
 /**
- * Event - The settlement and/or disposition of a delivery has been updated
- *
- * @param link_context The opaque context associated with the endpoint link
- * @param delivery The delivery object experiencing the change
- * @param settled True iff the delivery has been settled by the peer
- * @param disposition The disposition of the delivery (PN_[ACCEPTED|REJECTED|MODIFIED|RELEASED])
- */
-static void on_update(void           *link_context,
-                      qdr_delivery_t *delivery,
-                      bool            settled,
-                      uint64_t        disposition)
-{
-    //qcm_heartbeat_edge_t *client = (qcm_heartbeat_edge_t*) link_context;
-}
-
-/**
  * Event - A core-endpoint link has been detached
  *
  * Note: It is safe to discard objects referenced by the link_context in this handler.
@@ -109,7 +93,10 @@ static void on_update(void           *link_context,
 static void on_first_detach(void        *link_context,
                             qdr_error_t *error)
 {
-    //qcm_heartbeat_edge_t *client = (qcm_heartbeat_edge_t*) link_context;
+    qcm_heartbeat_edge_t *client = (qcm_heartbeat_edge_t*) link_context;
+    if (!!client->timer) {
+        qdr_core_timer_cancel_CT(client->core, client->timer);
+    }
 }
 
 
@@ -122,14 +109,16 @@ static void on_first_detach(void        *link_context,
  */
 static void on_cleanup(void *link_context)
 {
-    //qcm_heartbeat_edge_t *client = (qcm_heartbeat_edge_t*) link_context;
+    qcm_heartbeat_edge_t *client = (qcm_heartbeat_edge_t*) link_context;
+    if (!!client->timer) {
+        qdr_core_timer_cancel_CT(client->core, client->timer);
+    }
 }
 
 static qdrc_endpoint_desc_t descriptor = {
     .label = "heartbeat_edge",
     .on_second_attach = on_second_attach,
     .on_flow          = on_flow,
-    .on_update        = on_update,
     .on_first_detach  = on_first_detach,
     .on_cleanup       = on_cleanup
 };
