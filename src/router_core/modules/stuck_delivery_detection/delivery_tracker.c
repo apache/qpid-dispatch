@@ -46,6 +46,12 @@ struct tracker_t {
 
 static void check_delivery_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv)
 {
+    // DISPATCH-2036: ignore "infinitely long" streaming messages (like TCP
+    // adaptor deliveries)
+    if (dlv->msg && qd_message_is_streaming(dlv->msg)) {
+        return;
+    }
+
     if (!dlv->stuck && ((core->uptime_ticks - link->core_ticks) > stuck_age)) {
         dlv->stuck = true;
         link->deliveries_stuck++;
