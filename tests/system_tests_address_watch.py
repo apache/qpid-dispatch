@@ -17,12 +17,9 @@
 # under the License.
 #
 
-from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout, Logger
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from qpid_dispatch_internal.compat import UNICODE
-
+from proton.reactor import Container
 
 class RouterTest(TestCase):
 
@@ -59,6 +56,7 @@ class RouterTest(TestCase):
         test = AddressWatchTest(self.routers[0], self.routers[1])
         test.run()
         self.assertIsNone(test.error)
+
 
 class AddressWatchTest(MessagingHandler):
     def __init__(self, host_a, host_b):
@@ -108,7 +106,6 @@ class AddressWatchTest(MessagingHandler):
                 if len(matches) == 0:
                     self.error = "Didn't see remote consumer and local producer on router B"
             self.timer.cancel()
-
 
     def run(self):
         Container(self).run()
