@@ -51,37 +51,8 @@ do { \
     p = memalign(64, s + (s % 64 ? 64 - (s % 64) : 0)); \
 } while (0)
 
-#define FREE_CACHE_ALIGNED(p) \
-do { \
-    free(p); \
-} while (0)
 
 #else
-
-// https://stackoverflow.com/questions/33696092/whats-the-correct-replacement-for-posix-memalign-in-windows
-
-// There is a subtle difference. The POSIX function requires that the alignment is both a multiple of sizeof(void *) and a power of two. The Windows CRT function relaxes that requirement to only a power of two (i.e. not a multiple of the pointer size). This is only relevant when porting from Windows to POSIX since the requirement is always satisfied in the opposite case.
-
-#if defined(_WIN32)
-// Be careful that memory obtained from _aligned_malloc() must be freed with _aligned_free(), while posix_memalign() just uses regular free(). So you'd want to add something like:
-inline static int posix_memalign(void **ptr, const size_t alignment, const size_t size) {
-    *ptr = _aligned_malloc(size, alignment);
-    if (!*ptr) {
-        return -1;
-    }
-    return 0;
-}
-#define FREE_CACHE_ALIGNED(p) \
-do { \
-    _aligned_free(p); \
-} while (0)
-#else
-#define FREE_CACHE_ALIGNED(p) \
-do { \
-    free(p); \
-} while (0)
-#endif
-
 #define NEW_CACHE_ALIGNED(t,p) \
 do { \
     if (posix_memalign((void*) &(p), 64, (sizeof(t) + (sizeof(t) % 64 ? 64 - (sizeof(t) % 64) : 0))) != 0) (p) = 0; \
@@ -92,6 +63,11 @@ do { \
     if (posix_memalign((void*) &(p), 64, (s + (s % 64 ? 64 - (s % 64) : 0))) != 0) (p) = 0; \
 } while (0)
 #endif
+
+#define FREE_CACHE_ALIGNED(p) \
+do { \
+    free(p); \
+} while (0)
 
 #define ZERO(p) memset(p, 0, sizeof(*p))
 
