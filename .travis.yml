@@ -71,16 +71,13 @@ jobs:
     os: linux
     dist: focal
     before_install:
-    # https://travis-ci.community/t/clang-10-was-recently-broken-on-linux-unmet-dependencies-for-clang-10-clang-tidy-10-valgrind/11527
-    - sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2
     - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key 2>/dev/null | sudo apt-key add -
-    - sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main' -y
+    - sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-13 main' -y
     - sudo apt-get update -q
-    - sudo apt-get install -y clang-12 llvm-12-dev -o Debug::pkgProblemResolver=yes
-    # https://github.com/pypa/virtualenv/issues/1740
-    # https://github.com/pypa/virtualenv/issues/1873
+    - sudo apt-get install -y clang-13 llvm-13-dev
+    # Update pip, it may prevent issues later
     - python -m pip install --user --upgrade pip
-    - python -m pip install --user --upgrade tox virtualenv==20.0.23
+    - python -m pip install --user --upgrade tox virtualenv
     # Install quart, h2 to run the http2 tests.
     - python -m pip install --user quart h2
     # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -91,8 +88,8 @@ jobs:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
     - QPID_SYSTEM_TEST_SKIP_HTTP2_LARGE_IMAGE_UPLOAD_TEST=True
-    - CC=clang-12
-    - CXX=clang++-12
+    - CC=clang-13
+    - CXX=clang++-13
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.36.0 BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on focal)"
@@ -102,10 +99,9 @@ jobs:
     before_install:
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
-      - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv==20.0.23
+      # Update pip, it may prevent issues later
+      - python -m pip install --user --upgrade pip
+      - python -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -126,13 +122,12 @@ jobs:
     dist: focal
     compiler: clang
     before_install:
-      - sudo apt-get install clang-11 llvm-11-dev
+      - sudo apt-get install clang-12 llvm-12-dev
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
+      # Update pip, it may prevent issues later
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv==20.0.23
+      - python3 -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -142,8 +137,8 @@ jobs:
     env:
       - QPID_SYSTEM_TEST_TIMEOUT=300
       - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
-      - CC=clang-11
-      - CXX=clang++-11
+      - CC=clang-12
+      - CXX=clang++-12
       - PROTON_VERSION=0.36.0 BUILD_TYPE=RelWithDebInfo
       - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
   - name: "qdrouterd:Default Build"
@@ -156,10 +151,9 @@ jobs:
     os: linux
     dist: focal
     before_install:
-      # https://github.com/pypa/virtualenv/issues/1740
-      # https://github.com/pypa/virtualenv/issues/1873
+      # Update pip, it may prevent issues later
       - python -m pip install --user --upgrade pip
-      - python -m pip install --user --upgrade tox virtualenv==20.0.23
+      - python -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
       - python -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
