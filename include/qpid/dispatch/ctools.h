@@ -41,7 +41,7 @@
 //
 
 #ifdef __sun
-#define NEW_CACHE_ALIGNED(t,p)                  \
+#define NEW_CACHE_ALIGNED(t,p) \
 do { \
     p = memalign(64, sizeof(t) + (sizeof(t) % 64 ? 64 - (sizeof(t) % 64) : 0)); \
 } while (0)
@@ -63,6 +63,11 @@ do { \
     if (posix_memalign((void*) &(p), 64, (s + (s % 64 ? 64 - (s % 64) : 0))) != 0) (p) = 0; \
 } while (0)
 #endif
+
+#define FREE_CACHE_ALIGNED(p) \
+do { \
+    free(p); \
+} while (0)
 
 #define ZERO(p) memset(p, 0, sizeof(*p))
 
