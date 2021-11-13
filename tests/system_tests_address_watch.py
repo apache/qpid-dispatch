@@ -21,6 +21,7 @@ from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, Tes
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+
 class RouterTest(TestCase):
 
     inter_router_port = None
