@@ -124,7 +124,7 @@ CMAKE_DEPENDENT_OPTION(USE_LIBNGHTTP2 "Use libnghttp2 for HTTP/2 support" ON
                          "libnghttp2_FOUND" OFF)
 
 # Web Sockets
-find_package(LibWebSockets 2.4.2)
+find_package(LibWebSockets 3.0.1)
 CMAKE_DEPENDENT_OPTION(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ON
                          "LIBWEBSOCKETS_FOUND" OFF)
 
