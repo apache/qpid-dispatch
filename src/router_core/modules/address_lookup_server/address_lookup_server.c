@@ -17,11 +17,10 @@
  * under the License.
  */
 
-#include "qpid/dispatch/address_lookup_utils.h"
-
 #include "core_link_endpoint.h"
 #include "module.h"
 
+#include "qpid/dispatch/address_lookup_utils.h"
 #include "qpid/dispatch/ctools.h"
 
 #include <inttypes.h>
