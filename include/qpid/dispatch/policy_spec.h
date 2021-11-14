@@ -19,6 +19,9 @@
  * under the License.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
+
 typedef struct {
     int       maxFrameSize;
     int       maxSessionWindow;

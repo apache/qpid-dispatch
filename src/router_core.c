@@ -1,5 +1,3 @@
-#ifndef BPRINTF_H
-#define BPRINTF_H
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +17,4 @@
  * under the License.
  */
 
-#include <stdarg.h>
-
-/**
-   Variadic appending printf - see aprintf()
- */
-int vaprintf(char **begin, char *end, const char *format, va_list ap_in);
-
-/**
-   Appending printf.
-
-   Print to buffer at *begin with null terminator, end points after end of buffer.
-   Advance *begin to point to the null terminator.
-.  Return value:
-   - 0 on success: advance *begin to the null terminator.
-   - n > 0: printing was truncated and would have printed n characters. *begin == end-1
-   - n < 0: error (return value of vsnprintf) no change to *begin
- */
-int aprintf(char **begin, char *end, const char *format, ...);
-
-#endif
+#include "qpid/dispatch/router_core.h"

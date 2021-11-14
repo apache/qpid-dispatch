@@ -1,5 +1,5 @@
-#ifndef router_core_address_lookup_server_h
-#define router_core_address_lookup__server_h 1
+#ifndef router_core_address_lookup_utils_h
+#define router_core_address_lookup_utils_h 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -80,4 +80,4 @@ qcm_address_lookup_status_t qcm_link_route_lookup_decode(qd_iterator_t *properti
                                                          qd_iterator_t *body,
                                                          bool          *is_link_route,
                                                          bool          *has_destinations);
-#endif // router_core_address_lookup_server_h
+#endif // router_core_address_lookup_utils_h

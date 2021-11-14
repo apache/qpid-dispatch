@@ -47,12 +47,17 @@ set(qpid_dispatch_SOURCES
   adaptors/http1/http1_server.c
   adaptors/http1/http1_request_info.c
   adaptors/tcp_adaptor.c
+  alloc.c
   alloc_pool.c
+  aprintf.c
   amqp.c
+  atomic.c
   bitmask.c
   buffer.c
+  enum.c
   error.c
   compose.c
+  ctools.c
   connection_manager.c
   container.c
   delivery_state.c
@@ -68,6 +73,8 @@ set(qpid_dispatch_SOURCES
   parse.c
   parse_tree.c
   policy.c
+  policy_spec.c
+  protocol_adaptor.c
   proton_utils.c
   remote_sasl.c
   posix/threading.c
@@ -76,6 +83,8 @@ set(qpid_dispatch_SOURCES
   router_config.c
   address_lookup_utils.c
   platform.c
+  router.c
+  router_core.c
   router_core/agent.c
   router_core/agent_address.c
   router_core/agent_config_address.c
@@ -86,6 +95,7 @@ set(qpid_dispatch_SOURCES
   router_core/agent_router.c
   router_core/agent_conn_link_route.c
   router_core/connections.c
+  router_core/core_attach_address_lookup.c
   router_core/core_events.c
   router_core/core_link_endpoint.c
   router_core/core_client_api.c
@@ -101,6 +111,7 @@ set(qpid_dispatch_SOURCES
   router_core/terminus.c
   router_core/transfer.c
   router_core/core_timer.c
+  router_core/module.c
   router_core/modules/edge_router/module.c
   router_core/modules/edge_router/addr_proxy.c
   router_core/modules/edge_router/connection_manager.c
@@ -108,8 +119,8 @@ set(qpid_dispatch_SOURCES
   router_core/modules/edge_router/edge_mgmt.c
   router_core/modules/test_hooks/core_test_hooks.c
   router_core/modules/edge_addr_tracking/edge_addr_tracking.c
+  router_core/modules/address_lookup_client/address_lookup_client.c
   router_core/modules/address_lookup_server/address_lookup_server.c
-  router_core/modules/address_lookup_client/lookup_client.c
   router_core/modules/heartbeat_edge/heartbeat_edge.c
   router_core/modules/heartbeat_server/heartbeat_server.c
   router_core/modules/stuck_delivery_detection/delivery_tracker.c
@@ -118,10 +129,12 @@ set(qpid_dispatch_SOURCES
   router_node.c
   router_pynode.c
   schema_enum.c
+  static_assert.c
   server.c
   timer.c
   trace_mask.c
   python_utils.c
+  qd_asan_interface.c
   )
 
 set(qpid_dispatch_INCLUDES
