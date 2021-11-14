@@ -19,32 +19,12 @@
  * under the License.
  */
 
-#include <assert.h>
-#include <errno.h>
 #include <stdarg.h>
-#include <stdio.h>
 
 /**
    Variadic appending printf - see aprintf()
  */
-static int vaprintf(char **begin, char *end, const char *format, va_list ap_in) {
-    int size = end - *begin;
-    if (size == 0) return EINVAL;
-    va_list ap;
-    va_copy(ap, ap_in);
-    int n = vsnprintf(*begin, size, format, ap);
-    va_end(ap);
-    if (n < 0) return n;
-    if (n >= size) {
-        *begin = end-1;
-        assert(**begin == '\0');
-        return n;
-    }
-    *begin += n;
-    assert(*begin < end);
-    assert(**begin == '\0');
-    return 0;
-}
+int vaprintf(char **begin, char *end, const char *format, va_list ap_in);
 
 /**
    Appending printf.
@@ -56,14 +36,6 @@ static int vaprintf(char **begin, char *end, const char *format, va_list ap_in) 
    - n > 0: printing was truncated and would have printed n characters. *begin == end-1
    - n < 0: error (return value of vsnprintf) no change to *begin
  */
-static int aprintf(char **begin, char *end, const char *format, ...) {
-    va_list ap;
-    va_start(ap, format);
-    int n = vaprintf(begin, end, format, ap);
-    va_end(ap);
-    return n;
-}
-
-
+int aprintf(char **begin, char *end, const char *format, ...);
 
 #endif

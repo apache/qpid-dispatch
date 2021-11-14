@@ -17,5 +17,36 @@
  * under the License.
  */
 
-__attribute__((unused)) static int aprintf(char **begin, char *end, const char *format, ...);
 #include "aprintf.h"
+
+#include <assert.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+
+int vaprintf(char **begin, char *end, const char *format, va_list ap_in) {
+    int size = end - *begin;
+    if (size == 0) return EINVAL;
+    va_list ap;
+    va_copy(ap, ap_in);
+    int n = vsnprintf(*begin, size, format, ap);
+    va_end(ap);
+    if (n < 0) return n;
+    if (n >= size) {
+        *begin = end-1;
+        assert(**begin == '\0');
+        return n;
+    }
+    *begin += n;
+    assert(*begin < end);
+    assert(**begin == '\0');
+    return 0;
+}
+
+int aprintf(char **begin, char *end, const char *format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    int n = vaprintf(begin, end, format, ap);
+    va_end(ap);
+    return n;
+}
