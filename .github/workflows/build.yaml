@@ -186,6 +186,7 @@ jobs:
       DispatchCTestExtraArgs: "-E 'system_tests_authz_service_plugin'"
       LD_LIBRARY_PATH: ${{github.workspace}}/install/lib
       QPID_SYSTEM_TEST_TIMEOUT: 300
+      QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST: True
     steps:
 
       - name: Show environment (Linux)
@@ -310,6 +311,7 @@ jobs:
       CCACHE_COMPRESS: 'true'
       CCACHE_MAXSIZE: '400MB'
       QPID_SYSTEM_TEST_TIMEOUT: 300
+      QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST: True
       VERBOSE: 1
 
     steps:
