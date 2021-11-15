@@ -928,13 +928,19 @@ class AsyncTestReceiver(MessagingHandler):
     def _main(self):
         self._container.timeout = 0.5
         self._container.start()
-        self._logger.log("Starting reactor")
+        self._logger.log("AsyncTestReceiver Starting reactor")
         while self._container.process():
             if self._stop_thread:
                 if self._conn:
                     self._conn.close()
                     self._conn = None
-        self._logger.log("reactor thread done")
+        self._logger.log("AsyncTestReceiver reactor thread done")
+
+    def on_connection_error(self, event):
+        self._logger.log("AsyncTestReceiver on_connection_error=%s" % event.connection.remote_condition.description)
+
+    def on_link_error(self, event):
+        self._logger.log("AsyncTestReceiver on_link_error=%s" % event.link.remote_condition.description)
 
     def stop(self, timeout=TIMEOUT):
         self._stop_thread = True
@@ -1028,10 +1034,10 @@ class AsyncTestSender(MessagingHandler):
     def _main(self):
         self._container.timeout = 0.5
         self._container.start()
-        self._logger.log("Starting reactor")
+        self._logger.log("AsyncTestSender Starting reactor")
         while self._container.process():
             self._check_if_done()
-        self._logger.log("reactor thread done")
+        self._logger.log("AsyncTestSender reactor thread done")
 
     def get_msg_stats(self):
         return self.msg_stats % (self.sent, self.accepted, self.released, self.modified, self.rejected)

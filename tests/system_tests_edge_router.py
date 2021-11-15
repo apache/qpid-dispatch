@@ -1895,6 +1895,8 @@ class LinkRouteProxyTest(TestCase):
         if self.skip['test_51'] :
             self.skipTest("Test skipped during development.")
 
+        self.INT_B.wait_address_unsubscribed("CfgLinkRoute1")
+
         # We are logging each step of this test as we go. The log statements will print to console
         logger = Logger(title="test_51_link_route_proxy_configured",
                         print_to_console=True)
