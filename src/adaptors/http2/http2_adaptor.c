@@ -2317,6 +2317,7 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
 
     if (conn->pn_raw_conn) {
         qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Setting conn->pn_raw_conn=0", conn->conn_id);
+        pn_raw_connection_set_context(conn->pn_raw_conn, 0);
         conn->pn_raw_conn = 0;
     }
 

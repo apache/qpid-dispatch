@@ -833,6 +833,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                "[C%"PRIu64"] PN_RAW_CONNECTION_DISCONNECTED %s",
                conn->conn_id, qdr_tcp_connection_role_name(conn));
         LOCK(conn->activation_lock);
+        pn_raw_connection_set_context(conn->pn_raw_conn, 0);
         conn->pn_raw_conn = 0;
         UNLOCK(conn->activation_lock);
         handle_disconnected(conn);
