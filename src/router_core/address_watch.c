@@ -34,6 +34,7 @@ ALLOC_DEFINE(qdr_address_watch_t);
 static void qdr_watch_invoker(qdr_core_t *core, qdr_general_work_t *work);
 static void qdr_core_watch_address_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_core_unwatch_address_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_address_watch_free_CT(qdr_address_watch_t *watch);
 
 //==================================================================================
 // Core Interface Functions
@@ -97,8 +98,7 @@ void qdr_address_watch_shutdown(qdr_core_t *core)
     qdr_address_watch_t *watch = DEQ_HEAD(core->addr_watches);
     while (!!watch) {
         DEQ_REMOVE(core->addr_watches, watch);
-        free(watch->address_hash);
-        free_qdr_address_watch_t(watch);
+        qdr_address_watch_free_CT(watch);
         watch = DEQ_HEAD(core->addr_watches);
     }
 }
@@ -107,6 +107,13 @@ void qdr_address_watch_shutdown(qdr_core_t *core)
 //==================================================================================
 // Local Functions
 //==================================================================================
+static void qdr_address_watch_free_CT(qdr_address_watch_t *watch)
+{
+    free(watch->address_hash);
+    free_qdr_address_watch_t(watch);
+}
+
+
 static void qdr_watch_invoker(qdr_core_t *core, qdr_general_work_t *work)
 {
     work->watch_handler(work->context,
@@ -144,8 +151,7 @@ static void qdr_core_unwatch_address_CT(qdr_core_t *core, qdr_action_t *action, 
         while (!!watch) {
             if (watch->watch_handle == watch_handle) {
                 DEQ_REMOVE(core->addr_watches, watch);
-                free(watch->address_hash);
-                free_qdr_address_watch_t(watch);
+                qdr_address_watch_free_CT(watch);
                 break;
             }
             watch = DEQ_NEXT(watch);
