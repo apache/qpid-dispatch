@@ -427,19 +427,6 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
 }
 
 
-static void flush_outgoing_buffs(qdr_tcp_connection_t *conn)
-{
-    // Free any remaining stream data objects
-    if (conn->outgoing_stream_data) {
-        qd_message_stream_data_release_up_to(conn->outgoing_stream_data);
-        conn->outgoing_stream_data = 0;
-    } else if (conn->previous_stream_data) {
-        qd_message_stream_data_release_up_to(conn->previous_stream_data);
-        conn->previous_stream_data = 0;
-    }
-}
-
-
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
 {
     free(tc->reply_to);
@@ -464,9 +451,18 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
 
 static void handle_disconnected(qdr_tcp_connection_t* conn)
 {
-    // release all message buffers since the deliveries will free the message
-    // once we decref them.
-    flush_outgoing_buffs(conn);
+    // release all referenced message buffers since the deliveries will free
+    // the message once we decref them. Note the order: outgoing_stream_data
+    // comes after previous_stream_data, so previous_stream_data is
+    // automagically freed when we release_up_to(outgoing_stream_data).
+    if (conn->outgoing_stream_data) {
+        qd_message_stream_data_release_up_to(conn->outgoing_stream_data);
+        conn->outgoing_stream_data = 0;
+        conn->previous_stream_data = 0;
+    } else if (conn->previous_stream_data) {
+        qd_message_stream_data_release_up_to(conn->previous_stream_data);
+        conn->previous_stream_data = 0;
+    }
 
     if (conn->instream) {
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
@@ -615,8 +611,6 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
 {
     if (conn->outstream) {
         if (IS_ATOMIC_FLAG_SET(&conn->raw_closed_write)) {
-            // flush outgoing buffers and free attached stream_data objects
-            flush_outgoing_buffs(conn);
             // give no more buffers to raw connection
             return;
         }
