@@ -1035,6 +1035,10 @@ static bool compose_and_deliver(qdr_http2_connection_t *conn, qdr_http2_stream_d
         qd_compose_free(header_and_props);
     }
 
+    if (stream_data->in_link_credit == 0) {
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] compose_and_deliver stream_data->in_link_credit is zero", conn->conn_id);
+    }
+
     if (!stream_data->in_dlv && stream_data->in_link_credit > 0) {
         //
         // Not doing an incref here since the qdr_link_deliver increfs the delivery twice
@@ -1566,24 +1570,12 @@ static bool connection_configure_tls(qdr_http2_connection_t *conn)
             break;
         }
 
+        int res;
         // create pn domain
         conn->tls_domain = pn_tls_domain(is_listener ? PN_TLS_MODE_SERVER : PN_TLS_MODE_CLIENT);
         if (!conn->tls_domain) {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
                     "[C%"PRIu64"] HTTP2 %s %s unable to create tls domain", conn->conn_id, role, conn->config->name);
-            break;
-        }
-
-        // configure pn domain
-        int res;
-        res = pn_tls_domain_set_credentials(conn->tls_domain,
-                                            config_ssl_profile->ssl_certificate_file,
-                                            config_ssl_profile->ssl_private_key_file,
-                                            config_ssl_profile->ssl_password);
-        if (res != 0) {
-            assert(false);
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
-                    "[C%"PRIu64"] HTTP2 %s %s unable to set tls credentials (%d)", conn->conn_id, role, conn->config->name, res);
             break;
         }
 
@@ -1595,6 +1587,23 @@ static bool connection_configure_tls(qdr_http2_connection_t *conn)
                         "[C%"PRIu64"] HTTP2 %s %s unable to set tls trusted certificates (%d)", conn->conn_id, role, conn->config->name, res);
                 break;
             }
+        }
+
+        // Call pn_tls_domain_set_credentials only if "certFile" is provided.
+        if (config_ssl_profile->ssl_certificate_file) {
+            res = pn_tls_domain_set_credentials(conn->tls_domain,
+                                                config_ssl_profile->ssl_certificate_file,
+                                                config_ssl_profile->ssl_private_key_file,
+                                                config_ssl_profile->ssl_password);
+            if (res != 0) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR,
+                        "[C%"PRIu64"] HTTP2 %s %s unable to set tls credentials (%d)", conn->conn_id, role, conn->config->name, res);
+                break;
+            }
+        }
+        else {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_INFO,
+                                    "[C%"PRIu64"] HTTP2 sslProfile %s did not provide certFile", conn->conn_id, conn->config->ssl_profile_name);
         }
 
         if (!!config_ssl_profile->ssl_protocols) {
@@ -2468,18 +2477,16 @@ static void handle_outgoing_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
         // and send the encrypted data out to the peer
         if (!conn->ingress) {
             if (!conn->handled_connected_event) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_outgoing_tls calling handle_raw_connected_event", conn->conn_id);
                 handle_raw_connected_event(conn);
             }
         }
 
         size_t processed_unencrypted_buffs_count = 0;
-        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_outgoing_tls unencrypted_buff_count %zu", conn->conn_id, unencrypted_buff_count);
         while (processed_unencrypted_buffs_count < unencrypted_buff_count && unencrypted_buff_count) {
 
             size_t encrypt_input_buff_capacity = pn_tls_get_encrypt_input_buffer_capacity(conn->tls_session);
             assert (encrypt_input_buff_capacity > 0);
-
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_outgoing_tls encrypt_input_buff_capacity %zu", conn->conn_id, encrypt_input_buff_capacity);
 
             size_t num_buffs_to_process = MIN(encrypt_input_buff_capacity, unencrypted_buff_count-processed_unencrypted_buffs_count);
             if (num_buffs_to_process == 0)
@@ -2491,8 +2498,6 @@ static void handle_outgoing_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
             assert (consumed == num_buffs_to_process);
 
             processed_unencrypted_buffs_count += num_buffs_to_process;
-
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_outgoing_tls processed_unencrypted_buffs_count %zu", conn->conn_id, processed_unencrypted_buffs_count);
 
             //
             // Process TLS.
@@ -2558,6 +2563,8 @@ static void handle_outgoing_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
  */
 static bool handle_incoming_tls(qdr_http2_connection_t *conn, const pn_raw_buffer_t *incoming_buf)
 {
+    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_tls incoming_buf.size=%zu", conn->conn_id, incoming_buf->size);
+
     if (conn->tls_error)
         return true;
 
@@ -2893,7 +2900,7 @@ static void egress_conn_timer_handler(void *context)
     qd_log(http2_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Running egress_conn_timer_handler", conn->conn_id);
 
     if (!conn->ingress) {
-        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] - Egress_conn_timer_handler - Trying to establishing outbound connection", conn->conn_id);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] - Egress_conn_timer_handler - Trying to establish outbound connection", conn->conn_id);
         http_connector_establish(conn);
     }
 }
