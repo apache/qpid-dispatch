@@ -538,9 +538,9 @@ class QdstatLinkPriorityTest(QdstatTestBase):
             ('listener', {'port': cls.tester.get_port()}),
             ('connector', {'role': 'inter-router', 'port': cls.inter_router_port})
         ])
-
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'R2'}),
+            ('listener', {'port': cls.tester.get_port()}),
             ('listener', {'role': 'inter-router', 'port': cls.inter_router_port}),
         ])
         cls.router_2 = cls.tester.qdrouterd('test_router_2', config_2, wait=True)
