@@ -44,7 +44,7 @@ under the License
 :RouterName: Dispatch Router
 :RouterSchemaDir: ../../build/doc/book
 :RouterConfigFile: /etc/qpid-dispatch/qdrouterd.conf
-:DispatchRouterVersion: 1.18.0
+:DispatchRouterVersion: 1.18.1-SNAPSHOT
 
 // Book names
 
