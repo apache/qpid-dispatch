@@ -76,14 +76,15 @@ jobs:
     - sudo apt-get update -q
     - sudo apt-get install -y clang-13 llvm-13-dev
     # Update pip, it may prevent issues later
-    - python -m pip install --user --upgrade pip
-    - python -m pip install --user --upgrade tox virtualenv
+    - sudo apt-get install -y python3-pip
+    - python3 -m pip install --user --upgrade pip
+    - python3 -m pip install --user --upgrade tox virtualenv
     # Install quart, h2 to run the http2 tests.
-    - python -m pip install --user quart h2
+    - python3 -m pip install --user quart h2
     # DISPATCH-1883: Install selectors to run tcp echo server/client tools
-    - python -m pip install --user selectors
+    - python3 -m pip install --user selectors
     # Install grpcio and protobuf to run the grpc tests.
-    - python -m pip install --user grpcio protobuf
+    - python3 -m pip install --user grpcio protobuf
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
@@ -100,8 +101,8 @@ jobs:
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
       # Update pip, it may prevent issues later
-      - python -m pip install --user --upgrade pip
-      - python -m pip install --user --upgrade tox virtualenv
+      - python3 -m pip install --user --upgrade pip
+      - python3 -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -152,14 +153,15 @@ jobs:
     dist: focal
     before_install:
       # Update pip, it may prevent issues later
-      - python -m pip install --user --upgrade pip
-      - python -m pip install --user --upgrade tox virtualenv
+      - sudo apt-get install -y python3-pip
+      - python3 -m pip install --user --upgrade pip
+      - python3 -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
-      - python -m pip install --user quart
+      - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
-      - python -m pip install --user selectors
+      - python3 -m pip install --user selectors
       # Install grpcio and protobuf to run the grpc tests.
-      - python -m pip install --user grpcio protobuf
+      - python3 -m pip install --user grpcio protobuf
     env:
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
@@ -183,7 +185,7 @@ jobs:
     # set aliases for CMake's PythonInterp and PythonLibs to find MacPort's `python` on the path first
     - sudo port select --set python python37
     - sudo port select --set python3 python37
-    - python -m venv p3venv
+    - python3 -m venv p3venv
     - source p3venv/bin/activate
 
 addons:
