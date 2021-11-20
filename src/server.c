@@ -1660,7 +1660,7 @@ qd_listener_t *qd_server_listener(qd_server_t *server)
 }
 
 static bool qd_listener_listen_pn(qd_listener_t *li) {
-   li->pn_listener = pn_listener();
+    li->pn_listener = pn_listener();
     if (li->pn_listener) {
         pn_listener_set_context(li->pn_listener, &li->type);
         pn_proactor_listen(li->server->proactor, li->pn_listener, li->config.host_port,
