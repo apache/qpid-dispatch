@@ -87,8 +87,9 @@ void check_http_listener_startup_log_message(qd_server_config_t config, std::str
     qdr.deinitialize();
 
     std::string logging = css.str();
-    CHECK_MESSAGE((logging.find("SERVER (warning) HTTP support is not available") == std::string::npos) == http_supported,
-                  listen, " (not) found in ", logging);
+    const std::string unavailable = "SERVER (warning) HTTP support is not available";
+    CHECK_MESSAGE((logging.find(unavailable) == std::string::npos) == http_supported,
+                  unavailable, " (not) found in ", logging);
 
     CHECK_MESSAGE(std::regex_search(logging, std::regex(listen)) == http_supported,
                   listen, " (not) found in ", logging);
@@ -96,7 +97,7 @@ void check_http_listener_startup_log_message(qd_server_config_t config, std::str
                   stop, " (not) found in ", logging);
 
     CHECK_MESSAGE(std::regex_search(logging, std::regex(failed)) != http_supported,
-                  stop, " (not) found in ", logging);
+                  failed, " (not) found in ", logging);
 
 }
 
