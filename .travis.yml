@@ -76,6 +76,7 @@ jobs:
     - sudo apt-get update -q
     - sudo apt-get install -y clang-13 llvm-13-dev
     # Update pip, it may prevent issues later
+    - sudo apt-get install -y python3-pip
     - python3 -m pip install --user --upgrade pip
     - python3 -m pip install --user --upgrade tox virtualenv
     # Install quart, h2 to run the http2 tests.
@@ -152,6 +153,7 @@ jobs:
     dist: focal
     before_install:
       # Update pip, it may prevent issues later
+      - sudo apt-get install -y python3-pip
       - python3 -m pip install --user --upgrade pip
       - python3 -m pip install --user --upgrade tox virtualenv
       # Install quart to run the http2 tests.
