@@ -405,6 +405,7 @@ static void listener_start(qd_lws_listener_t *hl, qd_http_server_t *hs) {
     if (port == 0) {
         // If a 0 (zero) is specified for a port, get the actual listening port from the listener.
         const int resolved_port = lws_get_vhost_port(hl->vhost);
+        assert(resolved_port != -1); // already checked the vhost is successfully started
         if (config->name)
             qd_log(hs->log, QD_LOG_NOTICE, "Listening for HTTP on %s:%d (%s)", config->host, resolved_port, config->name);
         else
