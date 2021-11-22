@@ -2473,6 +2473,7 @@ static void handle_outgoing_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
         return;
 
     if (pn_tls_can_encrypt(conn->tls_session)) {
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_outgoing_tls pn_tls_can_encrypt(conn->tls_session)", conn->conn_id);
         // A TLS session has already been negotiated. We are ready to encrypt the HTTP2 data
         // and send the encrypted data out to the peer
         if (!conn->ingress) {
@@ -2632,6 +2633,8 @@ static bool handle_incoming_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
     }
 
     conn->tls_has_output = pn_tls_get_encrypt_output_pending(conn->tls_session) > 0;
+
+    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_tls conn->tls_has_output=%i", conn->conn_id, conn->tls_has_output);
 
     take_back_input_decrypt_buff(conn);
 
