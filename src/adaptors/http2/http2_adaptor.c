@@ -2582,7 +2582,7 @@ static bool handle_incoming_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
     size_t result_decrypt_buff_capacity = pn_tls_get_decrypt_output_buffer_capacity(conn->tls_session);
 
     if (result_decrypt_buff_capacity == 0) {
-        //TODO: We cannot proceed, there is no decrypt result buffers capacity.
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_tls result_decrypt_buff_capacity == 0", conn->conn_id);
     }
     else {
         //
@@ -2617,6 +2617,8 @@ static bool handle_incoming_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
                 take_back_input_decrypt_buff(conn);
                 return false;
             }
+
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_tls process_tls successful, result=%zu", conn->conn_id, result);
         }
 
         pn_raw_buffer_t take_decrypted_output_buff;
