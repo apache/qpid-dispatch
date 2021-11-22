@@ -125,6 +125,8 @@ struct qdr_http2_connection_t {
     uint64_t                 conn_id;
     char                     *remote_address;
     qdr_link_t               *stream_dispatcher;
+    qdr_link_t               *dummy_link;
+    uint64_t                  dummy_link_id;
     qdr_http2_stream_data_t  *stream_dispatcher_stream_data;
     uint64_t                  stream_dispatcher_id;
     nghttp2_data_provider     data_prd;

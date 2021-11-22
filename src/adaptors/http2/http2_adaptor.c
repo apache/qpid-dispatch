@@ -2808,6 +2808,12 @@ static void qdr_del_http2_connection_CT(qdr_core_t *core, qdr_action_t *action, 
 
 static void close_connections(qdr_http2_connection_t* conn)
 {
+    if (conn->dummy_link) {
+        qdr_link_detach(conn->dummy_link, QD_CLOSED, 0);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Detaching dummy link on egress connection", conn->conn_id);
+        conn->dummy_link = 0;
+    }
+
 	qdr_connection_set_context(conn->qdr_conn, 0);
 	if (conn->qdr_conn) {
 	    qdr_connection_closed(conn->qdr_conn);
@@ -2905,6 +2911,23 @@ static void egress_conn_timer_handler(void *context)
     }
 }
 
+static void create_dummy_link_on_egress_conn(qdr_http2_connection_t *egress_http_conn)
+{
+    //
+    // Create a dummy link for connection activation
+    //
+    qdr_terminus_t *source = qdr_terminus(0);
+    qdr_terminus_set_address(source, "dummy_link");
+    egress_http_conn->dummy_link = qdr_link_first_attach(egress_http_conn->qdr_conn,
+                                                           QD_OUTGOING,
+                                                           source,           //qdr_terminus_t   *source,
+                                                           qdr_terminus(0),  //qdr_terminus_t   *target,
+                                                           "dummy_link",     //const char       *name,
+                                                           0,                //const char       *terminus_addr,
+                                                           false,
+                                                           0,
+                                                           &(egress_http_conn->dummy_link_id));
+}
 
 static void create_stream_dispatcher_link(qdr_http2_connection_t *egress_http_conn)
 {
@@ -3001,7 +3024,7 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
 
     egress_http_conn->conn_id = conn->identity;
     qdr_connection_set_context(conn, egress_http_conn);
-    create_stream_dispatcher_link(egress_http_conn);
+    create_dummy_link_on_egress_conn(egress_http_conn);
     return egress_http_conn;
 }
 
