@@ -2593,6 +2593,8 @@ static bool handle_incoming_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
             return false;
         }
 
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_tls process_tls successful", conn->conn_id);
+
         while (pn_tls_need_decrypt_output_buffers(conn->tls_session)) {
             //
             // Give one raw buffer to tls which will be used to decrypt.
