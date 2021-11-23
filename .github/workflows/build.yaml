@@ -563,6 +563,9 @@ jobs:
         with:
           path: 'qpid-dispatch'
 
+      - name: Install make
+        run: dnf install -y make
+
       - name: Compile everything and install Dispatch
         run: make -f qpid-dispatch/console/playwright/Makefile.requirements fedora_install_packages fedora_install_python_packages clone_proton compile_install_proton compile_install_dispatch
 
