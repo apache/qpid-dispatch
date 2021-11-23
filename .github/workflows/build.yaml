@@ -572,6 +572,9 @@ jobs:
       - name: Install console test prereqs
         run: dnf install -y npm chromium; npm install -g yarn; cd qpid-dispatch/console/playwright; yarn install; yarn run playwright install
 
+      - name: Link playwright cache
+        run: mkdir -p /root/.cache/; ln -s /github/home/.cache/ms-playwright /root/.cache/ms-playwright
+
       - name: Run console tests
         run: dispatch_build=/usr/sbin/qdrouterd; cd qpid-dispatch/console/playwright; python3 runner.py $dispatch_build
 
