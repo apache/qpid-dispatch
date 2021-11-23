@@ -564,7 +564,7 @@ jobs:
           path: 'qpid-dispatch'
 
       - name: Run console tests
-        run: npm install -g yarn; yarn run playwright test
+        run: dnf install -y npm; npm install -g yarn; yarn run playwright test
 
       - name: Install make
         run: dnf install -y make
