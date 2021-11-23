@@ -548,6 +548,20 @@ jobs:
       - name: Run ESLint
         run: cd console/react && npx eslint --max-warnings 0 .
 
+  console-playwright:
+    name: Console Playwright
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: 'qpid-dispatch'
+
+      - name: Compile everything and install Dispatch
+        run: make -f qpid-dispatch/console/playwright/Makefile.requirements fedora_install_packages fedora_install_python_packages clone_proton compile_install_proton compile_install_dispatch
+
+      - name: Run console tests
+        run: dispatch_build=qpid-dispatch/build; cd qpid-dispatch/console/playwright; python3 runner.py $dispatch_build
+
   rat_check:
     name: RAT Check
     runs-on: ubuntu-latest

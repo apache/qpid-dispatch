@@ -1,4 +1,10 @@
 {
   "name": "playwright",
-  "packageManager": "yarn@3.1.0"
+  "packageManager": "yarn@3.1.0",
+  "devDependencies": {
+    "@playwright/test": "^1.16.3",
+    "@types/node": "^16.11.9",
+    "playwright": "^1.16.3",
+    "playwright-core": "^1.16.3"
+  }
 }

@@ -1,0 +1,72 @@
+# Solve make, then use make to solve all the rest
+
+fedora_build_essentials = git gcc gcc-c++ cmake ccache make
+# binutils: sanitizers need this for runtime for symbolizing stacktraces
+fedora_build_sanitizers = binutils libasan libubsan libtsan
+fedora_extra_tools = doxygen valgrind emacs
+fedora_proton_build_requirements = python3-devel python3-pip swig openssl-devel cyrus-sasl-devel libuuid-devel
+# libuv-devel: that may or may not be pulled transitively, or if Proton wants libuv proactor
+# npm: for the console
+fedora_dispatch_build_requirements = libwebsockets-devel npm
+fedora_runtime_requirements = cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5
+
+runtime_check = asan
+proton_cmake_options = -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                       -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                       -DBUILD_BINDINGS=python \
+                       -DBUILD_EXAMPLES=OFF \
+                       -DBUILD_TESTING=OFF \
+                       -DENABLE_FUZZ_TESTING=OFF \
+                       -DCMAKE_INSTALL_PREFIX=/usr \
+                       -DRUNTIME_CHECK=$(runtime_check)
+#                       -DSYSINSTALL_BINDINGS=ON \
+#                       -DSYSINSTALL_PYTHON=ON \
+
+dispatch_cmake_options = -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                         -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG \
+                         -DCONSOLE_INSTALL=ON \
+                         -DUSE_BWRAP=OFF \
+                         -DRUNTIME_CHECK=$(runtime_check) \
+                         -DBUILD_BENCHMARKS=OFF \
+                         -DCMAKE_INSTALL_PREFIX=/usr
+#                         -DSANITIZE_3RD_PARTY=ON \
+
+
+.PHONY: fedora_install_packages
+fedora_install_packages:
+	dnf -y install $(fedora_build_essentials) $(fedora_build_sanitizers) $(fedora_proton_build_requirements) $(fedora_dispatch_build_requirements) $(fedora_runtime_requirements) && dnf clean all -y
+
+.PHONY: fedora_install_python_packages
+fedora_install_python_packages:
+	python3 -m pip install wheel
+
+
+# Create a main directory and clone the qpid-proton repo from github
+.PHONY: clone_proton
+clone_proton:
+	git clone https://github.com/apache/qpid-proton.git && mkdir qpid-proton/build
+
+# make and install proton
+.PHONY: compile_install_proton
+compile_install_proton:
+	cd qpid-proton && cmake -S . -B build $(proton_cmake_options)
+	cd qpid-proton && cmake --build build
+	cd qpid-proton && cmake --install build
+	bash -c 'python3 -m pip install qpid-proton/build/python/pkgs/python_qpid_proton-*.whl'
+
+# Clone the qpid-dispatch git repo
+.PHONY: clone_dispatch
+clone_dispatch:
+	git clone https://github.com/apache/qpid-dispatch.git && mkdir qpid-dispatch/build
+
+.PHONY: compile_install_dispatch
+compile_install_dispatch:
+	cd qpid-dispatch && cmake -S . -B build $(dispatch_cmake_options)
+	cd qpid-dispatch && cmake --build build
+	cd qpid-dispatch && cmake --install build
+
+# runs all the dispatch unit tests and system tests.
+.PHONY: test_dispatch
+test_dispatch:
+	cd qpid-dispatch/build && ctest -VV
