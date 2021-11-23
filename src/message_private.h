@@ -120,7 +120,7 @@ typedef struct {
     qd_message_depth_t   parse_depth;                     // Depth to which message content has been parsed
     qd_iterator_t       *ma_field_iter_in;                // Iter for msg.FIELD_MESSAGE_ANNOTATION
 
-    qd_iterator_pointer_t ma_user_annotation_blob;        // Original user annotations
+    qd_buffer_field_t    ma_user_annotation_blob;        // Original user annotations
                                                           //  with router annotations stripped
     uint32_t             ma_count;                        // Number of map elements in blob
                                                           //  after router fields stripped
@@ -152,7 +152,7 @@ typedef struct {
 } qd_message_content_t;
 
 struct qd_message_pvt_t {
-    qd_iterator_pointer_t          cursor;          // Pointer to current location of outgoing byte stream.
+    qd_buffer_field_t              cursor;          // Pointer to current location of outgoing byte stream.
     qd_message_depth_t             message_depth;   // Depth of incoming received message
     qd_message_depth_t             sent_depth;      // Depth of outgoing sent message
     qd_message_content_t          *content;         // Singleton content shared by reference between

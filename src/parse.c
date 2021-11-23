@@ -22,6 +22,7 @@
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/amqp.h"
 #include "qpid/dispatch/ctools.h"
+#include "buffer_field_api.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -237,7 +238,7 @@ const char *qd_parse_turbo(qd_iterator_t          *iter,
         ZERO(turbo);
 
         // Get the buffer pointers for the map element
-        qd_iterator_get_view_cursor(iter, &turbo->bufptr);
+        turbo->bufptr = qd_iterator_get_view_cursor(iter);
 
         // Get description of the map element
         parse_error = get_type_info(iter, &turbo->tag, &turbo->size, &turbo->count,
@@ -259,7 +260,9 @@ const char *qd_parse_turbo(qd_iterator_t          *iter,
     for (int idx=0; idx < n_allocs; idx += 2) {
         qd_parsed_turbo_t *turbo = DEQ_HEAD(*annos);
         assert(turbo);
-        if (qd_iterator_prefix_ptr(&turbo->bufptr, turbo->length_of_size + 1, QD_MA_PREFIX))
+        qd_buffer_field_t key = turbo->bufptr;
+        qd_buffer_field_advance(&key, turbo->length_of_size + 1);
+        if (qd_buffer_field_equal(&key, (const uint8_t*) QD_MA_PREFIX, QD_MA_PREFIX_LEN))
             break;
 
         // leading anno is a user annotation map key
@@ -714,73 +717,16 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
 }
 
 
-// TODO(kgiusti) - de-duplicate all the buffer chain walking code!
-// See DISPATCH-1403
-//
-static inline int _turbo_advance(qd_iterator_pointer_t *ptr, int length)
-{
-    const int start = ptr->remaining;
-    int move = MIN(length, ptr->remaining);
-    while (move > 0) {
-        int avail = qd_buffer_cursor(ptr->buffer) - ptr->cursor;
-        if (move < avail) {
-            ptr->cursor += move;
-            ptr->remaining -= move;
-            break;
-        }
-        move -= avail;
-        ptr->remaining -= avail;
-        if (ptr->remaining == 0) {
-            ptr->cursor += avail;   // move to end
-            break;
-        }
-
-        // More remaining in buffer chain: advance to next buffer in chain
-        assert(DEQ_NEXT(ptr->buffer));
-        if (!DEQ_NEXT(ptr->buffer)) {
-            // this is an error!  ptr->remainer is not accurate.  This should not happen
-            // since the MA field must be completely received at this point
-            // (see DISPATCH-1394).
-            int copied = start - ptr->remaining;
-            ptr->remaining = 0;
-            ptr->cursor += avail;  // force to end of chain
-            return copied;
-        }
-        ptr->buffer = DEQ_NEXT(ptr->buffer);
-        ptr->cursor = qd_buffer_base(ptr->buffer);
-    }
-    return start - ptr->remaining;
-}
-
-
-// TODO(kgiusti): deduplicate!
-// See DISPATCH-1403
-//
-static inline int _turbo_copy(qd_iterator_pointer_t *ptr, char *buffer, int length)
-{
-    int move = MIN(length, ptr->remaining);
-    char * const start = buffer;
-    while (ptr->remaining && move > 0) {
-        int avail = MIN(move, qd_buffer_cursor(ptr->buffer) - ptr->cursor);
-        memcpy(buffer, ptr->cursor, avail);
-        buffer += avail;
-        move -= avail;
-        _turbo_advance(ptr, avail);
-    }
-    return (buffer - start);
-}
-
-
 const char *qd_parse_annotations_v1(
-    bool                   strip_anno_in,
-    qd_iterator_t         *ma_iter_in,
-    qd_parsed_field_t    **ma_ingress,
-    qd_parsed_field_t    **ma_phase,
-    qd_parsed_field_t    **ma_to_override,
-    qd_parsed_field_t    **ma_trace,
-    qd_parsed_field_t    **ma_stream,
-    qd_iterator_pointer_t *blob_pointer,
-    uint32_t              *blob_item_count)
+    bool                strip_anno_in,
+    qd_iterator_t      *ma_iter_in,
+    qd_parsed_field_t **ma_ingress,
+    qd_parsed_field_t **ma_phase,
+    qd_parsed_field_t **ma_to_override,
+    qd_parsed_field_t **ma_trace,
+    qd_parsed_field_t **ma_stream,
+    qd_buffer_field_t  *blob_pointer,
+    uint32_t           *blob_item_count)
 {
     // Do full parse
     qd_iterator_reset(ma_iter_in);
@@ -804,7 +750,7 @@ const char *qd_parse_annotations_v1(
     if (!strip_anno_in) {
         anno = DEQ_HEAD(annos);
         while (anno) {
-            uint8_t * dp;                     // pointer to key name in raw buf or extract buf
+            const uint8_t *dp;                // pointer to key name in raw buf or extract buf
             char key_name[QD_MA_MAX_KEY_LEN]; // key name extracted across buf boundary
             int key_len = anno->size;
 
@@ -814,12 +760,12 @@ const char *qd_parse_annotations_v1(
                 dp = anno->bufptr.cursor + anno->length_of_size + 1;
             } else {
                 // Pull the key name from multiple buffers
-                qd_iterator_pointer_t wbuf = anno->bufptr;    // scratch buf pointers for getting key
-                _turbo_advance(&wbuf, anno->length_of_size + 1);
+                qd_buffer_field_t wbuf = anno->bufptr;    // scratch buf pointers for getting key
+                qd_buffer_field_advance(&wbuf, anno->length_of_size + 1);
                 int t_size = MIN(anno->size, QD_MA_MAX_KEY_LEN); // get this many total
-                key_len = _turbo_copy(&wbuf, key_name, t_size);
+                key_len = qd_buffer_field_ncopy(&wbuf, (uint8_t*) key_name, t_size);
 
-                dp = (uint8_t *)key_name;
+                dp = (const uint8_t *)key_name;
             }
 
             // Verify that the key starts with the prefix.
@@ -924,15 +870,15 @@ const char *qd_parse_annotations_v1(
 
 
 void qd_parse_annotations(
-    bool                   strip_annotations_in,
-    qd_iterator_t         *ma_iter_in,
-    qd_parsed_field_t    **ma_ingress,
-    qd_parsed_field_t    **ma_phase,
-    qd_parsed_field_t    **ma_to_override,
-    qd_parsed_field_t    **ma_trace,
-    qd_parsed_field_t    **ma_stream,
-    qd_iterator_pointer_t *blob_pointer,
-    uint32_t              *blob_item_count)
+    bool                strip_annotations_in,
+    qd_iterator_t      *ma_iter_in,
+    qd_parsed_field_t **ma_ingress,
+    qd_parsed_field_t **ma_phase,
+    qd_parsed_field_t **ma_to_override,
+    qd_parsed_field_t **ma_trace,
+    qd_parsed_field_t **ma_stream,
+    qd_buffer_field_t  *blob_pointer,
+    uint32_t           *blob_item_count)
 {
     *ma_ingress             = 0;
     *ma_phase               = 0;
@@ -964,7 +910,7 @@ void qd_parse_annotations(
 
     // If there are no router annotations then all annotations
     // are the user's opaque blob.
-    qd_iterator_get_view_cursor(raw_iter, blob_pointer);
+    *blob_pointer = qd_iterator_get_view_cursor(raw_iter);
 
     qd_iterator_free(raw_iter);
 
