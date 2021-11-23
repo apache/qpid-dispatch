@@ -551,7 +551,14 @@ jobs:
   console-playwright:
     name: Console Playwright
     runs-on: ubuntu-latest
+
+    container:
+      image: 'library/fedora:34'
+      volumes:
+        - ${{github.workspace}}:${{github.workspace}}
+
     steps:
+
       - uses: actions/checkout@v2
         with:
           path: 'qpid-dispatch'
