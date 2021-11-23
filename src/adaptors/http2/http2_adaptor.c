@@ -2640,6 +2640,11 @@ static bool handle_incoming_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
 
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_tls conn->tls_has_output=%i", conn->conn_id, conn->tls_has_output);
 
+    if (pn_tls_can_encrypt(conn->tls_session) && !conn->handled_connected_event && !conn->ingress) {
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_pn_tls_can_encrypt", conn->conn_id);
+        handle_raw_connected_event(conn);
+    }
+
     take_back_input_decrypt_buff(conn);
 
     return close_conn;
