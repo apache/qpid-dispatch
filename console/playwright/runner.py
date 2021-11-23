@@ -57,9 +57,10 @@ async def main() -> int:
     tests = await asyncio.subprocess.create_subprocess_shell("yarn run playwright test", env={
         'baseURL': f'http://localhost:{console_port}',
     })
+    result = await tests.wait()
     dispatch.terminate()
     await printer
-    return (await dispatch.wait()) + (await tests.wait())
+    return (await dispatch.wait()) + result
 
 
 if __name__ == '__main__':
