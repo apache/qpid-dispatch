@@ -563,14 +563,14 @@ jobs:
         with:
           path: 'qpid-dispatch'
 
-      - name: Run console tests
-        run: dnf install -y npm chromium; npm install -g yarn; cd qpid-dispatch/console/playwright; yarn install; yarn run playwright test
-
       - name: Install make
         run: dnf install -y make
 
       - name: Compile everything and install Dispatch
         run: make -f qpid-dispatch/console/playwright/Makefile.requirements fedora_install_packages fedora_install_python_packages clone_proton compile_install_proton compile_install_dispatch
+
+      - name: Install console test prereqs
+        run: dnf install -y npm chromium; npm install -g yarn; cd qpid-dispatch/console/playwright; yarn install
 
       - name: Run console tests
         run: dispatch_build=/usr/sbin/qdrouterd; cd qpid-dispatch/console/playwright; python3 runner.py $dispatch_build
