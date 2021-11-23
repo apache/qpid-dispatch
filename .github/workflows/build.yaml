@@ -570,7 +570,7 @@ jobs:
         run: make -f qpid-dispatch/console/playwright/Makefile.requirements fedora_install_packages fedora_install_python_packages clone_proton compile_install_proton compile_install_dispatch
 
       - name: Run console tests
-        run: dispatch_build=$(pwd)/qpid-dispatch/build; cd qpid-dispatch/console/playwright; python3 runner.py $dispatch_build
+        run: dispatch_build=$(pwd)/build; cd qpid-dispatch/console/playwright; python3 runner.py $dispatch_build
 
   rat_check:
     name: RAT Check
