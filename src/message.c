@@ -1190,8 +1190,8 @@ void qd_message_message_annotations(qd_message_t *in_msg)
     // Construct pseudo-field location of user annotations blob
     // This holds all annotations if no router-specific annotations are present
     if (content->ma_count > 0) {
-        qd_field_location_t   *cf  = &content->field_user_annotations;
-        qd_iterator_pointer_t *uab = &content->ma_user_annotation_blob;
+        qd_field_location_t *cf  = &content->field_user_annotations;
+        qd_buffer_field_t   *uab = &content->ma_user_annotation_blob;
         cf->buffer = uab->buffer;
         cf->offset = uab->cursor - qd_buffer_base(uab->buffer);
         cf->length = uab->remaining;

@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/buffer_field.h"
 #include "qpid/dispatch/iterator.h"
 
 /**@file
@@ -48,12 +48,12 @@ DEQ_DECLARE(qd_parsed_turbo_t, qd_parsed_turbo_list_t);
  */
 struct qd_parsed_turbo_t {
     DEQ_LINKS(qd_parsed_turbo_t);
-    qd_iterator_pointer_t bufptr;  // location/size of field in buffer
-    uint8_t               tag;
-    uint32_t              size;
-    uint32_t              count;
-    uint32_t              length_of_size;
-    uint32_t              length_of_count;
+    qd_buffer_field_t bufptr;  // location/size of field in buffer
+    uint8_t           tag;
+    uint32_t          size;
+    uint32_t          count;
+    uint32_t          length_of_size;
+    uint32_t          length_of_count;
 };
 
 /**
@@ -295,15 +295,15 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
  * @param blob_item_count number of map entries referenced by blob_iterator
  */
 void qd_parse_annotations(
-    bool                   strip_annotations_in,
-    qd_iterator_t         *ma_iter_in,
-    qd_parsed_field_t    **ma_ingress,
-    qd_parsed_field_t    **ma_phase,
-    qd_parsed_field_t    **ma_to_override,
-    qd_parsed_field_t    **ma_trace,
-    qd_parsed_field_t    **ma_stream,
-    qd_iterator_pointer_t *blob_pointer,
-    uint32_t              *blob_item_count);
+    bool                strip_annotations_in,
+    qd_iterator_t      *ma_iter_in,
+    qd_parsed_field_t **ma_ingress,
+    qd_parsed_field_t **ma_phase,
+    qd_parsed_field_t **ma_to_override,
+    qd_parsed_field_t **ma_trace,
+    qd_parsed_field_t **ma_stream,
+    qd_buffer_field_t  *blob_pointer,
+    uint32_t           *blob_item_count);
 
 /**
  * Identify which annotation is being parsed

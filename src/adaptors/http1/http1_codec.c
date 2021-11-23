@@ -21,9 +21,8 @@
 #include "qpid/dispatch/http1_codec.h"
 
 #include "qpid/dispatch/alloc_pool.h"
-#include "qpid/dispatch/buffer.h"
 #include "qpid/dispatch/discriminator.h"
-#include "qpid/dispatch/iterator.h"
+#include "buffer_field_api.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -46,7 +45,7 @@ const char   *CRLF = "\r\n";
 const char   *DOUBLE_HYPHEN = "--";
 const char   *CONTENT_TYPE_KEY = "Content-Type";
 const char   *MULTIPART_CONTENT_TYPE_PREFIX = "multipart/mixed; boundary=";
-const qd_iterator_pointer_t NULL_I_PTR = {0};
+const qd_buffer_field_t NULL_R_PTR = {0};
 
 // true for informational response codes
 #define IS_INFO_RESPONSE(code) ((code) / 100 == 1)
@@ -81,6 +80,16 @@ typedef struct scratch_memory_t {
     uint8_t *buf;
     size_t   size;  // of allocated memory, not contents!
 } scratch_memory_t;
+
+
+// like a qd_buffer_field_t, but for writing data instead of reading.
+//
+typedef struct buffer_write_ptr_t {
+    qd_buffer_t *buffer;
+    uint8_t     *cursor;   // next octet to be written
+    size_t       capacity; // free space starting at cursor
+} buffer_write_ptr_t;
+const buffer_write_ptr_t NULL_W_PTR = {0};
 
 
 // State for a single request-response transaction.
@@ -140,9 +149,9 @@ struct h1_codec_connection_t {
     // data is being parsed.
     //
     struct decoder_t {
-        qd_buffer_list_t       incoming;
-        qd_iterator_pointer_t  read_ptr;
-        qd_iterator_pointer_t  body_ptr;
+        qd_buffer_list_t   incoming;
+        qd_buffer_field_t  read_ptr;
+        qd_buffer_field_t  body_ptr;
 
         h1_codec_request_state_t *hrs;            // current request/response
         http1_msg_state_t       state;
@@ -169,15 +178,14 @@ struct h1_codec_connection_t {
     // outgoing: holds the encoded data that needs to be sent to proactor for
     // sending out this connection
     // write_ptr: points to the first empty octet to be written to by the
-    // encoder.  Remaining is the total unused space in the outgoing list
-    // (capacity)
+    // encoder.
     // Note that the outgoing list and the write_ptr are only used for the
     // start line and headers.  Body content buffer chains are past directly to
     // the connection without encoding.
     //
     struct encoder_t {
-        qd_buffer_list_t       outgoing;
-        qd_iterator_pointer_t  write_ptr;
+        qd_buffer_list_t          outgoing;
+        buffer_write_ptr_t        write_ptr;
         h1_codec_request_state_t *hrs;           // current request/response state
 
         bool headers_sent;  // true after all headers have been sent
@@ -236,11 +244,11 @@ h1_codec_connection_t *h1_codec_connection(h1_codec_config_t *config, void *cont
 
     encoder_reset(&conn->encoder);
     DEQ_INIT(conn->encoder.outgoing);
-    conn->encoder.write_ptr = NULL_I_PTR;
+    conn->encoder.write_ptr = NULL_W_PTR;
 
     decoder_reset(&conn->decoder);
     DEQ_INIT(conn->decoder.incoming);
-    conn->decoder.read_ptr = NULL_I_PTR;
+    conn->decoder.read_ptr = NULL_R_PTR;
 
     return conn;
 }
@@ -271,7 +279,7 @@ static void decoder_reset(struct decoder_t *decoder)
     // do not touch the read_ptr or incoming buffer list as they
     // track the current position in the incoming data stream
 
-    decoder->body_ptr = NULL_I_PTR;
+    decoder->body_ptr = NULL_R_PTR;
     decoder->hrs = 0;
     decoder->state = HTTP1_MSG_STATE_START;
     decoder->content_length = 0;
@@ -337,10 +345,10 @@ static bool _is_transfer_chunked(const char *encoding)
 //
 static void ensure_outgoing_capacity(struct encoder_t *encoder, size_t capacity)
 {
-    while (encoder->write_ptr.remaining < capacity) {
+    while (encoder->write_ptr.capacity < capacity) {
         qd_buffer_t *buf = qd_buffer();
         DEQ_INSERT_TAIL(encoder->outgoing, buf);
-        encoder->write_ptr.remaining += qd_buffer_capacity(buf);
+        encoder->write_ptr.capacity += qd_buffer_capacity(buf);
     }
     if (!encoder->write_ptr.buffer) {
         encoder->write_ptr.buffer = DEQ_HEAD(encoder->outgoing);
@@ -359,7 +367,7 @@ static void write_string(struct encoder_t *encoder, const char *string)
     ensure_outgoing_capacity(encoder, needed);
 
     encoder->hrs->out_octets += needed;
-    qd_iterator_pointer_t *wptr = &encoder->write_ptr;
+    buffer_write_ptr_t *wptr = &encoder->write_ptr;
     while (needed) {
         if (qd_buffer_capacity(wptr->buffer) == 0) {
             wptr->buffer = DEQ_NEXT(wptr->buffer);
@@ -370,73 +378,36 @@ static void write_string(struct encoder_t *encoder, const char *string)
         memcpy(wptr->cursor, string, avail);
         qd_buffer_insert(wptr->buffer, avail);
         wptr->cursor += avail;
-        wptr->remaining -= avail;
+        wptr->capacity -= avail;
         string += avail;
         needed -= avail;
     }
 }
 
 
-//
-static inline size_t skip_octets(qd_iterator_pointer_t *data, size_t amount)
-{
-    size_t count = 0;
-    amount = MIN(data->remaining, amount);
-    while (count < amount) {
-        if (data->cursor == qd_buffer_cursor(data->buffer)) {
-            data->buffer = DEQ_NEXT(data->buffer);
-            assert(data->buffer);  // else data->remaining is bad
-            data->cursor = qd_buffer_base(data->buffer);
-        }
-        size_t available = qd_buffer_cursor(data->buffer) - data->cursor;
-        available = MIN(available, amount - count);
-        data->cursor += available;
-        count += available;
-    }
-    data->remaining -= amount;
-    return amount;
-}
-
-// consume next octet and advance the pointer
-static inline bool get_octet(qd_iterator_pointer_t *data, uint8_t *octet)
-{
-    if (data->remaining > 0) {
-        if (data->cursor == qd_buffer_cursor(data->buffer)) {
-            data->buffer = DEQ_NEXT(data->buffer);
-            data->cursor = qd_buffer_base(data->buffer);
-        }
-        *octet = *data->cursor;
-        data->cursor += 1;
-        data->remaining -= 1;
-        return true;
-    }
-    return false;
-}
-
-
 // True if line contains just "CRLF"
 //
-static bool is_empty_line(const qd_iterator_pointer_t *line)
+static bool is_empty_line(const qd_buffer_field_t *line)
 {
     if (line->remaining == 2) {
-        qd_iterator_pointer_t tmp = *line;
+        qd_buffer_field_t tmp = *line;
         uint8_t octet;
-        return (get_octet(&tmp, &octet) && octet == CR_TOKEN
-                && get_octet(&tmp, &octet) && octet == LF_TOKEN);
+        return (qd_buffer_field_octet(&tmp, &octet) && octet == CR_TOKEN
+                && qd_buffer_field_octet(&tmp, &octet) && octet == LF_TOKEN);
     }
     return false;
 }
 
 
 // for debug:
-static void debug_print_iterator_pointer(const char *prefix, const qd_iterator_pointer_t *ptr)
+static void debug_print_buffer_field(const char *prefix, const qd_buffer_field_t *ptr)
 {
 #if 0
-    qd_iterator_pointer_t tmp = *ptr;
+    qd_buffer_field_t tmp = *ptr;
     fprintf(stdout, "%s '", prefix);
     size_t len = MIN(tmp.remaining, 80);
     uint8_t octet;
-    while (len-- > 0 && get_octet(&tmp, &octet)) {
+    while (len-- > 0 && qd_buffer_field_octet(&tmp, &octet)) {
         fputc(octet, stdout);
     }
     fprintf(stdout, "%s'\n", (tmp.remaining) ? " <truncated>" : "");
@@ -449,9 +420,9 @@ static void debug_print_iterator_pointer(const char *prefix, const qd_iterator_p
 // On success, 'data' is advanced to the octet following the LF and 'line' is
 // set to the read line (including trailing CRLF).  Returns false if no CRLF found
 //
-static bool read_line(qd_iterator_pointer_t *data, qd_iterator_pointer_t *line)
+static bool read_line(qd_buffer_field_t *data, qd_buffer_field_t *line)
 {
-    qd_iterator_pointer_t tmp = *data;
+    qd_buffer_field_t tmp = *data;
 
     *line = *data;
     line->remaining = 0;
@@ -459,10 +430,10 @@ static bool read_line(qd_iterator_pointer_t *data, qd_iterator_pointer_t *line)
     bool   eol = false;
 
     uint8_t octet;
-    while (!eol && get_octet(&tmp, &octet)) {
+    while (!eol && qd_buffer_field_octet(&tmp, &octet)) {
         line->remaining += 1;
         if (octet == CR_TOKEN) {
-            if (get_octet(&tmp, &octet)) {
+            if (qd_buffer_field_octet(&tmp, &octet)) {
                 line->remaining += 1;
                 if (octet == LF_TOKEN) {
                     eol = true;
@@ -475,7 +446,7 @@ static bool read_line(qd_iterator_pointer_t *data, qd_iterator_pointer_t *line)
         *data = tmp;
         return true;
     } else {
-        *line = NULL_I_PTR;
+        *line = NULL_R_PTR;
         return false;
     }
 }
@@ -506,29 +477,26 @@ static inline bool filter_str(const char *str, uint8_t octet)
 // trims any optional whitespace characters at the start of 'line'
 // RFC7230 defines OWS as zero or more spaces or horizontal tabs
 //
-static void trim_whitespace(qd_iterator_pointer_t *line)
+static void trim_whitespace(qd_buffer_field_t *line)
 {
-    qd_iterator_pointer_t ptr = *line;
+    qd_buffer_field_t ptr = *line;
     size_t skip = 0;
     uint8_t octet;
-    while (get_octet(&ptr, &octet) && isblank(octet))
+    while (qd_buffer_field_octet(&ptr, &octet) && isblank(octet))
         skip += 1;
     if (skip)
-        skip_octets(line, skip);
+        qd_buffer_field_advance(line, skip);
 }
 
-// copy out iterator to a buffer and null terminate. Return # of bytes written
+// copy out to a buffer and null terminate. Return # of bytes written
 // to str including terminating null.
-static size_t pointer_2_str(const qd_iterator_pointer_t *line, unsigned char *str, size_t len)
+static size_t pointer_2_str(const qd_buffer_field_t *line, unsigned char *str, size_t len)
 {
     assert(len);
-    qd_iterator_pointer_t tmp = *line;
-    uint8_t *ptr = (uint8_t *)str;
-    len -= 1;  // reserve for null terminator
-    while (len-- > 0 && get_octet(&tmp, ptr))
-        ++ptr;
-    *ptr++ = 0;
-    return ptr - (uint8_t *)str;
+    qd_buffer_field_t tmp = *line;
+    size_t amount = qd_buffer_field_ncopy(&tmp, (uint8_t*) str, len - 1);
+    str[amount] = 0;
+    return amount + 1;
 }
 
 
@@ -536,16 +504,16 @@ static size_t pointer_2_str(const qd_iterator_pointer_t *line, unsigned char *st
 // 'line' is advanced past the token.  This is used for parsing fields that
 // RFC7230 defines as 'tokens'.
 //
-static bool parse_token(qd_iterator_pointer_t *line, qd_iterator_pointer_t *token)
+static bool parse_token(qd_buffer_field_t *line, qd_buffer_field_t *token)
 {
     static const char *TOKEN_EXTRA = "!#$%&’*+-.^_‘|~";
 
     trim_whitespace(line);
-    qd_iterator_pointer_t tmp = *line;
+    qd_buffer_field_t tmp = *line;
     *token = tmp;
     size_t len = 0;
     uint8_t octet;
-    while (get_octet(&tmp, &octet)
+    while (qd_buffer_field_octet(&tmp, &octet)
            && (('A' <= octet && octet <= 'Z') ||
                ('a' <= octet && octet <= 'z') ||
                ('0' <= octet && octet <= '9') ||
@@ -555,10 +523,10 @@ static bool parse_token(qd_iterator_pointer_t *line, qd_iterator_pointer_t *toke
 
     if (len) {
         token->remaining = len;
-        skip_octets(line, len);
+        qd_buffer_field_advance(line, len);
         return true;
     }
-    *token = NULL_I_PTR;
+    *token = NULL_R_PTR;
     return false;
 }
 
@@ -566,22 +534,22 @@ static bool parse_token(qd_iterator_pointer_t *line, qd_iterator_pointer_t *toke
 // Parse out a text field delineated by whitespace.
 // 'line' is advanced past the field.
 //
-static bool parse_field(qd_iterator_pointer_t *line, qd_iterator_pointer_t *field)
+static bool parse_field(qd_buffer_field_t *line, qd_buffer_field_t *field)
 {
     trim_whitespace(line);
-    qd_iterator_pointer_t tmp = *line;
+    qd_buffer_field_t tmp = *line;
     *field = tmp;
     size_t len = 0;
     uint8_t octet;
-    while (get_octet(&tmp, &octet) && !isspace(octet))
+    while (qd_buffer_field_octet(&tmp, &octet) && !isspace(octet))
         len++;
 
     if (len) {
         field->remaining = len;
-        skip_octets(line, len);
+        qd_buffer_field_advance(line, len);
         return true;
     }
-    *field = NULL_I_PTR;
+    *field = NULL_R_PTR;
     return false;
 }
 
@@ -589,11 +557,11 @@ static bool parse_field(qd_iterator_pointer_t *line, qd_iterator_pointer_t *fiel
 // parse the HTTP/1.1 request line:
 // "method SP request-target SP HTTP-version CRLF"
 //
-static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *decoder, qd_iterator_pointer_t *line)
+static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *decoder, qd_buffer_field_t *line)
 {
-    qd_iterator_pointer_t method = {0};
-    qd_iterator_pointer_t target = {0};
-    qd_iterator_pointer_t version = {0};
+    qd_buffer_field_t method = {0};
+    qd_buffer_field_t target = {0};
+    qd_buffer_field_t version = {0};
     int in_octets = line->remaining;
 
     if (!parse_token(line, &method) ||
@@ -605,7 +573,7 @@ static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *de
         return decoder->error;
     }
 
-    // translate iterator pointers to C strings
+    // translate buffer fields to C strings
     ensure_scratch_size(&decoder->scratch, method.remaining + target.remaining + version.remaining + 3);
     uint8_t *ptr = decoder->scratch.buf;
     size_t avail = decoder->scratch.size;
@@ -662,11 +630,11 @@ static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *de
 // parse the HTTP/1.1 response line
 // "HTTP-version SP status-code [SP reason-phrase] CRLF"
 //
-static int parse_response_line(h1_codec_connection_t *conn, struct decoder_t *decoder, qd_iterator_pointer_t *line)
+static int parse_response_line(h1_codec_connection_t *conn, struct decoder_t *decoder, qd_buffer_field_t *line)
 {
-    qd_iterator_pointer_t version = {0};
-    qd_iterator_pointer_t status_code = {0};
-    qd_iterator_pointer_t reason = {0};
+    qd_buffer_field_t version = {0};
+    qd_buffer_field_t status_code = {0};
+    qd_buffer_field_t reason = {0};
     int in_octets = line->remaining;
 
     if (!parse_field(line, &version)
@@ -750,11 +718,11 @@ static int parse_response_line(h1_codec_connection_t *conn, struct decoder_t *de
 //
 static bool parse_start_line(h1_codec_connection_t *conn, struct decoder_t *decoder)
 {
-    qd_iterator_pointer_t *rptr = &decoder->read_ptr;
-    qd_iterator_pointer_t line;
+    qd_buffer_field_t *rptr = &decoder->read_ptr;
+    qd_buffer_field_t line;
 
     if (read_line(rptr, &line)) {
-        debug_print_iterator_pointer("start line:", &line);
+        debug_print_buffer_field("start line:", &line);
 
         if (!is_empty_line(&line)) {  // RFC7230: ignore any preceding CRLF
             if (conn->config.type == HTTP1_CONN_CLIENT) {
@@ -904,9 +872,9 @@ static int process_header(h1_codec_connection_t *conn, struct decoder_t *decoder
 //
 static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
 {
-    qd_iterator_pointer_t end_ptr = decoder->read_ptr;
+    qd_buffer_field_t end_ptr = decoder->read_ptr;
     h1_codec_request_state_t *hrs = decoder->hrs;
-    qd_iterator_pointer_t line;
+    qd_buffer_field_t line;
 
     assert(hrs);  // else state machine busted
 
@@ -924,9 +892,9 @@ static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
 
     bool obs_fold = false;
     while (true) {
-        qd_iterator_pointer_t peek = end_ptr;
+        qd_buffer_field_t peek = end_ptr;
         uint8_t octet;
-        if (!get_octet(&peek, &octet))
+        if (!qd_buffer_field_octet(&peek, &octet))
             // need more data
             return false;
 
@@ -946,13 +914,13 @@ static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
     decoder->read_ptr = end_ptr;
     line.remaining -= end_ptr.remaining;
 
-    debug_print_iterator_pointer("header:", &line);
+    debug_print_buffer_field("header:", &line);
 
     hrs->in_octets += line.remaining;
 
     // convert field to key and value strings
 
-    qd_iterator_pointer_t key;
+    qd_buffer_field_t key;
     if (!parse_token(&line, &key)) {
         decoder->error_msg = "Malformed Header";
         decoder->error = (decoder->is_request) ? HTTP1_STATUS_BAD_REQ
@@ -962,7 +930,7 @@ static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
 
     // advance line past the ':'
     uint8_t octet;
-    while (get_octet(&line, &octet) && octet != ':')
+    while (qd_buffer_field_octet(&line, &octet) && octet != ':')
         ;
 
     // line now contains the value. convert to C strings and post callback
@@ -1019,8 +987,8 @@ static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
 static inline int consume_stream_data(h1_codec_connection_t *conn, bool flush)
 {
     struct decoder_t       *decoder = &conn->decoder;
-    qd_iterator_pointer_t *body_ptr = &decoder->body_ptr;
-    qd_iterator_pointer_t     *rptr = &decoder->read_ptr;
+    qd_buffer_field_t *body_ptr = &decoder->body_ptr;
+    qd_buffer_field_t     *rptr = &decoder->read_ptr;
     qd_buffer_list_t          blist = DEQ_EMPTY;
     size_t                   octets = 0;
 
@@ -1091,8 +1059,8 @@ static inline int consume_stream_data(h1_codec_connection_t *conn, bool flush)
 //
 static bool parse_body_chunked_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
 {
-    qd_iterator_pointer_t *rptr = &decoder->read_ptr;
-    qd_iterator_pointer_t line;
+    qd_buffer_field_t *rptr = &decoder->read_ptr;
+    qd_buffer_field_t line;
 
     assert(decoder->chunk_state == HTTP1_CHUNK_HEADER);
     assert(decoder->chunk_length == 0);
@@ -1133,12 +1101,12 @@ static bool parse_body_chunked_header(h1_codec_connection_t *conn, struct decode
 //
 static bool parse_body_chunked_data(h1_codec_connection_t *conn, struct decoder_t *decoder)
 {
-    qd_iterator_pointer_t *rptr = &decoder->read_ptr;
-    qd_iterator_pointer_t *body_ptr = &decoder->body_ptr;
+    qd_buffer_field_t *rptr = &decoder->read_ptr;
+    qd_buffer_field_t *body_ptr = &decoder->body_ptr;
 
     assert(decoder->chunk_state == HTTP1_CHUNK_DATA);
 
-    size_t skipped = skip_octets(rptr, decoder->chunk_length);
+    size_t skipped = qd_buffer_field_advance(rptr, decoder->chunk_length);
     decoder->chunk_length -= skipped;
     body_ptr->remaining += skipped;
 
@@ -1157,9 +1125,9 @@ static bool parse_body_chunked_data(h1_codec_connection_t *conn, struct decoder_
 //
 static bool parse_body_chunked_trailer(h1_codec_connection_t *conn, struct decoder_t *decoder)
 {
-    qd_iterator_pointer_t *rptr = &decoder->read_ptr;
-    qd_iterator_pointer_t *body_ptr = &decoder->body_ptr;
-    qd_iterator_pointer_t line;
+    qd_buffer_field_t *rptr = &decoder->read_ptr;
+    qd_buffer_field_t *body_ptr = &decoder->body_ptr;
+    qd_buffer_field_t line;
 
     assert(decoder->chunk_state == HTTP1_CHUNK_TRAILERS);
 
@@ -1206,10 +1174,10 @@ static bool parse_body_chunked(h1_codec_connection_t *conn, struct decoder_t *de
 //
 static bool parse_body_content(h1_codec_connection_t *conn, struct decoder_t *decoder)
 {
-    qd_iterator_pointer_t *rptr = &decoder->read_ptr;
-    qd_iterator_pointer_t *body_ptr = &decoder->body_ptr;
+    qd_buffer_field_t *rptr = &decoder->read_ptr;
+    qd_buffer_field_t *body_ptr = &decoder->body_ptr;
 
-    size_t skipped = skip_octets(rptr, decoder->content_length);
+    size_t skipped = qd_buffer_field_advance(rptr, decoder->content_length);
     decoder->content_length -= skipped;
     body_ptr->remaining += skipped;
     bool eom = decoder->content_length == 0;
@@ -1239,7 +1207,7 @@ static bool parse_body(h1_codec_connection_t *conn, struct decoder_t *decoder)
         decoder->read_ptr.buffer = DEQ_TAIL(decoder->incoming);
         decoder->read_ptr.cursor = qd_buffer_cursor(decoder->read_ptr.buffer);
         consume_stream_data(conn, true);
-        decoder->body_ptr = decoder->read_ptr = NULL_I_PTR;
+        decoder->body_ptr = decoder->read_ptr = NULL_R_PTR;
         DEQ_INIT(decoder->incoming);
     }
 
@@ -1327,16 +1295,14 @@ int h1_codec_connection_rx_data(h1_codec_connection_t *conn, qd_buffer_list_t *d
     DEQ_APPEND(decoder->incoming, *data);
 
     if (init_ptrs) {
-        decoder->read_ptr.buffer = DEQ_HEAD(decoder->incoming);
-        decoder->read_ptr.cursor = qd_buffer_base(decoder->read_ptr.buffer);
-        decoder->read_ptr.remaining = len;
-
+        qd_buffer_t *head = DEQ_HEAD(decoder->incoming);
+        decoder->read_ptr = qd_buffer_field(head, qd_buffer_base(head), len);
         if (decoder->state == HTTP1_MSG_STATE_BODY) {
             decoder->body_ptr = decoder->read_ptr;
             decoder->body_ptr.remaining = 0;
         }
     } else {
-        decoder->read_ptr.remaining += len;
+        qd_buffer_field_extend(&decoder->read_ptr, len);
     }
 
     return decode_incoming(conn);
@@ -1377,7 +1343,7 @@ void h1_codec_connection_rx_closed(h1_codec_connection_t *conn)
         // since the underlying connection is gone discard all remaining
         // incoming data
         qd_buffer_list_free_buffers(&conn->decoder.incoming);
-        decoder->read_ptr = NULL_I_PTR;
+        decoder->read_ptr = NULL_R_PTR;
 
         // check if current request is completed
         hrs = DEQ_HEAD(conn->hrs_queue);
@@ -1569,7 +1535,7 @@ static inline void _flush_output(h1_codec_request_state_t *hrs, struct encoder_t
     // no longer used for this message
     hrs->conn->config.tx_buffers(hrs, &encoder->outgoing, qd_buffer_list_length(&encoder->outgoing));
     DEQ_INIT(encoder->outgoing);
-    encoder->write_ptr = NULL_I_PTR;
+    encoder->write_ptr = NULL_W_PTR;
 }
 
 static inline void _flush_headers(h1_codec_request_state_t *hrs, struct encoder_t *encoder)
