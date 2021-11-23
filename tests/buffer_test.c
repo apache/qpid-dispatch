@@ -19,6 +19,7 @@
 
 #define _GNU_SOURCE
 #include "qpid/dispatch/buffer.h"
+#include "buffer_field_api.h"
 
 #include "test_case.h"
 
@@ -125,6 +126,318 @@ static char *test_buffer_list_append(void *context)
 }
 
 
+static char *test_buffer_field(void *context)
+{
+    char *result = 0;
+    static const uint8_t data1[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    static const uint8_t data2[10] = {0xF9, 0xF8, 0xF7, 0xF6, 0xF5, 0xF4, 0xF3, 0xF2, 0xF1, 0xF0};
+    qd_buffer_list_t list;
+    qd_buffer_list_t other_list;
+    qd_buffer_field_t bfield;
+
+    DEQ_INIT(list);
+    DEQ_INIT(other_list);
+
+    // test buffer list (2000 octets):
+    for (int i = 0; i < 100; ++i) {
+        qd_buffer_list_t tmp;
+        DEQ_INIT(tmp);
+        fill_buffer(&tmp, (unsigned char *) data1, 10);
+        qd_buffer_t *b = qd_buffer();
+        DEQ_INSERT_TAIL(tmp, b);  // empty buffer
+        DEQ_APPEND(list, tmp);
+        fill_buffer(&tmp, (unsigned char *) data2, 10);
+        DEQ_APPEND(list, tmp);
+    }
+
+    // verify octet read
+
+    bfield.buffer = DEQ_HEAD(list);
+    bfield.cursor = qd_buffer_base(bfield.buffer);
+    bfield.length = 2000;
+
+    int total_octets = 0;
+    size_t expected_length = 2000;
+    uint8_t next_octet = 0;
+    uint8_t octet = 0xFF;
+    while (qd_buffer_field_octet(&bfield, &octet)) {
+        total_octets += 1;
+        expected_length -= 1;
+
+        if (bfield.length != expected_length) {
+            result = "octet length not updated";
+            goto exit;
+        }
+        if (octet != next_octet) {
+            result = "Unexpected next octet";
+            goto exit;
+        }
+        if (next_octet == 0x09)
+            next_octet = 0xF9;
+        else if (next_octet == 0xF0)
+            next_octet = 0;
+        else if (next_octet < 0x09)
+            next_octet += 1;
+        else
+            next_octet -= 1;
+    }
+
+    if (total_octets != 2000 || bfield.length != 0) {
+        result = "Next octet wrong length";
+        goto exit;
+    }
+
+    // verify advance
+
+    bfield.buffer = DEQ_HEAD(list);
+    bfield.cursor = qd_buffer_base(bfield.buffer);
+    bfield.length = 2000;
+
+    size_t amount = qd_buffer_field_advance(&bfield, 2);
+    if (amount != 2) {
+        result = "advance 2 failed";
+        goto exit;
+    }
+
+    if (!qd_buffer_field_octet(&bfield, &octet) || octet != 2) {
+        result = "expected to advance to '2'";
+        goto exit;
+    }
+
+    amount = qd_buffer_field_advance(&bfield, 1995);
+    if (amount != 1995) {
+        result = "advance 1995 failed";
+        goto exit;
+    }
+
+    if (bfield.length != 2) {
+        result = "expected 2 last octets";
+        goto exit;
+    }
+
+    if (!qd_buffer_field_octet(&bfield, &octet) || octet != 0xF1) {
+        result = "expected to advance to '0xF1'";
+        goto exit;
+    }
+
+    amount = qd_buffer_field_advance(&bfield, 3);
+    if (amount != 1 || bfield.length != 0) {
+        result = "failed to advance to end of field";
+        goto exit;
+    }
+
+    // verify memcpy
+
+    bfield.buffer = DEQ_HEAD(list);
+    bfield.cursor = qd_buffer_base(bfield.buffer);
+    bfield.length = 2000;
+
+    uint8_t dest[10];
+    amount = qd_buffer_field_memcpy(&bfield, dest, 5);
+    if (amount != 5) {
+        result = "failed to memcpy 5";
+        goto exit;
+    }
+    if (memcmp(dest, data1, 5)) {
+        result = "memcpy 5 failed";
+        goto exit;
+    }
+    amount = qd_buffer_field_memcpy(&bfield, dest, 10);
+    if (amount != 10) {
+        result = "failed to memcpy 10";
+        goto exit;
+    }
+    if (memcmp(dest, &data1[5], 5) || memcmp(&dest[5], &data2[0], 5)) {
+        result = "memcpy 10 failed";
+        goto exit;
+    }
+    amount = qd_buffer_field_advance(&bfield, 1980);
+    if (amount != 1980) {
+        result = "advance 1980 failed";
+        goto exit;
+    }
+    amount = qd_buffer_field_memcpy(&bfield, dest, 10);
+    if (amount != 5) {
+        result = "memcpy expected 5 failed";
+        goto exit;
+    }
+    if (memcmp(dest, &data2[5], 5) || bfield.length != 0) {
+        result = "memcpy at end failed";
+        goto exit;
+    }
+
+    // verify equal
+
+    bfield.buffer = DEQ_HEAD(list);
+    bfield.cursor = qd_buffer_base(bfield.buffer);
+    bfield.length = 2000;
+
+    const uint8_t pattern[] = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\xF9\xF8\xF7\xF6\xF5\xF4\xF3\xF2\xF1\xF0";
+    const uint8_t pattern_bad[] = "\xF9\xF8\xF7\xF6\xF5\xF4\xF3\xF2\xF1\xF0\xAA";
+    if (qd_buffer_field_equal(&bfield, (uint8_t*) "\x00\x01\x03", 3)) {
+        result = "expected equal 3 to fail";
+        goto exit;
+    }
+    if (bfield.length != 2000) {
+        result = "do not advance on failed equal";
+        goto exit;
+    }
+    if (!qd_buffer_field_equal(&bfield, pattern, 20)) {
+        result = "expected pattern match";
+        goto exit;
+    }
+    if (bfield.length != 1980) {
+        result = "match did not advance";
+        goto exit;
+    }
+    (void)qd_buffer_field_advance(&bfield, 1960);
+    if (!qd_buffer_field_equal(&bfield, pattern, 10)) {
+        result = "expected sub pattern match";
+        goto exit;
+    }
+    if (qd_buffer_field_equal(&bfield, pattern_bad, 11)) {
+        result = "did not expect sub pattern match";
+        goto exit;
+    }
+    if (bfield.length != 10) {
+        result = "mismatch advanced";
+        goto exit;
+    }
+    if (!qd_buffer_field_equal(&bfield, &pattern[10], 10)) {
+        result = "expected end sub pattern match";
+        goto exit;
+    }
+
+    // verify equal using raw string
+
+    static const char *eq_str = "ABCDEFGHIJK";
+
+    bfield.buffer = 0;
+    bfield.cursor = (const uint8_t*) eq_str;
+    bfield.length = strlen(eq_str);
+
+    if (!qd_buffer_field_equal(&bfield, (const uint8_t*) "ABC", 3)) {
+        result = "expected match of ABC";
+        goto exit;
+    }
+
+    if (qd_buffer_field_equal(&bfield,  (const uint8_t*) "ABC", 3)) {
+        result = "expected not to match ABC";
+        goto exit;
+    }
+
+    if (qd_buffer_field_equal(&bfield,  (const uint8_t*) "DEFGHIJKX", 9)) {
+        result = "expected not to match DEFGHIJKX";
+        goto exit;
+    }
+
+    if (!qd_buffer_field_equal(&bfield,  (const uint8_t*) "DEFGHIJK", 8)) {
+        result = "expected to match DEFGHIJK";
+        goto exit;
+    }
+
+    if (bfield.length != 0) {
+        result = "expected bfield to be empty";
+        goto exit;
+    }
+
+    // verify uint32 using raw binary
+
+    static const uint8_t u32_data[] = {
+        0x00, 0x00, 0x00, 0x01,
+        0x80, 0x00, 0x00, 0x00,
+        0x00
+    };
+    uint32_t u32_value = 0;
+
+    bfield.buffer = 0;
+    bfield.cursor = &u32_data[0];
+    bfield.length = sizeof(u32_data);
+
+    if (!qd_buffer_field_uint32(&bfield, &u32_value)) {
+        result = "expected to extract first integer";
+        goto exit;
+    }
+
+    if (u32_value != 1) {
+        result = "expected uint32 of 1";
+        goto exit;
+    }
+
+    if (!qd_buffer_field_uint32(&bfield, &u32_value)) {
+        result = "expected to extract second integer";
+        goto exit;
+    }
+
+    if (u32_value != 2147483648) {
+        result = "expected uint32 of 2147483648";
+        goto exit;
+    }
+
+    if (qd_buffer_field_uint32(&bfield, &u32_value)) {
+        result = "expected to fail extracting 3rd uint32";
+        goto exit;
+    }
+
+    // verify buffer list append
+
+    bfield.buffer = DEQ_HEAD(list);
+    bfield.cursor = qd_buffer_base(bfield.buffer);
+    bfield.length = 2000;
+
+    qd_buffer_field_t saved_bfield = bfield;
+    qd_buffer_t *bptr = 0;
+
+    qd_buffer_list_append_field(&other_list, &bfield);
+    if (bfield.length) {
+        result = "expected to append 2000 octets";
+        goto exit;
+    }
+    bptr = DEQ_HEAD(other_list);
+    uint32_t cmp_count = 0;
+    while (bptr) {
+        if (!qd_buffer_field_equal(&saved_bfield, qd_buffer_base(bptr), qd_buffer_size(bptr))) {
+            result = "expected list and buffers to be equal";
+            goto exit;
+        }
+        cmp_count += qd_buffer_size(bptr);
+        bptr = DEQ_NEXT(bptr);
+    }
+
+    if (saved_bfield.length != 0) {
+        result = "expected saved_bfield to be empty";
+        goto exit;
+    }
+
+    if (cmp_count != 2000) {
+        result = "did not compare 2000 octets";
+        goto exit;
+    }
+
+    qd_buffer_list_free_buffers(&other_list);
+
+    const char *append_str = "abcdefghijklmnopqrstuvwxyz";
+    bfield.buffer = 0;
+    bfield.cursor = (const uint8_t*) append_str;
+    bfield.length = strlen(append_str);
+    qd_buffer_list_append_field(&other_list, &bfield);
+
+    bfield.buffer = DEQ_HEAD(other_list);
+    bfield.cursor = qd_buffer_base(bfield.buffer);
+    bfield.length = strlen(append_str);
+
+    if (!qd_buffer_field_equal(&bfield, (const uint8_t*) append_str, strlen(append_str))) {
+        result = "expected to equal append_str";
+        goto exit;
+    }
+
+exit:
+    qd_buffer_list_free_buffers(&list);
+    qd_buffer_list_free_buffers(&other_list);
+    return result;
+}
+
+
 int buffer_tests()
 {
     int result = 0;
@@ -132,6 +445,7 @@ int buffer_tests()
 
     TEST_CASE(test_buffer_list_clone, 0);
     TEST_CASE(test_buffer_list_append, 0);
+    TEST_CASE(test_buffer_field, 0);
 
     return result;
 }
