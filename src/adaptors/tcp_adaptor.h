@@ -29,6 +29,7 @@
 #include "qpid/dispatch/log.h"
 #include "qpid/dispatch/server.h"
 #include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/protocol_log.h"
 
 #include <proton/engine.h>
 #include <proton/event.h>
@@ -46,11 +47,11 @@ struct qd_tcp_bridge_t
     sys_atomic_t  ref_count;
     // static configuration defined at listener/connector creation
     char         *name;
-    char         *address;
+    char         *address;   // VAN (AMQP) address
     char         *host;
     char         *port;
     char         *site_id;
-    char         *host_port;
+    char         *host_port; // Generated as "<host>:<port>" for convenience
     // run time statistics updated by connections
     sys_mutex_t  *stats_lock;
     uint64_t      connections_opened;
@@ -70,6 +71,7 @@ struct qd_tcp_listener_t
     qd_server_t              *server;
     qd_tcp_bridge_t          *config;
     pn_listener_t            *pn_listener;
+    plog_record_t            *plog;
 
     DEQ_LINKS(qd_tcp_listener_t);
 };
@@ -84,6 +86,7 @@ struct qd_tcp_connector_t
     qd_server_t              *server;
     qd_tcp_bridge_t          *config;
     void                     *dispatcher;
+    plog_record_t            *plog;
 
     DEQ_LINKS(qd_tcp_connector_t);
 };

@@ -5,6 +5,7 @@ install
 .cproject
 .project
 .pydevproject
+target
 tests/system_test.dir/
 tests/policy-1/policy-*.json
 *.iml

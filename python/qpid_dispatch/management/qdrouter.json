@@ -1377,6 +1377,7 @@
                         "PROTOCOL",
                         "TCP_ADAPTOR",
                         "HTTP_ADAPTOR",
+                        "PROTOCOL_LOG",
                         "DEFAULT"
                     ],
                     "required": true,

@@ -83,6 +83,7 @@ set(qpid_dispatch_SOURCES
   router_config.c
   address_lookup_utils.c
   platform.c
+  protocol_log.c
   router.c
   router_core.c
   router_core/agent.c

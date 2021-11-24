@@ -53,6 +53,8 @@ ALLOC_DEFINE(qd_tcp_listener_t);
 ALLOC_DEFINE(qd_tcp_connector_t);
 ALLOC_DEFINE(qd_tcp_bridge_t);
 
+static const char *AP_FLOW_ID = "flowid";
+
 #define WRITE_BUFFERS 12
 
 #define LOCK   sys_mutex_lock
@@ -62,6 +64,8 @@ typedef struct qdr_tcp_connection_t qdr_tcp_connection_t;
 
 struct qdr_tcp_connection_t {
     qd_handler_context_t  context;
+    qd_tcp_connector_t   *connector;
+    plog_record_t        *plog;
     char                 *reply_to;
     qdr_connection_t     *qdr_conn;
     uint64_t              conn_id;
@@ -271,6 +275,7 @@ static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t
 
         conn->last_in_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_in      += result;
+        plog_set_uint64(conn->plog, PLOG_ATTRIBUTE_OCTETS, conn->bytes_in);
         LOCK(conn->bridge->stats_lock);
         conn->bridge->bytes_in += result;
         UNLOCK(conn->bridge->stats_lock);
@@ -361,6 +366,15 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
         //qd_compose_insert_null(props);                      // reply-to-group-id
         qd_compose_end_list(props);
 
+        //
+        // Add the application properties
+        //
+        props = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, props);
+        qd_compose_start_map(props);
+        qd_compose_insert_symbol(props, AP_FLOW_ID);
+        plog_serialize_identity(conn->plog, props);
+        qd_compose_end_map(props);
+
         qd_message_compose_2(msg, props, false);
         qd_compose_free(props);
 
@@ -430,6 +444,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
 
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
 {
+    plog_end_record(tc->plog);
     free(tc->reply_to);
     free(tc->remote_address);
     free(tc->global_id);
@@ -948,6 +963,9 @@ static qdr_tcp_connection_t *qdr_tcp_connection_ingress(qd_tcp_listener_t* liste
     sys_atomic_init(&tc->raw_closed_read, 0);
     sys_atomic_init(&tc->raw_closed_write, 0);
 
+    tc->plog = plog_start_record(PLOG_RECORD_FLOW, listener->plog);
+    plog_set_uint64(tc->plog, PLOG_ATTRIBUTE_OCTETS, 0);
+
     LOCK(tc->bridge->stats_lock);
     tc->bridge->connections_opened +=1;
     UNLOCK(tc->bridge->stats_lock);
@@ -960,6 +978,15 @@ static qdr_tcp_connection_t *qdr_tcp_connection_ingress(qd_tcp_listener_t* liste
     //qdr_tcp_connection_ingress_accept
     qd_log(tcp_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] call pn_listener_raw_accept()", tc->conn_id);
     pn_listener_raw_accept(listener->pn_listener, tc->pn_raw_conn);
+
+    const pn_netaddr_t *na = pn_raw_connection_remote_addr(tc->pn_raw_conn);
+    char remote_host[200];
+    char remote_port[50];
+    if (pn_netaddr_host_port(na, remote_host, 200, remote_port, 50) == 0) {
+        plog_set_string(tc->plog, PLOG_ATTRIBUTE_SOURCE_HOST, remote_host);
+        plog_set_string(tc->plog, PLOG_ATTRIBUTE_SOURCE_PORT, remote_port);
+    }
+
     return tc;
 }
 
@@ -1042,10 +1069,14 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
 }
 
 
-static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_tcp_bridge_t *config, qd_server_t *server, qdr_delivery_t *initial_delivery)
+static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_tcp_connector_t *connector,
+                                                       qd_tcp_bridge_t    *config,
+                                                       qd_server_t        *server,
+                                                       qdr_delivery_t     *initial_delivery)
 {
     qdr_tcp_connection_t* tc = new_qdr_tcp_connection_t();
     ZERO(tc);
+    tc->connector = connector;
     tc->activation_lock = sys_mutex();
     if (initial_delivery) {
         tc->egress_dispatcher = false;
@@ -1065,6 +1096,11 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_tcp_bridge_t *config, 
     sys_atomic_init(&tc->raw_closed_read, 0);
     sys_atomic_init(&tc->raw_closed_write, 0);
     tc->conn_id = qd_server_allocate_connection_id(tc->server);
+
+    if (!tc->egress_dispatcher) {
+        tc->plog = plog_start_record(PLOG_RECORD_FLOW, connector->plog);
+        plog_set_uint64(tc->plog, PLOG_ATTRIBUTE_OCTETS, 0);
+    }
 
     LOCK(tc->bridge->stats_lock);
     tc->bridge->connections_opened +=1;
@@ -1087,6 +1123,14 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_tcp_bridge_t *config, 
         tc->pn_raw_conn = pn_raw_connection();
         pn_raw_connection_set_context(tc->pn_raw_conn, tc);
         pn_proactor_raw_connect(qd_server_proactor(tc->server), tc->pn_raw_conn, tc->bridge->host_port);
+
+        const pn_netaddr_t *na = pn_raw_connection_local_addr(tc->pn_raw_conn);
+        char local_host[200];
+        char local_port[50];
+        if (pn_netaddr_host_port(na, local_host, 200, local_port, 50) == 0) {
+            plog_set_string(tc->plog, PLOG_ATTRIBUTE_SOURCE_HOST, local_host);
+            plog_set_string(tc->plog, PLOG_ATTRIBUTE_SOURCE_PORT, local_port);
+        }
     }
 
     return tc;
@@ -1157,6 +1201,7 @@ void qd_tcp_listener_decref(qd_tcp_listener_t* li)
 {
     if (li && sys_atomic_dec(&li->ref_count) == 1) {
         sys_atomic_destroy(&li->ref_count);
+        plog_end_record(li->plog);
         free_bridge_config(li->config);
         free_qd_tcp_listener_t(li);
     }
@@ -1212,6 +1257,13 @@ static qd_tcp_listener_t *qd_tcp_listener(qd_server_t *server)
     li->context.context = li;
     li->context.handler = &handle_listener_event;
     li->config = qd_bridge_config();
+
+    //
+    // Create a plog record for this listener
+    //
+    li->plog = plog_start_record(PLOG_RECORD_LISTENER, 0);
+    plog_set_string(li->plog, PLOG_ATTRIBUTE_PROTOCOL, "tcp");
+
     return li;
 }
 
@@ -1242,6 +1294,15 @@ qd_tcp_listener_t *qd_dispatch_configure_tcp_listener(qd_dispatch_t *qd, qd_enti
     DEQ_ITEM_INIT(li);
     DEQ_INSERT_TAIL(tcp_adaptor->listeners, li);
     log_tcp_bridge_config(tcp_adaptor->log_source, li->config, "TcpListener");
+
+    //
+    // Report listener configuration to plog
+    //
+    plog_set_string(li->plog, PLOG_ATTRIBUTE_NAME,             li->config->name);
+    plog_set_string(li->plog, PLOG_ATTRIBUTE_DESTINATION_HOST, li->config->host);
+    plog_set_string(li->plog, PLOG_ATTRIBUTE_DESTINATION_PORT, li->config->port);
+    plog_set_string(li->plog, PLOG_ATTRIBUTE_VAN_ADDRESS,      li->config->address);
+
     tcp_listener_listen(li);
     return li;
 }
@@ -1292,6 +1353,12 @@ static qd_tcp_connector_t *qd_tcp_connector(qd_server_t *server)
     c->server = server;
     c->config = qd_bridge_config();
 
+    //
+    // Create a plog record for this connector
+    //
+    c->plog = plog_start_record(PLOG_RECORD_CONNECTOR, 0);
+    plog_set_string(c->plog, PLOG_ATTRIBUTE_PROTOCOL, "tcp");
+
     return c;
 }
 
@@ -1299,6 +1366,7 @@ void qd_tcp_connector_decref(qd_tcp_connector_t* c)
 {
     if (c && sys_atomic_dec(&c->ref_count) == 1) {
         sys_atomic_destroy(&c->ref_count);
+        plog_end_record(c->plog);
         free_bridge_config(c->config);
         free_qd_tcp_connector_t(c);
     }
@@ -1315,7 +1383,16 @@ qd_tcp_connector_t *qd_dispatch_configure_tcp_connector(qd_dispatch_t *qd, qd_en
     DEQ_ITEM_INIT(c);
     DEQ_INSERT_TAIL(tcp_adaptor->connectors, c);
     log_tcp_bridge_config(tcp_adaptor->log_source, c->config, "TcpConnector");
-    c->dispatcher = qdr_tcp_connection_egress(c->config, c->server, NULL);
+
+    //
+    // Report connector configuration to plog
+    //
+    plog_set_string(c->plog, PLOG_ATTRIBUTE_NAME,             c->config->name);
+    plog_set_string(c->plog, PLOG_ATTRIBUTE_DESTINATION_HOST, c->config->host);
+    plog_set_string(c->plog, PLOG_ATTRIBUTE_DESTINATION_PORT, c->config->port);
+    plog_set_string(c->plog, PLOG_ATTRIBUTE_VAN_ADDRESS,      c->config->address);
+
+    c->dispatcher = qdr_tcp_connection_egress(c, c->config, c->server, NULL);
     return c;
 }
 
@@ -1516,9 +1593,58 @@ static int qdr_tcp_push(void *context, qdr_link_t *link, int limit)
 }
 
 
+/**
+ * @brief Find the flow-id in the message's application properties, it it's there and use
+ * it as the sibling-link of the connection's flow record.
+ * 
+ * @param tc Pointer to the tcp connection state
+ * @param msg Pointer to the message received from the ingress (listener) side
+ */
+static void qdr_associate_plog_flows(qdr_tcp_connection_t *tc, qd_message_t *msg)
+{
+    assert(!!tc->plog);
+    qd_iterator_t *ap_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
+    if (!ap_iter) {
+        return;
+    }
+
+    do {
+        qd_parsed_field_t *ap = qd_parse(ap_iter);
+        if (!ap) {
+            break;
+        }
+
+        do {
+            if (!qd_parse_ok(ap) || !qd_parse_is_map(ap)) {
+                break;
+            }
+
+            uint32_t count = qd_parse_sub_count(ap);
+            qd_parsed_field_t *id_value = 0;
+            for (uint32_t i = 0; i < count; i++) {
+                qd_parsed_field_t *key = qd_parse_sub_key(ap, i);
+                if (key == 0) {
+                    break;
+                }
+                qd_iterator_t *key_iter = qd_parse_raw(key);
+                if (!!key_iter && qd_iterator_equal(key_iter, (const unsigned char*) AP_FLOW_ID)) {
+                    id_value = qd_parse_sub_value(ap, i);
+                    break;
+                }
+            }
+
+            if (!!id_value) {
+                plog_set_ref_from_parsed(tc->plog, PLOG_ATTRIBUTE_SIBLING, id_value);
+            }
+        } while (false);
+        qd_parse_free(ap);
+    } while (false);
+    qd_iterator_free(ap_iter);
+}
+
+
 static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled)
 {
-
     // @TODO(kgiusti): determine why this is necessary to prevent window full stall:
     qd_message_Q2_holdoff_disable(qdr_delivery_message(delivery));
     void* link_context = qdr_link_get_context(link);
@@ -1529,7 +1655,7 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
         if (tc->egress_dispatcher) {
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                    DLV_FMT" tcp_adaptor initiating egress connection", DLV_ARGS(delivery));
-            qdr_tcp_connection_egress(tc->bridge, tc->server, delivery);
+            qdr_tcp_connection_egress(tc->connector, tc->bridge, tc->server, delivery);
             return QD_DELIVERY_MOVED_TO_NEW_LINK;
         } else if (!tc->outstream) {
             tc->outstream = delivery;
@@ -1545,6 +1671,7 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 f_iter = qd_message_field_iterator(msg, QD_FIELD_REPLY_TO);
                 qdr_tcp_connection_copy_reply_to(tc, f_iter);
                 qd_iterator_free(f_iter);
+                qdr_associate_plog_flows(tc, msg);
                 qdr_terminus_t *target = qdr_terminus(0);
                 qdr_terminus_set_address(target, tc->reply_to);
                 tc->incoming = qdr_link_first_attach(tc->qdr_conn,
@@ -1764,6 +1891,7 @@ static void qdr_tcp_adaptor_final(void *adaptor_context)
     qd_tcp_listener_t *tl = DEQ_HEAD(adaptor->listeners);
     while (tl) {
         qd_tcp_listener_t *next = DEQ_NEXT(tl);
+        plog_end_record(tl->plog);
         free_bridge_config(tl->config);
         free_qd_tcp_listener_t(tl);
         tl = next;
@@ -1772,6 +1900,7 @@ static void qdr_tcp_adaptor_final(void *adaptor_context)
     qd_tcp_connector_t *tr = DEQ_HEAD(adaptor->connectors);
     while (tr) {
         qd_tcp_connector_t *next = DEQ_NEXT(tr);
+        plog_end_record(tr->plog);
         free_bridge_config(tr->config);
         free_qdr_tcp_connection((qdr_tcp_connection_t*) tr->dispatcher);
         free_qd_tcp_connector_t(tr);

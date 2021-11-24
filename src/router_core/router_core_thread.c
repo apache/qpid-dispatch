@@ -61,22 +61,33 @@ void qdr_register_core_module(const char *name, qdrc_module_enable_t enable, qdr
 typedef struct qdrc_adaptor_t {
     DEQ_LINKS(struct qdrc_adaptor_t);
     const char          *name;
+    uint32_t             ordinal;
     qdr_adaptor_init_t   on_init;
     qdr_adaptor_final_t  on_final;
     void                *context;
 } qdrc_adaptor_t;
 
 DEQ_DECLARE(qdrc_adaptor_t, qdrc_adaptor_list_t);
-static qdrc_adaptor_list_t registered_adaptors = {0,0};
+static qdrc_adaptor_list_t registered_adaptors = DEQ_EMPTY;
 
-void qdr_register_adaptor(const char *name, qdr_adaptor_init_t on_init, qdr_adaptor_final_t on_final)
+void qdr_register_adaptor(const char *name, qdr_adaptor_init_t on_init, qdr_adaptor_final_t on_final, uint32_t ordinal)
 {
     qdrc_adaptor_t *adaptor = NEW(qdrc_adaptor_t);
     ZERO(adaptor);
     adaptor->name     = name;
+    adaptor->ordinal  = ordinal;
     adaptor->on_init  = on_init;
     adaptor->on_final = on_final;
-    DEQ_INSERT_TAIL(registered_adaptors, adaptor);
+
+    qdrc_adaptor_t *insert = DEQ_TAIL(registered_adaptors);
+    while (!!insert) {
+        if (ordinal >= insert->ordinal) {
+            DEQ_INSERT_AFTER(registered_adaptors, adaptor, insert);
+            return;
+        }
+        insert = DEQ_PREV(insert);
+    }
+    DEQ_INSERT_HEAD(registered_adaptors, adaptor);
 }
 
 
@@ -164,8 +175,10 @@ void qdr_adaptors_finalize(qdr_core_t *core)
     //
     qdrc_adaptor_t *adaptor = DEQ_TAIL(registered_adaptors);
     while (adaptor) {
+        DEQ_REMOVE(registered_adaptors, adaptor);
         adaptor->on_final(adaptor->context);
-        adaptor = DEQ_PREV(adaptor);
+        free(adaptor);
+        adaptor = DEQ_TAIL(registered_adaptors);
     }
 
     // release the default AMQP adaptor (it is not a module)

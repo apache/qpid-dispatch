@@ -22,6 +22,7 @@
 #include "qpid/dispatch/delivery_state.h"
 #include "qpid/dispatch/policy_spec.h"
 #include "qpid/dispatch/router_core.h"
+#include "qpid/dispatch/io_module.h"
 
 typedef struct qdr_protocol_adaptor_t  qdr_protocol_adaptor_t;
 typedef struct qdr_connection_t        qdr_connection_t;
@@ -29,45 +30,6 @@ typedef struct qdr_link_t              qdr_link_t;
 typedef struct qdr_delivery_t          qdr_delivery_t;
 typedef struct qdr_terminus_t          qdr_terminus_t;
 typedef struct qdr_connection_info_t   qdr_connection_info_t;
-
-/**
- ******************************************************************************
- * Protocol adaptor declaration macro
- ******************************************************************************
- */
-/**
- * Callback to initialize a protocol adaptor at core thread startup
- *
- * @param core Pointer to the core object
- * @param adaptor_context [out] Returned adaptor context
- */
-typedef void (*qdr_adaptor_init_t) (qdr_core_t *core, void **adaptor_context);
-
-
-/**
- * Callback to finalize a protocol adaptor at core thread shutdown
- *
- * @param adaptor_context The context returned by the adaptor during the on_init call
- */
-typedef void (*qdr_adaptor_final_t) (void *adaptor_context);
-
-
-/**
- * Declaration of a protocol adaptor
- *
- * A protocol adaptor may declare itself by invoking the QDR_CORE_ADAPTOR_DECLARE macro in its body.
- *
- * @param name A null-terminated literal string naming the module
- * @param on_init Pointer to a function for adaptor initialization, called at core thread startup
- * @param on_final Pointer to a function for adaptor finalization, called at core thread shutdown
- */
-#define QDR_CORE_ADAPTOR_DECLARE(name,on_init,on_final)      \
-    static void adaptorstart() __attribute__((constructor)); \
-    void adaptorstart() { qdr_register_adaptor(name, on_init, on_final); }
-void qdr_register_adaptor(const char         *name,
-                          qdr_adaptor_init_t  on_init,
-                          qdr_adaptor_final_t on_final);
-
 
 /**
  ******************************************************************************
