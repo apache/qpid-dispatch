@@ -51,8 +51,6 @@ struct  qdr_addr_tracking_module_context_t {
 
 static qd_message_t *qdcm_edge_create_address_dlv(qdr_core_t *core, qdr_address_t   *addr, bool insert_addr)
 {
-    qd_message_t *msg = qd_message();
-
     //
     // Start header
     //
@@ -71,13 +69,9 @@ static qd_message_t *qdcm_edge_create_address_dlv(qdr_core_t *core, qdr_address_
     qd_compose_insert_bool(body, insert_addr);
     qd_compose_end_list(body);
 
-    // Finally, compose and retuen the message so it can be sent out.
-    qd_message_compose_3(msg, fld, body, true);
+    // Finally, compose and return the message so it can be sent out.
 
-    qd_compose_free(body);
-    qd_compose_free(fld);
-
-    return msg;
+    return qd_message_compose(fld, body, 0, true);
 }
 
 static qdr_addr_endpoint_state_t *qdrc_get_endpoint_state_for_connection(qdr_addr_endpoint_state_list_t  endpoint_state_list, qdr_connection_t *conn)

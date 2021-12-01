@@ -102,12 +102,13 @@ static char *test_parser_fixed_scalars(void *context)
     qd_iterator_t *field = NULL;
     qd_parsed_field_t *parsed = NULL;
     static char error[1024];
+    qd_buffer_list_t buflist = DEQ_EMPTY;
 
     error[0] = 0;
 
     while (fs_vectors[idx].data) {
-        field = qd_iterator_binary(fs_vectors[idx].data,
-                                   fs_vectors[idx].length, ITER_VIEW_ALL);
+        qd_buffer_list_append(&buflist, (const uint8_t *)fs_vectors[idx].data, fs_vectors[idx].length);
+        field = qd_iterator_buffer(DEQ_HEAD(buflist), 0, fs_vectors[idx].length, ITER_VIEW_ALL);
         parsed = qd_parse(field);
 
         qd_iterator_t *typed_iter = qd_parse_typed(parsed);
@@ -157,10 +158,12 @@ static char *test_parser_fixed_scalars(void *context)
         field = 0;
         qd_parse_free(parsed);
         parsed = 0;
+        qd_buffer_list_free_buffers(&buflist);
     }
 
     qd_iterator_free(field);
     qd_parse_free(parsed);
+    qd_buffer_list_free_buffers(&buflist);
     return *error ? error : 0;
 }
 
@@ -220,13 +223,16 @@ static char *test_integer_conversion(void *context)
         {"\x53\x80",                             2, QD_AMQP_INT,   true, 0, 0},
         {"\x52\x80",                             2, QD_AMQP_INT,   true, 0, 0},
         {"\x50\x80",                             2, QD_AMQP_LONG,  true, 0, 0},
-        {"\x60\x80",                             2, QD_AMQP_LONG,  true, 0, 0},
+        {"\x60\x80\x00",                         3, QD_AMQP_LONG,  true, 0, 0},
         {NULL},
     };
 
+    qd_buffer_list_t buflist = DEQ_EMPTY;
     char *error = NULL;
+
     for (int i = 0; fs_vectors[i].data && !error; ++i) {
-        qd_iterator_t     *data_iter = qd_iterator_binary(fs_vectors[i].data, fs_vectors[i].length, ITER_VIEW_ALL);
+        qd_buffer_list_append(&buflist, (const uint8_t *)fs_vectors[i].data, fs_vectors[i].length);
+        qd_iterator_t *data_iter = qd_iterator_buffer(DEQ_HEAD(buflist), 0, fs_vectors[i].length, ITER_VIEW_ALL);
         qd_parsed_field_t *field = qd_parse(data_iter);
 
         if (!qd_parse_ok(field)) {
@@ -277,73 +283,81 @@ static char *test_integer_conversion(void *context)
 
         qd_iterator_free(data_iter);
         qd_parse_free(field);
+        qd_buffer_list_free_buffers(&buflist);
     }
 
+    qd_buffer_list_free_buffers(&buflist);
     return error;
 }
 
 
 static char *test_map(void *context)
 {
-    static char error[1000];
-    const char *data =
-        "\xd1\x00\x00\x00\x2d\x00\x00\x00\x06"    // map32, 6 items
+    qd_iterator_t     *val_iter = 0;
+    qd_iterator_t     *typed_iter = 0;
+    qd_iterator_t     *key_iter = 0;
+    static char error[1000] = "";
+    const uint8_t data[] =
+        "\xd1\x00\x00\x00\x43\x00\x00\x00\x08"    // map32, 8 items
         "\xa3\x05\x66irst\xa1\x0evalue_of_first"  // (23) "first":"value_of_first"
         "\xa3\x06second\x52\x20"                  // (10) "second":32
-        "\xa3\x05third\x41";                      // (8)  "third":true
-    int data_len = 50;
+        "\xa3\x05third\x41"                       // (8)  "third":true
+        "\x80\x00\x00\x00\x00\x00\x00\x80\x00"    // (9) 32768:
+        "\xb0\x00\x00\x00\x08"                    // (5+8) vbin "!+!+!+!+"
+        "\x21\x2b\x21\x2b\x21\x2b\x21\x2b";
 
-    qd_iterator_t     *data_iter = qd_iterator_binary(data, data_len, ITER_VIEW_ALL);
+    qd_buffer_list_t buflist = DEQ_EMPTY;
+    qd_buffer_list_append(&buflist, data, sizeof(data));
+
+    qd_iterator_t     *data_iter = qd_iterator_buffer(DEQ_HEAD(buflist), 0, sizeof(data), ITER_VIEW_ALL);
     qd_parsed_field_t *field     = qd_parse(data_iter);
+    qd_iterator_free(data_iter);
 
     if (!qd_parse_ok(field)) {
         snprintf(error, 1000, "Parse failed: %s", qd_parse_error(field));
-        qd_iterator_free(data_iter);
-        qd_parse_free(field);
-        return error;
+        goto exit;
     }
 
     if (!qd_parse_is_map(field)) {
-        qd_iterator_free(data_iter);
-        qd_parse_free(field);
-        return "Expected field to be a map";
+        snprintf(error, sizeof(error), "Expected field to be a map");
+        goto exit;
     }
 
     uint32_t count = qd_parse_sub_count(field);
-    if (count != 3) {
-        snprintf(error, 1000, "Expected sub-count==3, got %"PRIu32, count);
-        qd_iterator_free(data_iter);
-        qd_parse_free(field);
-        return error;
+    if (count != 4) {
+        snprintf(error, 1000, "Expected sub-count==4, got %"PRIu32, count);
+        goto exit;
     }
 
+    // Validate "first":"value_of_first"
+
     qd_parsed_field_t *key_field  = qd_parse_sub_key(field, 0);
-    qd_iterator_t     *key_iter   = qd_parse_raw(key_field);
-    qd_iterator_t     *typed_iter = qd_parse_typed(key_field);
+    key_iter   = qd_parse_raw(key_field);
+    typed_iter = qd_parse_typed(key_field);
     if (!qd_iterator_equal(key_iter, (unsigned char*) "first")) {
         unsigned char     *result   = qd_iterator_copy(key_iter);
         snprintf(error, 1000, "First key: expected 'first', got '%s'", result);
         free (result);
-        qd_iterator_free(data_iter);
-        qd_parse_free(field);
-        return error;
+        goto exit;
     }
 
     if (!qd_iterator_equal(typed_iter, (unsigned char*) "\xa3\x05\x66irst"))
         return "Incorrect typed iterator on first-key";
 
     qd_parsed_field_t *val_field = qd_parse_sub_value(field, 0);
-    qd_iterator_t     *val_iter  = qd_parse_raw(val_field);
+    val_iter  = qd_parse_raw(val_field);
     typed_iter = qd_parse_typed(val_field);
     if (!qd_iterator_equal(val_iter, (unsigned char*) "value_of_first")) {
         unsigned char     *result   = qd_iterator_copy(val_iter);
         snprintf(error, 1000, "First value: expected 'value_of_first', got '%s'", result);
         free (result);
-        return error;
+        goto exit;
     }
 
     if (!qd_iterator_equal(typed_iter, (unsigned char*) "\xa1\x0evalue_of_first"))
         return "Incorrect typed iterator on first-key";
+
+    // Validate "second:32"
 
     key_field = qd_parse_sub_key(field, 1);
     key_iter  = qd_parse_raw(key_field);
@@ -351,14 +365,16 @@ static char *test_map(void *context)
         unsigned char     *result   = qd_iterator_copy(key_iter);
         snprintf(error, 1000, "Second key: expected 'second', got '%s'", result);
         free (result);
-        return error;
+        goto exit;
     }
 
     val_field = qd_parse_sub_value(field, 1);
     if (qd_parse_as_uint(val_field) != 32) {
         snprintf(error, 1000, "Second value: expected 32, got %"PRIu32, qd_parse_as_uint(val_field));
-        return error;
+        goto exit;
     }
+
+    // Validate "third":true
 
     key_field = qd_parse_sub_key(field, 2);
     key_iter  = qd_parse_raw(key_field);
@@ -366,18 +382,82 @@ static char *test_map(void *context)
         unsigned char     *result   = qd_iterator_copy(key_iter);
         snprintf(error, 1000, "Third key: expected 'third', got '%s'", result);
         free (result);
-        return error;
+        goto exit;
     }
 
     val_field = qd_parse_sub_value(field, 2);
     if (!qd_parse_as_bool(val_field)) {
         snprintf(error, 1000, "Third value: expected true");
-        return error;
+        goto exit;
     }
 
-    qd_iterator_free(data_iter);
+    // Validate 32768:"!+!+!+!+"
+
+    uint8_t octet;
+    uint8_t ncopy_buf[8];
+
+    key_field = qd_parse_sub_key(field, 3);
+    typed_iter = qd_parse_typed(key_field);
+
+    octet = qd_iterator_octet(typed_iter);
+    if (octet != (uint8_t)0x80) {
+        snprintf(error, sizeof(error), "4th Key not ulong type");
+        goto exit;
+    }
+    if (qd_iterator_ncopy_octets(typed_iter, ncopy_buf, 8) != 8) {
+        snprintf(error, sizeof(error), "4th Key incorrect length");
+        goto exit;
+    }
+    if (memcmp(ncopy_buf, "\x00\x00\x00\x00\x00\x00\x80\x00", 8) != 0) {
+        snprintf(error, sizeof(error), "4th key encoding value incorrect");
+        goto exit;
+    }
+    if (qd_parse_as_ulong(key_field) != 32768) {
+        snprintf(error, sizeof(error), "4th key value not 32768");
+        goto exit;
+    }
+
+    val_field = qd_parse_sub_value(field, 3);
+    val_iter = qd_parse_raw(val_field);
+    typed_iter = qd_parse_typed(val_field);
+
+    octet = qd_iterator_octet(typed_iter);
+    if (octet != (uint8_t)0xb0) {
+        snprintf(error, sizeof(error), "4th Value not vbin32 type: 0x%X", (unsigned int)octet);
+        goto exit;
+    }
+    if (qd_iterator_ncopy_octets(typed_iter, ncopy_buf, 4) != 4) {
+        snprintf(error, sizeof(error), "4th Value incorrect length");
+        goto exit;
+    }
+    if (memcmp(ncopy_buf, "\x00\x00\x00\x08", 4) != 0) {
+        snprintf(error, sizeof(error), "4th Value encoding incorrect");
+        goto exit;
+    }
+
+    if (qd_iterator_octet(val_iter) != '!' || qd_iterator_octet(val_iter) != '+') {
+        snprintf(error, sizeof(error), "4th Value [0-1] incorrect");
+        goto exit;
+    }
+    if (qd_iterator_ncopy_octets(typed_iter, ncopy_buf, 4) != 4) {
+        snprintf(error, sizeof(error), "4th Value sub-copy failed");
+        goto exit;
+    }
+    if (memcmp(ncopy_buf, "!+!+", 4) != 0) {
+        snprintf(error, sizeof(error), "4th Value sub-copy incorrect");
+        goto exit;
+    }
+    if (qd_iterator_octet(val_iter) != '!' || qd_iterator_octet(val_iter) != '+') {
+        snprintf(error, sizeof(error), "4th Value [6-7] incorrect");
+        goto exit;
+    }
+
+
+exit:
     qd_parse_free(field);
-    return 0;
+    qd_buffer_list_free_buffers(&buflist);
+
+    return error[0] ? error : 0;
 }
 
 
@@ -402,27 +482,36 @@ struct err_vector_t {
 static char *test_parser_errors(void *context)
 {
     int idx = 0;
+    qd_buffer_list_t buflist = DEQ_EMPTY;
     static char error[1024];
 
     while (err_vectors[idx].data) {
-        qd_iterator_t *field  = qd_iterator_binary(err_vectors[idx].data,
-                                                   err_vectors[idx].length, ITER_VIEW_ALL);
+        if (err_vectors[idx].length) {
+            qd_buffer_list_append(&buflist, (const uint8_t *)err_vectors[idx].data, err_vectors[idx].length);
+        } else {
+            qd_buffer_t *tmp = qd_buffer();
+            DEQ_INSERT_HEAD(buflist, tmp);
+        }
+        qd_iterator_t *field  = qd_iterator_buffer(DEQ_HEAD(buflist), 0, err_vectors[idx].length, ITER_VIEW_ALL);
         qd_parsed_field_t *parsed = qd_parse(field);
         if (qd_parse_ok(parsed)) {
             qd_parse_free(parsed);
             qd_iterator_free(field);
             sprintf(error, "(%d) Unexpected Parse Success", idx);
+            qd_buffer_list_free_buffers(&buflist);
             return error;
         }
         if (strcmp(qd_parse_error(parsed), err_vectors[idx].expected_error) != 0) {
-            qd_parse_free(parsed);
-            qd_iterator_free(field);
             sprintf(error, "(%d) Error: Expected %s, Got %s", idx,
                     err_vectors[idx].expected_error, qd_parse_error(parsed));
+            qd_parse_free(parsed);
+            qd_iterator_free(field);
+            qd_buffer_list_free_buffers(&buflist);
             return error;
         }
         qd_parse_free(parsed);
         qd_iterator_free(field);
+        qd_buffer_list_free_buffers(&buflist);
         idx++;
     }
 

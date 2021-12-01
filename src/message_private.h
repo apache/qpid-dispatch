@@ -99,7 +99,6 @@ typedef struct {
     qd_field_location_t  section_application_properties;  // The application properties list
     qd_field_location_t  section_body;                    // The message body: Data
     qd_field_location_t  section_footer;                  // The footer
-    qd_field_location_t  field_user_annotations;          // Opaque user message annotations, not a real field.
 
     qd_field_location_t  field_message_id;                // The string value of the message-id
     qd_field_location_t  field_user_id;                   // The string value of the user-id
@@ -120,16 +119,21 @@ typedef struct {
     qd_message_depth_t   parse_depth;                     // Depth to which message content has been parsed
     qd_iterator_t       *ma_field_iter_in;                // Iter for msg.FIELD_MESSAGE_ANNOTATION
 
-    qd_buffer_field_t    ma_user_annotation_blob;        // Original user annotations
-                                                          //  with router annotations stripped
-    uint32_t             ma_count;                        // Number of map elements in blob
-                                                          //  after router fields stripped
+    // Original user-supplied message annotations: this is the location in the
+    // received message of all annotation key/value pairs provided by the
+    // origin endpoint.  Router-specific message annotations appear after these
+    // user values.
+    qd_buffer_field_t    ma_user_annotations;
+    uint32_t             ma_user_count;   // total # of user map entries
+
+    // Locations in the received message for the ingress-router ID, the
+    // to-override address, and the router trace list.  These fields are only
+    // present if the message has arrived from another router (not a client
+    // endpoint).
     qd_parsed_field_t   *ma_pf_ingress;
-    qd_parsed_field_t   *ma_pf_phase;
     qd_parsed_field_t   *ma_pf_to_override;
     qd_parsed_field_t   *ma_pf_trace;
-    int                  ma_int_phase;
-    sys_atomic_t         ma_stream;                      // Message is streaming
+
     uint64_t             max_message_size;               // Configured max; 0 if no max to enforce
     uint64_t             bytes_received;                 // Bytes returned by pn_link_recv()
                                                          //  when enforcing max_message_size
@@ -139,11 +143,13 @@ typedef struct {
 
     qd_message_q2_unblocker_t q2_unblocker;              // Callback and context to signal Q2 unblocked to receiver
 
+    bool                 ma_disabled;                    // true: link routing - no MA handling needed.
     bool                 ma_parsed;                      // Have parsed incoming message annotations message
-    sys_atomic_t         discard;                        // Message is being discarded
-    sys_atomic_t         receive_complete;               // Message has been completely received
     bool                 q2_input_holdoff;               // Q2 state: hold off calling pn_link_recv
     bool                 disable_q2_holdoff;             // Disable Q2 flow control
+
+    sys_atomic_t         discard;                        // Message is being discarded
+    sys_atomic_t         receive_complete;               // Message has been completely received
     sys_atomic_t         priority_parsed;                // Message priority has been parsed
     sys_atomic_t         oversize;                       // Policy oversize-message handling in effect
     sys_atomic_t         no_body;                        // HTTP2 request has no body
@@ -157,10 +163,13 @@ struct qd_message_pvt_t {
     qd_message_depth_t             sent_depth;      // Depth of outgoing sent message
     qd_message_content_t          *content;         // Singleton content shared by reference between
                                                     //  incoming and all outgoing copies
-    qd_buffer_list_t               ma_to_override;  // To field in outgoing message annotations.
-    qd_buffer_list_t               ma_trace;        // Trace list in outgoing message annotations
-    qd_buffer_list_t               ma_ingress;      // Ingress field in outgoing message annotations
+    char                          *ma_to_override;  // new outgoing value for to-override MA
     int                            ma_phase;        // Phase for override address
+    bool                           ma_streaming;    // Do not attempt to wait for entire msg to arrive.
+    bool                           ma_filter_trace; // Do not add trace list to outbound msg (sending to edge-router)
+    bool                           ma_filter_ingress;  // Do not add ingress router to outbound msg (sending to edge-router)
+    bool                           ma_reset_trace;     // exchange-bindings: discard incoming trace, replace with local node id
+    bool                           ma_reset_ingress;   // exchange-bindings: discard incoming ingress, replace with local node id
     qd_message_stream_data_list_t  stream_data_list;// Stream data parse structure
                                                     // TODO - move this to the content for one-time parsing (TLR)
     unsigned char                 *body_cursor;     // Stream: tracks the point in the content buffer chain

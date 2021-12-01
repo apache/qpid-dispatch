@@ -45,6 +45,8 @@ static char *container_role = "route-container";
 static char *edge_role      = "edge";
 static char *direct_prefix;
 static char *node_id;
+static uint8_t *encoded_node_id;
+static size_t encoded_node_id_len;
 
 static void deferred_AMQP_rx_handler(void *context, bool discard);
 static bool parse_failover_property_list(qd_router_t *router, qd_connection_t *conn, pn_data_t *props);
@@ -320,106 +322,49 @@ static int AMQP_writable_conn_handler(void *type_context, qd_connection_t *conn,
 }
 
 
-static qd_iterator_t *router_annotate_message(qd_router_t   *router,
-                                              qd_message_t  *msg,
-                                              qd_bitmask_t **link_exclusions,
-                                              uint32_t      *distance,
-                                              int           *ingress_index)
+static qd_iterator_t *process_router_annotations(qd_router_t   *router,
+                                                 qd_message_t  *msg,
+                                                 qd_bitmask_t **link_exclusions,
+                                                 uint32_t      *distance,
+                                                 int           *ingress_index)
 {
     qd_iterator_t *ingress_iter = 0;
     bool           edge_mode    = router->router_mode == QD_ROUTER_MODE_EDGE;
 
     *link_exclusions = 0;
     *distance        = 0;
+    *ingress_index   = 0;
 
-    qd_parsed_field_t *trace   = qd_message_get_trace(msg);
-    qd_parsed_field_t *ingress = qd_message_get_ingress(msg);
-    qd_parsed_field_t *to      = qd_message_get_to_override(msg);
-    qd_parsed_field_t *phase   = qd_message_get_phase(msg);
+    if (!edge_mode) { // Edge routers do not use trace or ingress meta-data
+        qd_parsed_field_t *trace = qd_message_get_trace(msg);
+        if (trace && qd_parse_is_list(trace)) {
+            //
+            // Return the distance in hops that this delivery has traveled.
+            //
+            *distance = qd_parse_sub_count(trace);
 
-    //
-    // QD_MA_TRACE:
-    // If there is a trace field, append this router's ID to the trace.
-    // If the router ID is already in the trace the msg has looped.
-    // This code does not check for the loop condition.
-    //
-    // Edge routers do not add their IDs to the trace list.
-    //
-    if (!edge_mode) {
-        qd_composed_field_t *trace_field = qd_compose_subfield(0);
-        qd_compose_start_list(trace_field);
-        if (trace) {
-            if (qd_parse_is_list(trace)) {
-                //
-                // Return the distance in hops that this delivery has traveled.
-                //
-                *distance = qd_parse_sub_count(trace);
-
-                //
-                // Create a link-exclusion map for the items in the trace.  This map will
-                // contain a one-bit for each link that leads to a neighbor router that
-                // the message has already passed through.
-                //
-                *link_exclusions = qd_tracemask_create(router->tracemask, trace, ingress_index);
-
-                //
-                // Append this router's ID to the trace.
-                //
-                uint32_t idx = 0;
-                qd_parsed_field_t *trace_item = qd_parse_sub_value(trace, idx);
-                while (trace_item) {
-                    qd_iterator_t *iter = qd_parse_raw(trace_item);
-                    qd_iterator_reset_view(iter, ITER_VIEW_ALL);
-                    qd_compose_insert_string_iterator(trace_field, iter);
-                    idx++;
-                    trace_item = qd_parse_sub_value(trace, idx);
-                }
-            }
+            //
+            // Create a link-exclusion map for the items in the trace.  This map will
+            // contain a one-bit for each link that leads to a neighbor router that
+            // the message has already passed through.
+            //
+            *link_exclusions = qd_tracemask_create(router->tracemask, trace, ingress_index);
         }
 
-        qd_compose_insert_string(trace_field, node_id);
-        qd_compose_end_list(trace_field);
-        qd_message_set_trace_annotation(msg, trace_field);
-    }
-
-    //
-    // QD_MA_TO:
-    // Preserve the existing value.
-    //
-    if (to) {
-        qd_composed_field_t *to_field = qd_compose_subfield(0);
-        qd_compose_insert_string_iterator(to_field, qd_parse_raw(to));
-        qd_message_set_to_override_annotation(msg, to_field);
-    }
-
-    //
-    // QD_MA_PHASE:
-    // Preserve the existing value.
-    //
-    if (phase) {
-        qd_message_set_phase_annotation(msg, qd_message_get_phase_val(msg));
-    }
-
-    //
-    // QD_MA_INGRESS:
-    // If there is no ingress field, annotate the ingress as
-    // this router else keep the original field.
-    //
-    // Edge routers do not annotate the ingress field.
-    //
-    if (!edge_mode) {
-        qd_composed_field_t *ingress_field = qd_compose_subfield(0);
+        qd_parsed_field_t *ingress = qd_message_get_ingress_router(msg);
         if (ingress && qd_parse_is_scalar(ingress)) {
             ingress_iter = qd_parse_raw(ingress);
-            qd_compose_insert_string_iterator(ingress_field, ingress_iter);
-        } else
-            qd_compose_insert_string(ingress_field, node_id);
-        qd_message_set_ingress_annotation(msg, ingress_field);
+        }
+
+    } else {
+        // Edge routers do not propagate trace or ingress
+        qd_message_disable_trace_annotation(msg);
+        qd_message_disable_ingress_router_annotation(msg);
     }
 
     //
     // Return the iterator to the ingress field _if_ it was present.
-    // If we added the ingress, return NULL.
+    // Otherwise this router is the ingress - return NULL.
     //
     return ingress_iter;
 }
@@ -717,7 +662,24 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
     }
 
-    qd_message_message_annotations(msg);
+    const char *ma_error = qd_message_parse_annotations(msg);
+    if (ma_error) {
+        qd_log(router->log_source, QD_LOG_WARNING,
+               "[C%"PRIu64"][L%"PRIu64"] Message rejected - invalid MA section: %s",
+               conn->connection_id, qd_link_link_id(link), ma_error);
+
+        pn_condition_t *condition = pn_disposition_condition(pn_delivery_local(pnd));
+        pn_condition_set_name(condition, "amqp:invalid-field");
+        pn_condition_set_description(condition, ma_error);
+        pn_delivery_update(pnd, PN_REJECTED);
+        qd_message_set_discard(msg, true);
+        pn_link_flow(pn_link, 1);
+        if (receive_complete) {
+            pn_delivery_settle(pnd);
+            qd_message_free(msg);
+        }
+        return next_delivery;
+    }
 
     //
     // Head of line blocking avoidance (DISPATCH-1545)
@@ -754,7 +716,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     uint32_t       distance = 0;
     int            ingress_index = 0; // Default to _this_ router
     qd_bitmask_t  *link_exclusions = 0;
-    qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, &distance, &ingress_index);
+    qd_iterator_t *ingress_iter = process_router_annotations(router, msg, &link_exclusions, &distance, &ingress_index);
 
     //
     // If this delivery has traveled further than the known radius of the network topology (plus 1),
@@ -803,9 +765,9 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 if (tenant_space) {
                     qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_WITH_SPACE);
                     qd_iterator_annotate_space(addr_iter, tenant_space, tenant_space_length);
-                    qd_composed_field_t *to_override = qd_compose_subfield(0);
-                    qd_compose_insert_string_iterator(to_override, addr_iter);
-                    qd_message_set_to_override_annotation(msg, to_override);
+                    char *iter_str = (char *)qd_iterator_copy(addr_iter);
+                    qd_message_set_to_override_annotation(msg, iter_str);
+                    free(iter_str);
                 }
             }
         }
@@ -858,17 +820,18 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
 
         if (term_addr) {
-            qd_composed_field_t *to_override = qd_compose_subfield(0);
             int tenant_space_length;
             const char *tenant_space = _get_tenant_space(conn, &tenant_space_length);
             if (tenant_space) {
                 qd_iterator_t *aiter = qd_iterator_string(term_addr, ITER_VIEW_ADDRESS_WITH_SPACE);
                 qd_iterator_annotate_space(aiter, tenant_space, tenant_space_length);
-                qd_compose_insert_string_iterator(to_override, aiter);
+                char *iter_str = (char *) qd_iterator_copy(aiter);
+                qd_message_set_to_override_annotation(msg, iter_str);
+                free(iter_str);
                 qd_iterator_free(aiter);
             } else
-                qd_compose_insert_string(to_override, term_addr);
-            qd_message_set_to_override_annotation(msg, to_override);
+                qd_message_set_to_override_annotation(msg, term_addr);
+
             int phase = qdr_link_phase(rlink);
             if (phase != 0)
                 qd_message_set_phase_annotation(msg, phase);
@@ -1643,15 +1606,45 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      AMQP_outbound_opened_handler,
                                      AMQP_closed_handler};
 
-qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)
-{
-    qd_container_register_node_type(qd, &router_node);
 
-    size_t dplen = 9 + strlen(area) + strlen(id);
+// not api, but needed by unit tests
+void qd_router_id_initialize(const char *area, const char *id)
+{
+    size_t dplen = 2 + strlen(area) + strlen(id);
     node_id = (char*) qd_malloc(dplen);
     strcpy(node_id, area);
     strcat(node_id, "/");
     strcat(node_id, id);
+
+    // Node ID as an AMQP encoded str value.  Used when composing trace list
+    // and ingress message annotations into the outgoing message
+
+    const uint32_t id_len = strlen(node_id);
+    const uint32_t extra = 5;  // 5 octets = max AMQP STRx header length
+    encoded_node_id = (uint8_t*) qd_malloc(id_len + extra + 1); // 1 = string terminator
+    const int hdr_len = qd_compose_str_header(encoded_node_id, id_len);
+    assert(hdr_len <= extra);
+    strcpy((char*) &encoded_node_id[hdr_len], node_id);
+    encoded_node_id_len = hdr_len + id_len;
+}
+
+
+// not api, but needed by unit tests
+void qd_router_id_finalize(void)
+{
+    free(node_id);
+    node_id = 0;
+    free(encoded_node_id);
+    encoded_node_id = 0;
+    encoded_node_id_len = 0;
+}
+
+
+qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)
+{
+    qd_container_register_node_type(qd, &router_node);
+
+    qd_router_id_initialize(area, id);
 
     qd_router_t *router = NEW(qd_router_t);
     ZERO(router);
@@ -2184,14 +2177,23 @@ void qd_router_free(qd_router_t *router)
     qd_router_python_free(router);
 
     free(router);
-    free(node_id);
+    qd_router_id_finalize();
     free(direct_prefix);
 }
 
 
-const char *qd_router_id(const qd_dispatch_t *qd)
+const char *qd_router_id(void)
 {
+    assert(node_id);
     return node_id;
+}
+
+
+const uint8_t *qd_router_id_encoded(size_t *len)
+{
+    assert(encoded_node_id && encoded_node_id_len);
+    *len = encoded_node_id_len;
+    return encoded_node_id;
 }
 
 

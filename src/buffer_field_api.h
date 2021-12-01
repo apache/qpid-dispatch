@@ -26,6 +26,7 @@
  */
 
 #include "qpid/dispatch/buffer_field.h"
+#include "qpid/dispatch/parse.h"
 #include <stdbool.h>
 
 /* qd_buffer_field_normalize
@@ -187,10 +188,7 @@ static inline bool qd_buffer_field_uint32(qd_buffer_field_t *bfield, uint32_t *v
     if (bfield->remaining >= 4) {
         uint8_t buf[4];
         qd_buffer_field_ncopy(bfield, buf, 4);
-        *value = (((uint32_t) buf[0]) << 24)
-            | (((uint32_t) buf[1]) << 16)
-            | (((uint32_t) buf[2]) << 8)
-            | ((uint32_t) buf[3]);
+        *value = qd_parse_uint32_decode(buf);
         return true;
     }
     return false;

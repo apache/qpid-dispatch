@@ -32,15 +32,19 @@
 #define FLAT_BUF_SIZE (100000)
 static unsigned char buffer[FLAT_BUF_SIZE];
 
-static size_t flatten_bufs(qd_message_content_t *content)
+// given a buffer list, copy the data it contains into a single contiguous
+// buffer.
+static size_t flatten_bufs(const qd_buffer_list_t *content)
 {
     unsigned char *cursor = buffer;
-    qd_buffer_t *buf      = DEQ_HEAD(content->buffers);
+    qd_buffer_t *buf      = DEQ_HEAD((*content));
 
     while (buf) {
+        // if this asserts you need a bigger buffer!
+        assert(((size_t) (cursor - buffer)) + qd_buffer_size(buf) < FLAT_BUF_SIZE);
         memcpy(cursor, qd_buffer_base(buf), qd_buffer_size(buf));
         cursor += qd_buffer_size(buf);
-        buf = buf->next;
+        buf = DEQ_NEXT(buf);
     }
 
     return (size_t) (cursor - buffer);
@@ -49,20 +53,10 @@ static size_t flatten_bufs(qd_message_content_t *content)
 
 static void set_content(qd_message_content_t *content, unsigned char *buffer, size_t len)
 {
-    unsigned char        *cursor = buffer;
-    qd_buffer_t *buf;
+    qd_buffer_list_t blist = DEQ_EMPTY;
 
-    while (len > (size_t) (cursor - buffer)) {
-        buf = qd_buffer();
-        size_t segment   = qd_buffer_capacity(buf);
-        size_t remaining = len - (size_t) (cursor - buffer);
-        if (segment > remaining)
-            segment = remaining;
-        memcpy(qd_buffer_base(buf), cursor, segment);
-        cursor += segment;
-        qd_buffer_insert(buf, segment);
-        DEQ_INSERT_TAIL(content->buffers, buf);
-    }
+    qd_buffer_list_append(&blist, buffer, len);
+    DEQ_APPEND(content->buffers, blist);
     SET_ATOMIC_FLAG(&content->receive_complete);
 }
 
@@ -82,7 +76,23 @@ static char* test_send_to_messenger(void *context)
 {
     qd_message_t         *msg     = qd_message();
     qd_message_content_t *content = MSG_CONTENT(msg);
-    qd_message_compose_1(msg, "test_addr_0", 0);
+
+    qd_composed_field_t *header = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(header);
+    qd_compose_insert_bool(header, true);  // durable
+    qd_compose_end_list(header);
+
+    qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
+    qd_compose_start_list(props);
+    qd_compose_insert_null(props);          // message-id
+    qd_compose_insert_null(props);          // user-id
+    qd_compose_insert_string(props, "test_addr_0");    // to
+    qd_compose_end_list(props);
+
+    qd_message_compose_3(msg, header, props, true);
+    qd_compose_free(header);
+    qd_compose_free(props);
+
     qd_buffer_t *buf = DEQ_HEAD(content->buffers);
     if (buf == 0) {
         qd_message_free(msg);
@@ -90,12 +100,18 @@ static char* test_send_to_messenger(void *context)
     }
 
     pn_message_t *pn_msg = pn_message();
-    size_t len = flatten_bufs(content);
+    size_t len = flatten_bufs(&content->buffers);
     int result = pn_message_decode(pn_msg, (char *)buffer, len);
     if (result != 0) {
         pn_message_free(pn_msg);
         qd_message_free(msg);
         return "Error in pn_message_decode";
+    }
+
+    if (!pn_message_is_durable(pn_msg)) {
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
+        return "Durable flag not set";
     }
 
     if (strcmp(pn_message_get_address(pn_msg), "test_addr_0") != 0) {
@@ -361,115 +377,114 @@ static char* test_check_multiple(void *context)
 }
 
 
-static char* test_send_message_annotations(void *context)
+// Create a proton message containing router-specific annotations.
+// Ensure the annotations are properly parsed.
+//
+static char* test_parse_message_annotations(void *context)
 {
-    qd_message_t         *msg     = qd_message();
-    qd_message_content_t *content = MSG_CONTENT(msg);
     char *error = 0;
 
-    qd_composed_field_t *trace = qd_compose_subfield(0);
-    qd_compose_start_list(trace);
-    qd_compose_insert_string(trace, "Node1");
-    qd_compose_insert_string(trace, "Node2");
-    qd_compose_end_list(trace);
-    qd_message_set_trace_annotation(msg, trace);
-
-    qd_composed_field_t *to_override = qd_compose_subfield(0);
-    qd_compose_insert_string(to_override, "to/address");
-    qd_message_set_to_override_annotation(msg, to_override);
-
-    qd_composed_field_t *ingress = qd_compose_subfield(0);
-    qd_compose_insert_string(ingress, "distress");
-    qd_message_set_ingress_annotation(msg, ingress);
-
-    qd_message_compose_1(msg, "test_addr_0", 0);
-    qd_buffer_t *buf = DEQ_HEAD(content->buffers);
-    if (buf == 0) {
-        qd_message_free(msg);
-        return "Expected a buffer in the test message";
-    }
-
     pn_message_t *pn_msg = pn_message();
-    size_t len = flatten_bufs(content);
-    int result = pn_message_decode(pn_msg, (char *)buffer, len);
-    if (result != 0) {
-        error = "Error in pn_message_decode";
+    pn_message_set_durable(pn_msg, true);
+    pn_message_set_address(pn_msg, "test_addr_0");
+    pn_data_t *pn_ma = pn_message_annotations(pn_msg);
+    pn_data_clear(pn_ma);
+    pn_data_put_map(pn_ma);
+    pn_data_enter(pn_ma);
+
+    pn_data_put_symbol(pn_ma, pn_bytes(strlen(QD_MA_INGRESS), QD_MA_INGRESS));
+    pn_data_put_string(pn_ma, pn_bytes(strlen("distress"), "distress"));
+
+    pn_data_put_symbol(pn_ma, pn_bytes(strlen(QD_MA_TRACE), QD_MA_TRACE));
+    pn_data_put_list(pn_ma);
+    pn_data_enter(pn_ma);
+    pn_data_put_string(pn_ma, pn_bytes(strlen("Node1"), "Node1"));
+    pn_data_put_string(pn_ma, pn_bytes(strlen("Node2"), "Node2"));
+    pn_data_exit(pn_ma);
+
+    pn_data_put_symbol(pn_ma, pn_bytes(strlen(QD_MA_TO), QD_MA_TO));
+    pn_data_put_string(pn_ma, pn_bytes(strlen("to/address"), "to/address"));
+
+    pn_data_put_symbol(pn_ma, pn_bytes(strlen(QD_MA_PHASE), QD_MA_PHASE));
+    pn_data_put_int(pn_ma, 9);
+
+    pn_data_put_symbol(pn_ma, pn_bytes(strlen(QD_MA_STREAM), QD_MA_STREAM));
+    pn_data_put_int(pn_ma, 1);
+    pn_data_exit(pn_ma);
+
+    // convert the proton message to a dispatch message
+
+    qd_message_t         *msg     = qd_message();
+    qd_message_content_t *content = MSG_CONTENT(msg);
+    size_t                    len = FLAT_BUF_SIZE;
+
+    pn_message_encode(pn_msg, (char*) buffer, &len);
+    qd_buffer_list_t blist = DEQ_EMPTY;
+    qd_buffer_list_append(&blist, buffer, len);
+    DEQ_MOVE(blist, content->buffers);
+
+    // now parse the sections:
+    if (qd_message_check_depth(msg, QD_DEPTH_PROPERTIES) != QD_MESSAGE_DEPTH_OK) {
+        error = "Failed to validate message";
         goto exit;
     }
 
-    pn_data_t *ma = pn_message_annotations(pn_msg);
-    if (!ma) {
-        error = "Missing message annotations";
-        goto exit;
-    }
-    pn_data_rewind(ma);
-    pn_data_next(ma);
-    if (pn_data_type(ma) != PN_MAP) {
-        error = "Invalid message annotation type";
-        goto exit;
-    }
-    if (pn_data_get_map(ma) != QD_MA_N_KEYS * 2) {
-        error = "Invalid map length";
+    error = (char*) qd_message_parse_annotations(msg);
+    if (error) {
         goto exit;
     }
 
-    pn_data_enter(ma);
-    for (int i = 0; i < QD_MA_N_KEYS; i++) {
-        pn_data_next(ma);
-        if (pn_data_type(ma) != PN_SYMBOL) {
-            error = "Bad map index";
-            goto exit;
-        }
-        pn_bytes_t sym = pn_data_get_symbol(ma);
-        if (!strncmp(QD_MA_PREFIX, sym.start, sym.size)) {
-            pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-        } else if (!strncmp(QD_MA_INGRESS, sym.start, sym.size)) {
-            pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-            if (strncmp("distress", sym.start, sym.size)) {
-                error = "Bad ingress";
-                goto exit;
-            }
-            //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
-        } else if (!strncmp(QD_MA_TO, sym.start, sym.size)) {
-            pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-            if (strncmp("to/address", sym.start, sym.size)) {
-                error = "Bad to override";
-                goto exit;
-            }
-            //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
-        } else if (!strncmp(QD_MA_TRACE, sym.start, sym.size)) {
-            pn_data_next(ma);
-            if (pn_data_type(ma) != PN_LIST) {
-                error = "List not found";
-                goto exit;
-            }
-            pn_data_enter(ma);
-            pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-            if (strncmp("Node1", sym.start, sym.size)) {
-                error = "Bad trace entry";
-                goto exit;
-            }
-            //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
-            pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-            if (strncmp("Node2", sym.start, sym.size)) {
-                error = "Bad trace entry";
-                goto exit;
-            }
-            //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
-            pn_data_exit(ma);
-        } else error = "Unexpected map key";
+    // validate sections parsed correctly:
+
+    qd_parsed_field_t *pf_trace = qd_message_get_trace(msg);
+    if (!pf_trace) {
+        error = "TRACE not found!";
+        goto exit;
     }
+    if (qd_parse_sub_count(pf_trace) != 2
+        || !qd_iterator_equal(qd_parse_raw(qd_parse_sub_value(pf_trace, 0)),
+                              (const unsigned char*) "Node1")
+        || !qd_iterator_equal(qd_parse_raw(qd_parse_sub_value(pf_trace, 1)),
+                              (const unsigned char*) "Node2")) {
+        error = "Invalid trace list";
+        goto exit;
+    }
+
+    qd_parsed_field_t *pf_to = qd_message_get_to_override(msg);
+    if (!pf_to) {
+        error = "TO override not found!";
+        goto exit;
+    }
+    if (!qd_iterator_equal(qd_parse_raw(pf_to), (const unsigned char*) "to/address")) {
+        error = "Invalid TO override!";
+        goto exit;
+    }
+
+    qd_parsed_field_t *pf_ingress = qd_message_get_ingress_router(msg);
+    if (!pf_ingress) {
+        error = "INGRESS not found!";
+        goto exit;
+    }
+    if (!qd_iterator_equal(qd_parse_raw(pf_ingress), (const unsigned char*) "distress")) {
+        error = "Invalid ingress override!";
+        goto exit;
+    }
+
+    if (!qd_message_is_streaming(msg)) {
+        error = "streaming flag not parsed!";
+        goto exit;
+    }
+
+    if (qd_message_get_phase_annotation(msg) != 9) {
+        error = "phase not parsed!";
+        goto exit;
+    }
+
 
 exit:
 
     pn_message_free(pn_msg);
     qd_message_free(msg);
-
     return error;
 }
 
@@ -712,7 +727,7 @@ exit:
 // Testing protocol adapter 'stream_data' interfaces
 //
 
-static void stream_data_generate_message(qd_message_t *msg, char *s_chunk_size, char *s_n_chunks)
+static qd_message_t *stream_data_generate_message(char *s_chunk_size, char *s_n_chunks, bool flatten)
 {
     // Fill a message with n_chunks of vbin chunk_size body data.
 
@@ -720,34 +735,55 @@ static void stream_data_generate_message(qd_message_t *msg, char *s_chunk_size, 
     int   n_chunks   = atoi(s_n_chunks);
 
     // Add message headers
-    qd_message_compose_1(msg, "whom-it-may-concern", 0);
 
-    // Add the chunks. This creates the test state for not-flattened buffers.
+    qd_composed_field_t *header = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(header);
+    qd_compose_insert_bool(header, 0);     // durable
+    qd_compose_insert_null(header);        // priority
+    qd_compose_end_list(header);
+
+    qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
+    qd_compose_start_list(props);
+    qd_compose_insert_null(props);          // message-id
+    qd_compose_insert_null(props);          // user-id
+    qd_compose_insert_string(props, "whom-it-may-concern");    // to
+    qd_compose_end_list(props);
+
+    qd_message_t *msg = qd_message();
+    qd_message_compose_3(msg, header, props, false);
+    qd_compose_free(header);
+    qd_compose_free(props);
+
+    // Generate the chunks. Each chunk is wrapped in a BODY_DATA section. Each
+    // body section resides in its own buffer list.  This creates a sparse body
+    // buffer chain which will exercise buffer boundary checking.
+
+    unsigned char *buf2 = (unsigned char *)malloc(chunk_size);
+    qd_buffer_list_t body = DEQ_EMPTY;
+
     for (int j=0; j<n_chunks; j++) {
-        // Create 'buf2' as a linear buffer of the raw data to be sent.
-        // Buffer filled with chunk index + 1.
-        unsigned char *buf2 = (unsigned char *)malloc(chunk_size);
-        memset(buf2, j+1, chunk_size);
-
-        // Use 'set_content' to convert raw buffer 'buf2'
-        // into a buffer list in message 'mule'.
-        qd_message_t *mule = qd_message();
-        qd_message_content_t *mule_content = MSG_CONTENT(mule);
-        set_content(mule_content, buf2, chunk_size);
-
-        // Extend message 'msg' with the buffer list in 'mule'
-        // and wrap the addition in a BODY_DATA performative.
-        // After this the content buffer list in 'mule' is empty and
-        // the buffers in 'field' are inserted into message 'msg'.
+        qd_buffer_list_t     tmp = DEQ_EMPTY;
         qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
-        qd_compose_insert_binary_buffers(field, &mule_content->buffers);
-        qd_message_extend(msg, field, 0);
 
-        // Clean up temporary resources
-        free(buf2);
+        memset(buf2, j+1, chunk_size);
+        qd_compose_insert_binary(field, (const uint8_t*) buf2, chunk_size);
+        qd_compose_take_buffers(field, &tmp);
+        DEQ_APPEND(body, tmp);
         qd_compose_free(field);
-        qd_message_free(mule);
     }
+
+    if (!flatten) {
+        DEQ_APPEND(MSG_CONTENT(msg)->buffers, body);
+    } else {
+        // compact the separate body buffer chains into the smallest buffer
+        // chain possible
+        size_t flat_size = flatten_bufs(&body);
+        qd_buffer_list_append(&(MSG_CONTENT(msg)->buffers), buffer, flat_size);
+        qd_buffer_list_free_buffers(&body);
+    }
+
+    free(buf2);
+    return msg;
 }
 
 static void free_stream_data_list(qd_message_t *msg_in)
@@ -783,36 +819,15 @@ static char *check_stream_data(char *s_chunk_size, char *s_n_chunks, bool flatte
     char *result     = 0;
     int   received;     // got this much of chunk_size chunk
 
-    // Messages for setting/sensing body data
-    qd_message_t         *msg     = qd_message();
-    qd_message_t         *copy    = qd_message_copy(msg);
-    qd_message_pvt_t     *msg_pvt = (qd_message_pvt_t *)msg;
-
     // Set the original message content
-    stream_data_generate_message(msg, s_chunk_size, s_n_chunks);
 
-    // flatten if required
-    if (flatten) {
-        // check that the flatten buffer is big enough
-        assert(FLAT_BUF_SIZE > (n_chunks * (chunk_size
-                                            // per-chunk vbin descriptor overhead:
-                                            + (chunk_size > 511 ? 8 : 5))
-                                + 100));  // leave plenty of allocaton for header
-
-        // compress message into flatten buffer
-        size_t flat_size = flatten_bufs(MSG_CONTENT(msg));
-
-        // erase buffer list in msg and copy
-        qd_buffer_list_free_buffers(&msg_pvt->content->buffers);
-
-        // reconstruct buffer list from flat buffer
-        qd_buffer_list_append(&msg_pvt->content->buffers, buffer, flat_size);
-    }
+    qd_message_t *msg = stream_data_generate_message(s_chunk_size, s_n_chunks, flatten);
 
     // check the chunks
     // Define the number of raw buffers to be extracted on each loop
 #define N_PN_RAW_BUFFS (2)
 
+    qd_message_t *copy = qd_message_copy(msg);
     qd_message_stream_data_t *stream_data;
 
     for (int j=0; j<n_chunks; j++) {
@@ -970,18 +985,13 @@ static char *test_check_stream_data_append(void * context)
     }
 
     // simulate building a message as an adaptor would:
-    msg = qd_message();
-
-    qd_alloc_safe_ptr_t unblock_arg = {0};
-    unblock_arg.ptr = (void*) &unblock_called;
-
-    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
 
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(field);
     qd_compose_insert_bool(field, 0);     // durable
     qd_compose_insert_null(field);        // priority
     qd_compose_end_list(field);
+
     field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
     qd_compose_start_list(field);
     qd_compose_insert_ulong(field, 666);    // message-id
@@ -991,8 +1001,11 @@ static char *test_check_stream_data_append(void * context)
     qd_compose_insert_string(field, "/reply-to");   // reply-to
     qd_compose_end_list(field);
 
-    qd_message_compose_2(msg, field, false);
-    qd_compose_free(field);
+    msg = qd_message_compose(field, 0, 0, false);
+
+    qd_alloc_safe_ptr_t unblock_arg = {0};
+    unblock_arg.ptr = (void*) &unblock_called;
+    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
 
     // snapshot the message buffer count to use as a baseline
     const size_t base_bufct = DEQ_SIZE(MSG_CONTENT(msg)->buffers);
@@ -1116,23 +1129,23 @@ static char *test_check_stream_data_fanout(void *context)
     qd_message_t *out_msg2 = 0;
 
     // simulate building a message as an adaptor would:
-    in_msg = qd_message();
-    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
-    qd_compose_start_list(field);
-    qd_compose_insert_bool(field, 0);     // durable
-    qd_compose_insert_null(field);        // priority
-    qd_compose_end_list(field);
-    field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
-    qd_compose_start_list(field);
-    qd_compose_insert_ulong(field, 666);    // message-id
-    qd_compose_insert_null(field);                 // user-id
-    qd_compose_insert_string(field, "/whereevah"); // to
-    qd_compose_insert_string(field, "my-subject");  // subject
-    qd_compose_insert_string(field, "/reply-to");   // reply-to
-    qd_compose_end_list(field);
 
-    qd_message_compose_2(in_msg, field, false);
-    qd_compose_free(field);
+    qd_composed_field_t *header = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(header);
+    qd_compose_insert_bool(header, 0);     // durable
+    qd_compose_insert_null(header);        // priority
+    qd_compose_end_list(header);
+
+    qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
+    qd_compose_start_list(props);
+    qd_compose_insert_ulong(props, 666);    // message-id
+    qd_compose_insert_null(props);                 // user-id
+    qd_compose_insert_string(props, "/whereevah"); // to
+    qd_compose_insert_string(props, "my-subject");  // subject
+    qd_compose_insert_string(props, "/reply-to");   // reply-to
+    qd_compose_end_list(props);
+
+    in_msg = qd_message_compose(header, props, 0, false);
 
     // snapshot the message buffer count to use as a baseline
     const size_t base_bufct = DEQ_SIZE(MSG_CONTENT(in_msg)->buffers);
@@ -1140,7 +1153,7 @@ static char *test_check_stream_data_fanout(void *context)
     // construct a couple of body data sections, cheek-to-jowl in a buffer
     // chain
 #define sd_count  5
-    field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
     memset(buffer, '1', 99);
     qd_compose_insert_binary(field, buffer, 99);
 
@@ -1247,7 +1260,7 @@ static char *test_check_stream_data_footer(void *context)
     qd_message_t *out_msg2 = 0;
 
     // simulate building a message as an adaptor would:
-    in_msg = qd_message();
+
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(field);
     qd_compose_insert_bool(field, 0);     // durable
@@ -1262,8 +1275,7 @@ static char *test_check_stream_data_footer(void *context)
     qd_compose_insert_string(field, "/reply-to");   // reply-to
     qd_compose_end_list(field);
 
-    qd_message_compose_2(in_msg, field, false);
-    qd_compose_free(field);
+    in_msg = qd_message_compose(field, 0, 0, false);
 
     // snapshot the message buffer count to use as a baseline
     const size_t base_bufct = DEQ_SIZE(MSG_CONTENT(in_msg)->buffers);
@@ -1367,11 +1379,6 @@ static char *test_q2_callback_on_disable(void *context)
 
     // first test: ensure calling disable without being in Q2 does not invoke the
     // handler:
-    msg = qd_message();
-
-    qd_alloc_safe_ptr_t unblock_arg = {0};
-    unblock_arg.ptr = (void*) &unblock_called;
-    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
 
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(field);
@@ -1387,8 +1394,12 @@ static char *test_q2_callback_on_disable(void *context)
     qd_compose_insert_string(field, "/reply-to");   // reply-to
     qd_compose_end_list(field);
 
-    qd_message_compose_2(msg, field, false);
-    qd_compose_free(field);
+    msg = qd_message_compose(field, 0, 0, false);
+
+    qd_alloc_safe_ptr_t unblock_arg = {0};
+    unblock_arg.ptr = (void*) &unblock_called;
+    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
+
 
     qd_message_Q2_holdoff_disable(msg);
 
@@ -1400,11 +1411,6 @@ static char *test_q2_callback_on_disable(void *context)
     qd_message_free(msg);
 
     // now try it again with a message with Q2 active
-
-    msg = qd_message();
-
-    unblock_arg.ptr = (void*) &unblock_called;
-    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
 
     field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(field);
@@ -1420,8 +1426,9 @@ static char *test_q2_callback_on_disable(void *context)
     qd_compose_insert_string(field, "/reply-to");   // reply-to
     qd_compose_end_list(field);
 
-    qd_message_compose_2(msg, field, false);
-    qd_compose_free(field);
+    msg = qd_message_compose(field, 0, 0, false);
+    unblock_arg.ptr = (void*) &unblock_called;
+    qd_message_set_q2_unblocked_handler(msg, q2_unblocked_handler, unblock_arg);
 
     // grow message until Q2 activates
 
@@ -1533,6 +1540,123 @@ exit:
 }
 
 
+// verify that a locally generated message containing message annotations can
+// be correctly parsed
+static char *test_local_message_compose(void * context)
+{
+    char *result = 0;
+    qd_composed_field_t *header = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(header);
+    qd_compose_insert_bool(header, true);  // durable
+    qd_compose_end_list(header);
+
+    qd_composed_field_t *da = qd_compose(QD_PERFORMATIVE_DELIVERY_ANNOTATIONS, 0);
+    qd_compose_start_map(da);
+    qd_compose_insert_symbol(da, "key1");
+    qd_compose_insert_string(da, "value1");
+    qd_compose_end_map(da);
+
+    qd_composed_field_t *ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
+    qd_compose_start_map(ma);
+
+    qd_compose_insert_symbol(ma, "User Key 1");
+    qd_compose_insert_string(ma, "User Value 1");
+
+    qd_compose_insert_symbol(ma, "User Key 2");
+    qd_compose_insert_string(ma, "User Value 2");
+
+    qd_compose_insert_symbol(ma, QD_MA_INGRESS);
+    qd_compose_insert_string(ma, "0/InRouter");
+
+    qd_compose_insert_symbol(ma, QD_MA_TRACE);
+    qd_compose_start_list(ma);
+    qd_compose_insert_string(ma, "1/Router");
+    qd_compose_insert_string(ma, "2/Router");
+    qd_compose_end_list(ma);
+
+    qd_compose_insert_symbol(ma, QD_MA_TO);
+    qd_compose_insert_string(ma, "address1");
+
+    qd_compose_insert_symbol(ma, QD_MA_PHASE);
+    qd_compose_insert_int(ma, 7);
+
+    qd_compose_insert_symbol(ma, QD_MA_STREAM);
+    qd_compose_insert_int(ma, 1);
+
+    qd_compose_end_map(ma);
+
+    qd_message_t *msg = qd_message_compose(header, da, ma, true);
+    qd_message_content_t *content = MSG_CONTENT(msg);
+
+    // verify that the internals of the content have been properly initialized.
+    // It should appear as if the message has arrived from proton like any
+    // other message.
+
+    if (!content->section_message_header.parsed) {
+        result = "Header section not parsed";
+        goto exit;
+    }
+
+    if (!content->section_delivery_annotation.parsed) {
+        result = "Delivery Annotation section not parsed";
+        goto exit;
+    }
+
+    if (!content->section_message_annotation.parsed || !content->ma_parsed) {
+        result = "Message Annotation section not parsed";
+        goto exit;
+    }
+
+    if (content->ma_user_count != 4) {
+        result = "failed to find user message annotations";
+        goto exit;
+    }
+
+    if (content->ma_user_annotations.remaining != 52) {
+        result = "wrong length of user annotations";
+        goto exit;
+    }
+
+    if (!content->ma_pf_ingress
+        || !qd_iterator_equal(qd_parse_raw(content->ma_pf_ingress),
+                              (const unsigned char*) "0/InRouter")) {
+        result = "ingress MA not correct";
+        goto exit;
+    }
+
+    if (!content->ma_pf_to_override
+        || !qd_iterator_equal(qd_parse_raw(content->ma_pf_to_override),
+                              (const unsigned char*) "address1")) {
+        result = "to-override MA not correct";
+        goto exit;
+    }
+
+    if (!content->ma_pf_trace
+        || qd_parse_sub_count(content->ma_pf_trace) != 2
+        || !qd_iterator_equal(qd_parse_raw(qd_parse_sub_value(content->ma_pf_trace, 0)),
+                              (const unsigned char*) "1/Router")
+        || !qd_iterator_equal(qd_parse_raw(qd_parse_sub_value(content->ma_pf_trace, 1)),
+                              (const unsigned char*) "2/Router")) {
+        result = "Invalid trace list";
+        goto exit;
+    }
+
+    if (((qd_message_pvt_t *)msg)->ma_phase != 7) {
+        result = "incorrect phase MA";
+        goto exit;
+    }
+
+    if (!((qd_message_pvt_t *)msg)->ma_streaming) {
+        result = "incorrect streaming MA";
+        goto exit;
+    }
+
+exit:
+
+    qd_message_free(msg);
+    return result;
+}
+
 int message_tests(void)
 {
     int result = 0;
@@ -1542,7 +1666,7 @@ int message_tests(void)
     TEST_CASE(test_receive_from_messenger, 0);
     TEST_CASE(test_message_properties, 0);
     TEST_CASE(test_check_multiple, 0);
-    TEST_CASE(test_send_message_annotations, 0);
+    TEST_CASE(test_parse_message_annotations, 0);
     TEST_CASE(test_q2_input_holdoff_sensing, 0);
     TEST_CASE(test_incomplete_annotations, 0);
     TEST_CASE(test_check_weird_messages, 0);
@@ -1552,6 +1676,7 @@ int message_tests(void)
     TEST_CASE(test_check_stream_data_footer, 0);
     TEST_CASE(test_q2_callback_on_disable, 0);
     TEST_CASE(test_q2_ignore_headers, 0);
+    TEST_CASE(test_local_message_compose, 0);
 
     return result;
 }

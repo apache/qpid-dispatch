@@ -86,7 +86,6 @@ static void source_send(test_endpoint_t *ep, bool presettled)
     static uint32_t      sequence = 0;
     static char          stringbuf[100];
     qdr_delivery_t      *dlv;
-    qd_message_t        *msg   = qd_message();
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
 
     sprintf(stringbuf, "Sequence: %"PRIu32, sequence);
@@ -109,9 +108,8 @@ static void source_send(test_endpoint_t *ep, bool presettled)
     field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, field);
     qd_compose_insert_string(field, stringbuf);
 
+    qd_message_t *msg = qd_message_compose(field, 0, 0, true);
     dlv = qdrc_endpoint_delivery_CT(ep->node->core, ep->ep, msg);
-    qd_message_compose_2(msg, field, true);
-    qd_compose_free(field);
     qdrc_endpoint_send_CT(ep->node->core, ep->ep, dlv, presettled);
 
     if (--ep->credit > 0) {
