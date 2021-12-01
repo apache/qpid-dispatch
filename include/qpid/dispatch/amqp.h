@@ -111,7 +111,7 @@ extern const char * const QD_MA_INGRESS;  ///< Ingress Router
 extern const char * const QD_MA_TRACE;    ///< Trace
 extern const char * const QD_MA_TO;       ///< To-Override
 extern const char * const QD_MA_PHASE;    ///< Phase for override address
-extern const char * const QD_MA_CLASS;    ///< Message-Class
+extern const char * const QD_MA_CLASS;    ///< Message-Class (deprecated)
 extern const char * const QD_MA_STREAM;   ///< Indicate streaming message
 
 #define QD_MA_PREFIX_LEN  (9)

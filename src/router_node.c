@@ -730,7 +730,21 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
     }
 
-    qd_message_message_annotations(msg);
+    const char *ma_error = qd_message_message_annotations(msg);
+    if (ma_error) {
+        qd_log(router->log_source, QD_LOG_DEBUG,
+               "[C%"PRIu64"][L%"PRIu64"] Message rejected - invalid MA section: %s",
+               conn->connection_id, qd_link_link_id(link), ma_error);
+
+        qd_message_set_discard(msg, true);
+        pn_link_flow(pn_link, 1);
+        pn_delivery_update(pnd, PN_REJECTED);
+        if (receive_complete) {
+            pn_delivery_settle(pnd);
+            qd_message_free(msg);
+        }
+        return next_delivery;
+    }
 
     //
     // Head of line blocking avoidance (DISPATCH-1545)

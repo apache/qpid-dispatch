@@ -1162,30 +1162,31 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     return (qd_message_t*) copy;
 }
 
-void qd_message_message_annotations(qd_message_t *in_msg)
+const char *qd_message_message_annotations(qd_message_t *in_msg)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;
 
     if (content->ma_parsed)
-        return ;
+        return 0;
     content->ma_parsed = true;
 
     content->ma_field_iter_in = qd_message_field_iterator(in_msg, QD_FIELD_MESSAGE_ANNOTATION);
     if (content->ma_field_iter_in == 0)
-        return;
+        return 0;
 
     qd_parsed_field_t *ma_pf_stream = 0;
-    qd_parse_annotations(
-        msg->strip_annotations_in,
-        content->ma_field_iter_in,
-        &content->ma_pf_ingress,
-        &content->ma_pf_phase,
-        &content->ma_pf_to_override,
-        &content->ma_pf_trace,
-        &ma_pf_stream,
-        &content->ma_user_annotation_blob,
-        &content->ma_count);
+    const char *err = qd_parse_annotations(msg->strip_annotations_in,
+                                           content->ma_field_iter_in,
+                                           &content->ma_pf_ingress,
+                                           &content->ma_pf_phase,
+                                           &content->ma_pf_to_override,
+                                           &content->ma_pf_trace,
+                                           &ma_pf_stream,
+                                           &content->ma_user_annotation_blob,
+                                           &content->ma_count);
+    if (err)
+        return(err);
 
     // Construct pseudo-field location of user annotations blob
     // This holds all annotations if no router-specific annotations are present
@@ -1208,7 +1209,7 @@ void qd_message_message_annotations(qd_message_t *in_msg)
         qd_parse_free(ma_pf_stream);
     }
 
-    return;
+    return 0;
 }
 
 

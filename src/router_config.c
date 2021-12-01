@@ -34,6 +34,7 @@ static void qdi_router_configure_body(qdr_core_t              *core,
 
     qd_iterator_t *iter = qd_iterator_buffer(DEQ_HEAD(buffers), 0, qd_buffer_list_length(&buffers), ITER_VIEW_ALL);
     qd_parsed_field_t   *in_body = qd_parse(iter);
+    assert(qd_parse_ok(in_body));
     qd_iterator_free(iter);
 
     qd_iterator_t *name_iter = 0;
