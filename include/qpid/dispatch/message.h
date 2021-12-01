@@ -148,12 +148,10 @@ qd_message_t *qd_message_copy(qd_message_t *msg);
 /**
  * Retrieve the message annotations from a message and place them in message storage.
  *
- * IMPORTANT: The pointer returned by this function remains owned by the message.
- *            The caller MUST NOT free the parsed field.
- *
  * @param msg Pointer to a received message.
+ * @return 0 on success, else an error message
  */
-void qd_message_message_annotations(qd_message_t *msg);
+const char *qd_message_message_annotations(qd_message_t *msg);
 
 /**
  * Set the value for the QD_MA_TRACE field in the outgoing message annotations
