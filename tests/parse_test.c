@@ -220,7 +220,7 @@ static char *test_integer_conversion(void *context)
         {"\x53\x80",                             2, QD_AMQP_INT,   true, 0, 0},
         {"\x52\x80",                             2, QD_AMQP_INT,   true, 0, 0},
         {"\x50\x80",                             2, QD_AMQP_LONG,  true, 0, 0},
-        {"\x60\x80",                             2, QD_AMQP_LONG,  true, 0, 0},
+        {"\x60\x80\x00",                         3, QD_AMQP_LONG,  true, 0, 0},
         {NULL},
     };
 
@@ -415,10 +415,10 @@ static char *test_parser_errors(void *context)
             return error;
         }
         if (strcmp(qd_parse_error(parsed), err_vectors[idx].expected_error) != 0) {
-            qd_parse_free(parsed);
-            qd_iterator_free(field);
             sprintf(error, "(%d) Error: Expected %s, Got %s", idx,
                     err_vectors[idx].expected_error, qd_parse_error(parsed));
+            qd_parse_free(parsed);
+            qd_iterator_free(field);
             return error;
         }
         qd_parse_free(parsed);
