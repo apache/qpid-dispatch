@@ -228,24 +228,8 @@ static void qcm_mobile_sync_compose_diff_hint_list(qdrm_mobile_sync_t *msync, qd
 
 static qd_message_t *qcm_mobile_sync_compose_differential_mau(qdrm_mobile_sync_t *msync, const char *address)
 {
-    qd_message_t        *msg     = qd_message();
     qd_composed_field_t *headers = qcm_mobile_sync_message_headers(address, MAU);
     qd_composed_field_t *body    = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
-
-    //
-    // Add the ingress and trace annotations to the message to prevent this multicast from bouncing
-    // back to us.
-    //
-    qd_composed_field_t *ingress = qd_compose_subfield(0);
-    qd_compose_insert_string(ingress, qd_router_id(msync->core->qd));
-
-    qd_composed_field_t *trace = qd_compose_subfield(0);
-    qd_compose_start_list(trace);
-    qd_compose_insert_string(trace, qd_router_id(msync->core->qd));
-    qd_compose_end_list(trace);
-
-    qd_message_set_ingress_annotation(msg, ingress);
-    qd_message_set_trace_annotation(msg, trace);
 
     //
     // Generate the message body
@@ -274,16 +258,14 @@ static qd_message_t *qcm_mobile_sync_compose_differential_mau(qdrm_mobile_sync_t
 
     qd_compose_end_map(body);
 
-    qd_message_compose_3(msg, headers, body, true);
-    qd_compose_free(headers);
-    qd_compose_free(body);
+    qd_message_t *msg = qd_message_compose(headers, body, 0, true);
+
     return msg;
 }
 
 
 static qd_message_t *qcm_mobile_sync_compose_absolute_mau(qdrm_mobile_sync_t *msync, const char *address)
 {
-    qd_message_t        *msg     = qd_message();
     qd_composed_field_t *headers = qcm_mobile_sync_message_headers(address, MAU);
     qd_composed_field_t *body    = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
@@ -342,16 +324,13 @@ static qd_message_t *qcm_mobile_sync_compose_absolute_mau(qdrm_mobile_sync_t *ms
     }
     qd_compose_end_list(body);
     qd_compose_end_map(body);
-    qd_message_compose_3(msg, headers, body, true);
-    qd_compose_free(headers);
-    qd_compose_free(body);
-    return msg;
+
+    return qd_message_compose(headers, body, 0, true);
 }
 
 
 static qd_message_t *qcm_mobile_sync_compose_mar(qdrm_mobile_sync_t *msync, qdr_node_t *router)
 {
-    qd_message_t        *msg     = qd_message();
     qd_composed_field_t *headers = qcm_mobile_sync_message_headers(router->wire_address_ma, MAR);
     qd_composed_field_t *body    = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
@@ -370,10 +349,7 @@ static qd_message_t *qcm_mobile_sync_compose_mar(qdrm_mobile_sync_t *msync, qdr_
 
     qd_compose_end_map(body);
 
-    qd_message_compose_3(msg, headers, body, true);
-    qd_compose_free(headers);
-    qd_compose_free(body);
-    return msg;
+    return qd_message_compose(headers, body, 0, true);
 }
 
 

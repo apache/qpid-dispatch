@@ -35,6 +35,10 @@ leak:^pni_init_default_logger$
 # DISPATCH-1844 - shutdown leak
 leak:sys_mutex
 
+# leak of qd_message_t (DISPATCH-1699)
+leak:^qd_message_copy$
+leak:^qd_message_set_to_override_annotation$
+
 # Ubuntu 16.04 (Xenial)
 #
 leak:_ctypes_alloc_format_string

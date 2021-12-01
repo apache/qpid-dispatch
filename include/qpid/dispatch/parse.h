@@ -27,67 +27,20 @@
  *
  * @defgroup parse parse
  *
- * Parse data from qd_iterator_t into a tree structure represeniting
+ * Parse data from raw octets into a tree structure representing
  * an AMQP data type tree.
  *@{
  */
 
 typedef struct qd_parsed_field_t qd_parsed_field_t;
-typedef struct qd_parsed_turbo_t qd_parsed_turbo_t;
-
-DEQ_DECLARE(qd_parsed_turbo_t, qd_parsed_turbo_list_t);
-
-/**@file
- * Parse raw data fields into skeletal AMQP data trees.
- *
- * @defgroup parse parse
- *
- * Parse data from qd_iterator_t into a tree structure representing
- * an AMQP data type tree.
- *@{
- */
-struct qd_parsed_turbo_t {
-    DEQ_LINKS(qd_parsed_turbo_t);
-    qd_buffer_field_t bufptr;  // location/size of field in buffer
-    uint8_t           tag;
-    uint32_t          size;
-    uint32_t          count;
-    uint32_t          length_of_size;
-    uint32_t          length_of_count;
-};
 
 /**
- * Parse a field delimited by a field iterator.
+ * Parse a field delimited by a buffer field.
  *
- * @param iter Field iterator for the field being parsed
+ * @param bfield holds the data to be parsed
  * @return A pointer to the newly created field.
  */
-qd_parsed_field_t *qd_parse(qd_iterator_t *iter);
-
-/**
- * Parse message annotations map from a raw iterator
- * It's called 'turbo' because it is supposed to be fast.
- * Distinguish between user annotations and router annotations
- * Enumerate the user entries count and size.
- * Return the router entries in a list.
- *
- * This function knows a priori:
- *   * the iter is a message annotations map
- *   * the map key prefix is QD_MA_PREFIX
- *   * there are 4 router map annotations at most
- *   * the router annotations are at the end of the map
- *
- * @param iter Field iterator for the message annotations map
- * @param annos returned list of router annotations map entries
- * @param user_entries number of map user items
- * @param user_bytes number of map user item bytes
- * @return 0 if success else pointer to error string
- */
-const char * qd_parse_turbo(
-                       qd_iterator_t          *iter,
-                       qd_parsed_turbo_list_t *annos,
-                       uint32_t               *user_entries,
-                       uint32_t               *user_bytes);
+qd_parsed_field_t *qd_parse(const qd_iterator_t *iter);
 
 /**
  * Free the resources associated with a parsed field.
@@ -146,7 +99,6 @@ uint8_t qd_parse_tag(qd_parsed_field_t *field);
  */
 qd_iterator_t *qd_parse_raw(qd_parsed_field_t *field);
 
-
 /**
  * Return an iterator for the typed content of the field. Contains the type followed by the raw content.
  *
@@ -157,6 +109,21 @@ qd_iterator_t *qd_parse_raw(qd_parsed_field_t *field);
  * @return A field iterator that describes the field's typed content.
  */
 qd_iterator_t *qd_parse_typed(qd_parsed_field_t *field);
+
+/**
+ * Return the location and length of the raw value of the parsed field.
+ *
+ * The returned value does not include the parsed fields header. If the field
+ * is a container (map/list) then the returned value is the content of the
+ * container, including each entries encoded header.
+ *
+ * IMPORTANT: The returned location remains valid for the lifetime of the
+ * parsed field.
+ *
+ * @param field The field pointer returned by qd_parse.
+ * @return The location in the buffer chain containing the field's raw content.
+ */
+qd_buffer_field_t qd_parse_value(const qd_parsed_field_t *field);
 
 /**
  * Return the raw content as an unsigned integer up to 32-bits.  This is
@@ -201,6 +168,15 @@ int64_t qd_parse_as_long(qd_parsed_field_t *field);
  * @return The raw content of the field cast as a bool.
  */
 bool qd_parse_as_bool(qd_parsed_field_t *field);
+
+/**
+ * Return the raw content as a c-string.  This is valid only for SYM* and STR*
+ * parsed types. The caller is responsible for freeing the returned string.
+ *
+ * @param field The field pointer returned by qd_parse.
+ * @return a C string containing the value or 0 if conversion failed.
+ */
+char *qd_parse_as_string(const qd_parsed_field_t *parsed_field);
 
 /**
  * Return the number of sub-fields in a compound field.  If the field is
@@ -291,19 +267,19 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
  * @param ma_phase returned parsed field: phase
  * @param ma_to_override returned parsed field: override
  * @param ma_trace returned parsed field: trace
- * @param blob_pointer returned buffer pointer to user's annotation blob
+ * @param  returned buffer pointer to user's annotation blob
  * @param blob_item_count number of map entries referenced by blob_iterator
  */
-void qd_parse_annotations(
-    bool                strip_annotations_in,
-    qd_iterator_t      *ma_iter_in,
-    qd_parsed_field_t **ma_ingress,
-    qd_parsed_field_t **ma_phase,
-    qd_parsed_field_t **ma_to_override,
-    qd_parsed_field_t **ma_trace,
-    qd_parsed_field_t **ma_stream,
-    qd_buffer_field_t  *blob_pointer,
-    uint32_t           *blob_item_count);
+const char *qd_parse_annotations(
+    bool                   strip_annotations_in,
+    qd_iterator_t         *ma_iter_in,
+    qd_parsed_field_t    **ma_ingress,
+    qd_parsed_field_t    **ma_phase,
+    qd_parsed_field_t    **ma_to_override,
+    qd_parsed_field_t    **ma_trace,
+    qd_parsed_field_t    **ma_stream,
+    qd_buffer_field_t     *user_annotations,
+    uint32_t              *user_count);
 
 /**
  * Identify which annotation is being parsed
@@ -316,6 +292,23 @@ typedef enum {
     QD_MAE_STREAM,
     QD_MAE_NONE
 } qd_ma_enum_t;
+
+
+/**
+ * Parse a 32 bit unsigned integer in network order to a native uint32 value.
+ *
+ * This is used throughout the code for decoding the size and count components
+ * of variable-sized AMQP types.
+ *
+ * The caller must ensure buf references four contiguous octets in memory.
+ */
+static inline uint32_t qd_parse_uint32_decode(const uint8_t buf[])
+{
+    return (((uint32_t) buf[0]) << 24)
+        |  (((uint32_t) buf[1]) << 16)
+        |  (((uint32_t) buf[2]) << 8)
+        |  ((uint32_t) buf[3]);
+}
 
 ///@}
 

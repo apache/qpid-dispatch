@@ -19,8 +19,11 @@
  * under the License.
  */
 
+#include "qpid/dispatch/amqp.h"
 #include "qpid/dispatch/buffer.h"
 #include "qpid/dispatch/iterator.h"
+
+#include <inttypes.h>
 
 /** A linked list of buffers composing a sequence of AMQP data objects. */
 typedef struct qd_composed_field_t qd_composed_field_t;
@@ -262,6 +265,92 @@ void qd_compose_insert_opaque_elements(qd_composed_field_t *field,
  */
 void qd_compose_insert_double(qd_composed_field_t *field, double value);
 
+/**
+ * Write a uint32 value in network order to buf.
+ *
+ * This is used throughout the code for writing the size and count components
+ * of variable-sized AMQP types.
+ *
+ * The caller must ensure buf references four contiguous octets in memory.
+ */
+static inline void qd_compose_uint32_encode(uint32_t value, uint8_t buf[])
+{
+  buf[0] = (uint8_t) ((value & 0xFF000000) >> 24);
+  buf[1] = (uint8_t) ((value & 0x00FF0000) >> 16);
+  buf[2] = (uint8_t) ((value & 0x0000FF00) >> 8);
+  buf[3] = (uint8_t) (value & 0x000000FF);
+}
+
+/**
+ * Compose the proper header for a map given entry count and data size.
+ *
+ * The caller must ensure hdr references nine contiguous octets in memory.
+ *
+ * @param size length of encoded map body (not including sizeof(count))
+ * @param count total number of elements in the map
+ * @return length of data in hdr in octets
+ */
+static inline int qd_compose_map_header(uint8_t hdr[], uint32_t size, uint32_t count)
+{
+    if (size + 1 <= UINT8_MAX) {  // + sizeof(count) field
+        hdr[0] = QD_AMQP_MAP8;
+        hdr[1] = size + 1;
+        hdr[2] = count;
+        return 3;
+    } else {
+        hdr[0] = QD_AMQP_MAP32;
+        qd_compose_uint32_encode(size + 4, &hdr[1]);
+        qd_compose_uint32_encode(count, &hdr[5]);
+        return 9;
+    }
+}
+
+
+/**
+ * Compose the proper header for a list given entry count and data size.
+ *
+ * The caller must ensure hdr references nine contiguous octets in memory.
+ *
+ * @param size length of encoded list body (not including sizeof(count))
+ * @param count total number of elements in the list
+ * @return length of data in hdr in octets
+ */
+static inline int qd_compose_list_header(uint8_t hdr[], uint32_t size, uint32_t count)
+{
+    if (size + 1 <= UINT8_MAX) {  // + sizeof(count) field
+        hdr[0] = QD_AMQP_LIST8;
+        hdr[1] = size + 1;
+        hdr[2] = count;
+        return 3;
+    } else {
+        hdr[0] = QD_AMQP_LIST32;
+        qd_compose_uint32_encode(size + 4, &hdr[1]);
+        qd_compose_uint32_encode(count, &hdr[5]);
+        return 9;
+    }
+}
+
+
+/**
+ * Compose the proper header for a string given its length in octets
+ *
+ * The caller must ensure hdr references five contiguous octets in memory.
+ *
+ * @param length of string in octets
+ * @return length of data in hdr in octets
+ */
+static inline int qd_compose_str_header(uint8_t hdr[], uint32_t length)
+{
+    if (length <= UINT8_MAX) {
+        hdr[0] = QD_AMQP_STR8_UTF8;
+        hdr[1] = length;
+        return 2;
+    } else {
+        hdr[0] = QD_AMQP_STR32_UTF8;
+        qd_compose_uint32_encode(length, &hdr[1]);
+        return 5;
+    }
+}
 
 ///@}
 

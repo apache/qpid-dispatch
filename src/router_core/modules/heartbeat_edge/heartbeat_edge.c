@@ -138,10 +138,7 @@ static void on_timer(qdr_core_t *core, void *context)
         qd_compose_insert_int(body, client->next_msg_id);
         client->next_msg_id++;
 
-        qd_message_t *msg = qd_message();
-        qd_message_compose_2(msg, body, true);
-
-        qd_compose_free(body);
+        qd_message_t *msg = qd_message_compose(body, 0, 0, true);
 
         qdr_delivery_t *dlv = qdrc_endpoint_delivery_CT(client->core, client->endpoint, msg);
         qdrc_endpoint_send_CT(client->core, client->endpoint, dlv, true);

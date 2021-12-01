@@ -1154,11 +1154,15 @@ class MessageAnnotationsStripBothAddIngressTrace(MessagingHandler):
         if event.sender == self.sender:
             if self.msg_not_sent:
                 msg = Message(body={'number': 0})
+                ingress_delivery_annotations = {'x-opt-qd.trace': 999,
+                                                'Hello': 'there'}
                 ingress_message_annotations = {'work': 'hard',
                                                'x-opt-qd': 'humble',
                                                'x-opt-qd.ingress': 'ingress-router',
                                                'x-opt-qd.trace': ['0/QDR.A']}
                 msg.annotations = ingress_message_annotations
+                msg.instructions = {'x-opt-qd.trace': 999,
+                                    'Hello': 'there'}
                 event.sender.send(msg)
                 self.msg_not_sent = False
 
@@ -1166,7 +1170,11 @@ class MessageAnnotationsStripBothAddIngressTrace(MessagingHandler):
         if self.receiver == event.receiver:
             if 0 == event.message.body['number']:
                 if event.message.annotations == {'work': 'hard', 'x-opt-qd': 'humble'}:
-                    self.error = None
+                    if event.message.instructions == {'x-opt-qd.trace': 999,
+                                                      'Hello': 'there'}:
+                        self.error = None
+                    else:
+                        self.error = "invalid delivery annos: %s" % event.message.instructions
             self.timer.cancel()
             self.conn1.close()
             self.conn2.close()
