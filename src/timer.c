@@ -249,7 +249,11 @@ void qd_timer_schedule(qd_timer_t *timer, qd_duration_t duration)
     }
 
     qd_timer_t *first = DEQ_HEAD(scheduled_timers);
-    qd_server_timeout(first->server, first->delta_time);
+    // Don't need to set timeout if qd_timer_visit is running on another thread now
+    // Because qd_timer_visit will itself deal with rescheduling the timers
+    if (!callback_thread) {
+        qd_server_timeout(first->server, first->delta_time);
+    }
     sys_mutex_unlock(lock);
 }
 
