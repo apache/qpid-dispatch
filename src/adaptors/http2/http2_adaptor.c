@@ -45,6 +45,7 @@ static const int BACKLOG = 50;  /* Listening backlog */
 
 #define DEFAULT_CAPACITY 250
 #define READ_BUFFERS 4
+#define NUM_ALPN_PROTOCOLS 1
 #define WRITE_BUFFERS 4
 #define ARRLEN(x) (sizeof(x) / sizeof(x[0]))
 
@@ -68,6 +69,7 @@ typedef struct qdr_http2_adaptor_t {
 static qdr_http2_adaptor_t *http2_adaptor;
 const int32_t WINDOW_SIZE = 65536;
 const int32_t MAX_FRAME_SIZE = 16384;
+const char *protocols[] = {"h2"};
 
 static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void *context);
 static void _http_record_request(qdr_http2_connection_t *conn, qdr_http2_stream_data_t *stream_data);
@@ -75,6 +77,34 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
 static void clean_conn_buffs(qdr_http2_connection_t* conn);
 static void handle_raw_connected_event(qdr_http2_connection_t *conn);
 static void handle_outgoing_tls(qdr_http2_connection_t *conn, const pn_raw_buffer_t *outgoing_buff, size_t outgoing_buff_size, bool can_write_buffers);
+
+
+/**
+ * If an ALPN protocol was detected by the TLS API, we make sure that the protocol matches the "h2" protocol.
+ * The connection is simply closed if any other protocol (other than h2) was detected.
+ * It is ok for no protocol to be detected which means that the other side might not be doing ALPN. If this is the case,
+ * we still continue sending http2 frames and close the connection if the response to those http2 frames is non-http2.
+ *
+ */
+static void check_alpn_protocol(qdr_http2_connection_t *http_conn) {
+
+    char buf[256];  // max possible size including terminating null
+    if (pn_tls_get_alpn_protocol(http_conn->tls_session, buf, 256)) {
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Using protocol %s obtained via ALPN", http_conn->conn_id, buf);
+        if (strcmp(buf, protocols[0])) {
+            // The protocol received from ALPN is not h2, we will fail and close this connection.
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"] conn->ingress=%i, Error in ALPN: was expecting protocol %s but got %s", http_conn->conn_id, http_conn->ingress, protocols[0], buf);
+            pn_raw_connection_read_close(http_conn->pn_raw_conn);
+        }
+    }
+    else {
+        //
+        // No protocol was received via ALPN. This could mean that the other side does not do ALPN and that is ok.
+        //
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] No ALPN protocol was returned", http_conn->conn_id);
+    }
+    http_conn->alpn_check_complete = true;
+}
 
 static void free_all_connection_streams(qdr_http2_connection_t *http_conn, bool on_shutdown)
 {
@@ -1652,6 +1682,13 @@ static bool connection_configure_tls(qdr_http2_connection_t *conn)
             break;
         }
 
+
+        //
+        // Provide an ordered list of application protocols for ALPN by calling pn_tls_domain_set_alpn_protocols. In our case, h2 is the only supported protocol.
+        // A list of protocols can be found here - https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.txt
+        //
+        pn_tls_domain_set_alpn_protocols(conn->tls_domain, protocols, NUM_ALPN_PROTOCOLS);
+
         // set up tls session
         conn->tls_session = pn_tls(conn->tls_domain);
         int ret = pn_tls_start(conn->tls_session);
@@ -2542,6 +2579,8 @@ static void handle_outgoing_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
         if (!process_tls(conn))
             return;
 
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_outgoing_tls process_tls successful", conn->conn_id);
+
         pn_raw_buffer_t take_encrypted_result_buffer;
         size_t take_encrypted_result_buffers_count = pn_tls_take_encrypt_output_buffers(conn->tls_session, &take_encrypted_result_buffer, 1);
         (void)take_encrypted_result_buffers_count;
@@ -2619,13 +2658,15 @@ static bool handle_incoming_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
                 take_back_input_decrypt_buff(conn);
                 return false;
             }
+            if (!conn->alpn_check_complete)
+                check_alpn_protocol(conn);
 
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_tls process_tls successful, result=%zu", conn->conn_id, result);
         }
 
         pn_raw_buffer_t take_decrypted_output_buff;
         while (pn_tls_take_decrypt_output_buffers(conn->tls_session, &take_decrypted_output_buff, 1)) {
-            if (!conn->handled_connected_event && conn->ingress) {
+            if (!conn->handled_connected_event) {
                 handle_raw_connected_event(conn);
             }
             close_conn = push_rx_buffer_to_nghttp2(conn, (uint8_t*)take_decrypted_output_buff.bytes, take_decrypted_output_buff.size);
@@ -2639,11 +2680,6 @@ static bool handle_incoming_tls(qdr_http2_connection_t *conn, const pn_raw_buffe
     conn->tls_has_output = pn_tls_get_encrypt_output_pending(conn->tls_session) > 0;
 
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_tls conn->tls_has_output=%i", conn->conn_id, conn->tls_has_output);
-
-    if (pn_tls_can_encrypt(conn->tls_session) && !conn->handled_connected_event && !conn->ingress) {
-        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] HTTP2 handle_incoming_pn_tls_can_encrypt", conn->conn_id);
-        handle_raw_connected_event(conn);
-    }
 
     take_back_input_decrypt_buff(conn);
 
@@ -3071,6 +3107,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     qd_log_source_t *log = http2_adaptor->log_source;
     switch (pn_event_type(e)) {
     case PN_RAW_CONNECTION_CONNECTED: {
+        conn->alpn_check_complete = false;
         conn->goaway_received = false;
         if (conn->require_tls) {
             conn->tls_error = false;

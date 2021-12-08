@@ -109,11 +109,19 @@ class Http2TestBase(TestCase):
             return self.curl_args
         return args
 
-    def run_curl(self, address, args=None, input=None, timeout=TIMEOUT):
+    def run_curl(self, address, args=None, input=None, timeout=TIMEOUT,
+                 http2_prior_knowledge=True,
+                 no_alpn=False,
+                 assert_status=True):
         """
         Run the curl command using the HTTP/2 protocol
         """
-        local_args = [str(address), "--http2-prior-knowledge"]
+        local_args = [str(address)]
+        if http2_prior_knowledge:
+            local_args += ["--http2-prior-knowledge"]
+        if no_alpn:
+            local_args += ["--no-alpn"]
+
         if args:
             local_args += args
 
@@ -121,8 +129,13 @@ class Http2TestBase(TestCase):
         if status != 0:
             print("CURL ERROR (%s): %s %s" % (status, out, err), flush=True)
 
-        assert status == 0
-        return out
+        if assert_status:
+            assert status == 0
+        if out:
+            return out
+        if err:
+            return err
+        return None
 
 
 class CommonHttp2Tests:
@@ -848,6 +861,39 @@ class Http2TestTlsTwoRouter(Http2TestTwoRouter, RouterTestSslBase):
                          '--cert', cls.ssl_file('client-certificate.pem') + ":client-password",
                          '--key', cls.ssl_file('client-private-key.pem')]
         sleep(1)
+
+    @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    # Tests the HTTP2 head request without http2-prior-knowledge
+    def test_head_request_no_http2_prior_knowledge(self):
+        # Run curl 127.0.0.1:port --head
+        # In this test, we do not use curl's --http2-prior-knowledge flag. This means that curl client will first offer
+        # http1 and http2 (h2) as the protocol list in ClientHello ALPN (since the curl client by default does
+        # ALPN over TLS). The router will respond back with just h2 in its
+        # ALPN response. curl will then know that the server (router) speaks only http2 and hence when the TLS handshake
+        # between curl and the server (router) is successful, curl starts speaking http2 to the server (router).
+        # If this test works, it is proof that ALPN over TLS is working.
+        address = self.router_qdra.http_addresses[0]
+        out = self.run_curl(address, args=self.get_all_curl_args(['--head']), http2_prior_knowledge=False)
+        self.assertIn('HTTP/2 200', out)
+        self.assertIn('server: hypercorn-h2', out)
+        self.assertIn('content-type: text/html; charset=utf-8', out)
+
+    @unittest.skipIf(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    # Tests the HTTP2 head request without APLN and without http2-prior-knowledge
+    def test_head_request_no_alpn_no_http2_prior_knowledge(self):
+        # Run curl 127.0.0.1:port --head --no-alpn
+        # In this test, we do not use curl's --http2-prior-knowledge flag but instead use the --no-alpn flag.
+        # This means that curl client will not offer an ALPN protocol at all. The router (server) sends back 'h2'
+        # in its ALPN response which is ignored by the curl client.
+        # The TLS handshake is successful and curl receives a http2 settings frame from the router which it does
+        # not understand. Hence it complains with the error message
+        # 'Received HTTP/0.9 when not allowed'
+        address = self.router_qdra.http_addresses[0]
+        out = self.run_curl(address,
+                            args=self.get_all_curl_args(['--head']),
+                            http2_prior_knowledge=False,
+                            no_alpn=True, assert_status=False)
+        self.assertIn('Received HTTP/0.9 when not allowed', out)
 
 
 class Http2TestEdgeInteriorRouter(Http2TestBase, CommonHttp2Tests):
