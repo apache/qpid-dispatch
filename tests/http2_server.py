@@ -119,4 +119,3 @@ if os.getenv('SERVER_TLS') == "yes":
             ca_certs=os.getenv('SERVER_CA_CERT'))
 else:
     app.run(port=os.getenv('SERVER_LISTEN_PORT'))
-

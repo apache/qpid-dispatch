@@ -717,7 +717,7 @@ class Qdrouterd(Process):
     def is_router_connected(self, router_id, **retry_kwargs):
         node = None
         try:
-            ide="router.node/%s" % router_id
+            ide = "router.node/%s" % router_id
             self.management.read(identity=ide)
             node = Node.connect(self.addresses[0], router_id, timeout=1)
             return retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))

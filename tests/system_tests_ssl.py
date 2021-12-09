@@ -54,6 +54,12 @@ class RouterTestSslBase(TestCase):
         return os.path.join(DIR, 'ssl_certs', name)
 
     @classmethod
+    def get_byte_string(cls, file_path):
+        with open(file_path, 'rb') as f:
+            credentials = f.read()
+        return credentials
+
+    @classmethod
     def create_sasl_files(cls):
         """
         Creates the SASL DB

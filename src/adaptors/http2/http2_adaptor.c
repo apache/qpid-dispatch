@@ -751,23 +751,25 @@ static int send_data_callback(nghttp2_session *session,
 
     if (require_tls) {
         size_t num_local_buffs = DEQ_SIZE(local_buffs);
-        // num_local_buffs should usually be 1 (16k) but can go to max of 4 (64k)
-        pn_raw_buffer_t raw_buffers[num_local_buffs];
+        if (num_local_buffs > 0) {
+            // num_local_buffs should usually be 1 (16k) but can go to max of 4 (64k)
+            pn_raw_buffer_t raw_buffers[num_local_buffs];
 
-        //
-        // Create a mapping between local http2 buffers and raw buffers.
-        //
-        qd_http2_buffer_t *local_http2_buff = DEQ_HEAD(local_buffs);
-        for (size_t i=0; i<num_local_buffs; i++) {
-            raw_buffers[i].bytes = (char*) qd_http2_buffer_base(local_http2_buff);
-            raw_buffers[i].capacity = qd_http2_buffer_capacity(local_http2_buff);
-            raw_buffers[i].size = qd_http2_buffer_size(local_http2_buff);
-            raw_buffers[i].offset = 0;
-            raw_buffers[i].context = (uintptr_t) local_http2_buff;
-            local_http2_buff = DEQ_NEXT(local_http2_buff);
+            //
+            // Create a mapping between local http2 buffers and raw buffers.
+            //
+            qd_http2_buffer_t *local_http2_buff = DEQ_HEAD(local_buffs);
+            for (size_t i=0; i<num_local_buffs; i++) {
+                raw_buffers[i].bytes = (char*) qd_http2_buffer_base(local_http2_buff);
+                raw_buffers[i].capacity = qd_http2_buffer_capacity(local_http2_buff);
+                raw_buffers[i].size = qd_http2_buffer_size(local_http2_buff);
+                raw_buffers[i].offset = 0;
+                raw_buffers[i].context = (uintptr_t) local_http2_buff;
+                local_http2_buff = DEQ_NEXT(local_http2_buff);
+            }
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] send_data_callback require_tls, num_local_buffs=%zu", conn->conn_id, stream_data->stream_id, num_local_buffs);
+            handle_outgoing_tls(conn, raw_buffers, num_local_buffs, write_buffs);
         }
-        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] send_data_callback require_tls, num_local_buffs=%zu", conn->conn_id, stream_data->stream_id, num_local_buffs);
-        handle_outgoing_tls(conn, raw_buffers, num_local_buffs, write_buffs);
     }
 
     if (stream_data->full_payload_handled) {

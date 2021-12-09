@@ -20,6 +20,7 @@
 from concurrent import futures
 
 import grpc
+from system_tests_ssl import RouterTestSslBase
 
 from friendship_pb2 import Person, CreateResult, PersonEmail, CommonFriendsResult, FriendshipResponse
 from friendship_pb2_grpc import FriendshipServicer, add_FriendshipServicer_to_server
@@ -88,6 +89,29 @@ class FriendShipService(FriendshipServicer):
             if p.email == email:
                 return p
         return None
+
+
+def serve_secure(port, options=None):
+    '''
+    Starts a GRPC server on secure port.
+    :param port:
+    :param options:
+    :return:
+    '''
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1),
+                         options=options)
+    add_FriendshipServicer_to_server(FriendShipService(), server)
+    server_ca = RouterTestSslBase.get_byte_string(RouterTestSslBase.ssl_file('ca-certificate.pem'))
+    server_cert = RouterTestSslBase.get_byte_string(RouterTestSslBase.ssl_file('server-certificate.pem'))
+    server_key = RouterTestSslBase.get_byte_string(RouterTestSslBase.ssl_file('server-private-key-no-pass.pem'))
+    server_credentials = grpc.ssl_server_credentials([(server_key, server_cert)],
+                                                     root_certificates=server_ca,
+                                                     require_client_auth=True)
+    # The server will listen on a TLS enabled secure port.
+    # The router connector will connect to this secure port.
+    server.add_secure_port('[::]:%s' % port, server_credentials)
+    server.start()
+    return server
 
 
 def serve(port, options=None):

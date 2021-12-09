@@ -28,6 +28,8 @@ try:
 except ImportError:
     _GRPC_UNAVAILABLE = True
 
+from system_tests_ssl import RouterTestSslBase
+
 
 def skip_test():
     """If grpc cannot be imported, test must be skipped"""
@@ -203,3 +205,63 @@ class GrpcServiceMethodsTest(TestCase):
             assert res.count == len(exp_friends)
             assert (all(f in res.friends for f in exp_friends))
             assert (all(f in exp_friends for f in res.friends))
+
+
+class GrpcServiceMethodsTestOverTls(GrpcServiceMethodsTest, RouterTestSslBase):
+    @classmethod
+    def setUpClass(cls):
+        super(GrpcServiceMethodsTestOverTls, cls).setUpClass()
+        if skip_test():
+            return
+
+        # Define a random port for  the gRPC server to bind
+        cls.grpc_server_port = str(cls.tester.get_port())
+
+        # Run the gRPC server which will listen on a secure port (see friendship_server.py for more info)
+        cls.grpc_server = fs.serve_secure(cls.grpc_server_port)
+        cls.router_http_port = cls.tester.get_port()
+
+        # Prepare router to communicate with the gRPC server
+        cls.connector_props = {
+            # This grpc_server_port is a secure TLS enabled port and the router connector will
+            # connect to this port.
+            'port': cls.grpc_server_port,
+            'address': 'examples',
+            'host': 'localhost',
+            'protocolVersion': 'HTTP2',
+            'name': 'grpc-server',
+            'sslProfile': 'http-connector-ssl-profile'
+        }
+        cls.listener_props = {
+            'port': cls.router_http_port,
+            'address': 'examples',
+            'host': 'localhost',
+            'authenticatePeer': 'no',
+            'protocolVersion': 'HTTP2',
+            'sslProfile': 'http-listener-ssl-profile'
+        }
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('sslProfile', {'name': 'http-listener-ssl-profile',
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'password': 'server-password'}),
+            ('httpListener', cls.listener_props),
+            ('httpConnector', cls.connector_props),
+            ('sslProfile', {'name': 'http-connector-ssl-profile',
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('client-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('client-private-key.pem'),
+                            'password': 'client-password'})
+        ])
+        cls.router_qdr = cls.tester.qdrouterd("grpc-test-router", config, wait=True)
+
+        ca_certificate = RouterTestSslBase.get_byte_string(cls.ssl_file('ca-certificate.pem'))
+        credentials = grpc.ssl_channel_credentials(root_certificates=ca_certificate)
+
+        # The GRPC client is opening a secure channel to the TLS enabled router listener port which has its
+        # sslProfile as http-listener-ssl-profile
+        cls.secure_grpc_channel = grpc.secure_channel('localhost:%s' % cls.router_http_port, credentials=credentials)
+        cls.grpc_stub = FriendshipStub(cls.secure_grpc_channel)
