@@ -739,6 +739,7 @@ const char *qd_parse_annotations(
     blob_pointer->buffer = ma_map.value.buffer;
     blob_pointer->cursor = (unsigned char*) ma_map.value.cursor;
 
+    bool user_anno = true;       // assume first annotations are non-router
     size_t user_annos_size = 0;
     uint32_t user_annos_count = 0;
 
@@ -753,9 +754,6 @@ const char *qd_parse_annotations(
         error = parse_amqp_field(&ma_fields, &key);
         if (error)
             return error;
-
-        // ignore annotations provided by the user
-        bool user_anno = true;
 
         if (key.tag == QD_AMQP_SYM8 || key.tag == QD_AMQP_SYM32) {
 
