@@ -28,15 +28,17 @@
 #include "qpid/dispatch/buffer_field.h"
 #include "qpid/dispatch/iterator.h"
 
-/* qd_buffer_field_memcpy
+/* qd_buffer_field_ncopy
  *
  * Copy up to n octets from bfield to dest, advance bfield by the number of
  * octets copied
  *
  * @return total of octets copied - may be < n if len(bfield) < n
  */
-static inline size_t qd_buffer_field_memcpy(qd_buffer_field_t *bfield, uint8_t *dest, size_t n)
+static inline size_t qd_buffer_field_ncopy(qd_buffer_field_t *bfield, uint8_t *dest, size_t n)
 {
+    assert(bfield);
+
     const uint8_t *start = dest;
     size_t count = MIN(n, bfield->length);
     if (bfield->buffer) {
@@ -90,6 +92,8 @@ static inline size_t qd_buffer_field_memcpy(qd_buffer_field_t *bfield, uint8_t *
  */
 static inline size_t qd_buffer_field_advance(qd_buffer_field_t *bfield, size_t amount)
 {
+    assert(bfield);
+
     size_t blen = bfield->length;
     size_t count = MIN(amount, blen);
     if (bfield->buffer) {
@@ -140,6 +144,8 @@ static inline size_t qd_buffer_field_advance(qd_buffer_field_t *bfield, size_t a
  */
 static inline bool qd_buffer_field_octet(qd_buffer_field_t *bfield, uint8_t *octet)
 {
+    assert(bfield);
+
     if (bfield->length) {
         bfield->length -= 1;
         *octet = *bfield->cursor++;
@@ -168,9 +174,11 @@ static inline bool qd_buffer_field_octet(qd_buffer_field_t *bfield, uint8_t *oct
  */
 static inline bool qd_buffer_field_uint32(qd_buffer_field_t *bfield, uint32_t *value)
 {
+    assert(bfield);
+
     if (bfield->length >= 4) {
         uint8_t buf[4];
-        qd_buffer_field_memcpy(bfield, buf, 4);
+        qd_buffer_field_ncopy(bfield, buf, 4);
         *value = (((uint32_t) buf[0]) << 24)
             | (((uint32_t) buf[1]) << 16)
             | (((uint32_t) buf[2]) << 8)
@@ -192,9 +200,11 @@ static inline bool qd_buffer_field_uint32(qd_buffer_field_t *bfield, uint32_t *v
  */
 static inline char *qd_buffer_field_strdup(qd_buffer_field_t *bfield)
 {
+    assert(bfield);
+
     const size_t len = bfield->length + 1;
     char *str = qd_malloc(len);
-    qd_buffer_field_memcpy(bfield, (uint8_t*) str, bfield->length);
+    qd_buffer_field_ncopy(bfield, (uint8_t*) str, bfield->length);
     str[len - 1] = 0;
     return str;
 }
@@ -209,6 +219,8 @@ static inline char *qd_buffer_field_strdup(qd_buffer_field_t *bfield)
  */
 static inline bool qd_buffer_field_equal(qd_buffer_field_t *bfield, const uint8_t *data, size_t count)
 {
+    assert(bfield);
+
     if (bfield->length < count)
         return false;
 
@@ -277,6 +289,9 @@ static inline bool qd_buffer_field_equal(qd_buffer_field_t *bfield, const uint8_
 
 static inline void qd_buffer_list_append_field(qd_buffer_list_t *buflist, qd_buffer_field_t *bfield)
 {
+    assert(buflist);
+    assert(bfield);
+
     while (bfield->length) {
         size_t avail = bfield->buffer ? qd_buffer_cursor(bfield->buffer) - bfield->cursor
             : bfield->length;
@@ -298,6 +313,8 @@ static inline void qd_buffer_list_append_field(qd_buffer_list_t *buflist, qd_buf
 static inline qd_iterator_t *qd_buffer_field_iterator(const qd_buffer_field_t *bfield,
                                                       qd_iterator_view_t view)
 {
+    assert(bfield);
+    
     if (bfield->buffer)
         return qd_iterator_buffer(bfield->buffer,
                                   bfield->cursor - qd_buffer_base(bfield->buffer),

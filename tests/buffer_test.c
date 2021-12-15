@@ -226,29 +226,29 @@ static char *test_buffer_field(void *context)
         goto exit;
     }
 
-    // verify memcpy
+    // verify ncopy
 
     bfield.buffer = DEQ_HEAD(list);
     bfield.cursor = qd_buffer_base(bfield.buffer);
     bfield.length = 2000;
 
     uint8_t dest[10];
-    amount = qd_buffer_field_memcpy(&bfield, dest, 5);
+    amount = qd_buffer_field_ncopy(&bfield, dest, 5);
     if (amount != 5) {
-        result = "failed to memcpy 5";
+        result = "failed to ncopy 5";
         goto exit;
     }
     if (memcmp(dest, data1, 5)) {
-        result = "memcpy 5 failed";
+        result = "ncopy 5 failed";
         goto exit;
     }
-    amount = qd_buffer_field_memcpy(&bfield, dest, 10);
+    amount = qd_buffer_field_ncopy(&bfield, dest, 10);
     if (amount != 10) {
-        result = "failed to memcpy 10";
+        result = "failed to ncopy 10";
         goto exit;
     }
     if (memcmp(dest, &data1[5], 5) || memcmp(&dest[5], &data2[0], 5)) {
-        result = "memcpy 10 failed";
+        result = "ncopy 10 failed";
         goto exit;
     }
     amount = qd_buffer_field_advance(&bfield, 1980);
@@ -256,13 +256,13 @@ static char *test_buffer_field(void *context)
         result = "advance 1980 failed";
         goto exit;
     }
-    amount = qd_buffer_field_memcpy(&bfield, dest, 10);
+    amount = qd_buffer_field_ncopy(&bfield, dest, 10);
     if (amount != 5) {
-        result = "memcpy expected 5 failed";
+        result = "ncopy expected 5 failed";
         goto exit;
     }
     if (memcmp(dest, &data2[5], 5) || bfield.length != 0) {
-        result = "memcpy at end failed";
+        result = "ncopy at end failed";
         goto exit;
     }
 
@@ -303,9 +303,13 @@ static char *test_buffer_field(void *context)
         result = "mismatch advanced";
         goto exit;
     }
-    if (!qd_buffer_field_equal(&bfield, &pattern[10], 10)) {
+    if (!qd_buffer_field_equal(&bfield, &pattern[10], 9 )) {
         result = "expected end sub pattern match";
         goto exit;
+    }
+
+    if (!qd_buffer_field_octet(&bfield, &octet) || octet != 0xF0) {
+        result = "failed to octet read the extra trailing octet in the pattern";
     }
 
     // verify equal using raw string
@@ -346,7 +350,7 @@ static char *test_buffer_field(void *context)
     static const uint8_t u32_data[] = {
         0x00, 0x00, 0x00, 0x01,
         0x80, 0x00, 0x00, 0x00,
-        0x00
+        0x02
     };
     uint32_t u32_value = 0;
 
@@ -377,6 +381,10 @@ static char *test_buffer_field(void *context)
     if (qd_buffer_field_uint32(&bfield, &u32_value)) {
         result = "expected to fail extracting 3rd uint32";
         goto exit;
+    }
+
+    if (!qd_buffer_field_octet(&bfield, &octet) || octet != 2) {
+        result = "failed to octet read the extra trailing octet";
     }
 
     // verify buffer list append
