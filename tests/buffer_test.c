@@ -312,81 +312,6 @@ static char *test_buffer_field(void *context)
         result = "failed to octet read the extra trailing octet in the pattern";
     }
 
-    // verify equal using raw string
-
-    static const char *eq_str = "ABCDEFGHIJK";
-
-    bfield.buffer = 0;
-    bfield.cursor = (const uint8_t*) eq_str;
-    bfield.length = strlen(eq_str);
-
-    if (!qd_buffer_field_equal(&bfield, (const uint8_t*) "ABC", 3)) {
-        result = "expected match of ABC";
-        goto exit;
-    }
-
-    if (qd_buffer_field_equal(&bfield,  (const uint8_t*) "ABC", 3)) {
-        result = "expected not to match ABC";
-        goto exit;
-    }
-
-    if (qd_buffer_field_equal(&bfield,  (const uint8_t*) "DEFGHIJKX", 9)) {
-        result = "expected not to match DEFGHIJKX";
-        goto exit;
-    }
-
-    if (!qd_buffer_field_equal(&bfield,  (const uint8_t*) "DEFGHIJK", 8)) {
-        result = "expected to match DEFGHIJK";
-        goto exit;
-    }
-
-    if (bfield.length != 0) {
-        result = "expected bfield to be empty";
-        goto exit;
-    }
-
-    // verify uint32 using raw binary
-
-    static const uint8_t u32_data[] = {
-        0x00, 0x00, 0x00, 0x01,
-        0x80, 0x00, 0x00, 0x00,
-        0x02
-    };
-    uint32_t u32_value = 0;
-
-    bfield.buffer = 0;
-    bfield.cursor = &u32_data[0];
-    bfield.length = sizeof(u32_data);
-
-    if (!qd_buffer_field_uint32(&bfield, &u32_value)) {
-        result = "expected to extract first integer";
-        goto exit;
-    }
-
-    if (u32_value != 1) {
-        result = "expected uint32 of 1";
-        goto exit;
-    }
-
-    if (!qd_buffer_field_uint32(&bfield, &u32_value)) {
-        result = "expected to extract second integer";
-        goto exit;
-    }
-
-    if (u32_value != 2147483648) {
-        result = "expected uint32 of 2147483648";
-        goto exit;
-    }
-
-    if (qd_buffer_field_uint32(&bfield, &u32_value)) {
-        result = "expected to fail extracting 3rd uint32";
-        goto exit;
-    }
-
-    if (!qd_buffer_field_octet(&bfield, &octet) || octet != 2) {
-        result = "failed to octet read the extra trailing octet";
-    }
-
     // verify buffer list append
 
     bfield.buffer = DEQ_HEAD(list);
@@ -425,10 +350,7 @@ static char *test_buffer_field(void *context)
     qd_buffer_list_free_buffers(&other_list);
 
     const char *append_str = "abcdefghijklmnopqrstuvwxyz";
-    bfield.buffer = 0;
-    bfield.cursor = (const uint8_t*) append_str;
-    bfield.length = strlen(append_str);
-    qd_buffer_list_append_field(&other_list, &bfield);
+    qd_buffer_list_append(&other_list, (const uint8_t *)append_str, strlen(append_str));
 
     bfield.buffer = DEQ_HEAD(other_list);
     bfield.cursor = qd_buffer_base(bfield.buffer);

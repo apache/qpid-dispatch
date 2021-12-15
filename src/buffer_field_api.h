@@ -41,46 +41,38 @@ static inline size_t qd_buffer_field_ncopy(qd_buffer_field_t *bfield, uint8_t *d
 
     const uint8_t *start = dest;
     size_t count = MIN(n, bfield->length);
-    if (bfield->buffer) {
-        while (count) {
-            size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
-            if (count < avail) {
-                // fastpath: no need to adjust buffer pointers
-                memcpy(dest, bfield->cursor, count);
-                dest += count;
-                bfield->cursor += count;
-                bfield->length -= count;
-                return dest - start;
+
+    while (count) {
+        size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
+        if (count < avail) {
+            // fastpath: no need to adjust buffer pointers
+            memcpy(dest, bfield->cursor, count);
+            dest += count;
+            bfield->cursor += count;
+            bfield->length -= count;
+            return dest - start;
+        }
+
+        // count is >= what is available in the current buffer
+        memcpy(dest, bfield->cursor, avail);
+        dest += avail;
+        count -= avail;
+        bfield->length -= avail;
+        bfield->cursor += avail;
+        if (bfield->length) {
+            bfield->buffer = DEQ_NEXT(bfield->buffer);
+            if (bfield->buffer) {
+                bfield->cursor = (const uint8_t *)qd_buffer_base(bfield->buffer);
+            } else {
+                // DISPATCH-1394: field is truncated (length is inaccurate!)
+                bfield->length = 0;
+                count = 0;
+                assert(false);  // TODO(KAG): is this fixed?
             }
+        }
+    } while (count);
 
-            // count is >= what is available in the current buffer
-            memcpy(dest, bfield->cursor, avail);
-            dest += avail;
-            count -= avail;
-            bfield->length -= avail;
-            bfield->cursor += avail;
-            if (bfield->length) {
-                bfield->buffer = DEQ_NEXT(bfield->buffer);
-                if (bfield->buffer) {
-                    bfield->cursor = (const uint8_t *)qd_buffer_base(bfield->buffer);
-                } else {
-                    // DISPATCH-1394: field is truncated (length is inaccurate!)
-                    bfield->length = 0;
-                    count = 0;
-                    assert(false);  // TODO(KAG): is this fixed?
-                }
-            }
-        } while (count);
-
-        return dest - start;
-
-    } else {    // string/binary data
-
-        memcpy(dest, bfield->cursor, count);
-        bfield->cursor += count;
-        bfield->length -= count;
-        return count;
-    }
+    return dest - start;
 }
 
 
@@ -96,39 +88,33 @@ static inline size_t qd_buffer_field_advance(qd_buffer_field_t *bfield, size_t a
 
     size_t blen = bfield->length;
     size_t count = MIN(amount, blen);
-    if (bfield->buffer) {
 
-        while (count > 0) {
-            size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
+    while (count > 0) {
+        size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
 
-            if (count < avail) {
-                // fastpath: no need to adjust buffer pointers
-                bfield->cursor += count;
-                bfield->length -= count;
-                break;
-            }
-
-            // count is > what is available in the current buffer, move to next
-            count -= avail;
-            bfield->length -= avail;
-            bfield->cursor += avail;
-            if (bfield->length) {
-                bfield->buffer = DEQ_NEXT(bfield->buffer);
-                if (bfield->buffer) {
-                    bfield->cursor = qd_buffer_base(bfield->buffer);
-                } else {
-                    // DISPATCH-1394: field is truncated (length is inaccurate!)
-                    size_t actual = blen - bfield->length;
-                    bfield->length = 0;
-                    assert(false);  // TODO(KAG): is this fixed?
-                    return actual;
-                }
-            }
+        if (count < avail) {
+            // fastpath: no need to adjust buffer pointers
+            bfield->cursor += count;
+            bfield->length -= count;
+            break;
         }
 
-     } else {    // string/binary data
-        bfield->cursor += count;
-        bfield->length -= count;
+        // count is > what is available in the current buffer, move to next
+        count -= avail;
+        bfield->length -= avail;
+        bfield->cursor += avail;
+        if (bfield->length) {
+            bfield->buffer = DEQ_NEXT(bfield->buffer);
+            if (bfield->buffer) {
+                bfield->cursor = qd_buffer_base(bfield->buffer);
+            } else {
+                // DISPATCH-1394: field is truncated (length is inaccurate!)
+                size_t actual = blen - bfield->length;
+                bfield->length = 0;
+                assert(false);  // TODO(KAG): is this fixed?
+                return actual;
+            }
+        }
     }
 
     return blen - bfield->length;
@@ -148,15 +134,15 @@ static inline bool qd_buffer_field_octet(qd_buffer_field_t *bfield, uint8_t *oct
 
     if (bfield->length) {
         bfield->length -= 1;
-        *octet = *bfield->cursor++;
-        // adjust cursor if necessary
-        while (bfield->buffer
-               && bfield->cursor == qd_buffer_cursor(bfield->buffer)
-               && bfield->length) {
+
+        // move to the next octet if none available in this buffer
+        while (bfield->cursor >= qd_buffer_cursor(bfield->buffer)) {
             bfield->buffer = DEQ_NEXT(bfield->buffer);
             assert(bfield->buffer);
             bfield->cursor = qd_buffer_base(bfield->buffer);
         }
+
+        *octet = *bfield->cursor++;
         return true;
     }
     return false;
@@ -226,54 +212,44 @@ static inline bool qd_buffer_field_equal(qd_buffer_field_t *bfield, const uint8_
 
     const qd_buffer_field_t save = *bfield;
 
-    if (bfield->buffer) {
+    while (count) {
 
-        while (count) {
+        size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
 
-            size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
-
-            if (count < avail) {
-                // fastpath: no need to adjust buffer pointers
-                if (memcmp(data, bfield->cursor, count) != 0) {
-                    *bfield = save;
-                    return false;
-                }
-                bfield->cursor += count;
-                bfield->length -= count;
-                return true;
-            }
-
-            // count is > what is available in the current buffer, move to next
-            if (memcmp(data, bfield->cursor, avail) != 0) {
+        if (count < avail) {
+            // fastpath: no need to adjust buffer pointers
+            if (memcmp(data, bfield->cursor, count) != 0) {
                 *bfield = save;
                 return false;
             }
-
-            data += avail;
-            count -= avail;
-            bfield->cursor += avail;
-            bfield->length -= avail;
-            if (bfield->length) {
-                bfield->buffer = DEQ_NEXT(bfield->buffer);
-                if (bfield->buffer) {
-                    bfield->cursor = qd_buffer_base(bfield->buffer);
-                } else {
-                    // DISPATCH-1394: field is truncated (remaining is inaccurate!)
-                    *bfield = save;
-                    assert(false);  // TODO(KAG): is this fixed?
-                    return false;
-                }
-            }
+            bfield->cursor += count;
+            bfield->length -= count;
+            return true;
         }
-    } else {  // string or binary array
 
-        if (memcmp(data, bfield->cursor, count) != 0) {
+        // count is > what is available in the current buffer, move to next
+        if (memcmp(data, bfield->cursor, avail) != 0) {
+            *bfield = save;
             return false;
         }
 
-       bfield->cursor += count;
-       bfield->length -= count;
+        data += avail;
+        count -= avail;
+        bfield->cursor += avail;
+        bfield->length -= avail;
+        if (bfield->length) {
+            bfield->buffer = DEQ_NEXT(bfield->buffer);
+            if (bfield->buffer) {
+                bfield->cursor = qd_buffer_base(bfield->buffer);
+            } else {
+                // DISPATCH-1394: field is truncated (remaining is inaccurate!)
+                *bfield = save;
+                assert(false);  // TODO(KAG): is this fixed?
+                return false;
+            }
+        }
     }
+
     return true;
 }
 
@@ -293,8 +269,7 @@ static inline void qd_buffer_list_append_field(qd_buffer_list_t *buflist, qd_buf
     assert(bfield);
 
     while (bfield->length) {
-        size_t avail = bfield->buffer ? qd_buffer_cursor(bfield->buffer) - bfield->cursor
-            : bfield->length;
+        size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
         size_t len = MIN(bfield->length, avail);
 
         qd_buffer_list_append(buflist, bfield->cursor, len);
@@ -302,8 +277,8 @@ static inline void qd_buffer_list_append_field(qd_buffer_list_t *buflist, qd_buf
         if (!bfield->length) {
             bfield->cursor += len;
         } else {
-            assert(bfield->buffer && DEQ_NEXT(bfield->buffer));
             bfield->buffer = DEQ_NEXT(bfield->buffer);
+            assert(bfield->buffer);
             bfield->cursor = qd_buffer_base(bfield->buffer);
         }
     }
@@ -314,14 +289,11 @@ static inline qd_iterator_t *qd_buffer_field_iterator(const qd_buffer_field_t *b
                                                       qd_iterator_view_t view)
 {
     assert(bfield);
-    
-    if (bfield->buffer)
-        return qd_iterator_buffer(bfield->buffer,
-                                  bfield->cursor - qd_buffer_base(bfield->buffer),
-                                  bfield->length,
-                                  view);
-    else
-        return qd_iterator_binary((const char*) bfield->cursor, bfield->length, view);
+
+    return qd_iterator_buffer(bfield->buffer,
+                              bfield->cursor - qd_buffer_base(bfield->buffer),
+                              bfield->length,
+                              view);
 }
 ///@}
 
