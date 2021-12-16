@@ -137,6 +137,7 @@ struct qdr_action_t {
             qd_detach_type_t     dt;
             int                  credit;
             bool                 drain;
+            bool                 enable_protocol_trace;
             qdr_delivery_t      *initial_delivery;
         } connection;
 

@@ -125,6 +125,9 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
     set_safe_ptr_qdr_connection_t(conn, &action->args.connection.conn);
     action->args.connection.connection_label = qdr_field(label);
     action->args.connection.container_id     = qdr_field(remote_container_id);
+    if (qd_log_enabled(qd_log_source("PROTOCOL"), QD_LOG_TRACE)) {
+        action->args.connection.enable_protocol_trace = true;
+    }
     qdr_action_enqueue(core, action);
 
     char   props_str[1000];
@@ -236,7 +239,6 @@ void *qdr_connection_get_context(const qdr_connection_t *conn)
 {
     return conn ? conn->user_context : NULL;
 }
-
 
 const char *qdr_connection_get_tenant_space(const qdr_connection_t *conn, int *len)
 {
@@ -1408,6 +1410,7 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
 
     do {
         DEQ_ITEM_INIT(conn);
+        conn->enable_protocol_trace = action->args.connection.enable_protocol_trace;
         DEQ_INSERT_TAIL(core->open_connections, conn);
 
         if (conn->role == QDR_ROLE_NORMAL) {
