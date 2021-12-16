@@ -139,6 +139,10 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
            connection_info->is_authenticated ? connection_info->sasl_mechanisms : "no",
            connection_info->user, connection_info->container, props_str);
 
+    if (qd_log_enabled(qd_log_source("PROTOCOL"), QD_LOG_TRACE)) {
+        conn->enable_protocol_trace = true;
+    }
+
     return conn;
 }
 
@@ -236,7 +240,6 @@ void *qdr_connection_get_context(const qdr_connection_t *conn)
 {
     return conn ? conn->user_context : NULL;
 }
-
 
 const char *qdr_connection_get_tenant_space(const qdr_connection_t *conn, int *len)
 {

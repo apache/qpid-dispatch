@@ -256,10 +256,8 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
 
     def test_inter_router_protocol_trace(self):
         qd_manager = QdManager(self, self.address)
-        # Turn off trace logging on all connections for Router B.
-        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"},
-                          name="log/DEFAULT")
 
+        # The router already has trace logging turned on for all connections.
         # Get the connection id of the inter-router connection
         results = qd_manager.query("org.apache.qpid.dispatch.connection")
         conn_id = None
@@ -267,45 +265,60 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
             if result['role'] == 'inter-router':
                 conn_id = result['identity']
 
-        # Turn on trace logging for the inter-router connection
-        qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "true"}, identity=conn_id)
+        # Turn off trace logging for the inter-router connection. This update command is run async by the router
+        # so we need to sleep a bit before the operation is actually completed.
+        qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "false"}, identity=conn_id)
+        time.sleep(1)
 
-        # Create a receiver and make sure the MAU update is seen on the inter-router connection log
+        inter_router_cid = "[C" + conn_id + "]"
+
+        num_transfers = 0
+        with open(self.routers[1].logfile_path) as router_log:
+            log_lines = router_log.read().split("\n")
+            for log_line in log_lines:
+                if 'PROTOCOL' in log_line and inter_router_cid in log_line and '@transfer' in log_line:
+                    num_transfers += 1
+
+        # Create a receiver. This will send an MAU update to the other router but we should not see any of that
+        # in the log since the trace logging for the inter-router connection has been turned off.
         TEST_ADDR_1 = "EnableConnectionLevelProtocolTraceTest1"
         conn_2 = BlockingConnection(self.address)
-        blocking_receiver_1 = conn_2.create_receiver(address=TEST_ADDR_1)
-
-        # Give some time for the MAU to go over the inter-router link
+        conn_2.create_receiver(address=TEST_ADDR_1)
+        # Give some time for the MAU to go over the inter-router connection.
         time.sleep(2)
-        logs = qd_manager.get_log()
-        mau_found = False
-        for log in logs:
-            if 'PROTOCOL' in log[0]:
-                if "@transfer" in log[2] and TEST_ADDR_1 in log[2] and "MAU" in log[2]:
-                    mau_found = True
-                    break
+        num_transfers_after_update = 0
+        with open(self.routers[1].logfile_path) as router_log:
+            log_lines = router_log.read().split("\n")
+            for log_line in log_lines:
+                if 'PROTOCOL' in log_line and inter_router_cid in log_line and '@transfer' in log_line:
+                    num_transfers_after_update += 1
 
-        self.assertTrue(mau_found)
+        # Since there will be no transfer frames printed in the log, there should be no more new transfers in the
+        # log file.
+        self.assertEqual(num_transfers_after_update, num_transfers)
 
-        # Turn off trace logging for the inter-router connection
-        qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "no"}, identity=conn_id)
+        # Turn on trace logging for the inter-router connection
+        qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "yes"}, identity=conn_id)
 
         # Create a receiver and make sure the MAU update is NOT seen on the inter-router connection log
         TEST_ADDR_2 = "EnableConnectionLevelProtocolTraceTest2"
         conn_1 = BlockingConnection(self.address)
-        blocking_receiver_2 = conn_1.create_receiver(address=TEST_ADDR_2)
+        conn_1.create_receiver(address=TEST_ADDR_2)
 
-        time.sleep(1)
+        #Give time for the MAU to be generated.
+        time.sleep(2)
 
-        logs = qd_manager.get_log()
-        mau_found = False
-        for log in logs:
-            if 'PROTOCOL' in log[0]:
-                if "@transfer" in log[2] and TEST_ADDR_2 in log[2] and "MAU" in log[2]:
-                    mau_found = True
-                    break
+        num_transfers_after_update = 0
+        with open(self.routers[1].logfile_path) as router_log:
+            log_lines = router_log.read().split("\n")
+            for log_line in log_lines:
+                if 'PROTOCOL' in log_line and inter_router_cid in log_line and '@transfer' in log_line:
+                    num_transfers_after_update += 1
 
-        self.assertFalse(mau_found)
+        # Since we have now turned on trace logging for the inter-router connection, we should see
+        # additional transfer frames in the log and we check that here.
+        self.assertGreater(num_transfers_after_update, num_transfers)
+
         conn_1.close()
         conn_2.close()
 
