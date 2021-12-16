@@ -224,6 +224,7 @@ qd_parsed_field_t *qd_parse(const qd_iterator_t *iter)
     if (!iter)
         return 0;
     qd_iterator_get_view_cursor(iter, &iptr);
+    assert(iptr.buffer);
     bfield.buffer = iptr.buffer;
     bfield.cursor = iptr.cursor;
     bfield.length = iptr.remaining;
