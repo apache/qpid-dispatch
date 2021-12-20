@@ -40,7 +40,7 @@ static inline size_t qd_buffer_field_ncopy(qd_buffer_field_t *bfield, uint8_t *d
     assert(bfield);
 
     const uint8_t *start = dest;
-    size_t count = MIN(n, bfield->length);
+    size_t count = MIN(n, bfield->remaining);
 
     while (count) {
         size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
@@ -49,7 +49,7 @@ static inline size_t qd_buffer_field_ncopy(qd_buffer_field_t *bfield, uint8_t *d
             memcpy(dest, bfield->cursor, count);
             dest += count;
             bfield->cursor += count;
-            bfield->length -= count;
+            bfield->remaining -= count;
             return dest - start;
         }
 
@@ -59,8 +59,8 @@ static inline size_t qd_buffer_field_ncopy(qd_buffer_field_t *bfield, uint8_t *d
 
         // count is >= what is available in the current buffer, move to next
 
-        bfield->length -= avail;
-        if (bfield->length) {
+        bfield->remaining -= avail;
+        if (bfield->remaining) {
             do {
                 bfield->buffer = DEQ_NEXT(bfield->buffer);
                 assert(bfield->buffer);
@@ -84,7 +84,7 @@ static inline size_t qd_buffer_field_advance(qd_buffer_field_t *bfield, size_t a
 {
     assert(bfield);
 
-    size_t blen = bfield->length;
+    size_t blen = bfield->remaining;
     size_t count = MIN(amount, blen);
 
     while (count > 0) {
@@ -93,16 +93,16 @@ static inline size_t qd_buffer_field_advance(qd_buffer_field_t *bfield, size_t a
         if (count < avail) {
             // fastpath: no need to adjust buffer pointers
             bfield->cursor += count;
-            bfield->length -= count;
+            bfield->remaining -= count;
             break;
         }
 
         count -= avail;
-        bfield->length -= avail;
+        bfield->remaining -= avail;
 
         // count is >= what is available in the current buffer, move to next
 
-        if (bfield->length) {
+        if (bfield->remaining) {
             do {
                 bfield->buffer = DEQ_NEXT(bfield->buffer);
                 assert(bfield->buffer);
@@ -111,7 +111,7 @@ static inline size_t qd_buffer_field_advance(qd_buffer_field_t *bfield, size_t a
         }
     }
 
-    return blen - bfield->length;
+    return blen - bfield->remaining;
 }
 
 
@@ -126,10 +126,10 @@ static inline bool qd_buffer_field_octet(qd_buffer_field_t *bfield, uint8_t *oct
 {
     assert(bfield);
 
-    if (bfield->length) {
+    if (bfield->remaining) {
         assert(bfield->cursor < qd_buffer_cursor(bfield->buffer));
         *octet = *bfield->cursor++;
-        if (--bfield->length) {
+        if (--bfield->remaining) {
             // adjust the cursor if it is at the end of the current buffer
             while (bfield->cursor >= qd_buffer_cursor(bfield->buffer)) {
                 bfield->buffer = DEQ_NEXT(bfield->buffer);
@@ -157,7 +157,7 @@ static inline bool qd_buffer_field_uint32(qd_buffer_field_t *bfield, uint32_t *v
 {
     assert(bfield);
 
-    if (bfield->length >= 4) {
+    if (bfield->remaining >= 4) {
         uint8_t buf[4];
         qd_buffer_field_ncopy(bfield, buf, 4);
         *value = (((uint32_t) buf[0]) << 24)
@@ -183,9 +183,9 @@ static inline char *qd_buffer_field_strdup(qd_buffer_field_t *bfield)
 {
     assert(bfield);
 
-    const size_t len = bfield->length + 1;
+    const size_t len = bfield->remaining + 1;
     char *str = qd_malloc(len);
-    qd_buffer_field_ncopy(bfield, (uint8_t*) str, bfield->length);
+    qd_buffer_field_ncopy(bfield, (uint8_t*) str, bfield->remaining);
     str[len - 1] = 0;
     return str;
 }
@@ -202,7 +202,7 @@ static inline bool qd_buffer_field_equal(qd_buffer_field_t *bfield, const uint8_
 {
     assert(bfield);
 
-    if (bfield->length < count)
+    if (bfield->remaining < count)
         return false;
 
     const qd_buffer_field_t save = *bfield;
@@ -218,7 +218,7 @@ static inline bool qd_buffer_field_equal(qd_buffer_field_t *bfield, const uint8_
                 return false;
             }
             bfield->cursor += count;
-            bfield->length -= count;
+            bfield->remaining -= count;
             return true;
         }
 
@@ -229,11 +229,11 @@ static inline bool qd_buffer_field_equal(qd_buffer_field_t *bfield, const uint8_
 
         data += avail;
         count -= avail;
-        bfield->length -= avail;
+        bfield->remaining -= avail;
 
         // count is >= what is available in the current buffer, move to next
 
-        if (bfield->length) {
+        if (bfield->remaining) {
             do {
                 bfield->buffer = DEQ_NEXT(bfield->buffer);
                 assert(bfield->buffer);
@@ -261,13 +261,13 @@ static inline void qd_buffer_list_append_field(qd_buffer_list_t *buflist, qd_buf
     assert(buflist);
     assert(bfield);
 
-    while (bfield->length) {
+    while (bfield->remaining) {
         size_t avail = qd_buffer_cursor(bfield->buffer) - bfield->cursor;
-        size_t len = MIN(bfield->length, avail);
+        size_t len = MIN(bfield->remaining, avail);
 
         qd_buffer_list_append(buflist, bfield->cursor, len);
-        bfield->length -= len;
-        if (!bfield->length) {
+        bfield->remaining -= len;
+        if (!bfield->remaining) {
             bfield->cursor += len;
         } else {
             bfield->buffer = DEQ_NEXT(bfield->buffer);
@@ -294,10 +294,10 @@ static inline qd_iterator_t *qd_buffer_field_iterator(const qd_buffer_field_t *b
     // qd_iterator_buffer() expects the cursor to point to the next available
     // octet if there is data. IOW: passing an offset past the current buffer
     // is incorrect behavior.
-    assert(bfield->length == 0 || offset < qd_buffer_size(bfield->buffer));
+    assert(bfield->remaining == 0 || offset < qd_buffer_size(bfield->buffer));
     return qd_iterator_buffer(bfield->buffer,
                               offset,
-                              bfield->length,
+                              bfield->remaining,
                               view);
 }
 ///@}

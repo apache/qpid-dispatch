@@ -34,9 +34,9 @@
  */
 typedef struct qd_buffer_field_t qd_buffer_field_t;
 struct qd_buffer_field_t {
-    qd_buffer_t   *buffer;  // hold start of data
-    const uint8_t *cursor;  // first octet of data
-    size_t         length;  // of data
+    qd_buffer_t   *buffer;     // hold start of data
+    const uint8_t *cursor;     // first octet of data
+    size_t         remaining;  // length of data
 };
 
 ///@}

@@ -154,7 +154,7 @@ static char *test_buffer_field(void *context)
 
     bfield.buffer = DEQ_HEAD(list);
     bfield.cursor = qd_buffer_base(bfield.buffer);
-    bfield.length = 2000;
+    bfield.remaining = 2000;
 
     int total_octets = 0;
     size_t expected_length = 2000;
@@ -164,7 +164,7 @@ static char *test_buffer_field(void *context)
         total_octets += 1;
         expected_length -= 1;
 
-        if (bfield.length != expected_length) {
+        if (bfield.remaining != expected_length) {
             result = "octet length not updated";
             goto exit;
         }
@@ -182,7 +182,7 @@ static char *test_buffer_field(void *context)
             next_octet -= 1;
     }
 
-    if (total_octets != 2000 || bfield.length != 0) {
+    if (total_octets != 2000 || bfield.remaining != 0) {
         result = "Next octet wrong length";
         goto exit;
     }
@@ -191,7 +191,7 @@ static char *test_buffer_field(void *context)
 
     bfield.buffer = DEQ_HEAD(list);
     bfield.cursor = qd_buffer_base(bfield.buffer);
-    bfield.length = 2000;
+    bfield.remaining = 2000;
 
     size_t amount = qd_buffer_field_advance(&bfield, 2);
     if (amount != 2) {
@@ -210,7 +210,7 @@ static char *test_buffer_field(void *context)
         goto exit;
     }
 
-    if (bfield.length != 2) {
+    if (bfield.remaining != 2) {
         result = "expected 2 last octets";
         goto exit;
     }
@@ -221,7 +221,7 @@ static char *test_buffer_field(void *context)
     }
 
     amount = qd_buffer_field_advance(&bfield, 3);
-    if (amount != 1 || bfield.length != 0) {
+    if (amount != 1 || bfield.remaining != 0) {
         result = "failed to advance to end of field";
         goto exit;
     }
@@ -230,7 +230,7 @@ static char *test_buffer_field(void *context)
 
     bfield.buffer = DEQ_HEAD(list);
     bfield.cursor = qd_buffer_base(bfield.buffer);
-    bfield.length = 2000;
+    bfield.remaining = 2000;
 
     uint8_t dest[10];
     amount = qd_buffer_field_ncopy(&bfield, dest, 5);
@@ -261,7 +261,7 @@ static char *test_buffer_field(void *context)
         result = "ncopy expected 5 failed";
         goto exit;
     }
-    if (memcmp(dest, &data2[5], 5) || bfield.length != 0) {
+    if (memcmp(dest, &data2[5], 5) || bfield.remaining != 0) {
         result = "ncopy at end failed";
         goto exit;
     }
@@ -270,7 +270,7 @@ static char *test_buffer_field(void *context)
 
     bfield.buffer = DEQ_HEAD(list);
     bfield.cursor = qd_buffer_base(bfield.buffer);
-    bfield.length = 2000;
+    bfield.remaining = 2000;
 
     const uint8_t pattern[] = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\xF9\xF8\xF7\xF6\xF5\xF4\xF3\xF2\xF1\xF0";
     const uint8_t pattern_bad[] = "\xF9\xF8\xF7\xF6\xF5\xF4\xF3\xF2\xF1\xF0\xAA";
@@ -278,7 +278,7 @@ static char *test_buffer_field(void *context)
         result = "expected equal 3 to fail";
         goto exit;
     }
-    if (bfield.length != 2000) {
+    if (bfield.remaining != 2000) {
         result = "do not advance on failed equal";
         goto exit;
     }
@@ -286,7 +286,7 @@ static char *test_buffer_field(void *context)
         result = "expected pattern match";
         goto exit;
     }
-    if (bfield.length != 1980) {
+    if (bfield.remaining != 1980) {
         result = "match did not advance";
         goto exit;
     }
@@ -299,7 +299,7 @@ static char *test_buffer_field(void *context)
         result = "did not expect sub pattern match";
         goto exit;
     }
-    if (bfield.length != 10) {
+    if (bfield.remaining != 10) {
         result = "mismatch advanced";
         goto exit;
     }
@@ -316,13 +316,13 @@ static char *test_buffer_field(void *context)
 
     bfield.buffer = DEQ_HEAD(list);
     bfield.cursor = qd_buffer_base(bfield.buffer);
-    bfield.length = 2000;
+    bfield.remaining = 2000;
 
     qd_buffer_field_t saved_bfield = bfield;
     qd_buffer_t *bptr = 0;
 
     qd_buffer_list_append_field(&other_list, &bfield);
-    if (bfield.length) {
+    if (bfield.remaining) {
         result = "expected to append 2000 octets";
         goto exit;
     }
@@ -337,7 +337,7 @@ static char *test_buffer_field(void *context)
         bptr = DEQ_NEXT(bptr);
     }
 
-    if (saved_bfield.length != 0) {
+    if (saved_bfield.remaining != 0) {
         result = "expected saved_bfield to be empty";
         goto exit;
     }
@@ -354,7 +354,7 @@ static char *test_buffer_field(void *context)
 
     bfield.buffer = DEQ_HEAD(other_list);
     bfield.cursor = qd_buffer_base(bfield.buffer);
-    bfield.length = strlen(append_str);
+    bfield.remaining = strlen(append_str);
 
     if (!qd_buffer_field_equal(&bfield, (const uint8_t*) append_str, strlen(append_str))) {
         result = "expected to equal append_str";
