@@ -169,9 +169,9 @@ static inline char *parse_amqp_field(qd_buffer_field_t *bfield, qd_amqp_field_t 
         return "Insufficient Length to Determine Count";
 
     value->value = *bfield;
-    value->value.length = value->size - length_of_count;
-    size_t moved = qd_buffer_field_advance(bfield, value->value.length);
-    if (moved != value->value.length)
+    value->value.remaining = value->size - length_of_count;
+    size_t moved = qd_buffer_field_advance(bfield, value->value.remaining);
+    if (moved != value->value.remaining)
         return "Truncated field";
 
     return 0;
@@ -198,7 +198,7 @@ static qd_parsed_field_t *qd_parse_internal(qd_buffer_field_t *bfield, qd_parsed
     if (!field->parse_error) {
         // truncate full_field in case bfield holds multiple values.
         // since bfield has advanced past the parsed field we just subtract it.
-        field->full_field.length -= bfield->length;
+        field->full_field.remaining -= bfield->remaining;
 
         // now parse out the content of any contained types:
         qd_buffer_field_t children = field->amqp.value;
@@ -227,7 +227,7 @@ qd_parsed_field_t *qd_parse(const qd_iterator_t *iter)
     assert(iptr.buffer);
     bfield.buffer = iptr.buffer;
     bfield.cursor = iptr.cursor;
-    bfield.length = iptr.remaining;
+    bfield.remaining = iptr.remaining;
     return qd_parse_internal(&bfield, 0);
 }
 
@@ -715,7 +715,7 @@ const char *qd_parse_annotations(
     qd_buffer_field_t bfield;
     bfield.buffer = iptr.buffer;
     bfield.cursor = iptr.cursor;
-    bfield.length = iptr.remaining;
+    bfield.remaining = iptr.remaining;
 
     qd_amqp_field_t ma_map;
     error = parse_amqp_field(&bfield, &ma_map);
@@ -758,7 +758,7 @@ const char *qd_parse_annotations(
 
         if (key.tag == QD_AMQP_SYM8 || key.tag == QD_AMQP_SYM32) {
 
-            switch (key.value.length) {
+            switch (key.value.remaining) {
             case QD_MA_PREFIX_LEN:
                 if (qd_buffer_field_equal(&key.value, (uint8_t*) QD_MA_PREFIX, QD_MA_PREFIX_LEN)) {
                     qd_amqp_field_t skip;
