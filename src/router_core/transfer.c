@@ -144,6 +144,9 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     dlv->link_id            = link->identity;
     dlv->conn_id            = link->conn_id;
     dlv->dispo_lock         = sys_mutex();
+
+    qd_message_disable_router_annotations(msg);  // routed links do not use router annotations
+
     qd_log(link->core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_link_deliver_to_routed_link", DLV_ARGS(dlv));
 
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");

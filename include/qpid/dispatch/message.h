@@ -213,6 +213,15 @@ void qd_message_set_stream_annotation(qd_message_t *msg, bool stream);
 int qd_message_is_streaming(qd_message_t *msg);
 
 /**
+ * Prevent the router from doing any transformations to the message annotations
+ * section of the message.
+ *
+ * Used by link-routing to completely skip all MA handling, including parsing
+ * MA on receive and restoring/composing MA on send.
+ */
+void qd_message_disable_router_annotations(qd_message_t *in_msg);
+
+/**
  * Set the value for the QD_MA_INGRESS field in the outgoing message
  * annotations for the message.
  *
