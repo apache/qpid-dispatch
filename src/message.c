@@ -1140,10 +1140,6 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
 
     ZERO(copy);
 
-    qd_buffer_list_clone(&copy->ma_to_override, &msg->ma_to_override);
-    qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
-    qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
-    copy->ma_phase = msg->ma_phase;
     copy->strip_annotations_in  = msg->strip_annotations_in;
 
     copy->content = content;
@@ -1155,7 +1151,13 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     copy->tag_sent      = false;
     copy->is_fanout     = false;
 
-    qd_message_message_annotations((qd_message_t*) copy);
+    if (!content->ma_disabled) {
+        qd_buffer_list_clone(&copy->ma_to_override, &msg->ma_to_override);
+        qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
+        qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
+        copy->ma_phase = msg->ma_phase;
+        qd_message_message_annotations((qd_message_t*) copy);
+    }
 
     sys_atomic_inc(&content->ref_count);
 
@@ -1167,6 +1169,7 @@ const char *qd_message_message_annotations(qd_message_t *in_msg)
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;
 
+    assert(!content->ma_disabled);  // should not be called when skipping MA processing
     if (content->ma_parsed)
         return 0;
     content->ma_parsed = true;
@@ -1254,6 +1257,15 @@ void qd_message_set_ingress_annotation(qd_message_t *in_msg, qd_composed_field_t
     qd_compose_take_buffers(ingress_field, &msg->ma_ingress);
     qd_compose_free(ingress_field);
 }
+
+
+void qd_message_disable_router_annotations(qd_message_t *msg)
+{
+    qd_message_content_t *content = ((qd_message_pvt_t *)msg)->content;
+    content->ma_disabled = true;
+    content->ma_parsed = true;
+}
+
 
 bool qd_message_is_discard(qd_message_t *msg)
 {
@@ -1829,91 +1841,103 @@ void qd_message_send(qd_message_t *in_msg,
             return;
         }
 
-        qd_buffer_list_t new_ma;
-        qd_buffer_list_t new_ma_trailer;
-        DEQ_INIT(new_ma);
-        DEQ_INIT(new_ma_trailer);
+        if (content->ma_disabled) {
 
-        // Process  the message annotations if any
-        compose_message_annotations(msg, &new_ma, &new_ma_trailer, strip_annotations);
+            // link-routing: there are no router-specific annotations anywhere
+            // in this message nor are any to be added. Start sending from
+            // first octet of received message.
 
-        //
-        // Start with the very first buffer;
-        //
-        buf = DEQ_HEAD(content->buffers);
+            msg->cursor.buffer = DEQ_HEAD(content->buffers);
+            msg->cursor.cursor = qd_buffer_base(msg->cursor.buffer);
+
+        } else {
+
+            qd_buffer_list_t new_ma;
+            qd_buffer_list_t new_ma_trailer;
+            DEQ_INIT(new_ma);
+            DEQ_INIT(new_ma_trailer);
+
+            // Process  the message annotations if any
+            compose_message_annotations(msg, &new_ma, &new_ma_trailer, strip_annotations);
+
+            //
+            // Start with the very first buffer;
+            //
+            buf = DEQ_HEAD(content->buffers);
 
 
-        //
-        // Send header if present
-        //
-        unsigned char *cursor = qd_buffer_base(buf);
-        int header_consume = content->section_message_header.length + content->section_message_header.hdr_length;
-        if (content->section_message_header.length > 0) {
-            buf    = content->section_message_header.buffer;
-            cursor = content->section_message_header.offset + qd_buffer_base(buf);
-            advance_guarded(&cursor, &buf, header_consume, send_handler, (void*) pnl);
+            //
+            // Send header if present
+            //
+            unsigned char *cursor = qd_buffer_base(buf);
+            int header_consume = content->section_message_header.length + content->section_message_header.hdr_length;
+            if (content->section_message_header.length > 0) {
+                buf    = content->section_message_header.buffer;
+                cursor = content->section_message_header.offset + qd_buffer_base(buf);
+                advance_guarded(&cursor, &buf, header_consume, send_handler, (void*) pnl);
+            }
+
+            //
+            // Send delivery annotation if present
+            //
+            int da_consume = content->section_delivery_annotation.length + content->section_delivery_annotation.hdr_length;
+            if (content->section_delivery_annotation.length > 0) {
+                buf    = content->section_delivery_annotation.buffer;
+                cursor = content->section_delivery_annotation.offset + qd_buffer_base(buf);
+                advance_guarded(&cursor, &buf, da_consume, send_handler, (void*) pnl);
+            }
+
+            //
+            // Send new message annotations map start if any
+            //
+            qd_buffer_t *da_buf = DEQ_HEAD(new_ma);
+            while (da_buf) {
+                char *to_send = (char*) qd_buffer_base(da_buf);
+                pn_link_send(pnl, to_send, qd_buffer_size(da_buf));
+                da_buf = DEQ_NEXT(da_buf);
+            }
+            qd_buffer_list_free_buffers(&new_ma);
+
+            //
+            // Annotations possibly include an opaque blob of user annotations
+            //
+            if (content->field_user_annotations.length > 0) {
+                qd_buffer_t *buf2      = content->field_user_annotations.buffer;
+                unsigned char *cursor2 = content->field_user_annotations.offset + qd_buffer_base(buf);
+                advance_guarded(&cursor2, &buf2,
+                                content->field_user_annotations.length,
+                                send_handler, (void*) pnl);
+            }
+
+            //
+            // Annotations may include the v1 new_ma_trailer
+            //
+            qd_buffer_t *ta_buf = DEQ_HEAD(new_ma_trailer);
+            while (ta_buf) {
+                char *to_send = (char*) qd_buffer_base(ta_buf);
+                pn_link_send(pnl, to_send, qd_buffer_size(ta_buf));
+                ta_buf = DEQ_NEXT(ta_buf);
+            }
+            qd_buffer_list_free_buffers(&new_ma_trailer);
+
+
+            //
+            // Skip over replaced message annotations
+            //
+            int ma_consume = content->section_message_annotation.hdr_length + content->section_message_annotation.length;
+            if (content->section_message_annotation.length > 0)
+                advance_guarded(&cursor, &buf, ma_consume, 0, 0);
+
+            msg->cursor.buffer = buf;
+
+            //
+            // If this message has no header and no delivery annotations and no message annotations, set the offset to 0.
+            //
+            if (header_consume == 0 && da_consume == 0 && ma_consume ==0)
+                msg->cursor.cursor = qd_buffer_base(buf);
+            else
+                msg->cursor.cursor = cursor;
         }
-
-        //
-        // Send delivery annotation if present
-        //
-        int da_consume = content->section_delivery_annotation.length + content->section_delivery_annotation.hdr_length;
-        if (content->section_delivery_annotation.length > 0) {
-            buf    = content->section_delivery_annotation.buffer;
-            cursor = content->section_delivery_annotation.offset + qd_buffer_base(buf);
-            advance_guarded(&cursor, &buf, da_consume, send_handler, (void*) pnl);
-        }
-
-        //
-        // Send new message annotations map start if any
-        //
-        qd_buffer_t *da_buf = DEQ_HEAD(new_ma);
-        while (da_buf) {
-            char *to_send = (char*) qd_buffer_base(da_buf);
-            pn_link_send(pnl, to_send, qd_buffer_size(da_buf));
-            da_buf = DEQ_NEXT(da_buf);
-        }
-        qd_buffer_list_free_buffers(&new_ma);
-
-        //
-        // Annotations possibly include an opaque blob of user annotations
-        //
-        if (content->field_user_annotations.length > 0) {
-            qd_buffer_t *buf2      = content->field_user_annotations.buffer;
-            unsigned char *cursor2 = content->field_user_annotations.offset + qd_buffer_base(buf);
-            advance_guarded(&cursor2, &buf2,
-                            content->field_user_annotations.length,
-                            send_handler, (void*) pnl);
-        }
-
-        //
-        // Annotations may include the v1 new_ma_trailer
-        //
-        qd_buffer_t *ta_buf = DEQ_HEAD(new_ma_trailer);
-        while (ta_buf) {
-            char *to_send = (char*) qd_buffer_base(ta_buf);
-            pn_link_send(pnl, to_send, qd_buffer_size(ta_buf));
-            ta_buf = DEQ_NEXT(ta_buf);
-        }
-        qd_buffer_list_free_buffers(&new_ma_trailer);
-
-
-        //
-        // Skip over replaced message annotations
-        //
-        int ma_consume = content->section_message_annotation.hdr_length + content->section_message_annotation.length;
-        if (content->section_message_annotation.length > 0)
-            advance_guarded(&cursor, &buf, ma_consume, 0, 0);
-
-        msg->cursor.buffer = buf;
-
-        //
-        // If this message has no header and no delivery annotations and no message annotations, set the offset to 0.
-        //
-        if (header_consume == 0 && da_consume == 0 && ma_consume ==0)
-            msg->cursor.cursor = qd_buffer_base(buf);
-        else
-            msg->cursor.cursor = cursor;
 
         msg->sent_depth = QD_DEPTH_MESSAGE_ANNOTATIONS;
 

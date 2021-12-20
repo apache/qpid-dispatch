@@ -139,11 +139,13 @@ typedef struct {
 
     qd_message_q2_unblocker_t q2_unblocker;              // Callback and context to signal Q2 unblocked to receiver
 
+    bool                 ma_disabled;                    // true: link routing - no MA handling needed.
     bool                 ma_parsed;                      // Have parsed incoming message annotations message
-    sys_atomic_t         discard;                        // Message is being discarded
-    sys_atomic_t         receive_complete;               // Message has been completely received
     bool                 q2_input_holdoff;               // Q2 state: hold off calling pn_link_recv
     bool                 disable_q2_holdoff;             // Disable Q2 flow control
+
+    sys_atomic_t         discard;                        // Message is being discarded
+    sys_atomic_t         receive_complete;               // Message has been completely received
     sys_atomic_t         priority_parsed;                // Message priority has been parsed
     sys_atomic_t         oversize;                       // Policy oversize-message handling in effect
     sys_atomic_t         no_body;                        // HTTP2 request has no body
