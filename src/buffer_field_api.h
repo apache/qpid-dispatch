@@ -127,16 +127,16 @@ static inline bool qd_buffer_field_octet(qd_buffer_field_t *bfield, uint8_t *oct
     assert(bfield);
 
     if (bfield->remaining) {
-        assert(bfield->cursor < qd_buffer_cursor(bfield->buffer));
-        *octet = *bfield->cursor++;
-        if (--bfield->remaining) {
-            // adjust the cursor if it is at the end of the current buffer
-            while (bfield->cursor >= qd_buffer_cursor(bfield->buffer)) {
-                bfield->buffer = DEQ_NEXT(bfield->buffer);
-                assert(bfield->buffer);
-                bfield->cursor = qd_buffer_base(bfield->buffer);
-            }
+
+        // adjust the cursor if it is at the end of the current buffer
+        while (bfield->cursor >= qd_buffer_cursor(bfield->buffer)) {
+            bfield->buffer = DEQ_NEXT(bfield->buffer);
+            assert(bfield->buffer);
+            bfield->cursor = qd_buffer_base(bfield->buffer);
         }
+
+        *octet = *bfield->cursor++;
+        bfield->remaining -= 1;
 
         return true;
     }
@@ -288,15 +288,19 @@ static inline qd_iterator_t *qd_buffer_field_iterator(const qd_buffer_field_t *b
                                                       qd_iterator_view_t view)
 {
     assert(bfield);
-
-    const int offset = bfield->cursor - qd_buffer_base(bfield->buffer);
+    qd_buffer_t *buffer = bfield->buffer;
+    const uint8_t *cursor = bfield->cursor;
 
     // qd_iterator_buffer() expects the cursor to point to the next available
     // octet if there is data. IOW: passing an offset past the current buffer
     // is incorrect behavior.
-    assert(bfield->remaining == 0 || offset < qd_buffer_size(bfield->buffer));
-    return qd_iterator_buffer(bfield->buffer,
-                              offset,
+    while (bfield->remaining && cursor >= qd_buffer_cursor(buffer)) {
+        buffer = DEQ_NEXT(buffer);
+        cursor = qd_buffer_base(buffer);
+    }
+
+    return qd_iterator_buffer(buffer,
+                              cursor - qd_buffer_base(buffer),
                               bfield->remaining,
                               view);
 }

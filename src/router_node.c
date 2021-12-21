@@ -315,8 +315,6 @@ static qd_iterator_t *router_annotate_message(qd_router_t   *router,
 
     qd_parsed_field_t *trace   = qd_message_get_trace(msg);
     qd_parsed_field_t *ingress = qd_message_get_ingress(msg);
-    qd_parsed_field_t *to      = qd_message_get_to_override(msg);
-    qd_parsed_field_t *phase   = qd_message_get_phase(msg);
 
     //
     // QD_MA_TRACE:
@@ -361,24 +359,6 @@ static qd_iterator_t *router_annotate_message(qd_router_t   *router,
         qd_compose_insert_string(trace_field, node_id);
         qd_compose_end_list(trace_field);
         qd_message_set_trace_annotation(msg, trace_field);
-    }
-
-    //
-    // QD_MA_TO:
-    // Preserve the existing value.
-    //
-    if (to) {
-        qd_composed_field_t *to_field = qd_compose_subfield(0);
-        qd_compose_insert_string_iterator(to_field, qd_parse_raw(to));
-        qd_message_set_to_override_annotation(msg, to_field);
-    }
-
-    //
-    // QD_MA_PHASE:
-    // Preserve the existing value.
-    //
-    if (phase) {
-        qd_message_set_phase_annotation(msg, qd_message_get_phase_val(msg));
     }
 
     //
@@ -827,9 +807,8 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             if (addr_iter && tenant_space) {
                 qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_WITH_SPACE);
                 qd_iterator_annotate_space(addr_iter, tenant_space, tenant_space_len);
-                qd_composed_field_t *to_override = qd_compose_subfield(0);
-                qd_compose_insert_string_iterator(to_override, addr_iter);
-                qd_message_set_to_override_annotation(msg, to_override);
+                qd_iterator_reset(addr_iter);
+                qd_message_set_to_override_annotation(msg, (char*) qd_iterator_copy(addr_iter));
             }
         }
 
@@ -875,15 +854,15 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
 
         if (term_addr) {
-            qd_composed_field_t *to_override = qd_compose_subfield(0);
             if (tenant_space) {
                 qd_iterator_t *aiter = qd_iterator_string(term_addr, ITER_VIEW_ADDRESS_WITH_SPACE);
                 qd_iterator_annotate_space(aiter, tenant_space, tenant_space_len);
-                qd_compose_insert_string_iterator(to_override, aiter);
+                qd_iterator_reset(aiter);
+                qd_message_set_to_override_annotation(msg, (char*) qd_iterator_copy(aiter));
                 qd_iterator_free(aiter);
             } else
-                qd_compose_insert_string(to_override, term_addr);
-            qd_message_set_to_override_annotation(msg, to_override);
+                qd_message_set_to_override_annotation(msg, qd_strdup(term_addr));
+
             int phase = qdr_link_phase(rlink);
             if (phase != 0)
                 qd_message_set_phase_annotation(msg, phase);

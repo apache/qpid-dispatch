@@ -322,9 +322,7 @@ static int send_message(qdr_core_t     *core,
            next_hop->exchange->name, next_hop->next_hop);
 
     // set "to override" and "phase" message annotations based on the next hop
-    qd_composed_field_t *to_field = qd_compose_subfield(0);
-    qd_compose_insert_string(to_field, (char *)next_hop->next_hop);
-    qd_message_set_to_override_annotation(copy, to_field);  // frees to_field
+    qd_message_set_to_override_annotation(copy, qd_strdup((const char*) next_hop->next_hop));
     qd_message_set_phase_annotation(copy, next_hop->phase);
 
     count = qdr_forward_message_CT(core, next_hop->qdr_addr, copy, in_delivery, exclude_inprocess, control);

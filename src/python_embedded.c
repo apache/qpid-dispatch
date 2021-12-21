@@ -768,8 +768,7 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
         return 0;
 
     if (compose_python_message(&field, message, ioa->qd) == QD_ERROR_NONE) {
-        qd_message_t *msg = qd_message();
-        qd_message_compose_2(msg, field, true);
+        qd_message_t *msg = qd_message_compose(field, 0, 0, true);
 
         qd_composed_field_t *ingress = qd_compose_subfield(0);
         qd_compose_insert_string(ingress, qd_router_id(ioa->qd));
@@ -794,7 +793,6 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
             }
             Py_DECREF(address);
         }
-        qd_compose_free(field);
         qd_message_free(msg);
         Py_RETURN_NONE;
     }

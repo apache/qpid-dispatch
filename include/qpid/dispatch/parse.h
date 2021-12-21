@@ -155,6 +155,15 @@ int64_t qd_parse_as_long(qd_parsed_field_t *field);
 bool qd_parse_as_bool(qd_parsed_field_t *field);
 
 /**
+ * Return the raw content as a c-string.  This is valid only for SYM* and STR*
+ * parsed types. The caller is responsible for freeing the returned string.
+ *
+ * @param field The field pointer returned by qd_parse.
+ * @return a C string containing the value or 0 if conversion failed.
+ */
+char *qd_parse_as_string(const qd_parsed_field_t *parsed_field);
+
+/**
  * Return the number of sub-fields in a compound field.  If the field is
  * a list or array, this is the number of items in the list/array.  If
  * the field is a map, this is the number of key/value pairs in the map

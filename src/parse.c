@@ -588,6 +588,26 @@ bool qd_parse_as_bool(qd_parsed_field_t *parsed_field)
 }
 
 
+char *qd_parse_as_string(const qd_parsed_field_t *parsed_field)
+{
+    char *str = 0;
+    switch (parsed_field->amqp.tag) {
+    case QD_AMQP_STR8_UTF8:
+    case QD_AMQP_SYM8:
+    case QD_AMQP_STR32_UTF8:
+    case QD_AMQP_SYM32: {
+        qd_buffer_field_t tmp = parsed_field->amqp.value;
+        str = qd_buffer_field_strdup(&tmp);
+        break;
+    }
+    default:
+        break;
+    }
+
+    return str;
+}
+
+
 uint32_t qd_parse_sub_count(qd_parsed_field_t *field)
 {
     uint32_t count = DEQ_SIZE(field->children);

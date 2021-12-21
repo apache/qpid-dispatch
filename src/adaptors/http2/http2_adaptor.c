@@ -476,7 +476,7 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_connection_t 
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Created new stream_data (%lx)", conn->conn_id, stream_id, (long) stream_data);
 
     stream_data->message = qd_message();
-    qd_message_set_stream_annotation(stream_data->message, true);
+    qd_message_set_streaming_annotation(stream_data->message);
     qdr_new_message_annotate(http2_adaptor->core, stream_data->message);
     stream_data->conn = conn;
     stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);

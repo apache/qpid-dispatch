@@ -311,6 +311,7 @@ static char *test_map(void *context)
 
     qd_iterator_t     *data_iter = qd_iterator_buffer(DEQ_HEAD(buflist), 0, sizeof(data), ITER_VIEW_ALL);
     qd_parsed_field_t *field     = qd_parse(data_iter);
+    qd_iterator_free(data_iter);
 
     if (!qd_parse_ok(field)) {
         snprintf(error, 1000, "Parse failed: %s", qd_parse_error(field));

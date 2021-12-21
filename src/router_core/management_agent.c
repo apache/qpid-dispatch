@@ -82,7 +82,6 @@ typedef enum {
 
 
 typedef struct qd_management_context_t {
-    qd_message_t               *msg;
     qd_message_t               *source;
     qd_composed_field_t        *field;
     qdr_query_t                *query;
@@ -98,8 +97,7 @@ ALLOC_DEFINE(qd_management_context_t);
 /**
  * Convenience function to create and initialize context (qd_management_context_t)
  */
-static qd_management_context_t* qd_management_context(qd_message_t               *msg,
-                                                      qd_message_t               *source,
+static qd_management_context_t* qd_management_context(qd_message_t               *source,
                                                       qd_composed_field_t        *field,
                                                       qdr_query_t                *query,
                                                       qdr_core_t                 *core,
@@ -109,7 +107,6 @@ static qd_management_context_t* qd_management_context(qd_message_t              
     qd_management_context_t *ctx = new_qd_management_context_t();
     ctx->count  = count;
     ctx->field  = field;
-    ctx->msg    = msg;
     ctx->source = qd_message_copy(source);
     ctx->query  = query;
     ctx->current_count = 0;
@@ -220,19 +217,15 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     qd_set_response_status(status, &fld);
 
     // Finally, compose and send the message.
-    qd_message_compose_3(ctx->msg, fld, ctx->field, true);
-
-    qdr_send_to1(ctx->core, ctx->msg, reply_to, true, false);
+    qd_message_t *msg = qd_message_compose(fld, ctx->field, 0, true);
+    qdr_send_to1(ctx->core, msg, reply_to, true, false);
+    qd_message_free(msg);
 
     // We have come to the very end. Free the appropriate memory.
     // Just go over this with Ted to see if I freed everything.
 
     qd_iterator_free(reply_to);
-    qd_compose_free(fld);
-
-    qd_message_free(ctx->msg);
     qd_message_free(ctx->source);
-    qd_compose_free(ctx->field);
 
     if (need_free) {
         qdr_query_free(ctx->query);
@@ -261,7 +254,7 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
     qd_compose_insert_string(field, ATTRIBUTE_NAMES);
 
     // Call local function that creates and returns a local qd_management_context_t object containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, field, 0, core, operation_type, (*count));
+    qd_management_context_t *ctx = qd_management_context(msg, field, 0, core, operation_type, (*count));
 
     // Grab the attribute names from the incoming message body. The attribute names will be used later on in the response.
     qd_parsed_field_t *attribute_names_parsed_field = 0;
@@ -306,7 +299,7 @@ static void qd_core_agent_read_handler(qdr_core_t                 *core,
     qdr_manage_handler(core, qd_manage_response_handler);
 
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, body, 0, core, operation_type, 0);
+    qd_management_context_t *ctx = qd_management_context(msg, body, 0, core, operation_type, 0);
 
     //Call the read API function
     qdr_manage_read(core, ctx, entity_type, name_iter, identity_iter, body, in_conn);
@@ -329,7 +322,7 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
     qdr_manage_handler(core, qd_manage_response_handler);
 
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
+    qd_management_context_t *ctx = qd_management_context(msg, out_body, 0, core, operation_type, 0);
 
     qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
 
@@ -355,7 +348,7 @@ static void qd_core_agent_update_handler(qdr_core_t                 *core,
     // Set the callback function.
     qdr_manage_handler(core, qd_manage_response_handler);
 
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
+    qd_management_context_t *ctx = qd_management_context(msg, out_body, 0, core, operation_type, 0);
 
     qd_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
     qd_parsed_field_t *in_body= qd_parse(iter);
@@ -383,7 +376,7 @@ static void qd_core_agent_delete_handler(qdr_core_t                 *core,
     qdr_manage_handler(core, qd_manage_response_handler);
 
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, body, 0, core, operation_type, 0);
+    qd_management_context_t *ctx = qd_management_context(msg, body, 0, core, operation_type, 0);
 
     qdr_manage_delete(core, ctx, entity_type, name_iter, identity_iter, in_conn);
 }

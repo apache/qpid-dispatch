@@ -177,13 +177,13 @@ void qd_message_set_trace_annotation(qd_message_t *msg, qd_composed_field_t *tra
  * method must not reference it after this call.
  *
  * @param msg Pointer to an outgoing message.
- * @param to_field Pointer to a composed field representing the to override
- * address that will be used as the value for the QD_MA_TO map entry.  If null,
- * the message will not have a QA_MA_TO message annotation field.  Ownership of
- * this field is transferred to the message.
+ * @param to_field Pointer to a c string holding the to override address that
+ * will be used as the value for the outgoing QD_MA_TO annotations map entry.
+ * If null, the message will not have a QA_MA_TO message annotation field.
+ * Ownership of this field is transferred to the message.
  *
  */
-void qd_message_set_to_override_annotation(qd_message_t *msg, qd_composed_field_t *to_field);
+void qd_message_set_to_override_annotation(qd_message_t *msg, char *to_field);
 
 /**
  * Set a phase for the phase annotation in the message.
@@ -196,13 +196,18 @@ void qd_message_set_phase_annotation(qd_message_t *msg, int phase);
 int  qd_message_get_phase_annotation(const qd_message_t *msg);
 
 /**
- * Indicate whether message should be considered to be streaming.
+ * Classify the message as streaming.
+ *
+ * Marking a message as streaming will prevent downstream routers from manually
+ * determining if this message should be sent on an inter-router streaming
+ * link. Once a message is classified as streaming it retains the
+ * classification until it is delivered to an endpoint
  *
  * @param msg Pointer to an outgoing message.
- * @param stream true if the message is streaming
  *
  */
-void qd_message_set_stream_annotation(qd_message_t *msg, bool stream);
+void qd_message_set_streaming_annotation(qd_message_t *msg);
+
 /**
  * Test whether received message should be considered to be streaming.
  *
@@ -210,7 +215,7 @@ void qd_message_set_stream_annotation(qd_message_t *msg, bool stream);
  * @return true if the received message has the streaming annotation set, else false.
  *
  */
-int qd_message_is_streaming(qd_message_t *msg);
+int qd_message_is_streaming(const qd_message_t *msg);
 
 /**
  * Prevent the router from doing any transformations to the message annotations
@@ -302,16 +307,27 @@ qd_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t f
 ssize_t qd_message_field_length(qd_message_t *msg, qd_message_field_t field);
 ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, char *buffer, size_t *hdr_length);
 
+// Create a message using composed fields to supply content.
 //
-// Functions for composed messages
+// This message constructor will create a new message using each fields buffers
+// concatenated in order (f1 first, f2 second, etc). There is no need to
+// provide all three fields: concatenation stops at the first null fx pointer.
 //
+// Note well that while this constructor can support up to three separate
+// composed fields it is more efficent to chain as many message sections as
+// possible into as few separate composed fields as possible.  This means that
+// any passed composed field can contain several message sections.
+//
+// This constructor takes ownership of the composed fields - the caller must
+// not reference them after the call.
+//
+qd_message_t *qd_message_compose(qd_composed_field_t *f1,
+                                 qd_composed_field_t *f2,
+                                 qd_composed_field_t *f3,
+                                 bool receive_complete);
 
-// Convenience Functions
-void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers);
-void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content, bool receive_complete);
-void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, bool receive_complete);
-void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, qd_composed_field_t *content3, bool receive_complete);
-void qd_message_compose_5(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, qd_composed_field_t *field3, qd_composed_field_t *field4, bool receive_complete);
+// deprecated: use qd_message_compose() to create locally generated messages
+void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, bool receive_complete);
 
 /**
  * qd_message_extend
@@ -460,19 +476,11 @@ qd_log_source_t* qd_message_log_source();
 
 /**
  * Accessor for message field ingress
- * 
+ *
  * @param msg A pointer to the message
  * @return the parsed field
  */
 qd_parsed_field_t *qd_message_get_ingress(qd_message_t *msg);
-
-/**
- * Accessor for message field phase
- * 
- * @param msg A pointer to the message
- * @return the parsed field
- */
-qd_parsed_field_t *qd_message_get_phase(qd_message_t *msg);
 
 /**
  * Accessor for message field to_override
@@ -489,14 +497,6 @@ qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg);
  * @return the parsed field
  */
 qd_parsed_field_t *qd_message_get_trace(qd_message_t *msg);
-
-/**
- * Accessor for message field phase
- * 
- * @param msg A pointer to the message
- * @return the phase as an integer
- */
-int                qd_message_get_phase_val  (qd_message_t *msg);
 
 /**
  * Should the message be discarded.

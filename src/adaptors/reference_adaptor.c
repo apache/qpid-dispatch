@@ -177,11 +177,7 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         props = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, props);
         qd_compose_insert_string(props, "Test Payload");
 
-        qd_message_t *msg = qd_message();
-
-        qd_message_compose_2(msg, props, true);
-        qd_compose_free(props);
-
+        qd_message_t *msg = qd_message_compose(props, 0, 0, true);
         qdr_link_deliver(adaptor->out_link_1, msg, 0, false, 0, 0, 0, 0);
         // Keep return-protection delivery reference as the adaptor's reference
     } else if (link == adaptor->out_link_2) {
@@ -197,10 +193,7 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         qd_compose_insert_string(props, adaptor->reply_to); // reply-to
         qd_compose_end_list(props);
 
-        adaptor->streaming_message = qd_message();
-
-        qd_message_compose_2(adaptor->streaming_message, props, false);
-        qd_compose_free(props);
+        adaptor->streaming_message = qd_message_compose(props, 0, 0, false);
 
         printf("qdr_ref_flow: Starting a streaming delivery\n");
         adaptor->streaming_delivery =

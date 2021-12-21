@@ -73,6 +73,7 @@ static uint64_t _send_reply(_endpoint_ref_t             *epr,
                "Link route address reply failed - invalid request message properties"
                " (container=%s, endpoint=%p)",
                epr->container_id, (void *)epr->endpoint);
+        qd_compose_free(body);
         return PN_REJECTED;
     }
 
@@ -101,12 +102,9 @@ static uint64_t _send_reply(_endpoint_ref_t             *epr,
     qd_compose_insert_uint(fld,   status);
     qd_compose_end_map(fld);
 
-    qd_message_t *msg = qd_message();
-
-    qd_message_compose_3(msg, fld, body, true);
+    qd_message_t *msg = qd_message_compose(fld, body, 0, true);
     qdr_in_process_send_to_CT(_server_state.core, reply_to, msg, true, false);
     qd_message_free(msg);
-    qd_compose_free(fld);
 
     return PN_ACCEPTED;
 }
@@ -161,7 +159,6 @@ static uint64_t _do_link_route_lookup(_endpoint_ref_t   *epr,
                               cid,
                               reply_to,
                               out_body);
-    qd_compose_free(out_body);
 
     if (qd_log_enabled(_server_state.core->log, QD_LOG_TRACE)) {
         char *as = (char *)qd_iterator_copy(addr_i);

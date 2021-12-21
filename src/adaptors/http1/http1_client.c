@@ -878,10 +878,6 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     // now that all the headers have been received we can construct
     // the AMQP message
 
-    hreq->request_msg = qd_message();
-    qd_message_set_stream_annotation(hreq->request_msg, hreq->expect_continue);
-    qdr_new_message_annotate(hreq->base.hconn->adaptor->core, hreq->request_msg);
-
     qd_composed_field_t *hdrs = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(hdrs);
     qd_compose_insert_bool(hdrs, 0);     // durable
@@ -916,10 +912,13 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
 
     qd_compose_end_map(hreq->request_props);
 
-    qd_message_compose_3(hreq->request_msg, props, hreq->request_props, !has_body);
-    qd_compose_free(props);
-    qd_compose_free(hreq->request_props);
+    hreq->request_msg = qd_message_compose(props, hreq->request_props, 0, !has_body);
     hreq->request_props = 0;
+    if (hreq->expect_continue)
+        // avoid waiting for entire request to be buffered on
+        // intermediate routers
+        qd_message_set_streaming_annotation(hreq->request_msg);
+    qdr_new_message_annotate(hreq->base.hconn->adaptor->core, hreq->request_msg);
 
     // future-proof: ensure the message headers have not caused Q2
     // blocking.  We only check for Q2 events while adding body data.

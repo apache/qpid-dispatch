@@ -679,20 +679,13 @@ static qd_message_t *_create_message_CT(qdrc_client_t *client,
         qd_compose_end_list(fld);
     }
 
-    qd_message_t *message = qd_message();
-    if (req->app_properties && req->body) {
-        qd_message_compose_4(message, fld, req->app_properties, req->body, true);
-    } else if (req->body) {
-        qd_message_compose_3(message, fld, req->body, true);
-    } else if (req->app_properties) {
-        qd_message_compose_3(message, fld, req->app_properties, true);
+    qd_message_t *message = 0;
+    if (req->app_properties) {
+        message = qd_message_compose(fld, req->app_properties, req->body, true);
     } else {
-        qd_message_compose_2(message, fld, true);
+        message = qd_message_compose(fld, req->body, 0, true);
     }
-    qd_compose_free(fld);
-    qd_compose_free(req->body);
     req->body = 0;
-    qd_compose_free(req->app_properties);
     req->app_properties = 0;
 
     return message;

@@ -667,10 +667,8 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     // itself associated with a fallback destination.
     //
     if (fanout == 0 && !!addr && !!addr->fallback && !link->fallback) {
-        const char          *key      = (const char*) qd_hash_key_by_handle(addr->fallback->hash_handle);
-        qd_composed_field_t *to_field = qd_compose_subfield(0);
-        qd_compose_insert_string(to_field, key + 2);
-        qd_message_set_to_override_annotation(dlv->msg, to_field);
+        const char *key = (const char*) qd_hash_key_by_handle(addr->fallback->hash_handle);
+        qd_message_set_to_override_annotation(dlv->msg, qd_strdup(key + 2));
         qd_message_set_phase_annotation(dlv->msg, key[1] - '0');
         fanout = qdr_forward_message_CT(core, addr->fallback, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
         if (fanout > 0) {

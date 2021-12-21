@@ -962,8 +962,6 @@ static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
 
     // start building the AMQP message
 
-    rmsg->msg = qd_message();
-
     qd_composed_field_t *hdrs = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(hdrs);
     qd_compose_insert_bool(hdrs, 0);     // durable
@@ -994,10 +992,7 @@ static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     qd_compose_end_list(props);
 
     qd_compose_end_map(rmsg->msg_props);
-
-    qd_message_compose_3(rmsg->msg, props, rmsg->msg_props, !has_body);
-    qd_compose_free(props);
-    qd_compose_free(rmsg->msg_props);
+    rmsg->msg = qd_message_compose(props, rmsg->msg_props, 0, !has_body);
     rmsg->msg_props = 0;
 
     // future-proof: ensure the message headers have not caused Q2
