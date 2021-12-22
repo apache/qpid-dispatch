@@ -210,6 +210,11 @@ tests/c_unittests/doctest.h), which is distributed under the MIT licence.
 
 A copy of its licence can be found at: tests/c_unittests/LICENSE.txt
 
+This product bundles a copy of CPP-STUB within its test code (found at
+tests/cpp-stub), which is distributed under the MIT licence.
+
+A copy of its licence can be found at: tests/cpp-stub/LICENSE.txt
+
 The tests run a http2 server which uses a Python ASGI web microframework
 called Quart which is distributed under the MIT licence.
 A copy of Quart's licence can be found at: tests/quart/LICENSE
