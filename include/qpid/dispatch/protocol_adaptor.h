@@ -835,6 +835,17 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error);
 void qdr_link_delete(qdr_link_t *link);
 
 /**
+ * qdr_new_message_annotate
+ *
+ * Annotate a newly originated message prior to transmission.  This function adds the annotations
+ * for ORIGIN and TRACE as well as any other needed pre-send annotations.
+ *
+ * @param core Pointer to the core object.
+ * @param msg Pointer to the message to be annotated.
+ */
+void qdr_new_message_annotate(qdr_core_t *core, qd_message_t *msg);
+
+/**
  * qdr_link_deliver
  *
  * Deliver a message to the router core for forwarding.  This function is used in cases where

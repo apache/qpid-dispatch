@@ -880,6 +880,7 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
 
     hreq->request_msg = qd_message();
     qd_message_set_stream_annotation(hreq->request_msg, hreq->expect_continue);
+    qdr_new_message_annotate(hreq->base.hconn->adaptor->core, hreq->request_msg);
 
     qd_composed_field_t *hdrs = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_compose_start_list(hdrs);
