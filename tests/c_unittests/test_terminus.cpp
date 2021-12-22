@@ -18,6 +18,7 @@
  */
 
 #include "qdr_doctest.hpp"
+#include "cpp_stub.h"
 
 extern "C" {
 #include "qpid/dispatch/router_core.h"
@@ -28,6 +29,15 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 }
+
+namespace vsnprintf_stub
+{
+int rc = 0;
+int stub(char *str, size_t size, const char *format, ...)
+{
+    return rc;
+}
+}  // namespace vsnprintf_stub
 
 TEST_CASE("test_safe_snprintf") {
     const int   OUTPUT_SIZE = 128;
@@ -72,6 +82,17 @@ TEST_CASE("test_safe_snprintf") {
             len = safe_snprintf(output, (int)-1, TEST_MESSAGE);
             CHECK(0 == len);
         }
+    }
+
+    SUBCASE("vsnprintf failure (_STUB_)") {
+        Stub stub;
+        stub.set(vsnprintf, vsnprintf_stub::stub);
+        vsnprintf_stub::rc = -1;
+
+        output[0] = 'a';
+        len       = safe_snprintf(output, LEN + 10, TEST_MESSAGE);
+        CHECK(0 == len);
+        CHECK('\0' == output[0]);
     }
 }
 
