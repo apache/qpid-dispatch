@@ -121,6 +121,7 @@
                       <exclude>libwebsockets/**</exclude>
                       <exclude>tools/scraper/test_data/**</exclude>
                       <exclude>**/doctest.h</exclude>
+                      <exclude>**/cpp-stub/*</exclude>
                       <exclude>**/*_pb2*</exclude>
                 </excludes>
         </configuration>            
