@@ -97,7 +97,8 @@ class RouterTestHttp(TestCase):
                 self.get(url, use_ca=use_ca)
             return False
         except OSError as e:
-            expected = (errno.ECONNREFUSED, errno.ECONNRESET)
+            # EADDRNOTAVAIL happens in Docker when connecting to localhost:port where nobody listens
+            expected = (errno.ECONNREFUSED, errno.ECONNRESET, errno.EADDRNOTAVAIL)
             if e.errno in expected or e.reason.errno in expected:
                 return True
             raise e
