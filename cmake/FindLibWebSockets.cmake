@@ -45,10 +45,11 @@ find_path(LIBWEBSOCKETS_INCLUDE_DIRS
   PATHS "/usr/include"
   )
 
+# strips trailing version elaboration, e.g. #define LWS_LIBRARY_VERSION "4.1.6-git..."
 if(LIBWEBSOCKETS_INCLUDE_DIRS AND EXISTS "${LIBWEBSOCKETS_INCLUDE_DIRS}/lws_config.h")
   file(STRINGS "${LIBWEBSOCKETS_INCLUDE_DIRS}/lws_config.h" lws_version_str
     REGEX "^#define[ \t]+LWS_LIBRARY_VERSION[ \t]+\"[^\"]+\"")
-  string(REGEX REPLACE "^#define[ \t]+LWS_LIBRARY_VERSION[ \t]+\"([^\"]+)\".*" "\\1"
+  string(REGEX REPLACE "^#define[ \t]+LWS_LIBRARY_VERSION[ \t]+\"([0-9.]+).*" "\\1"
     LIBWEBSOCKETS_VERSION_STRING "${lws_version_str}")
   unset(lws_version_str)
 endif()

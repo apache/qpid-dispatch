@@ -24,6 +24,7 @@ import ssl
 from urllib.request import urlopen, build_opener, HTTPSHandler
 from urllib.error import HTTPError, URLError
 
+import qpid_dispatch_site
 from system_test import TIMEOUT, Process, QdManager, retry
 from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR
@@ -39,9 +40,8 @@ class RouterTestHttp(TestCase):
     @classmethod
     def setUpClass(cls):
         super(RouterTestHttp, cls).setUpClass()
-        # Http listener delete tests will run only if LWS version == 2.4.2
-        # OR (if LWS version > 3.0 and LWS version < 4.0)
-        cls.skip_delete_http_listener_test = ${SKIP_DELETE_HTTP_LISTENER}
+        # DISPATCH-1513, DISPATCH-2299: Http listener delete was broken in LWS v4 until v4.2.0
+        cls.skip_delete_http_listener_test = qpid_dispatch_site.SKIP_DELETE_HTTP_LISTENER
 
     @classmethod
     def get(cls, url, use_ca=True):
@@ -314,9 +314,13 @@ class RouterTestHttp(TestCase):
         self.assert_get("https://localhost:%s" % r.ports[0])
         # requireSsl=false Allows simple-ssl HTTP
 
-        # The following test will be commented out if you are running a version lower than
-        # libwebsockets 3.2.0
-        ${TEST_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER}self.assert_get("http://localhost:%s" % r.ports[0])
+        # DISPATCH-1513: libwebsockets versions 3.2.0 introduces a new flag called
+        # LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER
+        # The new flag allows (as the flag says) HTTP over HTTPS listeners.
+        # Since this flag is not available before lws 3.2.0 we need
+        # to selectively disable this check
+        if qpid_dispatch_site.LIBWEBSOCKETS_VERSION >= (3, 2, 0):
+            self.assert_get("http://localhost:%s" % r.ports[0])
 
         self.assert_get("https://localhost:%s" % r.ports[1])
         # requireSsl=True does not allow simple-ssl HTTP

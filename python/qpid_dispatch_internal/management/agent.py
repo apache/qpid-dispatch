@@ -33,7 +33,7 @@ EntityAdapters are created/deleted in two ways:
 - Externally by CREATE/DELETE operations (or loading config file)
 - Internally by creation or deletion of corresponding implementation object.
 
-Memory managment: The implementation is reponsible for informing the L{Agent}
+Memory management: The implementation is responsible for informing the L{Agent}
 when an implementation object is created and *before* it is deleted in the case
 of a C object.
 
@@ -75,6 +75,7 @@ from io import StringIO
 from ctypes import c_void_p, py_object, c_long
 from subprocess import Popen
 
+import qpid_dispatch_site
 from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
@@ -435,7 +436,7 @@ class ListenerEntity(ConnectionBaseEntity):
         return super(ListenerEntity, self).__str__().replace("Entity(", "ListenerEntity(")
 
     def _delete(self):
-        if self.http and ${SKIP_DELETE_HTTP_LISTENER}:
+        if self.http and qpid_dispatch_site.SKIP_DELETE_HTTP_LISTENER:
             raise BadRequestStatus("HTTP listeners cannot be deleted")
         self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
 
