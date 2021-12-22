@@ -477,6 +477,7 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_connection_t 
 
     stream_data->message = qd_message();
     qd_message_set_stream_annotation(stream_data->message, true);
+    qdr_new_message_annotate(http2_adaptor->core, stream_data->message);
     stream_data->conn = conn;
     stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
     stream_data->status = QD_STREAM_OPEN;
