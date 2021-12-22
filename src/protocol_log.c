@@ -24,6 +24,7 @@
 #include "qpid/dispatch/threading.h"
 #include "qpid/dispatch/log.h"
 #include "qpid/dispatch/compose.h"
+#include "qpid/dispatch/amqp.h"
 #include "stdbool.h"
 #include <inttypes.h>
 #include <stdlib.h>
@@ -179,7 +180,7 @@ static void _plog_strncat_attribute(char *buffer, size_t n, const plog_attribute
 
     if (1 << data->attribute_type & VALID_UINT_ATTRS) {
         sprintf(text, "%"PRIu64, data->value.uint_val);
-    } else if (1 << data->attribute_type & VALID_STRING_ATTRS) {
+    } else if (1 << data->attribute_type & (VALID_STRING_ATTRS | VALID_TRACE_ATTRS)) {
         text_ptr = data->value.string_val;
     } else if (1 << data->attribute_type & VALID_REF_ATTRS) {
         _plog_strncat_id(text, ATTR_TEXT_MAX, &data->value.ref_val);
@@ -401,20 +402,6 @@ static void _plog_set_int_TH(plog_work_t *work, bool discard)
 
 
 /**
- * @brief Work handler for plog_set_trace
- * 
- * @param work Pointer to work context
- * @param discard Indicator that this work must be discarded
- */
-static void _plog_set_trace_TH(plog_work_t *work, bool discard)
-{
-    if (discard) {
-        return;
-    }
-}
-
-
-/**
  * @brief Allocate a work object pre-loaded with a handler.
  * 
  * @param handler The handler to be called on the plog thread to do the work
@@ -514,7 +501,7 @@ static void _plog_free_record(plog_record_t *record)
     plog_attribute_data_t *data = DEQ_HEAD(record->attributes);
     while (!!data) {
         DEQ_REMOVE_HEAD(record->attributes);
-        if (1 << data->attribute_type & VALID_STRING_ATTRS) {
+        if (1 << data->attribute_type & (VALID_STRING_ATTRS | VALID_TRACE_ATTRS)) {
             free(data->value.string_val);
         }
         free_plog_attribute_data_t(data);
@@ -842,10 +829,66 @@ void plog_set_uint64(plog_record_t *record, plog_attribute_t attribute_type, uin
 
 void plog_set_trace(plog_record_t *record, qd_message_t *msg)
 {
-    // Consider extracting the trace header here.
-    plog_work_t *work = _plog_work(_plog_set_trace_TH);
+#define MAX_TRACE_BUFFER 1000
+    qd_iterator_t *ma_iter = qd_message_field_iterator(msg, QD_FIELD_MESSAGE_ANNOTATION);
+    char *trace_text     = "Local";
+    char *trace_text_ptr = trace_text;
+    char  trace_buffer[MAX_TRACE_BUFFER + 1];
+
+    do {
+        if (!ma_iter) {
+            break;
+        }
+
+        qd_parsed_field_t *ma = qd_parse(ma_iter);
+        if (!ma) {
+            break;
+        }
+
+        do {
+            if (!qd_parse_ok(ma) || !qd_parse_is_map(ma)) {
+                break;
+            }
+
+            uint32_t count = qd_parse_sub_count(ma);
+            qd_parsed_field_t *trace_value = 0;
+            for (uint32_t i = 0; i < count; i++) {
+                qd_parsed_field_t *key = qd_parse_sub_key(ma, i);
+                if (key == 0) {
+                    break;
+                }
+                qd_iterator_t *key_iter = qd_parse_raw(key);
+                if (!!key_iter && qd_iterator_equal(key_iter, (const unsigned char*) QD_MA_TRACE)) {
+                    trace_value = qd_parse_sub_value(ma, i);
+                    break;
+                }
+            }
+
+            if (!!trace_value && qd_parse_is_list(trace_value)) {
+                trace_text_ptr = trace_buffer;
+                char *cursor   = trace_text_ptr;
+                uint32_t trace_count = qd_parse_sub_count(trace_value);
+                for (uint32_t i = 0; i < trace_count; i++) {
+                    qd_parsed_field_t *trace_item = qd_parse_sub_value(trace_value, i);
+                    if (i > 0) {
+                        *(cursor++) = '|';
+                    }
+                    if (qd_parse_is_scalar(trace_item)) {
+                        cursor += qd_iterator_ncopy(qd_parse_raw(trace_item),
+                                                    (uint8_t*) cursor, MAX_TRACE_BUFFER - (cursor - trace_text_ptr));;
+                    }
+                }
+                *(cursor++) = '\0';
+            }
+        } while (false);
+        qd_parse_free(ma);
+    } while (false);
+    qd_iterator_free(ma_iter);
+
+    plog_work_t *work = _plog_work(_plog_set_string_TH);
     work->record    = record;
     work->attribute = PLOG_ATTRIBUTE_TRACE;
+    work->value.string_val = strdup(trace_text_ptr);
     _plog_post_work(work);
 }
 
