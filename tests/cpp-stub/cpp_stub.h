@@ -7,6 +7,8 @@
 // See accompanying file LICENSE.txt or copy at
 // https://opensource.org/licenses/MIT
 
+#include "qd_asan_interface.h"
+
 #ifdef _WIN32
 //windows
 #include <windows.h>
@@ -113,19 +115,24 @@
     //13 byte(jmp m16:64)
     //movabs $0x102030405060708,%r11
     //jmpq   *%r11
-    #define REPLACE_FAR(t, fn, fn_stub)\
+    #define REPLACE_FAR(t, fn, fn_stub) \
+        do{\
         *fn = 0x49;\
         *(fn + 1) = 0xbb;\
-        *(long long *)(fn + 2) = (long long)fn_stub;\
+        memcpy((int *)(fn + 2), &fn_stub, sizeof(long long));\
         *(fn + 10) = 0x41;\
         *(fn + 11) = 0xff;\
         *(fn + 12) = 0xe3;\
+        }while(false)
         //CACHEFLUSH((char *)fn, CODESIZE);
 
     //5 byte(jmp rel32)
     #define REPLACE_NEAR(t, fn, fn_stub)\
+        do{\
+        const int addr = fn_stub - fn - CODESIZE_MIN;\
         *fn = 0xE9;\
-        *(int *)(fn + 1) = (int)(fn_stub - fn - CODESIZE_MIN);\
+        memcpy((int *)(fn + 1), &addr, sizeof(int));\
+        }while(false)
         //CACHEFLUSH((char *)fn, CODESIZE);
 #endif
 
@@ -179,13 +186,13 @@ public:
                 }
 
 #if defined(__aarch64__) || defined(_M_ARM64)
-                CACHEFLUSH(pstub->fn, CODESIZE);
+                CACHEFLUSH((char *)pstub->fn, CODESIZE);
 #elif defined(__arm__) || defined(_M_ARM)
-                CACHEFLUSH(pstub->fn, CODESIZE);
+                CACHEFLUSH((char *)pstub->fn, CODESIZE);
 #elif defined(__mips64)
-                CACHEFLUSH(pstub->fn, CODESIZE);
+                CACHEFLUSH((char *)pstub->fn, CODESIZE);
 #else //__i386__ _x86_64__  _M_IX86 _M_X64
-                //CACHEFLUSH(pstub->fn, CODESIZE);
+                //CACHEFLUSH((char *)pstub->fn, CODESIZE);
 #endif
 
 #ifdef _WIN32
@@ -202,6 +209,7 @@ public:
         return;
     }
     template<typename T,typename S>
+    ATTRIBUTE_NO_SANITIZE_THREAD
     void set(T addr, S addr_stub)
     {
         unsigned char * fn;
@@ -292,13 +300,13 @@ public:
         }
 
 #if defined(__aarch64__) || defined(_M_ARM64)
-                CACHEFLUSH(pstub->fn, CODESIZE);
+                CACHEFLUSH((char *)pstub->fn, CODESIZE);
 #elif defined(__arm__) || defined(_M_ARM)
-                CACHEFLUSH(pstub->fn, CODESIZE);
+                CACHEFLUSH((char *)pstub->fn, CODESIZE);
 #elif defined(__mips64)
-                CACHEFLUSH(pstub->fn, CODESIZE);
+                CACHEFLUSH((char *)pstub->fn, CODESIZE);
 #else //__i386__ _x86_64__  _M_IX86 _M_X64
-                //CACHEFLUSH(pstub->fn, CODESIZE);
+                //CACHEFLUSH((char *)pstub->fn, CODESIZE);
 #endif
 
 #ifdef _WIN32
