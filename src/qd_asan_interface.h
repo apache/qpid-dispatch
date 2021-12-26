@@ -29,10 +29,21 @@
 
 #if defined(__clang__)
 # define QD_HAS_ADDRESS_SANITIZER __has_feature(address_sanitizer)
-#elif defined (__GNUC__) && defined(__SANITIZE_ADDRESS__)
-# define QD_HAS_ADDRESS_SANITIZER __SANITIZE_ADDRESS__
+# define QD_HAS_THREAD_SANITIZER __has_feature(thread_sanitizer)
+#elif defined (__GNUC__)
+# if defined(__SANITIZE_ADDRESS__)
+#  define QD_HAS_ADDRESS_SANITIZER __SANITIZE_ADDRESS__
+# else
+#  define QD_HAS_ADDRESS_SANITIZER 0
+# endif
+# if defined(__SANITIZE_THREAD__)
+#  define QD_HAS_THREAD_SANITIZER __SANITIZE_THREAD__
+# else
+#  define QD_HAS_THREAD_SANITIZER 0
+# endif
 #else
 # define QD_HAS_ADDRESS_SANITIZER 0
+# define QD_HAS_THREAD_SANITIZER 0
 #endif
 
 #if QD_HAS_ADDRESS_SANITIZER
@@ -72,9 +83,15 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 // https://github.com/google/sanitizers/wiki/AddressSanitizer#turning-off-instrumentation
 
 #if QD_HAS_ADDRESS_SANITIZER
-# define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+# define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address)) __attribute__((no_sanitize("address")))
 #else
 # define ATTRIBUTE_NO_SANITIZE_ADDRESS
 #endif  // QD_HAS_ADDRESS_SANITIZER
+
+#if QD_HAS_THREAD_SANITIZER
+# define ATTRIBUTE_NO_SANITIZE_THREAD __attribute__((no_sanitize_thread)) __attribute__((no_sanitize("thread")))
+#else
+# define ATTRIBUTE_NO_SANITIZE_THREAD
+#endif  // QD_HAS_THREAD_SANITIZER
 
 #endif  // __qd_asan_interface_h__
