@@ -23,7 +23,7 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   compile:
-    name: "Compile (${{matrix.os}}, ${{matrix.runtimeCheck}})"
+    name: "Compile (${{matrix.os}}, ${{matrix.runtimeCheck}}, proton ${{matrix.protonGitRef}})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,6 +31,7 @@ jobs:
         os: [ubuntu-20.04]
         buildType: [Debug]
         runtimeCheck: [asan]
+        protonGitRef: [main, 0.36.0]
     env:
       BuildType: ${{matrix.buildType}}
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
@@ -69,7 +70,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: 'apache/qpid-proton'
-          ref: 'main'
+          ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
 
       - uses: actions/checkout@v2
@@ -162,11 +163,11 @@ jobs:
       - name: Upload archive
         uses: actions/upload-artifact@v2
         with:
-          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}
+          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{ matrix.protonGitRef }}
           path: /tmp/archive.tar.xz
 
   test:
-    name: 'Test (${{matrix.os}}, ${{matrix.runtimeCheck}}, shard ${{matrix.shard}} of ${{matrix.shards}})'
+    name: 'Test (${{matrix.os}}, ${{matrix.runtimeCheck}}, proton ${{matrix.protonGitRef}}, shard ${{matrix.shard}} of ${{matrix.shards}})'
     runs-on: ${{ matrix.os }}
     needs: [compile]
     strategy:
@@ -175,6 +176,7 @@ jobs:
         os: [ubuntu-20.04]
         buildType: [Debug]
         runtimeCheck: [asan]
+        protonGitRef: [main, 0.36.0]
         shard: [1, 2]
         shards: [2]
     env:
@@ -196,7 +198,7 @@ jobs:
       - name: Download Build
         uses: actions/download-artifact@v2
         with:
-          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}
+          name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}
 
       - name: Setup python
         uses: actions/setup-python@v2
@@ -228,14 +230,14 @@ jobs:
         uses: actions/upload-artifact@v2
         if: ${{ ! cancelled() }}
         with:
-          name: Test_Results_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          name: Test_Results_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: ${{env.DispatchBuildDir}}/Testing/**/*.xml
 
       - name: Upload log files (if any tests failed)
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: testLogs_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          name: testLogs_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: |
             qpid-dispatch/build/tests
 
@@ -243,12 +245,12 @@ jobs:
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: cores_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          name: cores_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: |
             **/core
 
   compile_and_test:
-    name: "Compile and Test (${{matrix.container}}, ${{matrix.runtimeCheck}}, shard ${{matrix.shard}} of ${{matrix.shards}})"
+    name: "Compile and Test (${{matrix.container}}, ${{matrix.runtimeCheck}}, proton ${{matrix.protonGitRef}}, shard ${{matrix.shard}} of ${{matrix.shards}})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -258,6 +260,7 @@ jobs:
         containerTag: ['35']
         buildType: [RelWithDebInfo]
         runtimeCheck: [asan, tsan]
+        protonGitRef: [main, 0.36.0]
         shard: [ 1, 2 ]
         shards: [ 2 ]
         include:
@@ -265,12 +268,28 @@ jobs:
             container: 'centos'
             containerTag: 7
             runtimeCheck: OFF
+            protonGitRef: main
             shard: 1
             shards: 2
           - os: ubuntu-20.04
             container: 'centos'
             containerTag: 7
             runtimeCheck: OFF
+            protonGitRef: main
+            shard: 2
+            shards: 2
+          - os: ubuntu-20.04
+            container: 'centos'
+            containerTag: 7
+            runtimeCheck: OFF
+            protonGitRef: 0.36.0
+            shard: 1
+            shards: 2
+          - os: ubuntu-20.04
+            container: 'centos'
+            containerTag: 7
+            runtimeCheck: OFF
+            protonGitRef: 0.36.0
             shard: 2
             shards: 2
 
@@ -323,7 +342,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: 'apache/qpid-proton'
-          ref: 'main'
+          ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
 
       - uses: actions/checkout@v2
@@ -437,14 +456,14 @@ jobs:
         uses: actions/upload-artifact@v2
         if: ${{ ! cancelled() }}
         with:
-          name: Test_Results_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          name: Test_Results_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: ${{env.DispatchBuildDir}}/Testing/**/*.xml
 
       - name: Upload log files (if any tests failed)
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: testLogs_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          name: testLogs_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: |
             qpid-dispatch/build/tests
 
@@ -452,7 +471,7 @@ jobs:
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: cores_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.shard}}
+          name: cores_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: |
             **/core
 
