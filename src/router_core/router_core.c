@@ -337,6 +337,13 @@ void qdr_core_free(qdr_core_t *core)
     free(core);
 }
 
+
+qd_dispatch_t *qdr_core_dispatch(qdr_core_t *core)
+{
+    return core->qd;
+}
+
+
 void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode)
 {
     qd_bitmask_free(rnode->valid_origins);

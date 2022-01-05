@@ -25,6 +25,7 @@
 #include "qpid/dispatch/log.h"
 #include "qpid/dispatch/compose.h"
 #include "qpid/dispatch/amqp.h"
+#include "dispatch_private.h"
 #include "stdbool.h"
 #include <inttypes.h>
 #include <stdlib.h>
@@ -933,6 +934,8 @@ void plog_set_trace(plog_record_t *record, qd_message_t *msg)
  */
 static void _plog_init(qdr_core_t *core, void **adaptor_context)
 {
+    router_id = qdr_core_dispatch(core)->plog_router_id;
+    site_id   = qdr_core_dispatch(core)->plog_site_id;
     log       = qd_log_source("PROTOCOL_LOG");
     lock      = sys_mutex();
     condition = sys_cond();

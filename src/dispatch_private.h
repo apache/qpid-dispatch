@@ -56,6 +56,8 @@ struct qd_dispatch_t {
     char  *sasl_config_name;
     char  *router_area;
     char  *router_id;
+    uint32_t plog_router_id;
+    uint32_t plog_site_id;
     qd_router_mode_t  router_mode;
     bool   allow_resumable_link_route;
     bool   test_hooks;

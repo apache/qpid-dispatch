@@ -500,6 +500,20 @@
                     "create": true,
                     "required": false
                 },
+                "plogRouterId": {
+                    "type": "integer",
+                    "description": "This router's identity for protocol logging",
+                    "create": true,
+                    "required": false,
+                    "default": 0
+                },
+                "plogSiteId": {
+                    "type": "integer",
+                    "description": "This router's site-identity for protocol logging",
+                    "create": true,
+                    "required": false,
+                    "default": 0
+                },
 	            "addrCount": {
 	                "type": "integer",
 	                "description":"Number of addresses known to the router.",

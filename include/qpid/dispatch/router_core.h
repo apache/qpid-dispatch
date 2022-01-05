@@ -60,6 +60,11 @@ void qdr_core_free(qdr_core_t *core);
  */
 
 /**
+ * Return the qd_dispatch pointer stored in core.
+ */
+qd_dispatch_t *qdr_core_dispatch(qdr_core_t *core);
+
+/**
  * Drive the core-internal timer every one second.
  *
  * @param core Pointer to the core object returned by qd_core()

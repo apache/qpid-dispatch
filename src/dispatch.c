@@ -231,6 +231,9 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
         free(dump_file);
     }
 
+    qd->plog_router_id = qd_entity_opt_long(entity, "plogRouterId", 0);
+    qd->plog_site_id = qd_entity_opt_long(entity, "plogSiteId", 0);
+
     return QD_ERROR_NONE;
 
 }
