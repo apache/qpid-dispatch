@@ -63,6 +63,8 @@ struct plog_record_t {
     uint32_t                    emit_ordinal;
     bool                        unflushed;
     bool                        never_flushed;
+    bool                        never_logged;
+    bool                        force_log;
     bool                        ended;
 };
 
@@ -221,16 +223,29 @@ static void _plog_start_record_TH(plog_work_t *work, bool discard)
     //
     DEQ_INSERT_TAIL(record->parent->children, record);
 
+
+    //
+    // If this record has a parent and the parent has never been logged,
+    // flag it as needing to be flushed and logged.
+    //
+    if (record->parent->never_logged) {
+        record->parent->force_log = true;
+        if (!record->parent->unflushed) {
+            record->parent->unflushed = true;
+            DEQ_INSERT_TAIL_N(UNFLUSHED, unflushed_records, record->parent);
+        }
+    }
+
     //
     // Place the new record on the unflushed list to be pushed out later.
     // Mark the record as never-flushed so we can avoid the situation where
     // a record that references this record gets flushed before this record
     // is initially flushed.
     //
-    record->unflushed     = true;
-    record->never_flushed = true;
-    record->ended         = false;
-    DEQ_INSERT_TAIL_N(UNFLUSHED, unflushed_records, record);
+    if (!record->unflushed) {
+        record->unflushed = true;
+        DEQ_INSERT_TAIL_N(UNFLUSHED, unflushed_records, record);
+    }
 }
 
 
@@ -602,7 +617,7 @@ static bool _plog_unserialize_identity(qd_parsed_field_t *field, plog_identity_t
  * 
  * @param record Pointer to the record to be emitted
  */
-static void _plog_emit_record_as_log(const plog_record_t *record)
+static void _plog_emit_record_as_log(plog_record_t *record)
 {
 #define LINE_MAX 1000
     char line[LINE_MAX + 1];
@@ -611,29 +626,28 @@ static void _plog_emit_record_as_log(const plog_record_t *record)
     strcat(line, " [");
     _plog_strncat_id(line, LINE_MAX, &record->identity);
     strcat(line, "]");
-    if (record->never_flushed) {
+    if (record->never_logged) {
         strcat(line, " BEGIN");
     }
     if (record->ended) {
         strcat(line, " END");
     }
 
-    if ((record->ended || record->never_flushed) && !!record->parent) {
+    if ((record->ended || record->never_logged) && !!record->parent) {
         strcat(line, " parent=");
         _plog_strncat_id(line, LINE_MAX, &record->parent->identity);
     }
 
     plog_attribute_data_t *data = DEQ_HEAD(record->attributes);
     while (data) {
-        if (record->ended || data->emit_ordinal == record->emit_ordinal) {
-            strncat(line, " ", LINE_MAX);
-            strncat(line, _plog_attribute_name(data), LINE_MAX);
-            strncat(line, "=", LINE_MAX);
-            _plog_strncat_attribute(line, LINE_MAX, data);
-        }
+        strncat(line, " ", LINE_MAX);
+        strncat(line, _plog_attribute_name(data), LINE_MAX);
+        strncat(line, "=", LINE_MAX);
+        _plog_strncat_attribute(line, LINE_MAX, data);
         data = DEQ_NEXT(data);
     }
 
+    record->never_logged = false;
     qd_log(log, QD_LOG_INFO, line);
 }
 
@@ -649,7 +663,19 @@ static void _plog_flush(void)
         DEQ_REMOVE_HEAD_N(UNFLUSHED, unflushed_records);
         assert(record->unflushed);
         record->unflushed = false;
-        _plog_emit_record_as_log(record);
+
+        //
+        // TODO - Emit event to collectors
+        //
+
+        //
+        // If this record has been ended, emit the log line.
+        //
+        if (record->ended || record->force_log) {
+            record->force_log = false;
+            _plog_emit_record_as_log(record);
+        }
+
         record->never_flushed = false;
         record->emit_ordinal++;
         if (record->ended) {
@@ -744,9 +770,15 @@ plog_record_t *plog_start_record(plog_record_type_t record_type, plog_record_t *
     plog_record_t *record = new_plog_record_t();
     plog_work_t   *work   = _plog_work(_plog_start_record_TH);
     ZERO(record);
-    record->record_type = record_type;
-    record->parent      = parent;
-    work->record        = record;
+    record->record_type   = record_type;
+    record->parent        = parent;
+    record->unflushed     = false;
+    record->never_flushed = true;
+    record->never_logged  = true;
+    record->force_log     = false;
+    record->ended         = false;
+
+    work->record = record;
 
     _plog_post_work(work);
     return record;

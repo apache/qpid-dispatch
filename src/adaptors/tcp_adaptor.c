@@ -1672,6 +1672,7 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 qdr_tcp_connection_copy_reply_to(tc, f_iter);
                 qd_iterator_free(f_iter);
                 qdr_associate_plog_flows(tc, msg);
+                plog_set_trace(tc->plog, msg);
                 qdr_terminus_t *target = qdr_terminus(0);
                 qdr_terminus_set_address(target, tc->reply_to);
                 tc->incoming = qdr_link_first_attach(tc->qdr_conn,
