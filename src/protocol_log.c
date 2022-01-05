@@ -103,6 +103,8 @@ static plog_record_t      *local_router      = 0;
 static uint32_t            site_id;
 static uint32_t            router_id;
 static uint64_t            next_identity     = 0;
+static const char         *router_area;
+static const char         *router_name;
 
 
 /**
@@ -461,6 +463,13 @@ static void _plog_create_router_record(void)
     const char *namespace  = getenv("POD_NAMESPACE");
     const char *image_name = getenv("APPLICATION_NAME");
     const char *version    = getenv("VERSION");
+
+    char *name = (char*) malloc(strlen(router_area) + strlen(router_name) + 2);
+    strcpy(name, router_area);
+    strcat(name, "/");
+    strcat(name, router_name);
+    plog_set_string(local_router, PLOG_ATTRIBUTE_NAME, name);
+    free(name);
 
     if (!!hostname) {
         plog_set_string(local_router, PLOG_ATTRIBUTE_HOST_NAME, hostname);
@@ -934,8 +943,11 @@ void plog_set_trace(plog_record_t *record, qd_message_t *msg)
  */
 static void _plog_init(qdr_core_t *core, void **adaptor_context)
 {
-    router_id = qdr_core_dispatch(core)->plog_router_id;
-    site_id   = qdr_core_dispatch(core)->plog_site_id;
+    router_id   = qdr_core_dispatch(core)->plog_router_id;
+    site_id     = qdr_core_dispatch(core)->plog_site_id;
+    router_area = qdr_core_dispatch(core)->router_area;
+    router_name = qdr_core_dispatch(core)->router_id;
+
     log       = qd_log_source("PROTOCOL_LOG");
     lock      = sys_mutex();
     condition = sys_cond();
