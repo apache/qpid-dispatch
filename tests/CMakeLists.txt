@@ -194,7 +194,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in ${CMAKE_CURRENT_BINARY_DIR
 # since that version allows us to skip the install step (we have
 # no modules thus no setup.py)
 #
-find_program(TOX_EXE "tox" PATHS ENV PATH)
+find_program(TOX_EXE "tox")
 if (TOX_EXE)
   # the "skip_install" feature showed up in version 1.9.0 tox,
   # which is used by our tox.ini script:
