@@ -48,4 +48,4 @@ def parse_version(version: str) -> Optional[Tuple[int, int, int]]:
 VERSION = "${QPID_DISPATCH_VERSION}"
 
 LIBWEBSOCKETS_VERSION: Optional[Tuple[int, int, int]] = parse_version("${LIBWEBSOCKETS_VERSION_STRING}")
-SKIP_DELETE_HTTP_LISTENER = (4, 0, 0) <= LIBWEBSOCKETS_VERSION < (4, 2, 0)
+SKIP_DELETE_HTTP_LISTENER = None if not LIBWEBSOCKETS_VERSION else (4, 0, 0) <= LIBWEBSOCKETS_VERSION < (4, 2, 0)
