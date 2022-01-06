@@ -128,26 +128,6 @@ find_package(LibWebSockets 3.0.1)
 CMAKE_DEPENDENT_OPTION(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ON
                          "LIBWEBSOCKETS_FOUND" OFF)
 
-set(SKIP_DELETE_HTTP_LISTENER "True")
-if (LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
-  # This is a fix for DISPATCH-1513. libwebsockets versions 3.2.0 introduces a new flag called LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER
-  # The new flag allows (as the flag says) HTTP over HTTPS listeners. Since this flag is not available before lws 3.2.0 we need
-  # to selectively comment out a test.
-  set(TEST_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER "#")
-  set(LWS_VERSION_WITH_SSL_FIX "3.2.0")
-  if ((LIBWEBSOCKETS_VERSION_STRING STREQUAL LWS_VERSION_WITH_SSL_FIX) OR (LIBWEBSOCKETS_VERSION_STRING STRGREATER  LWS_VERSION_WITH_SSL_FIX))
-    set(TEST_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER "")
-  endif()
-  # The listener delete functionality worked in all versions of LibWebSockets
-  # starting from v2.4.2 thru v3.2.3. It stopped working in v4.0.0 and beyond
-  if ( (LIBWEBSOCKETS_VERSION_STRING STREQUAL "2.4.2") OR (  (LIBWEBSOCKETS_VERSION_STRING STRGREATER_EQUAL  "3.0.0") AND (LIBWEBSOCKETS_VERSION_STRING STRLESS  "4.0.0") )  )
-    # Do not skip the tests (in system_tests_http.py) that specifically
-    # test deletion of http:yes listeners.
-    set(SKIP_DELETE_HTTP_LISTENER "False")
-  endif()
-
-endif(LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
-
 if (NOT DEFINED DISPATCH_TEST_TIMEOUT)
     set(DISPATCH_TEST_TIMEOUT "600")
 endif (NOT DEFINED DISPATCH_TEST_TIMEOUT)
@@ -283,8 +263,6 @@ install(FILES
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/tests/run.py)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_http.py.in ${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_http.py)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/python/qpid_dispatch_internal/management/agent.py.in ${CMAKE_CURRENT_SOURCE_DIR}/python/qpid_dispatch_internal/management/agent.py)
 execute_process(COMMAND ${RUN} --sh OUTPUT_FILE config.sh)
 
 add_subdirectory(src) # Build src first so other subdirs can use qpid-dispatch library

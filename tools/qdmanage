@@ -24,7 +24,9 @@ import json
 import re
 from collections.abc import Mapping, Sequence
 
-import qpid_dispatch_site  # noqa: F401 # imported for side-effects (inserts to sys.path)
+import qpid_dispatch_site
+qpid_dispatch_site.populate_pythonpath()
+
 from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.tools.command import (UsageError, _qdmanage_parser, check_args,
                                                   main, opts_ssl_domain, opts_url, opts_sasl)

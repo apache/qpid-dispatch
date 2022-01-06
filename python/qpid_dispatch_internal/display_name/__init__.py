@@ -16,4 +16,5 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-"Qpid Dispatch internal display name service"
+
+"""Qpid Dispatch internal display name service"""

@@ -20,16 +20,32 @@
 """
 INTERNAL USE ONLY - Install locations and other site information for qpid dispatch.
 """
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
+
+import sys
 
 from os.path import join
 from os import environ
-import sys
+from typing import Optional, Tuple
 
-HOME = environ.get("QPID_DISPATCH_HOME") or "${QPID_DISPATCH_HOME_INSTALLED}"
+
+def populate_pythonpath() -> None:
+    """Makes qpid_dispatch_internal available. Modifies sys.path."""
+    home = environ.get("QPID_DISPATCH_HOME") or "${QPID_DISPATCH_HOME_INSTALLED}"
+    sys.path.insert(0, join(home, 'python'))
+
+
+def parse_version(version: str) -> Optional[Tuple[int, int, int]]:
+    """Returns a 3-tuple semver version, or None (if say version is an empty string)."""
+    if not version:
+        return None
+    try:
+        major, minor, patch = (int(v) for v in version.split('.'))
+        return major, minor, patch
+    except ValueError as e:
+        raise ValueError(f"version '{version}' cannot be parsed") from e
+
+
 VERSION = "${QPID_DISPATCH_VERSION}"
 
-sys.path.insert(0, join(HOME, 'python'))
+LIBWEBSOCKETS_VERSION: Optional[Tuple[int, int, int]] = parse_version("${LIBWEBSOCKETS_VERSION_STRING}")
+SKIP_DELETE_HTTP_LISTENER = (4, 0, 0) <= LIBWEBSOCKETS_VERSION < (4, 2, 0)

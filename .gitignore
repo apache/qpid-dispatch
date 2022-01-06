@@ -7,8 +7,6 @@ install
 .pydevproject
 tests/system_test.dir/
 tests/policy-1/policy-*.json
-tests/system_tests_http.py
-python/qpid_dispatch_internal/management/agent.py
 *.iml
 .idea
 .metadata
