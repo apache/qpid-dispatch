@@ -79,7 +79,7 @@ jobs:
     # Update pip, it may prevent issues later
     - sudo apt-get install -y python3-pip
     - python3 -m pip install --user --upgrade pip
-    - python3 -m pip install --user --upgrade tox virtualenv
+    - python3 -m pip install --user tox
     # Install quart, h2 to run the http2 tests.
     - python3 -m pip install --user quart h2
     # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -103,7 +103,7 @@ jobs:
       - nvm install "lts/*"
       # Update pip, it may prevent issues later
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv
+      - python3 -m pip install --user tox
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -129,7 +129,7 @@ jobs:
       - nvm install "lts/*"
       # Update pip, it may prevent issues later
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv
+      - python3 -m pip install --user tox
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
@@ -156,7 +156,7 @@ jobs:
       # Update pip, it may prevent issues later
       - sudo apt-get install -y python3-pip
       - python3 -m pip install --user --upgrade pip
-      - python3 -m pip install --user --upgrade tox virtualenv
+      - python3 -m pip install --user tox
       # Install quart to run the http2 tests.
       - python3 -m pip install --user quart
       # DISPATCH-1883: Install selectors to run tcp echo server/client tools
