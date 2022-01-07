@@ -2358,21 +2358,18 @@
                 "maxFrameSize": {
                     "type": "integer",
                     "description": "The largest frame, in bytes, that may be sent on this connection. Non-zero policy values overwrite values specified for a listener object (AMQP Open, max-frame-size).",
-                    "default": 16384,
                     "required": false,
                     "create": true
                 },
                 "maxSessionWindow": {
                     "type": "integer",
                     "description": "The incoming capacity for new AMQP sessions, measured in octets. Non-zero policy values overwrite values specified for a listener object (AMQP Begin, incoming-window).",
-                    "default": 1638400,
                     "required": false,
                     "create": true
                 },
                 "maxSessions": {
                     "type": "integer",
                     "description": "The maximum number of sessions that may be created on this connection. Non-zero policy values overwrite values specified for a listener object (AMQP Open, channel-max).",
-                    "default": 32768,
                     "required": false,
                     "create": true
                 },

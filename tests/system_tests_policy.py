@@ -2037,5 +2037,111 @@ class PolicyVhostMultiTenantBlankHostname(TestCase):
         self.assertTrue(test.error is None)
 
 
+class PolicyVhostFrameSessionWindowOverride(TestCase):
+    """
+    DISPATCH-2305: verify that policy does not override the connection settings
+    by default.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(PolicyVhostFrameSessionWindowOverride, cls).setUpClass()
+
+        def router(name, mode, extra=None):
+            config = [
+                ('router', {'mode': mode,
+                            'id': name}),
+                ('listener', {'role': 'normal',
+                              'multiTenant': 'true',
+                              'port': cls.tester.get_port(),
+                              'policyVhost': 'noOverride',
+                              'maxFrameSize': '2048',
+                              'maxSessions': '200',
+                              'maxSessionFrames': '100'}),
+                ('listener', {'role': 'normal',
+                              'multiTenant': 'true',
+                              'port': cls.tester.get_port(),
+                              'policyVhost': 'overrideMe',
+                              'maxFrameSize': '2048',
+                              'maxSessions': '200',
+                              'maxSessionFrames': '100'}),
+                ('policy', {'enableVhostPolicy': 'true'}),
+
+
+                ('vhost', {
+                    'hostname': 'noOverride',
+                    'allowUnknownUser': 'true',
+                    'groups': {
+                        '$default': {
+                            'users': '*',
+                            'remoteHosts': '*',
+                            'sources': '*',
+                            'targets': '*',
+                            'allowAnonymousSender': True
+                        }
+                    }
+                }),
+
+                ('vhost', {
+                    'hostname': 'overrideMe',
+                    'allowUnknownUser': 'true',
+                    'groups': {
+                        '$default': {
+                            'users': '*',
+                            'remoteHosts': '*',
+                            'sources': '*',
+                            'targets': '*',
+                            'allowAnonymousSender': True,
+                            'maxFrameSize': 32767,
+                            'maxSessions': 10,
+                            'maxSessionWindow': 3 * 32767,
+                        }
+                    }
+                })
+            ]
+
+            config = Qdrouterd.Config(config)
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+            return cls.routers[-1]
+
+        cls.routers = []
+
+        router('A', 'interior')
+        cls.INT_A = cls.routers[0]
+        cls.INT_A.defaults = cls.INT_A.addresses[0]
+        cls.INT_A.override = cls.INT_A.addresses[1]
+
+    def test_1_check_frame_sessions(self):
+        mframe, mssn, _ = PolicyConnSettingsSniffer(self.INT_A.defaults).run()
+        self.assertEqual(2048, mframe)
+        self.assertEqual(200, mssn)
+        mframe, mssn, _ = PolicyConnSettingsSniffer(self.INT_A.override).run()
+        self.assertEqual(32767, mframe)
+        self.assertEqual(10, mssn)
+
+
+class PolicyConnSettingsSniffer(MessagingHandler):
+    def __init__(self, address):
+        super(PolicyConnSettingsSniffer, self).__init__()
+        self.address = address
+        self.max_frame = None
+        self.max_sessions = None
+        self.max_window = None
+
+    def on_start(self, event):
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn, "target")
+
+    def on_link_opened(self, event):
+        self.max_frame = event.transport.remote_max_frame_size
+        self.max_sessions = event.transport.remote_channel_max + 1
+        # currently proton does not provide access to remote window info!
+        # self.max_window = event.session.incoming_capacity
+        self.conn.close()
+
+    def run(self):
+        Container(self).run()
+        return (self.max_frame, self.max_sessions, self.max_window)
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
