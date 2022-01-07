@@ -239,11 +239,16 @@ class PolicyCompiler(object):
         # rulesets may not come through standard config so make nice defaults
         policy_out[PolicyKeys.KW_USERS] = ''
         policy_out[PolicyKeys.KW_REMOTE_HOSTS] = ''
-        # DISPATCH-1277 - KW_MAX_FRAME_SIZE must be defaulted to 16384 not 2147483647
-        policy_out[PolicyKeys.KW_MAX_FRAME_SIZE] = 16384
+
+        # DISPATCH-2305: do not provide default values for max
+        # frame/window/sessions.  The router already provides these. Setting
+        # zero here will cause the router to use configured values unless
+        # specifically overridden by policy:
+        policy_out[PolicyKeys.KW_MAX_FRAME_SIZE] = 0
+        policy_out[PolicyKeys.KW_MAX_SESSION_WINDOW] = 0
+        policy_out[PolicyKeys.KW_MAX_SESSIONS] = 0
+
         policy_out[PolicyKeys.KW_MAX_MESSAGE_SIZE] = None
-        policy_out[PolicyKeys.KW_MAX_SESSION_WINDOW] = 2147483647
-        policy_out[PolicyKeys.KW_MAX_SESSIONS] = 65536
         policy_out[PolicyKeys.KW_MAX_SENDERS] = 2147483647
         policy_out[PolicyKeys.KW_MAX_RECEIVERS] = 2147483647
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_SRC] = False
