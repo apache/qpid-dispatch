@@ -228,11 +228,11 @@ class Node(object):
 
         def get_dicts(self, clean=False):
             """Results as list of dicts."""
-            return [d for d in self.iter_dicts(clean=clean)]
+            return list(self.iter_dicts(clean=clean))
 
         def get_entities(self, clean=False):
             """Results as list of entities."""
-            return [d for d in self.iter_entities(clean=clean)]
+            return list(self.iter_entities(clean=clean))
 
         def __repr__(self):
             return "QueryResponse(attribute_names=%r, results=%r" % (self.attribute_names, self.results)

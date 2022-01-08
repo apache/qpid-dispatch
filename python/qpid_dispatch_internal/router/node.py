@@ -59,7 +59,7 @@ class NodeTracker(object):
             "index": 0,
             "protocolVersion": ProtocolVersion,
             "instance": self.container.instance,  # Boot number, integer
-            "linkState": [ls for ls in self.link_state.peers],  # List of neighbour nodes
+            "linkState": list(self.link_state.peers),  # List of neighbour nodes
             "nextHop": "(self)",
             "validOrigins": [],
             "address": Address.topological(self.my_id, area=self.container.area),
@@ -403,7 +403,7 @@ class RouterNode(object):
             "index": self.maskbit,
             "protocolVersion": self.version,
             "instance": self.instance,  # Boot number, integer
-            "linkState": [ls for ls in self.link_state.peers],  # List of neighbour nodes
+            "linkState": list(self.link_state.peers),  # List of neighbour nodes
             "nextHop": self.next_hop_router and self.next_hop_router.id,
             "validOrigins": self.valid_origins,
             "address": Address.topological(self.id, area=self.parent.container.area),

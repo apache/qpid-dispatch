@@ -825,7 +825,7 @@ class ManagementEntity(EntityAdapter):
 
     def get_attributes(self, request):
         type = self.requested_type(request)
-        return (OK, dict((t, [a for a in et.attributes])
+        return (OK, dict((t, list(et.attributes))
                          for t, et in self._schema.entity_types.items()
                          if not type or type.name == t))
 

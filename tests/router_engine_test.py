@@ -204,7 +204,7 @@ class NeighborTest(unittest.TestCase):
         self.engine.handle_hello(MessageHELLO(None, 'R5', ['R2']), 2.5, 0, 1)
         self.engine.handle_hello(MessageHELLO(None, 'R6', ['R1']), 2.5, 0, 1)
         self.engine.tick(3.0)
-        keys = sorted([k for k in self.neighbors.keys()])
+        keys = sorted(self.neighbors.keys())
         self.assertEqual(keys, ['R2', 'R3', 'R4', 'R6'])
 
 

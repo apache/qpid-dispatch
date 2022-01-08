@@ -890,7 +890,7 @@ class QdstatSslTest(QdstatTestBase):
 
     def test_ssl_peer_name_verify_disabled(self):
         """Verify the --ssl-disable-peer-name-verify option"""
-        params = [x for x in self.get_ssl_args()['trustfile']]
+        params = self.get_ssl_args()['trustfile']
 
         # Expect the connection to fail, since the certificate has
         # 'localhost' as the peer name and we used '127.0.0.1' instead.

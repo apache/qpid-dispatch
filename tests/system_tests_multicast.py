@@ -916,7 +916,7 @@ class MulticastUnsettled3AckMA(MulticastUnsettled3Ack):
             "my-map": {"my-map-key1": "X",
                        "my-map-key2": 0x12,
                        "my-map-key3": "+0123456789" * 101,
-                       "my-map-list": [i for i in range(97)]
+                       "my-map-list": list(range(97))
                        },
             "my-last-key": "so long, folks!"
         }

@@ -745,8 +745,8 @@ class OneRouterTest(TestCase):
             # check the caps sent by router.
             self.assertTrue(test.remote_offered is not None)
             self.assertTrue(test.remote_desired is not None)
-            ro = [c for c in test.remote_offered]
-            rd = [c for c in test.remote_desired]
+            ro = list(test.remote_offered)
+            rd = list(test.remote_desired)
             for rc in [ro, rd]:
                 self.assertIn(symbol('ANONYMOUS-RELAY'), rc)
                 self.assertIn(symbol('qd.streaming-links'), rc)
