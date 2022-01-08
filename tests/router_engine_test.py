@@ -20,7 +20,7 @@
 import os
 import sys
 
-import mock  # noqa F401: imported for side-effects (installs mock definitions for tests)
+import mock  # noqa F401: imported for side-effects (installs mock definitions for tests)  # pylint: disable=unused-import
 
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
 

@@ -220,7 +220,6 @@ disable =
     unspecified-encoding,
     unsubscriptable-object,
     unused-argument,
-    unused-import,
     unused-variable,
     unused-wildcard-import,
     use-dict-literal,

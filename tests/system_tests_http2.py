@@ -29,7 +29,7 @@ from subprocess import PIPE
 
 h2hyper_installed = True
 try:
-    import h2.connection # noqa F401: imported but unused
+    import h2.connection # noqa F401: imported but unused  # pylint: disable=unused-import
 except ImportError:
     h2hyper_installed = False
 

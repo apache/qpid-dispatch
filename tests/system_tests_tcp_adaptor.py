@@ -57,7 +57,7 @@ except ImportError:
 DISABLE_SELECTOR_TESTS = False
 DISABLE_SELECTOR_REASON = ''
 try:
-    import selectors  # noqa F401: imported but unused (echo server and echo client import this, they run as subprocesses)
+    import selectors  # noqa F401: imported but unused (echo server and echo client import this, they run as subprocesses)  # pylint: disable=unused-import
 except ImportError:
     DISABLE_SELECTOR_TESTS = True
     DISABLE_SELECTOR_REASON = "Python selectors module is not available on this platform."
