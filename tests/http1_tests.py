@@ -90,7 +90,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def log_request(self, code=None, size=None):
         pass
 
-    def log_message(self, format=None, *args):
+    def log_message(self, *args, format=None):
         pass
 
     def _consume_body(self):

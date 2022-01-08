@@ -170,7 +170,6 @@ disable =
     import-outside-toplevel,
     inconsistent-return-statements,
     invalid-name,
-    keyword-arg-before-vararg,
     line-too-long,
     method-hidden,
     misplaced-bare-raise,
