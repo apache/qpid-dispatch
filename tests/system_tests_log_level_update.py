@@ -17,14 +17,15 @@
 # under the License.
 #
 
-from system_test import TestCase, Qdrouterd
-from system_test import QdManager
-from proton.utils import BlockingConnection
+import time
+
 from proton import Message
+from proton.utils import BlockingConnection
 from proton.reactor import AtMostOnce
 from proton.reactor import Container
 
-import time
+from system_test import TestCase, Qdrouterd
+from system_test import QdManager
 
 apply_options = AtMostOnce()
 

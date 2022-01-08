@@ -21,11 +21,12 @@ import os
 import sys
 import hashlib
 import unittest
+from subprocess import PIPE
 from time import sleep
+
 import system_test
 from system_test import TestCase, Qdrouterd, QdManager, Process
 from system_test import curl_available, TIMEOUT, skip_test_in_ci
-from subprocess import PIPE
 
 h2hyper_installed = True
 try:

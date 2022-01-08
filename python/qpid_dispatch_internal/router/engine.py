@@ -17,6 +17,9 @@
 # under the License.
 #
 
+import time
+from traceback import format_exc, extract_stack
+
 from .data import MessageHELLO, MessageRA, MessageLSU, MessageLSR, \
     isCompatibleVersion, getIdAndVersion
 from .hello import HelloProtocol
@@ -25,8 +28,6 @@ from .path import PathEngine
 from .node import NodeTracker
 from .message import Message
 
-from traceback import format_exc, extract_stack
-import time
 
 ##
 # Import the Dispatch adapters from the environment.  If they are not found

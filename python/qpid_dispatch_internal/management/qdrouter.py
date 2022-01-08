@@ -22,8 +22,9 @@ Qpid Dispatch Router management schema and config file parsing.
 """
 import json
 from pkgutil import get_data
-from . import schema
+
 from qpid_dispatch_internal.compat import JSON_LOAD_KWARGS
+from . import schema
 
 
 class QdSchema(schema.Schema):

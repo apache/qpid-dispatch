@@ -17,14 +17,16 @@
 # under the License.
 #
 
+from time import sleep
+
+from proton import Message
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
+
 from system_test import TestCase, Qdrouterd, main_module, TestTimeout, unittest, TIMEOUT
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
 from system_tests_drain_support import DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 from system_tests_drain_support import DrainMessagesMoreHandler
-from proton.handlers import MessagingHandler
-from proton import Message
-from proton.reactor import Container
-from time import sleep
 
 
 class DrainSupportTest(TestCase):

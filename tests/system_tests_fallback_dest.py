@@ -17,13 +17,15 @@
 # under the License.
 #
 
+import time
+
 from proton import Message, symbol
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
+
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout
 from system_test import unittest, skip_test_in_ci
 from system_test import Logger
-from proton.handlers import MessagingHandler
-from proton.reactor import Container
-import time
 
 
 class AddrTimer(object):

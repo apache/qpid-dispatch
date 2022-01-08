@@ -17,15 +17,16 @@
 # under the License.
 #
 
+import time
+
 from proton import Message, Timeout
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
+
 from system_test import AsyncTestReceiver
 from system_test import TestCase, Qdrouterd, main_module
 from system_test import TIMEOUT
 from system_test import unittest
-from proton.handlers import MessagingHandler
-from proton.reactor import Container
-
-import time
 
 # ------------------------------------------------
 # Helper classes for all tests.

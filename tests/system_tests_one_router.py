@@ -17,19 +17,22 @@
 # under the License.
 #
 
-from proton import Condition, Message, Delivery, Url, symbol, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process, unittest, QdManager, TestTimeout
-from proton.handlers import MessagingHandler, TransactionHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce
-from proton.utils import BlockingConnection, SyncRequestResponse
-from proton import VERSION as PROTON_VERSION
-from proton import Terminus
-from proton import Data, symbol
-from qpid_dispatch.management.client import Node
-import os
 import json
+import os
 from subprocess import PIPE, STDOUT
 from time import sleep
+
+from proton import Condition, Message, Delivery, Url, symbol, Timeout
+from proton import Data, symbol
+from proton import Terminus
+from proton import VERSION as PROTON_VERSION
+from proton.handlers import MessagingHandler, TransactionHandler
+from proton.utils import BlockingConnection, SyncRequestResponse
+from proton.reactor import Container, AtMostOnce, AtLeastOnce
+
+from qpid_dispatch.management.client import Node
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process, unittest, QdManager, TestTimeout
 from test_broker import FakeBroker
 
 

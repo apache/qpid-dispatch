@@ -25,15 +25,17 @@ import ssl
 import sys
 import re
 import time
+from distutils.version import StrictVersion
 from subprocess import Popen, PIPE
+
+import cproton
+import proton
+from proton import SASL, Url, SSLDomain, SSLUnavailable
+from proton.utils import BlockingConnection
+
 from qpid_dispatch.management.client import Node
 from system_test import TestCase, main_module, Qdrouterd, DIR
 from system_test import unittest
-from proton import SASL, Url, SSLDomain, SSLUnavailable
-from proton.utils import BlockingConnection
-from distutils.version import StrictVersion
-import proton
-import cproton
 
 
 class RouterTestSslBase(TestCase):

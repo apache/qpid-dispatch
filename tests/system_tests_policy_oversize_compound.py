@@ -20,12 +20,13 @@
 import unittest
 import sys
 import time
-
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, Logger, TestTimeout
 from subprocess import PIPE, STDOUT
+
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, Logger, TestTimeout
 from test_broker import FakeBroker
 
 # How many worker threads?

@@ -18,13 +18,16 @@
 #
 
 import json
-from proton import Message, symbol
-from system_test import TestCase, Qdrouterd, Process, TIMEOUT
-from system_test import unittest
 from subprocess import PIPE, STDOUT
+
+from proton import Message, symbol
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
 from qpid_dispatch_internal.compat import BINARY
+
+from system_test import TestCase, Qdrouterd, Process, TIMEOUT
+from system_test import unittest
 
 # force streaming in order to check that
 # freeing sent buffers does not lose fields

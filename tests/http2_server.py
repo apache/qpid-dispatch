@@ -16,8 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import system_test
+import json
 import os
+import system_test
+
 from quart import Quart, request
 try:
     from quart.static import send_file
@@ -29,7 +31,6 @@ try:
 except ImportError:
     from werkzeug.exceptions import InternalServerError as HTTPStatusException
 
-import json
 app = Quart(__name__)
 
 

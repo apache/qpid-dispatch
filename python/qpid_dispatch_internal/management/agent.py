@@ -76,12 +76,12 @@ from ctypes import c_void_p, py_object, c_long
 from subprocess import Popen
 
 import qpid_dispatch_site
-from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
+from qpid_dispatch.management.entity import camelcase
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
-from qpid_dispatch.management.entity import camelcase
 from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
+from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from ..router.message import Message
 from ..router.address import Address
 from ..policy.policy_manager import PolicyManager

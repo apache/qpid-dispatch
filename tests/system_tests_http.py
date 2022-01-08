@@ -20,13 +20,13 @@ import errno
 import os
 import threading
 import ssl
+from subprocess import PIPE, STDOUT
 
 from urllib.request import urlopen, build_opener, HTTPSHandler
 from urllib.error import HTTPError, URLError
 
 import qpid_dispatch_site
 from system_test import TIMEOUT, Process, QdManager, retry
-from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR
 from system_test import unittest
 

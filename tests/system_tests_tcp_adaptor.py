@@ -24,6 +24,8 @@ import socket
 import sys
 import time
 import traceback
+from subprocess import PIPE
+from subprocess import STDOUT
 
 from system_test import Logger
 from system_test import main_module
@@ -32,9 +34,6 @@ from system_test import Qdrouterd
 from system_test import TestCase
 from system_test import TIMEOUT
 from system_test import unittest
-
-from subprocess import PIPE
-from subprocess import STDOUT
 
 # Tests in this file are organized by classes that inherit TestCase.
 # The first instance is TcpAdaptor(TestCase).

@@ -22,10 +22,11 @@ System tests involving one or more brokers and dispatch routers integrated
 with waypoints.
 """
 
+from itertools import cycle
+
 import system_test
 from system_test import Qdrouterd, message, MISSING_REQUIREMENTS
 from system_test import unittest
-from itertools import cycle
 
 
 class DistributedQueueTest(system_test.TestCase):  # pylint: disable=too-many-public-methods

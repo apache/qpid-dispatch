@@ -227,5 +227,4 @@ disable =
     useless-else-on-loop,
     useless-object-inheritance,
     useless-super-delegation,
-    wrong-import-order,
     wrong-import-position,

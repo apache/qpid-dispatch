@@ -19,11 +19,18 @@
 
 import os
 import re
+from subprocess import PIPE
 from time import sleep
 from threading import Event
 from threading import Timer
 
 from proton import Message
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
+from proton.utils import BlockingConnection
+
+from qpid_dispatch.management.client import Node
+
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
@@ -34,11 +41,6 @@ from system_test import Process
 from system_tests_link_routes import ConnLinkRouteService
 from test_broker import FakeBroker
 from test_broker import FakeService
-from proton.handlers import MessagingHandler
-from proton.reactor import Container
-from proton.utils import BlockingConnection
-from qpid_dispatch.management.client import Node
-from subprocess import PIPE
 
 
 class AddrTimer(object):

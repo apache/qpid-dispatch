@@ -23,14 +23,16 @@ import json
 import re
 import sys
 import time
+from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, TestTimeout
 from system_test import Logger
-from subprocess import PIPE, STDOUT
+
 from proton import ConnectionException, Timeout, Url, symbol
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, ReceiverOption
 from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
+
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 from test_broker import FakeBroker
 
