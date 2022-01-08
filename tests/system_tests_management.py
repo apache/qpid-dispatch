@@ -26,7 +26,8 @@ import json
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Message
-from qpid_dispatch.management.client import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus
+from qpid_dispatch.management.client import Node, Url
+from qpid_dispatch.management.error import ManagementError, BadRequestStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.compat import BINARY
