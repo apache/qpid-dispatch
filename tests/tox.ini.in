@@ -144,7 +144,6 @@ disable =
     access-member-before-definition,
     arguments-differ,
     attribute-defined-outside-init,
-    bad-classmethod-argument,
     bad-super-call,
     bare-except,
     broad-except,

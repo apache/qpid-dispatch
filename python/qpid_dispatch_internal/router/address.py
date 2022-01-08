@@ -29,11 +29,11 @@ class Address(str):
     AMQP = "amqp:"
     TOPO = "_topo"
 
-    def __new__(self, addr):  # Subclassing immutable type, must use __new__ not __init__
-        if addr.startswith(self.AMQP):
+    def __new__(cls, addr):  # Subclassing immutable type, must use __new__ not __init__
+        if addr.startswith(cls.AMQP):
             return str.__new__(addr)
         else:
-            return str.__new__(Address, "%s/%s" % (self.AMQP, addr))
+            return str.__new__(Address, "%s/%s" % (cls.AMQP, addr))
 
     @classmethod
     def mobile(cls, path):
