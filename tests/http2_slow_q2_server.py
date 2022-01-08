@@ -41,7 +41,7 @@ def send_response(event, conn):
     """
     stream_id = event.stream_id
     conn.send_headers(stream_id=stream_id,
-                      headers=[(u':status', u'200'), (u'server', u'h2_slow_q2_server/0.1.0')])
+                      headers=[(':status', '200'), ('server', 'h2_slow_q2_server/0.1.0')])
     conn.send_data(stream_id=stream_id,
                    data=b'Success!',
                    end_stream=True)

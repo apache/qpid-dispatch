@@ -255,18 +255,18 @@ class RouterEntity(EntityAdapter):
         return self.attributes.get('id')
 
     def create(self):
-        if u"id" in self.attributes.keys():
-            for ch in self.attributes[u"id"]:
+        if "id" in self.attributes.keys():
+            for ch in self.attributes["id"]:
                 try:
                     disallowed = unicodedata.category(ch)[0] in "CZ"
                 except TypeError:
                     disallowed = unicodedata.category(ch.decode('utf-8'))[0] in "CZ"
                 if disallowed:  # disallow control and whitespace characters
-                    raise AttributeError("Router id attribute containing character '%s' in id '%s' is disallowed." % (ch, self.attributes[u"id"]))
+                    raise AttributeError("Router id attribute containing character '%s' in id '%s' is disallowed." % (ch, self.attributes["id"]))
         try:
-            self.attributes[u"hostName"] = socket.gethostbyaddr(socket.gethostname())[0]
+            self.attributes["hostName"] = socket.gethostbyaddr(socket.gethostname())[0]
         except:
-            self.attributes[u"hostName"] = ''
+            self.attributes["hostName"] = ''
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
 
     def __str__(self):

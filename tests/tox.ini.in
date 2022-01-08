@@ -191,7 +191,6 @@ disable =
     raising-format-tuple,
     redefined-builtin,
     redefined-outer-name,
-    redundant-u-string-prefix,
     redundant-unittest-assert,
     singleton-comparison,
     super-init-not-called,
