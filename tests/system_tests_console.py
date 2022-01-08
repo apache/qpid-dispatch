@@ -33,7 +33,7 @@ from proton.handlers import MessagingHandler
 class ConsolePreReq:
     @staticmethod
     def is_cmd(name):
-        ''' determine if a command is present and executes on the system '''
+        """Determine if a command is present and executes on the system"""
         try:
             devnull = open(os.devnull, "w")
             subprocess.Popen([name], stdout=devnull, stderr=devnull).communicate()
@@ -135,6 +135,7 @@ class ConsoleTest(TestCase):
 
 
 class AsyncStopableSender(AsyncTestSender):
+
     def __init__(self, hostport, address):
         super(AsyncStopableSender, self).__init__(hostport, address, 999999999)
         self._stop_thread = False
@@ -163,6 +164,7 @@ class AsyncStopableSender(AsyncTestSender):
 
 
 class TimedFlow(MessagingHandler):
+
     def __init__(self, receiver, credit):
         super(TimedFlow, self).__init__()
         self.receiver = receiver
@@ -173,6 +175,7 @@ class TimedFlow(MessagingHandler):
 
 
 class AsyncSlowReceiver(AsyncTestReceiver):
+
     def __init__(self, hostport, target):
         super(AsyncSlowReceiver, self).__init__(hostport, target, msg_args={"prefetch": 0})
 

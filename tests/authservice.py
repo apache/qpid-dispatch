@@ -33,6 +33,7 @@ import system_test
 
 
 class AuthService(MessagingHandler):
+
     def __init__(self, address):
         super(AuthService, self).__init__()
         self.address = address

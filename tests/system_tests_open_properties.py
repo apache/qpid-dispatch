@@ -40,9 +40,7 @@ def strip_default_options(options):
 
 
 class OpenPropertiesBroker(FakeBroker):
-    """
-    For obtaining open properties on connector connections
-    """
+    """For obtaining open properties on connector connections"""
     wait = False  # do not block for broker connector setup
     entity = 'connector'
 
@@ -68,9 +66,7 @@ class OpenPropertiesBroker(FakeBroker):
 
 
 class OpenPropertiesClient(MessagingHandler):
-    """
-    For obtaining open properties on listener connections
-    """
+    """For obtaining open properties on listener connections"""
     wait = True  # wait for broker setup to complete
     entity = 'listener'
 
@@ -105,9 +101,7 @@ class OpenPropertiesConfigTest(TestCase):
     """
 
     def _valid_properties_check(self, client_class):
-        """
-        Test a few different valid property maps
-        """
+        """Test a few different valid property maps"""
 
         valid_properties = [
             {
@@ -196,14 +190,10 @@ class OpenPropertiesConfigTest(TestCase):
 
 
 class OpenPropertiesQdManageTest(TestCase):
-    """
-    Tests creating openProperties via qdmanage tool
-    """
+    """Tests creating openProperties via qdmanage tool"""
 
     def _valid_properties_check(self, client_class):
-        """
-        Test a few different valid property maps
-        """
+        """Test a few different valid property maps"""
 
         valid_properties = [
             {
@@ -286,9 +276,7 @@ class OpenPropertiesQdManageTest(TestCase):
 
 
 class OpenPropertiesBadConfigTest(TestCase):
-    """
-    Ensure invalid open properties configurations are detected
-    """
+    """Ensure invalid open properties configurations are detected"""
 
     def _find_in_output(self, filename, error_msg):
         with open(filename, 'r') as out_file:
@@ -298,9 +286,7 @@ class OpenPropertiesBadConfigTest(TestCase):
         return False
 
     def test_01_invalid_properties_check(self):
-        """
-        Test a few different invalid property maps
-        """
+        """Test a few different invalid property maps"""
         invalid_properties = [
             (
                 {9: "invalid key type"},

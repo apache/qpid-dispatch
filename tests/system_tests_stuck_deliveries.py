@@ -148,6 +148,7 @@ class RouterTest(TestCase):
 
 
 class DelayedSettlementTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host, query_host, addr, dlv_count, stuck_list, close_link):
         super(DelayedSettlementTest, self).__init__(auto_accept=False)
         self.sender_host   = sender_host
@@ -258,6 +259,7 @@ class DelayedSettlementTest(MessagingHandler):
 
 
 class RxLinkCreditTest(MessagingHandler):
+
     def __init__(self, host):
         super(RxLinkCreditTest, self).__init__(prefetch=0)
         self.host = host
@@ -389,6 +391,7 @@ class RxLinkCreditTest(MessagingHandler):
 
 
 class TxLinkCreditTest(MessagingHandler):
+
     def __init__(self, host):
         super(TxLinkCreditTest, self).__init__()
         self.host = host

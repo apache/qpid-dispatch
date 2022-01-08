@@ -17,9 +17,8 @@
 # under the License
 #
 
-"""
-Utilities for command-line programs.
-"""
+"""Utilities for command-line programs."""
+
 import sys
 import argparse
 import os
@@ -238,9 +237,7 @@ def get_password(file=None):
 
 
 class Sasl:
-    """
-    A simple object to hold sasl mechanisms, sasl username and password
-    """
+    """A simple object to hold sasl mechanisms, sasl username and password"""
 
     def __init__(self, mechs=None, user=None, password=None, sasl_password_file=None):
         self.mechs = mechs
@@ -273,7 +270,7 @@ def opts_sasl(opts):
 
 def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     """Return proton.SSLDomain from command line options or None if no SSL options specified.
-    @param opts: Parsed optoins including connection_options()
+    @param opts: Parsed options including connection_options()
     """
 
     url = opts_url(opts)

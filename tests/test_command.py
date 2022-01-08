@@ -41,6 +41,7 @@ argparse.ArgumentParser.error = mock_error  # type: ignore[assignment]  # Cannot
 
 
 class FakeBusManager:
+
     def displayGeneral(self): pass
     def displayConnections(self): pass
     def displayRouterLinks(self): pass
@@ -62,6 +63,7 @@ FBM = FakeBusManager
 
 
 class TestParseArgsQdstat(unittest.TestCase):
+
     def setUp(self):
         self.parser = _qdstat_parser(BusManager=FBM)
 
@@ -112,6 +114,7 @@ class TestParseArgsQdstat(unittest.TestCase):
 
 
 class TestParseArgsQdmanage(unittest.TestCase):
+
     def setUp(self):
         self.operations = ["HERE", "SOME", "OPERATIONS"]
         self.parser = _qdmanage_parser(operations=self.operations)
@@ -131,6 +134,7 @@ class TestParseArgsQdmanage(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
+
     def test_main(self):
         def run_success(argv):
             self.assertEqual(sys.argv, argv)

@@ -48,6 +48,7 @@ class SchemaWriter:
             self.para("\n=%s %s" % ("=" * self._heading, text))
 
     class Section(namedtuple("Section", ["writer", "heading"])):
+
         def __enter__(self): self.writer.heading(self.heading, sub=+1)
         def __exit__(self, ex, value, trace): self.writer.heading(sub=-1)
 

@@ -16,9 +16,7 @@
 # under the License.
 #
 
-"""
-Mock implementation of the dispatch C extension module for use in unit tests.
-"""
+"""Mock implementation of the dispatch C extension module for use in unit tests."""
 
 LOG_TRACE    = 1
 LOG_DEBUG    = 2
@@ -37,6 +35,7 @@ TREATMENT_LINK_BALANCED    = 4
 
 
 class LogAdapter:
+
     def __init__(self, mod_name):
         self.mod_name = mod_name
 
@@ -45,6 +44,7 @@ class LogAdapter:
 
 
 class IoAdapter:
+
     def __init__(self, handler, address, global_address=False):
         self.handler = handler
         self.address = address

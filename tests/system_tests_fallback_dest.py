@@ -463,6 +463,7 @@ class RouterTest(TestCase):
 
 
 class SenderFirstTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host, addr, rx_fallback):
         super(SenderFirstTest, self).__init__()
         self.sender_host   = sender_host
@@ -524,6 +525,7 @@ class SenderFirstTest(MessagingHandler):
 
 
 class ReceiverFirstTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host, addr, rx_fallback):
         super(ReceiverFirstTest, self).__init__()
         self.sender_host   = sender_host
@@ -585,6 +587,7 @@ class ReceiverFirstTest(MessagingHandler):
 
 
 class SwitchoverTest(MessagingHandler):
+
     def __init__(self, sender_host, primary_host, fallback_host, addr):
         super(SwitchoverTest, self).__init__()
         self.sender_host    = sender_host[0]
@@ -752,6 +755,7 @@ class SwitchoverTest(MessagingHandler):
 
 
 class SenderFirstAutoLinkTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host):
         super(SenderFirstAutoLinkTest, self).__init__()
         self.sender_host   = sender_host
@@ -823,6 +827,7 @@ class SenderFirstAutoLinkTest(MessagingHandler):
 
 
 class ReceiverFirstAutoLinkTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host):
         super(ReceiverFirstAutoLinkTest, self).__init__()
         self.sender_host   = sender_host

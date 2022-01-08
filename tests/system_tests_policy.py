@@ -38,9 +38,7 @@ from test_broker import FakeBroker
 
 
 class AbsoluteConnectionCountLimit(TestCase):
-    """
-    Verify that connections beyond the absolute limit are denied and counted
-    """
+    """Verify that connections beyond the absolute limit are denied and counted"""
     @classmethod
     def setUpClass(cls):
         """Start the router"""
@@ -280,9 +278,7 @@ class LoadPolicyFromFolder(TestCase):
 
 
 class SenderReceiverLimits(TestCase):
-    """
-    Verify that policy can limit senders and receivers by count.
-    """
+    """Verify that policy can limit senders and receivers by count."""
     @classmethod
     def setUpClass(cls):
         """Start the router"""
@@ -460,6 +456,7 @@ class PolicyVhostOverride(TestCase):
 
 
 class Capabilities(ReceiverOption):
+
     def __init__(self, value):
         self.value = value
 
@@ -990,9 +987,7 @@ class PolicyLinkNamePatternTest(TestCase):
 
 
 class PolicyHostamePatternTest(TestCase):
-    """
-    Verify hostname pattern matching
-    """
+    """Verify hostname pattern matching"""
     @classmethod
     def setUpClass(cls):
         """Start the router"""
@@ -1351,10 +1346,10 @@ class SenderAddressValidator(ClientAddressValidator):
 #
 
 class ConnectorPolicyMisconfiguredClient(FakeBroker):
-    '''
+    """
     This client is targeted by a misconfigured connector whose policy
     causes an immediate connection close.
-    '''
+    """
 
     def __init__(self, url, container_id=None):
         self.connection_opening = 0
@@ -1466,10 +1461,10 @@ class ConnectorPolicyMisconfigured(TestCase):
 
 
 class ConnectorPolicyClient(FakeBroker):
-    '''
+    """
     This client is targeted by a configured connector whose policy
     allows certain sources and targets.
-    '''
+    """
 
     def __init__(self, url, container_id=None):
         self.connection_opening = 0

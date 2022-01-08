@@ -49,9 +49,7 @@ def get_body(n_sent, large_message=False):
 
 
 def _link_stats_are_zero(statistics, keys):
-    """
-    Verify that all statistics whose keys are present are zero
-    """
+    """Verify that all statistics whose keys are present are zero"""
     for key in keys:
         if statistics.get(key) != 0:
             return False
@@ -59,6 +57,7 @@ def _link_stats_are_zero(statistics, keys):
 
 
 class OneRouterModifiedTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         """Start three routers"""
@@ -112,6 +111,7 @@ class OneRouterModifiedTest(TestCase):
 
 
 class OneRouterRejectedTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         """Start three routers"""
@@ -163,6 +163,7 @@ class OneRouterRejectedTest(TestCase):
 
 
 class OneRouterReleasedDroppedPresettledTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         """Start three routers"""
@@ -221,6 +222,7 @@ class OneRouterReleasedDroppedPresettledTest(TestCase):
 
 
 class TwoRouterReleasedDroppedPresettledTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(TwoRouterReleasedDroppedPresettledTest, cls).setUpClass()
@@ -308,6 +310,7 @@ class CounterCheckerTimeout :
 
 
 class LargePresettledLinkCounterTest(MessagingHandler):
+
     def __init__(self, sender_addr, receiver_addr):
         super(LargePresettledLinkCounterTest, self).__init__()
         self.timer = None
@@ -405,6 +408,7 @@ class LargePresettledLinkCounterTest(MessagingHandler):
 
 
 class LargePresettledReleasedLinkCounterTest(MessagingHandler):
+
     def __init__(self, sender_addr, receiver_addr):
         super(LargePresettledReleasedLinkCounterTest, self).__init__(prefetch=0)
         self.sender_addr = sender_addr
@@ -510,6 +514,7 @@ class LargePresettledReleasedLinkCounterTest(MessagingHandler):
 
 
 class TwoRouterLargeMessagePresettledCountTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(TwoRouterLargeMessagePresettledCountTest, cls).setUpClass()
@@ -550,6 +555,7 @@ class TwoRouterLargeMessagePresettledCountTest(TestCase):
 
 
 class TwoRouterLargeMessagePresettledReleasedCountTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(TwoRouterLargeMessagePresettledReleasedCountTest, cls).setUpClass()
@@ -590,6 +596,7 @@ class TwoRouterLargeMessagePresettledReleasedCountTest(TestCase):
 
 
 class LinkRouteIngressEgressTransitTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         """Start three routers"""
@@ -708,6 +715,7 @@ class LinkRouteIngressEgressTransitTest(TestCase):
 
 
 class TwoRouterIngressEgressTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(TwoRouterIngressEgressTest, cls).setUpClass()
@@ -808,6 +816,7 @@ class TwoRouterIngressEgressTest(TestCase):
 
 
 class OneRouterIngressEgressTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         """Start a router and a messenger"""
@@ -866,6 +875,7 @@ class OneRouterIngressEgressTest(TestCase):
 
 
 class RouteContainerEgressCount(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(RouteContainerEgressCount, cls).setUpClass()
@@ -933,9 +943,7 @@ class RouteContainerEgressCount(TestCase):
 
 
 class OneRouterLinkCountersTest(TestCase):
-    """
-    A set of tests that validate link-level counters
-    """
+    """A set of tests that validate link-level counters"""
     CREDIT = 20  # default issued by test receiver client
     COUNT  = 40  # default total msgs the sender client generates
 
@@ -1048,9 +1056,7 @@ class OneRouterLinkCountersTest(TestCase):
             Container(self).run()
 
     def verify_released(self, large_message=False):
-        """
-        Verify the link released count by releasing all received messages
-        """
+        """Verify the link released count by releasing all received messages"""
         test = self.LinkCountersTest(self.router.addresses[0],
                                      outcome=Delivery.RELEASED,
                                      large_message=large_message)
@@ -1150,9 +1156,7 @@ class OneRouterLinkCountersTest(TestCase):
                                                 'presettledCount'}))
 
     def verify_one_credit_accepted(self, large_message=False):
-        """
-        Verify counters on a credit-blocked link
-        """
+        """Verify counters on a credit-blocked link"""
         test = self.LinkCountersTest(self.router.addresses[0],
                                      outcome=Delivery.ACCEPTED,
                                      rx_limit=1,
@@ -1205,6 +1209,7 @@ class OneRouterLinkCountersTest(TestCase):
 
 
 class RouteContainerIngressCount(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(RouteContainerIngressCount, cls).setUpClass()
@@ -1264,6 +1269,7 @@ class RouteContainerIngressCount(TestCase):
 
 
 class IngressEgressTwoRouterTest(MessagingHandler):
+
     def __init__(self, sender_address, receiver_address, num_messages, large_message=False):
         super(IngressEgressTwoRouterTest, self).__init__()
         self.sender = None
@@ -1337,6 +1343,7 @@ class IngressEgressTwoRouterTest(MessagingHandler):
 
 
 class IngressEgressOneRouterTest(MessagingHandler):
+
     def __init__(self, address, num_messages, large_message=False):
         super(IngressEgressOneRouterTest, self).__init__()
         self.sender = None
@@ -1395,6 +1402,7 @@ class IngressEgressOneRouterTest(MessagingHandler):
 
 
 class RouteContainerEgressTest(MessagingHandler):
+
     def __init__(self, route_container_addr, sender_addr, num_messages, large_message=False):
         super(RouteContainerEgressTest, self).__init__()
         self.sender_addr = sender_addr
@@ -1467,6 +1475,7 @@ class RouteContainerEgressTest(MessagingHandler):
 
 
 class RouteContainerIngressTest(MessagingHandler):
+
     def __init__(self, route_container_addr, receiver_addr):
         super(RouteContainerIngressTest, self).__init__()
         self.receiver_addr = receiver_addr
@@ -1545,6 +1554,7 @@ class RouteContainerIngressTest(MessagingHandler):
 
 
 class IngressEgressTransitLinkRouteTest(MessagingHandler):
+
     def __init__(self, sender_addr, receiver_addr, num_messages, large_message=False):
         super(IngressEgressTransitLinkRouteTest, self).__init__()
         self.timer = None
@@ -1620,6 +1630,7 @@ class IngressEgressTransitLinkRouteTest(MessagingHandler):
 
 
 class ReleasedDroppedPresettledCountTest(MessagingHandler):
+
     def __init__(self, sender_addr, num_messages, large_message=False):
         super(ReleasedDroppedPresettledCountTest, self).__init__()
         self.timer = None
@@ -1679,6 +1690,7 @@ class ReleasedDroppedPresettledCountTest(MessagingHandler):
 
 
 class RejectedDeliveriesTest(MessagingHandler):
+
     def __init__(self, addr, num_messages, large_message=False):
         super(RejectedDeliveriesTest, self).__init__(auto_accept=False)
         self.addr = addr
@@ -1741,6 +1753,7 @@ class RejectedDeliveriesTest(MessagingHandler):
 
 
 class ModifiedDeliveriesTest(MessagingHandler):
+
     def __init__(self, addr, num_messages, large_message=False):
         super(ModifiedDeliveriesTest, self).__init__(auto_accept=False)
         self.addr = addr

@@ -385,9 +385,7 @@ class MulticastLinearTest(TestCase):
         self.assertIsNone(test.error)
 
     def test_90_credit_no_subscribers(self):
-        """
-        Verify that multicast senders are blocked until a consumer is present.
-        """
+        """Verify that multicast senders are blocked until a consumer is present."""
         test = MulticastCreditBlocked(address=self.EA1.listener,
                                       target='multicast/no/subscriber1')
 
@@ -438,9 +436,7 @@ class MulticastLinearTest(TestCase):
 #
 
 class SendPresettled(LinkOption):
-    """
-    All messages are sent presettled
-    """
+    """All messages are sent presettled"""
 
     def apply(self, link):
         link.snd_settle_mode = Link.SND_SETTLED
@@ -448,9 +444,7 @@ class SendPresettled(LinkOption):
 
 
 class SendMixed(LinkOption):
-    """
-    Messages may be sent unsettled or settled
-    """
+    """Messages may be sent unsettled or settled"""
 
     def apply(self, link):
         link.snd_settle_mode = Link.SND_MIXED
@@ -458,9 +452,7 @@ class SendMixed(LinkOption):
 
 
 class Link1Ack(LinkOption):
-    """
-    Messages will be sent unsettled
-    """
+    """Messages will be sent unsettled"""
 
     def apply(self, link):
         link.snd_settle_mode = Link.SND_UNSETTLED
@@ -479,9 +471,7 @@ class Link3Ack(LinkOption):
 
 
 class MulticastBase(MessagingHandler, metaclass=abc.ABCMeta):
-    """
-    Common multicast boilerplate code
-    """
+    """Common multicast boilerplate code"""
 
     def __init__(self, config, count, body, topic=None, **handler_kwargs):
         super(MulticastBase, self).__init__(**handler_kwargs)
@@ -714,9 +704,7 @@ class MulticastPresettled(MulticastBase):
 
 
 class MulticastPresettledRxFail(MulticastPresettled):
-    """
-    Spontaneously close a receiver or connection on message received
-    """
+    """Spontaneously close a receiver or connection on message received"""
 
     def __init__(self, config, count, drop_clients, detach, body):
         super(MulticastPresettledRxFail, self).__init__(config, count, body, SendPresettled())
@@ -831,9 +819,7 @@ class MulticastUnsettled3Ack(MulticastBase):
 
 
 class MulticastUnsettled1Ack(MulticastUnsettled3Ack):
-    """
-    Sender sends unsettled, the receiver sets outcome and immediately settles
-    """
+    """Sender sends unsettled, the receiver sets outcome and immediately settles"""
 
     def __init__(self, config, count, body, outcomes=None):
         super(MulticastUnsettled1Ack, self).__init__(config,
@@ -868,9 +854,7 @@ class MulticastUnsettled1Ack(MulticastUnsettled3Ack):
 
 
 class MulticastUnsettledRxFail(MulticastUnsettled3Ack):
-    """
-    Spontaneously close a receiver or connection on message received
-    """
+    """Spontaneously close a receiver or connection on message received"""
 
     def __init__(self, config, count, drop_clients, detach, body):
         super(MulticastUnsettledRxFail, self).__init__(config, count, body)
@@ -902,9 +886,7 @@ class MulticastUnsettledRxFail(MulticastUnsettled3Ack):
 
 
 class MulticastUnsettled3AckMA(MulticastUnsettled3Ack):
-    """
-    Try 3 Ack, but with a bunch of user Message Annotations (why not?)
-    """
+    """Try 3 Ack, but with a bunch of user Message Annotations (why not?)"""
 
     def __init__(self, config, count, body, outcomes=None):
         super(MulticastUnsettled3AckMA, self).__init__(config,

@@ -17,9 +17,7 @@
 # under the License
 #
 
-"""
-ManagementError exception class and subclasses, with status codes used by AMQP.
-"""
+"""ManagementError exception class and subclasses, with status codes used by AMQP."""
 
 #from httplib import responses as STATUS_TEXT
 # from httplib import OK, NO_CONTENT, CREATED, \
@@ -110,6 +108,7 @@ class ManagementError(Exception):
 def _error_class(status):
     """Create a ManagementError class for a particular status"""
     class Error(ManagementError):
+
         def __init__(self, description): ManagementError.__init__(self, status, description)
     return Error
 

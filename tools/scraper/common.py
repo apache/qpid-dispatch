@@ -103,7 +103,7 @@ class Common:
         return self.router_ids.index(id)
 
     def module_key_in_line(self, key, line):
-        '''
+        """
         Sense if the key is a log module name in the log line.
         The name can't be too far into the string or else it finds
         false positives when a user uses qdstat to get a log file.
@@ -111,7 +111,7 @@ class Common:
         :param key:
         :param line:
         :return:
-        '''
+        """
         MAX_POSITION = 40
         assert len(key) > 0
         st = line.find(key)
@@ -119,23 +119,23 @@ class Common:
 
 
 def log_letter_of(idx):
-    '''
+    """
     Return the letter A, B, C, ... from the index 0..n
     :param idx:
     :return: A..Z
-    '''
+    """
     if idx >= 26:
         sys.exit('ERROR: too many log files')
     return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[idx]
 
 
 def index_of_log_letter(letter):
-    '''
+    """
     Return the index 0..25 of the firster letter of the 'letter' string
     Raise error if out of range
     :param letter:
     :return:
-    '''
+    """
     val = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".find(letter[0].upper())
     if val < 0 or val > 25:
         raise ValueError("index_of_log_letter Invalid log letter: %s", letter)
@@ -143,6 +143,7 @@ def index_of_log_letter(letter):
 
 
 class RestartRec():
+
     def __init__(self, _id, _router, _event, _datetime):
         self.id = _id
         self.router = _router
@@ -186,7 +187,7 @@ def html_escape(text):
 
 
 def strings_of_proton_log(text):
-    '''
+    r"""
     Given a transfer log text string like:
       "\x00SpE\x00Ss\xd0\x00\x00\x002\x00\x00\x00\x06@@@@\xa1$amqp:/_edge/EB1/temp.RkCWe_Is4jc3bcN\xa1\x0232\x00St\xd1\x00\x00\x00\x8c\x00\x00\x00\x0c\xa1\x04name\xa1\x04self\xa1\x04type\xa1\x13org.amqp.management\xa1\x09operation\xa1\x05QUERY\xa1\x0aentityType\xa1'org.apache.qpid.dispatch.router.address\xa1\x06offsetU\x00\xa1\x05count\x81\x00\x00\x00\x00\x00\x00\x01\xf4\x00Sw\xd1\x00\x00\x00Q\x00\x00\x00\x02\xa1\x0eattributeNames\xd0\x00\x00\x008\x00\x00\x00\x04\xa1\x04name\xa1\x0fsubscriberCount\xa1\x0bremoteCount\xa1\x0econtainerCount"
     return the strings thereof:
@@ -194,7 +195,7 @@ def strings_of_proton_log(text):
     The intended use for this is to help decode management and router frames in the transfer nickname dump.
     :param text:
     :return: strings embedded in text
-    '''
+    """
     r = ""  # return result
     sstate = 0  # when a backslash is seen, skip this many more input chars
     skipping = False
@@ -214,11 +215,11 @@ def strings_of_proton_log(text):
 
 
 def ls_eval(text):
-    '''
+    """
     Given a router_ls cost string like '{u'A': 1, u'C': 51L, u'B': 101L}',
     return a dictionary {A:1, C:51, B:101}
     This code replaces ast.literal_eval
-    '''
+    """
     result = {}
     text = text.strip(" {}")
     if len(text) > 0:

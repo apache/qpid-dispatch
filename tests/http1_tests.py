@@ -43,9 +43,7 @@ def _curl_ok():
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    """
-    Dispatches requests received by the HTTPServer based on the method
-    """
+    """Dispatches requests received by the HTTPServer based on the method"""
     protocol_version = 'HTTP/1.1'
 
     def _execute_request(self, tests):
@@ -122,16 +120,12 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 
 class RequestHandler10(RequestHandler):
-    """
-    RequestHandler that forces the server to use HTTP version 1.0 semantics
-    """
+    """RequestHandler that forces the server to use HTTP version 1.0 semantics"""
     protocol_version = 'HTTP/1.0'
 
 
 class MyHTTPServer(HTTPServer):
-    """
-    Adds a switch to the HTTPServer to allow it to exit gracefully
-    """
+    """Adds a switch to the HTTPServer to allow it to exit gracefully"""
 
     def __init__(self, addr, handler_cls, testcases):
         self.system_tests = testcases
@@ -148,9 +142,7 @@ class MyHTTPServer(HTTPServer):
 
 
 class ThreadedTestClient:
-    """
-    An HTTP client running in a separate thread
-    """
+    """An HTTP client running in a separate thread"""
 
     def __init__(self, tests, port, repeat=1):
         self._id = uuid.uuid4().hex
@@ -217,9 +209,7 @@ class ThreadedTestClient:
 
 
 class TestServer:
-    """
-    A HTTPServer running in a separate thread
-    """
+    """A HTTPServer running in a separate thread"""
     __test__ = False
 
     @classmethod
@@ -288,9 +278,7 @@ class TestServer:
 
 
 def http1_ping(sport, cport):
-    """
-    Test the HTTP path by doing a simple GET request
-    """
+    """Test the HTTP path by doing a simple GET request"""
     TEST = {
         "GET": [
             (RequestMsg("GET", "/GET/ping",
@@ -369,9 +357,7 @@ class RequestMsg:
 
 
 class ResponseValidator:
-    """
-    Validate a response as received by the HTTP client
-    """
+    """Validate a response as received by the HTTP client"""
 
     def __init__(self, status=200, expect_headers=None, expect_body=None):
         if expect_headers is None:
@@ -398,9 +384,7 @@ class ResponseValidator:
 
 class CommonHttp1Edge2EdgeTest:
     def test_01_concurrent_requests(self):
-        """
-        Test multiple concurrent clients sending streaming messages
-        """
+        """Test multiple concurrent clients sending streaming messages"""
 
         REQ_CT = 3  # 3 requests per TEST_*
         TESTS_11 = {
@@ -552,9 +536,7 @@ class CommonHttp1Edge2EdgeTest:
         server.wait()
 
     def test_03_server_reconnect(self):
-        """
-        Verify server reconnect logic.
-        """
+        """Verify server reconnect logic."""
         TESTS = {
             "GET": [
                 (RequestMsg("GET", "/GET/test_03_server_reconnect",
@@ -602,9 +584,7 @@ class CommonHttp1Edge2EdgeTest:
         server.wait()
 
     def test_04_server_pining_for_the_fjords(self):
-        """
-        Test permanent loss of server
-        """
+        """Test permanent loss of server"""
         TESTS = {
             "GET": [
                 (RequestMsg("GET", "/GET/test_04_fjord_pining",
@@ -665,9 +645,7 @@ class CommonHttp1Edge2EdgeTest:
         server.wait()
 
     def test_05_large_streaming_msg(self):
-        """
-        Verify large streaming message transfer
-        """
+        """Verify large streaming message transfer"""
         TESTS_11 = {
             "PUT": [
                 (RequestMsg("PUT", "/PUT/streaming_test_11",
@@ -1180,6 +1158,7 @@ class Http1OneRouterTestBase(TestCase):
 
 
 class Http1Edge2EdgeTestBase(TestCase):
+
     @classmethod
     def router(cls, name, mode, extra):
         config = [
@@ -1212,13 +1191,9 @@ class Http1Edge2EdgeTestBase(TestCase):
 
 
 class Http1ClientCloseTestsMixIn:
-    """
-    Generic test functions for simulating HTTP/1.x client connection drops.
-    """
+    """Generic test functions for simulating HTTP/1.x client connection drops."""
     def client_request_close_test(self, server_port, client_port, server_mgmt):
-        """
-        Simulate an HTTP client drop while sending a very large PUT request
-        """
+        """Simulate an HTTP client drop while sending a very large PUT request"""
         PING = {
             "GET": [
                 (RequestMsg("GET", "/GET/test_04_client_request_close/ping",
@@ -1368,16 +1343,12 @@ class Http1ClientCloseTestsMixIn:
 
 
 class Http1CurlTestsMixIn:
-    """
-    Test cases using curl as the command line client
-    """
+    """Test cases using curl as the command line client"""
 
     @unittest.skipIf(not _curl_ok(),
                      "required curl version >= %s" % str(CURL_VERSION))
     def curl_get_test(self, host, port, server_port):
-        """
-        Use curl to get a resource
-        """
+        """Use curl to get a resource"""
         CURL_TESTS = {
             "GET": [
                 (RequestMsg("GET", "/GET/curl_get"),
@@ -1433,9 +1404,7 @@ class Http1CurlTestsMixIn:
     @unittest.skipIf(not _curl_ok(),
                      "required curl version >= %s" % str(CURL_VERSION))
     def curl_put_test(self, host, port, server_port):
-        """
-        Use curl to PUT a resource
-        """
+        """Use curl to PUT a resource"""
 
         CURL_TESTS = {
             "PUT": [
@@ -1487,9 +1456,7 @@ class Http1CurlTestsMixIn:
     @unittest.skipIf(not _curl_ok(),
                      "required curl version >= %s" % str(CURL_VERSION))
     def curl_post_test(self, host, port, server_port):
-        """
-        Use curl to post to a resource
-        """
+        """Use curl to post to a resource"""
 
         CURL_TESTS = {
             "POST": [

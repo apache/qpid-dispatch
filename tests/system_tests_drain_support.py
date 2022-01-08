@@ -25,6 +25,7 @@ from system_test import unittest
 
 
 class DrainMessagesHandler(MessagingHandler):
+
     def __init__(self, address):
         # prefetch is set to zero so that proton does not automatically issue 10 credits.
         super(DrainMessagesHandler, self).__init__(prefetch=0)
@@ -91,6 +92,7 @@ class DrainMessagesHandler(MessagingHandler):
 
 
 class DrainOneMessageHandler(DrainMessagesHandler):
+
     def __init__(self, address):
         super(DrainOneMessageHandler, self).__init__(address)
 
@@ -118,6 +120,7 @@ class DrainOneMessageHandler(DrainMessagesHandler):
 
 
 class DrainNoMessagesHandler(MessagingHandler):
+
     def __init__(self, address):
         # prefetch is set to zero so that proton does not automatically issue 10 credits.
         super(DrainNoMessagesHandler, self).__init__(prefetch=0)
@@ -154,6 +157,7 @@ class DrainNoMessagesHandler(MessagingHandler):
 
 
 class DrainNoMoreMessagesHandler(MessagingHandler):
+
     def __init__(self, address):
         # prefetch is set to zero so that proton does not automatically issue 10 credits.
         super(DrainNoMoreMessagesHandler, self).__init__(prefetch=0)

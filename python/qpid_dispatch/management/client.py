@@ -153,9 +153,7 @@ class Node:
 
     @staticmethod
     def check_response(response, expect=error.OK):
-        """
-        Check a management response message for errors and correlation ID.
-        """
+        """Check a management response message for errors and correlation ID."""
         code = response.properties.get('statusCode')
         if code != expect:
             if 200 <= code <= 299:
@@ -167,7 +165,7 @@ class Node:
 
     def request(self, body=None, **properties):
         """
-        Make a L{proton.Message} containining a management request.
+        Make a L{proton.Message} containing a management request.
         @param body: The request body, a dict or list.
         @param properties: Keyword arguments for application-properties of the request.
         @return: L{proton.Message} containining the management request.
@@ -200,9 +198,6 @@ class Node:
         """
 
         def __init__(self, node, attribute_names, results):
-            """
-            @param response: the respose message to a query.
-            """
             self.node = node
             self.attribute_names = attribute_names
             self.results = results

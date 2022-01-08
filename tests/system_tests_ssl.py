@@ -17,9 +17,7 @@
 # under the License.
 #
 
-"""
-Provides tests related with allowed TLS protocol version restrictions.
-"""
+"""Provides tests related with allowed TLS protocol version restrictions."""
 import os
 import ssl
 import sys
@@ -39,9 +37,7 @@ from system_test import unittest
 
 
 class RouterTestSslBase(TestCase):
-    """
-    Base class to help with SSL related testing.
-    """
+    """Base class to help with SSL related testing."""
     # If unable to determine which protocol versions are allowed system wide
     DISABLE_SSL_TESTING = False
     DISABLE_REASON = "Unable to determine MinProtocol"
@@ -456,73 +452,55 @@ class RouterTestSslClient(RouterTestSslBase):
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_only(self):
-        """
-        Expects TLSv1 only is allowed
-        """
+        """Expects TLSv1 only is allowed"""
         self.assertEqual(self.get_expected_tls_result([True, False, False, False]),
                          self.get_allowed_protocols(self.PORT_TLS1))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls11_only(self):
-        """
-        Expects TLSv1.1 only is allowed
-        """
+        """Expects TLSv1.1 only is allowed"""
         self.assertEqual(self.get_expected_tls_result([False, True, False, False]),
                          self.get_allowed_protocols(self.PORT_TLS11))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls12_only(self):
-        """
-        Expects TLSv1.2 only is allowed
-        """
+        """Expects TLSv1.2 only is allowed"""
         self.assertEqual(self.get_expected_tls_result([False, False, True, False]),
                          self.get_allowed_protocols(self.PORT_TLS12))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls13_only(self):
-        """
-        Expects TLSv1.3 only is allowed
-        """
+        """Expects TLSv1.3 only is allowed"""
         self.assertEqual(self.get_expected_tls_result([False, False, False, True]),
                          self.get_allowed_protocols(self.PORT_TLS13))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_tls11_only(self):
-        """
-        Expects TLSv1 and TLSv1.1 only are allowed
-        """
+        """Expects TLSv1 and TLSv1.1 only are allowed"""
         self.assertEqual(self.get_expected_tls_result([True, True, False, False]),
                          self.get_allowed_protocols(self.PORT_TLS1_TLS11))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_tls12_only(self):
-        """
-        Expects TLSv1 and TLSv1.2 only are allowed
-        """
+        """Expects TLSv1 and TLSv1.2 only are allowed"""
         self.assertEqual(self.get_expected_tls_result([True, False, True, False]),
                          self.get_allowed_protocols(self.PORT_TLS1_TLS12))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls11_tls12_only(self):
-        """
-        Expects TLSv1.1 and TLSv1.2 only are allowed
-        """
+        """Expects TLSv1.1 and TLSv1.2 only are allowed"""
         self.assertEqual(self.get_expected_tls_result([False, True, True, False]),
                          self.get_allowed_protocols(self.PORT_TLS11_TLS12))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls_all(self):
-        """
-        Expects all supported versions: TLSv1, TLSv1.1, TLSv1.2 and TLSv1.3 to be allowed
-        """
+        """Expects all supported versions: TLSv1, TLSv1.1, TLSv1.2 and TLSv1.3 to be allowed"""
         self.assertEqual(self.get_expected_tls_result([True, True, True, True]),
                          self.get_allowed_protocols(self.PORT_TLS_ALL))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_ssl_invalid(self):
-        """
-        Expects connection is rejected as SSL is no longer supported
-        """
+        """Expects connection is rejected as SSL is no longer supported"""
         self.assertEqual(False, self.is_proto_allowed(self.PORT_SSL3, 'SSLv3'))
 
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
@@ -757,9 +735,7 @@ class RouterTestSslInterRouter(RouterTestSslBase):
     @unittest.skipIf(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
                      "Cyrus library not available. skipping test")
     def test_connected_tls_sasl_routers(self):
-        """
-        Validates if all expected routers are connected in the network
-        """
+        """Validates if all expected routers are connected in the network"""
         if not SASL.extended():
             self.skipTest("Cyrus library not available. skipping test")
 
@@ -799,9 +775,7 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
 
     @classmethod
     def setUpClass(cls):
-        """
-        Prepares 2 routers to form a network.
-        """
+        """Prepares 2 routers to form a network."""
         super(RouterTestSslInterRouterWithInvalidPathToCA, cls).setUpClass()
 
         if not SASL.extended():
@@ -907,9 +881,7 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
         return router_nodes
 
     def test_invalid_ca_path(self):
-        """
-        Prove sslProfile with invalid path to CA prevents the router from joining the network
-        """
+        """Prove sslProfile with invalid path to CA prevents the router from joining the network"""
         if not SASL.extended():
             self.skipTest("Cyrus library not available. skipping test")
 
@@ -971,9 +943,7 @@ class RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA(RouterT
 
     @classmethod
     def setUpClass(cls):
-        """
-        Prepares 2 routers to form a network.
-        """
+        """Prepares 2 routers to form a network."""
         super(RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA, cls).setUpClass()
 
         if not SASL.extended():

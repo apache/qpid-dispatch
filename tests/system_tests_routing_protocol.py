@@ -70,6 +70,7 @@ class RouterTest(TestCase):
 
 
 class RejectHigherVersionHelloTest(MessagingHandler):
+
     def __init__(self, host):
         super(RejectHigherVersionHelloTest, self).__init__()
         self.host     = host
@@ -125,6 +126,7 @@ class RejectHigherVersionHelloTest(MessagingHandler):
 
 
 class RejectHigherVersionMARTest(MessagingHandler):
+
     def __init__(self, host, normal_host):
         super(RejectHigherVersionMARTest, self).__init__()
         self.host        = host

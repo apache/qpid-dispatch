@@ -214,9 +214,7 @@ class QdSSLUseridTest(TestCase):
         return self.router.addresses[index]
 
     def create_ssl_domain(self, ssl_options_dict, mode=SSLDomain.MODE_CLIENT):
-        """Return proton.SSLDomain from command line options or None if no SSL options specified.
-            @param opts: Parsed optoins including connection_options()
-        """
+        """Return proton.SSLDomain from command line options or None if no SSL options specified."""
         certificate, key, trustfile, password = ssl_options_dict.get('ssl-certificate'), \
             ssl_options_dict.get('ssl-key'), \
             ssl_options_dict.get('ssl-trustfile'), \

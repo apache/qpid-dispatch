@@ -25,6 +25,7 @@ import binascii
 
 
 class PolicyError(Exception):
+
     def __init__(self, value):
         self.value = value
 
@@ -33,9 +34,7 @@ class PolicyError(Exception):
 
 
 def is_ipv6_enabled():
-    """
-    Returns true if IPV6 is enabled, false otherwise
-    """
+    """Returns true if IPV6 is enabled, false otherwise"""
     ipv6_enabled = True
     try:
         sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
@@ -337,9 +336,7 @@ class PolicyAppConnectionMgr:
             return False
 
     def disconnect(self, conn_id, user, host):
-        """
-        Unregister a connection
-        """
+        """Unregister a connection"""
         assert self.connections_active > 0
         assert user in self.per_user_state
         assert conn_id in self.per_user_state[user]

@@ -39,6 +39,7 @@ MAGIC_SPACE_NUMBER = 1   # tested with entryspacing 0.1
 
 
 class log_record:
+
     def __init__(self, index, line):
         # print("DEBUG input line: ", index, line)
         dateandtime, name_left, direction, name_right, perf, router_line, dummy = line.split('|')
@@ -56,13 +57,13 @@ class log_record:
         self.rcvdby = name_right.strip() if dir_out else name_left.strip()
 
     def absorb_peer_rec(self, peer_rec):
-        '''
+        """
         Given peer_rec, see if it is the receiving side of
         this log_rec being sent. If so then cross-link the
         records and return true.
         :param peer_rec:
         :return:
-        '''
+        """
         valid_peer = self.name_left == peer_rec.name_right and \
             self.name_right == peer_rec.name_left and \
             self.direction != peer_rec.direction and \
@@ -112,11 +113,11 @@ class log_record:
 
 
 def split_log_file(filename):
-    '''
+    """
     Given a filename, read the file into an array of lines
     :param filename:
     :return:
-    '''
+    """
     if filename == "STDIN" or filename == "" or filename == "-":
         log = sys.stdin
         log_lines = log.read().split("\n")
@@ -128,7 +129,7 @@ def split_log_file(filename):
 
 
 def match_logline_pairs(log_recs):
-    '''
+    """
     Given a log line that might be the source of a message to another router,
     search the list of remaining log lines and try to find the router that received
     this message. Then hook them together.
@@ -136,7 +137,7 @@ def match_logline_pairs(log_recs):
     Messages for which there is no 'match' are drawn as horizontal lines.
     :param log_lines:
     :return:
-    '''
+    """
     for idx in range(len(log_recs) - 2):
         for idx2 in range(idx + 1, len(log_recs) - 1):
             if log_recs[idx].absorb_peer_rec(log_recs[idx2]):

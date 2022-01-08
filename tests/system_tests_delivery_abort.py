@@ -148,6 +148,7 @@ class RouterProxy:
 
 
 class MessageRouteTruncateTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host, address):
         super(MessageRouteTruncateTest, self).__init__()
         self.sender_host      = sender_host
@@ -249,6 +250,7 @@ class MessageRouteTruncateTest(MessagingHandler):
 
 
 class LinkRouteTruncateTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host, address, query_host):
         super(LinkRouteTruncateTest, self).__init__()
         self.sender_host      = sender_host
@@ -368,6 +370,7 @@ class LinkRouteTruncateTest(MessagingHandler):
 
 
 class MessageRouteAbortTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host, address):
         super(MessageRouteAbortTest, self).__init__()
         self.sender_host      = sender_host
@@ -467,6 +470,7 @@ class MessageRouteAbortTest(MessagingHandler):
 
 
 class MulticastTruncateTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host1, receiver_host2, address):
         super(MulticastTruncateTest, self).__init__()
         self.sender_host      = sender_host

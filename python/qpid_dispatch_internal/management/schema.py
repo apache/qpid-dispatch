@@ -61,9 +61,7 @@ class Type:
         self.name, self.pytype = name, pytype
 
     def validate(self, value):
-        """
-        Convert value to the correct python type.
-        """
+        """Convert value to the correct python type."""
         return self.pytype(value)
 
     def dump(self):
@@ -120,9 +118,7 @@ class EnumType(Type):
     """An enumerated type"""
 
     def __init__(self, tags):
-        """
-        @param tags: A list of string values for the enumerated type.
-        """
+        """@param tags: A list of string values for the enumerated type."""
         assert isinstance(tags, list)
         super(EnumType, self).__init__("enum%s" % ([str(t) for t in tags]), int)
         self.tags = tags
@@ -144,9 +140,7 @@ class EnumType(Type):
         raise ValidationError("Invalid value for %s: %r" % (self.name, value))
 
     def dump(self):
-        """
-        @return: A list of the enum tags.
-        """
+        """@return: A list of the enum tags."""
         return self.tags
 
     def __str__(self):
@@ -227,9 +221,7 @@ class AttributeType:
     def __init__(self, name, type=None, defined_in=None, default=None,
                  required=False, unique=False, hidden=False, deprecated=False, deprecationName=None,
                  value=None, description="", create=False, update=False, graph=False):
-        """
-        See L{AttributeType} instance variables.
-        """
+        """See L{AttributeType} instance variables."""
         try:
             self.name = name
             self.type = type
@@ -256,9 +248,7 @@ class AttributeType:
                                      sys.exc_info()[2]))
 
     def missing_value(self):
-        """
-        Fill in missing default and fixed values.
-        """
+        """Fill in missing default and fixed values."""
         if self.value is not None:  # Fixed value attribute
             return self.value
         if self.default is not None:
@@ -281,9 +271,7 @@ class AttributeType:
             raise ValidationError("%s:%s" % (str(e), sys.exc_info()[2]))
 
     def dump(self):
-        """
-        @return: Json-friendly representation of an attribute type
-        """
+        """@return: Json-friendly representation of an attribute type"""
         return _dump_dict([
             ('type', self.atype.dump()),
             ('default', self.default),
@@ -633,9 +621,7 @@ class Schema:
         entity_type.validate(attributes)
 
     def validate_all(self, attribute_maps):
-        """
-        Validate all the entities from entity_iter, return a list of valid entities.
-        """
+        """Validate all the entities from entity_iter, return a list of valid entities."""
         entities = []
         for a in attribute_maps:
             self.validate_add(a, entities)

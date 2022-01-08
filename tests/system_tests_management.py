@@ -496,6 +496,7 @@ class ManagementTest(system_test.TestCase):
 
 
 class SimpleSndRecv(MessagingHandler):
+
     def __init__(self, conn_address, address):
         super(SimpleSndRecv, self).__init__()
         self.conn_address = conn_address

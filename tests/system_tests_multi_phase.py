@@ -241,6 +241,7 @@ class RouterTest(TestCase):
 
 
 class WaypointTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host, waypoint_host, addr):
         super(WaypointTest, self).__init__()
         self.sender_host   = sender_host
@@ -302,6 +303,7 @@ class WaypointTest(MessagingHandler):
 
 
 class MultiPhaseTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host, waypoint_hosts, addr):
         super(MultiPhaseTest, self).__init__()
         self.sender_host    = sender_host

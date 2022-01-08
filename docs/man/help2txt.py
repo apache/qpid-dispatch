@@ -17,13 +17,7 @@
 # under the License
 #
 
-"""
-Convert --help output of a program into asciidoc text format.
-"""
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
+"""Convert --help output of a program into asciidoc text format."""
 
 import re
 import subprocess

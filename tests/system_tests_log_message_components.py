@@ -37,6 +37,7 @@ BIG_BODY = 'X' * 1000000
 
 
 class RouterMessageLogTestBase(TestCase):
+
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
         p = self.popen(
             ['qdmanage'] +
@@ -190,6 +191,7 @@ class RouterMessageLogTestSome(RouterMessageLogTestBase):
 
 
 class LogMessageTest(MessagingHandler):
+
     def __init__(self, address):
         super(LogMessageTest, self).__init__(auto_accept=False)
         self.address = address

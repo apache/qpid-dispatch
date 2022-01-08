@@ -31,6 +31,7 @@ from system_test import unittest
 
 
 class AuthServicePluginAuthzTest(TestCase):
+
     @classmethod
     def addUser(cls, user, password):
         # Create a sasl database.
@@ -62,9 +63,7 @@ mech_list: SCRAM-SHA-1 PLAIN
 
     @classmethod
     def setUpClass(cls):
-        """
-        Tests the delegation of sasl auth to an external auth service.
-        """
+        """Tests the delegation of sasl auth to an external auth service."""
         super(AuthServicePluginAuthzTest, cls).setUpClass()
 
         if not SASL.extended():
@@ -145,11 +144,10 @@ mech_list: SCRAM-SHA-1 PLAIN
 
 
 class AuthServicePluginAuthzDeprecatedTest(AuthServicePluginAuthzTest):
+
     @classmethod
     def setUpClass(cls):
-        """
-        Tests the delegation of sasl auth to an external auth service.
-        """
+        """Tests the delegation of sasl auth to an external auth service."""
         super(AuthServicePluginAuthzTest, cls).setUpClass()
 
         if not SASL.extended():
@@ -175,6 +173,7 @@ class AuthServicePluginAuthzDeprecatedTest(AuthServicePluginAuthzTest):
 
 
 class ConnectionHandler(MessagingHandler):
+
     def __init__(self, address, count):
         super(ConnectionHandler, self).__init__()
         self.address = address
@@ -203,6 +202,7 @@ class ConnectionHandler(MessagingHandler):
 
 
 class DynamicSourceAnonymousSender(MessagingHandler):
+
     def __init__(self):
         super(DynamicSourceAnonymousSender, self).__init__()
         self.sender = None

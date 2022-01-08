@@ -43,6 +43,7 @@ import text
 
 
 class RestartRecord():
+
     def __init__(self, _router, _line, _lineno):
         self.router = _router
         self.line = _line
@@ -58,7 +59,7 @@ class RestartRecord():
 
 
 class Router():
-    '''A single dispatch boot-and-run instance from a log file'''
+    """A single dispatch boot-and-run instance from a log file"""
 
     def __init__(self, _fn, _log_index, _instance):
         self.fn = _fn                 # log file name
@@ -127,7 +128,7 @@ class Router():
         self.details = None
 
     def discover_connection_facts(self, comn):
-        '''
+        """
         Discover all the connections in this router-instance log
         For each connection:
          * determine connection direction
@@ -137,7 +138,7 @@ class Router():
          * count transfer bytes
         :param comn:
         :return:
-        '''
+        """
         for item in self.lines:
             if item.data.is_scraper:
                 # scraper lines are pass-through
@@ -180,11 +181,11 @@ class Router():
         self.details = amqp_detail.AllDetails(self, comn)
 
     def conn_id(self, conn_num):
-        '''
+        """
         Given this router's connection number return the global connection id
         :param conn_num: connection number
         :return: conn_id in the for A0_3
-        '''
+        """
         return self.iname + "_" + str(conn_num)
 
     def is_interior(self):
@@ -192,12 +193,12 @@ class Router():
 
 
 def which_router_tod(router_list, at_time):
-    '''
+    """
     Find a router in a list based on time of day
     :param router_list: a list of Router objects
     :param at_time: the datetime record identifying the router
     :return: tuple: (a router from the list or None, router index)
-    '''
+    """
     if len(router_list) == 0:
         return (None, 0)
     if len(router_list) == 1:
@@ -209,13 +210,13 @@ def which_router_tod(router_list, at_time):
 
 
 def which_router_id_tod(routers, id, at_time):
-    '''
+    """
     Find a router by container_name and time of day
     :param routers: a list of router instance lists
     :param id: the container name
     :param at_time: datetime of interest
     :return: the router that had that container name at that time; None if not found
-    '''
+    """
     for routerlist in routers:
         if routerlist[0].container_name == id:
             return which_router_tod(routerlist, at_time)

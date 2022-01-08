@@ -34,6 +34,7 @@ TARGET_ADDR = "test_core_client_address"
 
 
 class CoreClientAPITest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(CoreClientAPITest, cls).setUpClass()

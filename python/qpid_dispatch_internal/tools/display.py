@@ -57,9 +57,7 @@ def TimeShort(value):
 
 
 def NumKMG(value, base=1000):
-    """
-    Format large numbers in a human readable summary
-    """
+    """Format large numbers in a human readable summary"""
     # IEEE 1541 numeric suffix definitions:
     SUFFIX = {1024: ('KiB', 'MiB', 'GiB', 'TiB', 'PiB'),
               1000: ('k', 'm', 'g', 't', 'p')}
@@ -178,7 +176,7 @@ class CSV_CONFIG:
 
 
 class Display:
-    """ Display formatting """
+    """Display formatting"""
 
     def __init__(self, spacing=2, prefix="    ", bodyFormat=BodyFormat.CLASSIC):
         self.tableSpacing    = spacing
@@ -206,7 +204,7 @@ class Display:
         self.printTable(title, headtext, fRows)
 
     def table(self, title, heads, rows):
-        """ Print a table with autosized columns """
+        """Print a table with autosized columns"""
 
         # Pad the rows to the number of heads
         for row in rows:
@@ -253,9 +251,7 @@ class Display:
             print(line)
 
     def tableCsv(self, title, heads, rows):
-        """
-        Print a table with CSV format.
-        """
+        """Print a table with CSV format."""
 
         def csvEscape(text):
             """
@@ -278,14 +274,14 @@ class Display:
             print(','.join([csvEscape(UNICODE(item)) for item in row]))
 
     def do_setTimeFormat(self, fmt):
-        """ Select timestamp format """
+        """Select timestamp format"""
         if fmt == "long":
             self.timestampFormat = "%c"
         elif fmt == "short":
             self.timestampFormat = "%X"
 
     def timestamp(self, nsec):
-        """ Format a nanosecond-since-the-epoch timestamp for printing """
+        """Format a nanosecond-since-the-epoch timestamp for printing"""
         return strftime(self.timestampFormat, gmtime(nsec / 1000000000))
 
     def duration(self, nsec):

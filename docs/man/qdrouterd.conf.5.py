@@ -17,9 +17,7 @@
 # under the License
 #
 
-"""
-Generate the qdrouterd.conf. man page from the qdrouterd management schema.
-"""
+"""Generate the qdrouterd.conf. man page from the qdrouterd management schema."""
 
 from __future__ import unicode_literals
 from __future__ import division

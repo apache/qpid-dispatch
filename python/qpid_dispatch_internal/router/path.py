@@ -194,9 +194,7 @@ class NodeSet:
         return False
 
     def lowest_cost(self):
-        """
-        Remove and return the lowest cost node ID.
-        """
+        """Remove and return the lowest cost node ID."""
         _id, cost = self.nodes.pop(0)
         return _id
 

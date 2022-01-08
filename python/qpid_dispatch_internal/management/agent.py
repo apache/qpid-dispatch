@@ -147,9 +147,7 @@ class PythonImplementation(Implementation):
 
 
 class EntityAdapter(SchemaEntity):
-    """
-    Base class for agent entities with operations as well as attributes.
-    """
+    """Base class for agent entities with operations as well as attributes."""
 
     def __init__(self, agent, entity_type, attributes=None, validate=True):
         """
@@ -244,6 +242,7 @@ class EntityAdapter(SchemaEntity):
 
 
 class RouterEntity(EntityAdapter):
+
     def __init__(self, agent, entity_type, attributes=None):
         super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False)
         # Router is a mix of configuration and operational entity.
@@ -299,6 +298,7 @@ class LogEntity(EntityAdapter):
 
 
 class PolicyEntity(EntityAdapter):
+
     def __init__(self, agent, entity_type, attributes=None):
         super(PolicyEntity, self).__init__(agent, entity_type, attributes, validate=False)
         # Policy is a mix of configuration and operational entity.
@@ -318,6 +318,7 @@ class PolicyEntity(EntityAdapter):
 
 
 class VhostEntity(EntityAdapter):
+
     def create(self):
         self._policy.create_ruleset(self.attributes)
 
@@ -335,6 +336,7 @@ class VhostEntity(EntityAdapter):
 
 
 class VhostStatsEntity(EntityAdapter):
+
     def _identifier(self):
         return self.attributes.get('hostname')
 
@@ -354,6 +356,7 @@ def _host_port_name_identifier(entity):
 
 
 class SslProfileEntity(EntityAdapter):
+
     def create(self):
         return self._qd.qd_dispatch_configure_ssl_profile(self._dispatch, self)
 
@@ -368,6 +371,7 @@ class SslProfileEntity(EntityAdapter):
 
 
 class AuthServicePluginEntity(EntityAdapter):
+
     def create(self):
         return self._qd.qd_dispatch_configure_sasl_plugin(self._dispatch, self)
 
@@ -424,6 +428,7 @@ class ConnectionBaseEntity(EntityAdapter):
 
 
 class ListenerEntity(ConnectionBaseEntity):
+
     def create(self):
         config_listener = self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
@@ -442,6 +447,7 @@ class ListenerEntity(ConnectionBaseEntity):
 
 
 class ConnectorEntity(ConnectionBaseEntity):
+
     def __init__(self, agent, entity_type, attributes=None, validate=True):
         super(ConnectorEntity, self).__init__(agent, entity_type, attributes,
                                               validate)
@@ -462,6 +468,7 @@ class ConnectorEntity(ConnectionBaseEntity):
 
 
 class AddressEntity(EntityAdapter):
+
     def create(self):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
 
@@ -470,6 +477,7 @@ class AddressEntity(EntityAdapter):
 
 
 class LinkRouteEntity(EntityAdapter):
+
     def create(self):
         self._qd.qd_dispatch_configure_link_route(self._dispatch, self)
 
@@ -478,6 +486,7 @@ class LinkRouteEntity(EntityAdapter):
 
 
 class AutoLinkEntity(EntityAdapter):
+
     def create(self):
         self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
 
@@ -486,6 +495,7 @@ class AutoLinkEntity(EntityAdapter):
 
 
 class ConsoleEntity(EntityAdapter):
+
     def __str__(self):
         return super(ConsoleEntity, self).__str__().replace("Entity(", "ConsoleEntity(")
 
@@ -527,16 +537,19 @@ class ConsoleEntity(EntityAdapter):
 
 
 class DummyEntity(EntityAdapter):
+
     def callme(self, request):
         return (OK, dict(**request.properties))
 
 
 class RouterLinkEntity(EntityAdapter):
+
     def __str__(self):
         return super(RouterLinkEntity, self).__str__().replace("Entity(", "RouterLinkEntity(")
 
 
 class RouterNodeEntity(EntityAdapter):
+
     def _identifier(self):
         return self.attributes.get('id')
 
@@ -545,6 +558,7 @@ class RouterNodeEntity(EntityAdapter):
 
 
 class RouterAddressEntity(EntityAdapter):
+
     def _identifier(self):
         return self.attributes.get('key')
 
@@ -553,6 +567,7 @@ class RouterAddressEntity(EntityAdapter):
 
 
 class LogStatsEntity(EntityAdapter):
+
     def _identifier(self):
         return self.attributes.get('identity')
 
@@ -561,6 +576,7 @@ class LogStatsEntity(EntityAdapter):
 
 
 class AllocatorEntity(EntityAdapter):
+
     def _identifier(self):
         return self.attributes.get('typeName')
 
@@ -569,6 +585,7 @@ class AllocatorEntity(EntityAdapter):
 
 
 class ExchangeEntity(EntityAdapter):
+
     def create(self):
         self._qd.qd_dispatch_configure_exchange(self._dispatch, self)
 
@@ -577,6 +594,7 @@ class ExchangeEntity(EntityAdapter):
 
 
 class BindingEntity(EntityAdapter):
+
     def create(self):
         self._qd.qd_dispatch_configure_binding(self._dispatch, self)
 
@@ -585,6 +603,7 @@ class BindingEntity(EntityAdapter):
 
 
 class HttpListenerEntity(EntityAdapter):
+
     def create(self):
         return self._qd.qd_dispatch_configure_http_listener(self._dispatch, self)
 
@@ -599,6 +618,7 @@ class HttpListenerEntity(EntityAdapter):
 
 
 class TcpListenerEntity(EntityAdapter):
+
     def create(self):
         config_listener = self._qd.qd_dispatch_configure_tcp_listener(self._dispatch, self)
         return config_listener
@@ -614,6 +634,7 @@ class TcpListenerEntity(EntityAdapter):
 
 
 class TcpConnectorEntity(EntityAdapter):
+
     def create(self):
         config_connector = self._qd.qd_dispatch_configure_tcp_connector(self._dispatch, self)
         return config_connector
@@ -629,6 +650,7 @@ class TcpConnectorEntity(EntityAdapter):
 
 
 class HttpConnectorEntity(EntityAdapter):
+
     def create(self):
         return self._qd.qd_dispatch_configure_http_connector(self._dispatch, self)
 
@@ -643,9 +665,7 @@ class HttpConnectorEntity(EntityAdapter):
 
 
 class EntityCache:
-    """
-    Searchable cache of entities, can be refreshed from implementation objects.
-    """
+    """Searchable cache of entities, can be refreshed from implementation objects."""
 
     def __init__(self, agent):
         self.entities = []
@@ -812,9 +832,7 @@ class ManagementEntity(EntityAdapter):
                          for t in self._schema.by_type(type)))
 
     def get_annotations(self, request):
-        """
-        We are not supporting any annotations at the moment.
-        """
+        """We are not supporting any annotations at the moment."""
         return (OK, {})
 
     def get_operations(self, request):

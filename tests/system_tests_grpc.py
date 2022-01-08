@@ -35,10 +35,7 @@ def skip_test():
 
 
 class GrpcServiceMethodsTest(TestCase):
-
-    """
-    Data for the grpc service
-    """
+    """Data for the grpc service"""
     NAME_EMAIL = {
         "One": "one@apache.org",
         "Two": "two@apache.org",

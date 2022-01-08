@@ -198,9 +198,7 @@ class QdmanageTest(TestCase):
         self.assertEqual(schema, dictify(json.loads(actual)))
 
     def test_get_annotations(self):
-        """
-        The qdmanage GET-ANNOTATIONS call must return an empty dict since we don't support annotations at the moment.
-        """
+        """The qdmanage GET-ANNOTATIONS call must return an empty dict since we don't support annotations at the moment."""
         out = json.loads(self.run_qdmanage("get-annotations"))
         self.assertTrue(len(out) == 0)
 

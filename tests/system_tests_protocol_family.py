@@ -26,6 +26,7 @@ from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 
 
 class ProtocolFamilyTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         """
@@ -116,6 +117,7 @@ class ProtocolFamilyTest(TestCase):
 
 
 class SimpleSndRecv(MessagingHandler):
+
     def __init__(self, address):
         super(SimpleSndRecv, self).__init__()
         self.address = address

@@ -17,9 +17,7 @@
 # under the License
 #
 
-"""
-AMQP Management Entity
-"""
+"""AMQP Management Entity"""
 
 import itertools
 import re

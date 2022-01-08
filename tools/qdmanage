@@ -52,6 +52,7 @@ def attr_split(attrstr, qd_schema, type):
 
 
 class QdManage():
+
     def __init__(self):
         self.qd_schema = QdSchema()
         self.prefix = 'org.apache.qpid.dispatch.'

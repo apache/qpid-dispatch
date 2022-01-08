@@ -910,9 +910,7 @@ class QdstatSslTest(QdstatTestBase):
 
 @unittest.skipIf(_has_ssl() is False, "Proton SSL support unavailable")
 class QdstatSslTestSslPasswordFile(QdstatSslTest):
-    """
-    Tests the --ssl-password-file command line parameter
-    """
+    """Tests the --ssl-password-file command line parameter"""
 
     def get_ssl_args(self):
         args = dict(

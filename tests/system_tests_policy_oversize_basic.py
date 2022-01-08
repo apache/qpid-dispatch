@@ -264,9 +264,7 @@ OVER_UNDER = 200
 
 
 class MaxMessageSizeBlockOversize(TestCase):
-    """
-    verify that maxMessageSize blocks oversize messages
-    """
+    """verify that maxMessageSize blocks oversize messages"""
     @classmethod
     def setUpClass(cls):
         """Start the router"""

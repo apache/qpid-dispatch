@@ -67,9 +67,7 @@ class NodeTracker:
         })
 
     def _do_expirations(self, now):
-        """
-        Run through the list of routers and check for expired conditions
-        """
+        """Run through the list of routers and check for expired conditions"""
         for node_id, node in list(self.nodes.items()):
             ##
             # If the node is a neighbor, check the neighbor refresh time to see
@@ -230,9 +228,7 @@ class NodeTracker:
             node.request_link_state()
 
     def link_lost(self, link_id):
-        """
-        Invoked when an inter-router link is dropped.
-        """
+        """Invoked when an inter-router link is dropped."""
         self.container.log_ls(LOG_INFO, "Link to Neighbor Router Lost - link_tag=%d" % link_id)
         node_id = self.link_id_to_node_id(link_id)
         if node_id:
@@ -258,9 +254,7 @@ class NodeTracker:
         return result
 
     def ra_received(self, node_id, version, ls_seq, mobile_seq, instance, now):
-        """
-        Invoked when a router advertisement is received from another router.
-        """
+        """Invoked when a router advertisement is received from another router."""
         ##
         # If the node id is not known, create a new RouterNode to track it.
         ##
@@ -302,16 +296,12 @@ class NodeTracker:
             node.mobile_address_request()
 
     def router_learned(self, node_id, version):
-        """
-        Invoked when we learn about another router by any means
-        """
+        """Invoked when we learn about another router by any means"""
         if node_id not in self.nodes and node_id != self.my_id:
             self.nodes[node_id] = RouterNode(self, node_id, version, None)
 
     def link_state_received(self, node_id, version, link_state, instance, now):
-        """
-        Invoked when a link state update is received from another router.
-        """
+        """Invoked when a link state update is received from another router."""
         ##
         # If the node id is not known, create a new RouterNode to track it.
         ##
@@ -370,9 +360,7 @@ class NodeTracker:
 
 
 class RouterNode:
-    """
-    RouterNode is used to track remote routers in the router network.
-    """
+    """RouterNode is used to track remote routers in the router network."""
 
     def __init__(self, parent, node_id, version, instance):
         self.parent                  = parent

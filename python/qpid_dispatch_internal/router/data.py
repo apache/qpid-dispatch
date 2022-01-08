@@ -26,9 +26,7 @@ ProtocolVersion = 1
 
 
 def getMandatory(data, key, cls=None):
-    """
-    Get the value mapped to the requested key.    If it's not present, raise an exception.
-    """
+    """Get the value mapped to the requested key.    If it's not present, raise an exception."""
     if key in data:
         value = data[key]
         if cls and value.__class__ != cls:
@@ -38,9 +36,7 @@ def getMandatory(data, key, cls=None):
 
 
 def getOptional(data, key, default=None, cls=None):
-    """
-    Get the value mapped to the requested key.  If it's not present, return the default value.
-    """
+    """Get the value mapped to the requested key.  If it's not present, return the default value."""
     if key in data:
         value = data[key]
         if cls and value.__class__ != cls:
@@ -50,9 +46,7 @@ def getOptional(data, key, default=None, cls=None):
 
 
 def isCompatibleVersion(body):
-    """
-    Return True iff the version of the message body is compatible with this protocol implementation.
-    """
+    """Return True iff the version of the message body is compatible with this protocol implementation."""
     version = 0
     try:
         version = getOptional(body, 'pv', 0, int)
@@ -63,9 +57,7 @@ def isCompatibleVersion(body):
 
 
 def getIdAndVersion(body):
-    """
-    Return a tuple of id and version from a message body
-    """
+    """Return a tuple of id and version from a message body"""
     result = ('<unknown>', 0)
     try:
         result = (getOptional(body, 'id', '<unknown>', str), getOptional(body, 'pv', 0, int))

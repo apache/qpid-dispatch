@@ -32,9 +32,7 @@ _BINDING_TYPE  = "org.apache.qpid.dispatch.router.config.binding"
 
 
 class ExchangeBindingsTest(TestCase):
-    """
-    Tests the exchange/bindings of the dispatch router.
-    """
+    """Tests the exchange/bindings of the dispatch router."""
 
     def _create_router(self, name, config):
 
@@ -77,9 +75,7 @@ class ExchangeBindingsTest(TestCase):
         self._validate_entity(name, "binding", ast.literal_eval(_), kwargs)
 
     def test_qdmanage(self):
-        """
-        Tests the management API via qdmanage
-        """
+        """Tests the management API via qdmanage"""
         router = self._create_router("A", [])
 
         # create exchanges
@@ -261,9 +257,7 @@ class ExchangeBindingsTest(TestCase):
                           " --identity %s" % exchanges[0]["identity"])
 
     def test_forwarding(self):
-        """
-        Simple forwarding over a single 0-10 exchange
-        """
+        """Simple forwarding over a single 0-10 exchange"""
         config = [
             ('exchange', {'address': 'Address1',
                           'name': 'Exchange1',
@@ -368,9 +362,7 @@ class ExchangeBindingsTest(TestCase):
         conn.close()
 
     def test_forwarding_mqtt(self):
-        """
-        Simple forwarding over a single mqtt exchange
-        """
+        """Simple forwarding over a single mqtt exchange"""
         config = [
             ('exchange', {'address':          'Address2',
                           'name':             'Exchange1',
@@ -458,9 +450,7 @@ class ExchangeBindingsTest(TestCase):
         conn.close()
 
     def test_forwarding_sync(self):
-        """
-        Forward unsettled messages to multiple subscribers
-        """
+        """Forward unsettled messages to multiple subscribers"""
         config = [
             ('router',   {'mode': 'standalone', 'id': 'QDR.mcast'}),
             ('listener', {'role': 'normal', 'host': '0.0.0.0',
@@ -605,9 +595,7 @@ class ExchangeBindingsTest(TestCase):
         conn.close()
 
     def test_large_messages(self):
-        """
-        Verify that multi-frame messages are forwarded properly
-        """
+        """Verify that multi-frame messages are forwarded properly"""
         MAX_FRAME = 1024
         config = [
             ('router', {'mode': 'interior', 'id': 'QDR.X',
@@ -653,9 +641,7 @@ class ExchangeBindingsTest(TestCase):
         conn.close()
 
     def test_forwarding_fanout(self):
-        """
-        Verify bindings that do not have a key receive all messages
-        """
+        """Verify bindings that do not have a key receive all messages"""
         config = [
             ('exchange', {'address': 'AddressF',
                           'name': 'ExchangeF'}),

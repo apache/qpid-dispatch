@@ -42,9 +42,7 @@ from http1_tests import Http1CurlTestsMixIn
 
 
 class Http1AdaptorManagementTest(TestCase):
-    """
-    Test Creation and deletion of HTTP1 management entities.
-    """
+    """Test Creation and deletion of HTTP1 management entities."""
     @classmethod
     def setUpClass(cls):
         super(Http1AdaptorManagementTest, cls).setUpClass()
@@ -90,7 +88,7 @@ class Http1AdaptorManagementTest(TestCase):
         cls.e_router.wait_ready()
 
     def test_01_create_delete(self):
-        """ Create and delete HTTP1 connectors and listeners.  The
+        """Create and delete HTTP1 connectors and listeners.  The
         connectors/listeners are created on the edge router.  Verify that the
         adaptor properly notifies the interior of the subscribers/producers.
         """
@@ -243,9 +241,7 @@ class Http1AdaptorManagementTest(TestCase):
 
 class Http1AdaptorOneRouterTest(Http1OneRouterTestBase,
                                 CommonHttp1OneRouterTest):
-    """
-    Test HTTP servers and clients attached to a standalone router
-    """
+    """Test HTTP servers and clients attached to a standalone router"""
     @classmethod
     def setUpClass(cls):
         """Start a router"""
@@ -397,46 +393,34 @@ class Http1AdaptorEdge2EdgeTest(Http1Edge2EdgeTestBase,
         cls.INT_A.wait_address('EA2')
 
     def test_1001_client_request_close(self):
-        """
-        Simulate an HTTP client drop while sending a very large PUT
-        """
+        """Simulate an HTTP client drop while sending a very large PUT"""
         self.client_request_close_test(self.http_server11_port,
                                        self.http_listener11_port,
                                        self.EA2.management)
 
     def test_1002_client_response_close(self):
-        """
-        Simulate an HTTP client drop while server sends very large response
-        """
+        """Simulate an HTTP client drop while server sends very large response"""
         self.client_response_close_test(self.http_server11_port,
                                         self.http_listener11_port)
 
     def test_2000_curl_get(self):
-        """
-        Perform a get via curl
-        """
+        """Perform a get via curl"""
         self.curl_get_test("127.0.0.1", self.http_listener11_port,
                            self.http_server11_port)
 
     def test_2001_curl_put(self):
-        """
-        Perform a put via curl
-        """
+        """Perform a put via curl"""
         self.curl_put_test("127.0.0.1", self.http_listener11_port,
                            self.http_server11_port)
 
     def test_2002_curl_post(self):
-        """
-        Perform a post via curl
-        """
+        """Perform a post via curl"""
         self.curl_post_test("127.0.0.1", self.http_listener11_port,
                             self.http_server11_port)
 
 
 class FakeHttpServerBase:
-    """
-    A very base socket server to simulate HTTP server behaviors
-    """
+    """A very base socket server to simulate HTTP server behaviors"""
 
     def __init__(self, host='', port=80, bufsize=1024):
         super(FakeHttpServerBase, self).__init__()
@@ -474,9 +458,7 @@ class FakeHttpServerBase:
 
 class Http1AdaptorBadEndpointsTest(TestCase,
                                    Http1ClientCloseTestsMixIn):
-    """
-    Subject the router to mis-behaving HTTP endpoints.
-    """
+    """Subject the router to mis-behaving HTTP endpoints."""
     @classmethod
     def setUpClass(cls):
         """
@@ -516,6 +498,7 @@ class Http1AdaptorBadEndpointsTest(TestCase,
         without first waiting for a request to arrive.
         """
         class UnsolicitedResponse(FakeHttpServerBase):
+
             def __init__(self, host, port):
                 self.request_sent = False
                 super(UnsolicitedResponse, self).__init__(host, port)
@@ -539,9 +522,7 @@ class Http1AdaptorBadEndpointsTest(TestCase,
         self.assertEqual(1, count)
 
     def test_02_bad_request_message(self):
-        """
-        Test various improperly constructed request messages
-        """
+        """Test various improperly constructed request messages"""
         server = TestServer(server_port=self.http_server_port,
                             client_port=self.http_listener_port,
                             tests={})
@@ -603,9 +584,7 @@ class Http1AdaptorBadEndpointsTest(TestCase,
         self.assertEqual(1, count)
 
     def test_03_bad_response_message(self):
-        """
-        Test various improperly constructed response messages
-        """
+        """Test various improperly constructed response messages"""
         DUMMY_TESTS = {
             "GET": [
                 (RequestMsg("GET", "/GET/test_03_bad_response_message",
@@ -696,17 +675,13 @@ class Http1AdaptorBadEndpointsTest(TestCase,
         self.assertEqual(1, count)
 
     def test_04_client_request_close(self):
-        """
-        Simulate an HTTP client drop while sending a very large PUT
-        """
+        """Simulate an HTTP client drop while sending a very large PUT"""
         self.client_request_close_test(self.http_server_port,
                                        self.http_listener_port,
                                        self.INT_A.management)
 
     def test_05_client_response_close(self):
-        """
-        Simulate an HTTP client drop while server sends very large response
-        """
+        """Simulate an HTTP client drop while server sends very large response"""
         self.client_response_close_test(self.http_server_port,
                                         self.http_listener_port)
 
@@ -772,9 +747,7 @@ class Http1AdaptorQ2Standalone(TestCase):
         return sent
 
     def _read_until_empty(self, sock, timeout):
-        """
-        Read data from socket until timeout occurs.  Return read data.
-        """
+        """Read data from socket until timeout occurs.  Return read data."""
         sock.setblocking(0)
         data = b''
 
@@ -793,9 +766,7 @@ class Http1AdaptorQ2Standalone(TestCase):
         return data
 
     def test_01_backpressure_client(self):
-        """
-        Trigger Q2 backpressure against the HTTP client.
-        """
+        """Trigger Q2 backpressure against the HTTP client."""
         # create a listener socket to act as the server service
         server_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_listener.settimeout(TIMEOUT)
@@ -876,9 +847,7 @@ class Http1AdaptorQ2Standalone(TestCase):
         self.assertEqual(block_ct, unblock_ct)
 
     def test_02_backpressure_server(self):
-        """
-        Trigger Q2 backpressure against the HTTP server.
-        """
+        """Trigger Q2 backpressure against the HTTP server."""
         small_get_req = b'GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n'
 
         # create a listener socket to act as the server service

@@ -30,6 +30,7 @@ from qpid_dispatch.management.client import Node
 
 
 class SenderExpiry(SenderOption):
+
     def __init__(self, expiry):
         self.expiry = expiry
 
@@ -38,6 +39,7 @@ class SenderExpiry(SenderOption):
 
 
 class SenderTimeout(SenderOption):
+
     def __init__(self, timeout):
         self.timeout = timeout
 
@@ -46,6 +48,7 @@ class SenderTimeout(SenderOption):
 
 
 class LinkRouteTest(TestCase):
+
     @classmethod
     def get_router(cls, index):
         return cls.routers[index]

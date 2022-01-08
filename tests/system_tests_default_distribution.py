@@ -83,6 +83,7 @@ class DefaultDistributionTest(TestCase):
 
 
 class UnavailableBase(MessagingHandler):
+
     def __init__(self, address):
         super(UnavailableBase, self).__init__()
         self.address = address
@@ -119,6 +120,7 @@ class UnavailableBase(MessagingHandler):
 
 
 class UnavailableSender(UnavailableBase):
+
     def __init__(self, address):
         super(UnavailableSender, self).__init__(address)
 
@@ -136,6 +138,7 @@ class UnavailableSender(UnavailableBase):
 
 
 class UnavailableReceiver(UnavailableBase):
+
     def __init__(self, address):
         super(UnavailableReceiver, self).__init__(address)
 
@@ -153,6 +156,7 @@ class UnavailableReceiver(UnavailableBase):
 
 
 class UnavailableAnonymousSender(MessagingHandler):
+
     def __init__(self, address):
         super(UnavailableAnonymousSender, self).__init__()
         self.address = address

@@ -17,9 +17,8 @@
 # under the License
 #
 
-"""
-Configuration file parsing
-"""
+"""Configuration file parsing"""
+
 import json
 import re
 import os
@@ -262,6 +261,7 @@ class Config:
 
 
 class PolicyConfig(Config):
+
     def __init__(self, filename=None, schema=QdSchema(), raw_json=False):
         super(PolicyConfig, self).__init__(filename, schema, raw_json)
 

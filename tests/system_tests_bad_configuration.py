@@ -30,7 +30,6 @@ from system_test import TestCase, Qdrouterd, TIMEOUT, Process
 
 
 class RouterTestBadConfiguration(TestCase):
-
     """
     This test case sets up a router using configurations that are not
     well defined, but are not supposed to cause a crash to the router
@@ -180,9 +179,7 @@ class RouterTestIdFailCtrlChar(TestCase):
         super(RouterTestIdFailCtrlChar, cls).tearDownClass()
 
     def test_verify_reject_id_with_ctrl_char(self):
-        """
-        Writes illegal config, runs router, examines console output
-        """
+        """Writes illegal config, runs router, examines console output"""
         parent_path = os.path.dirname(os.getcwd())
         conf_path = os.path.join(parent_path, "setUpClass/test-router-ctrl-char.conf")
         with open(conf_path, 'w') as router_conf:
@@ -222,9 +219,7 @@ class RouterTestIdFailWhiteSpace(TestCase):
         super(RouterTestIdFailWhiteSpace, cls).tearDownClass()
 
     def test_verify_reject_id_with_whitespace(self):
-        """
-        Writes illegal config, runs router, examines console output
-        """
+        """Writes illegal config, runs router, examines console output"""
         parent_path = os.path.dirname(os.getcwd())
         conf_path = os.path.join(parent_path, "setUpClass/test-router-whitespace.conf")
         with open(conf_path, 'w') as router_conf:

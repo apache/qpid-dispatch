@@ -53,6 +53,7 @@ class Adapter:
 
 
 class DataTest(unittest.TestCase):
+
     def test_link_state(self):
         ls = LinkState(None, 'R1', 1, {'R2': 1, 'R3': 1})
         self.assertEqual(ls.id, 'R1')
@@ -98,6 +99,7 @@ class DataTest(unittest.TestCase):
 
 
 class NodeTrackerTest(unittest.TestCase):
+
     def log(self, level, text):
         pass
 
@@ -133,6 +135,7 @@ class NodeTrackerTest(unittest.TestCase):
 
 
 class NeighborTest(unittest.TestCase):
+
     def log(self, level, text):
         pass
 
@@ -209,6 +212,7 @@ class NeighborTest(unittest.TestCase):
 
 
 class PathTest(unittest.TestCase):
+
     def setUp(self):
         self.id = 'R1'
         self.engine = PathEngine(self)

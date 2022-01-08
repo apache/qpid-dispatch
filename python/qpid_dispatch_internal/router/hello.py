@@ -22,9 +22,7 @@ from ..dispatch import LOG_TRACE, LOG_CRITICAL
 
 
 class HelloProtocol:
-    """
-    This module is responsible for running the HELLO protocol.
-    """
+    """This module is responsible for running the HELLO protocol."""
 
     def __init__(self, container, node_tracker):
         self.container        = container

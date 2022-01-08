@@ -182,6 +182,7 @@ class RouterTestHttp(TestCase):
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
+
             def __init__(self, port):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None
@@ -226,6 +227,7 @@ class RouterTestHttp(TestCase):
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
+
             def __init__(self, port):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None
@@ -261,6 +263,7 @@ class RouterTestHttp(TestCase):
 
         # Concurrent calls on multiple ports
         class TestThread(threading.Thread):
+
             def __init__(self, port):
                 threading.Thread.__init__(self)
                 self.port, self.ex = port, None

@@ -27,6 +27,7 @@ from proton import SASL
 
 
 class RouterTestPlainSaslCommon(TestCase):
+
     @classmethod
     def router(cls, name, connection):
 
@@ -56,6 +57,7 @@ sql_select: dummy select
 
 
 class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
+
     @staticmethod
     def sasl_file(name):
         return os.path.join(DIR, 'sasl_files', name)
@@ -152,6 +154,7 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
 
 
 class RouterTestPlainSaslFailureUsingLiteral(RouterTestPlainSaslCommon):
+
     @staticmethod
     def sasl_file(name):
         return os.path.join(DIR, 'sasl_files', name)
@@ -323,9 +326,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
 
     @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_qdstat_connect_sasl(self):
-        """
-        Make qdstat use sasl plain authentication.
-        """
+        """Make qdstat use sasl plain authentication."""
 
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c', '--sasl-mechanisms=PLAIN',
@@ -347,9 +348,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
 
     @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_qdstat_connect_sasl_password_file(self):
-        """
-        Make qdstat use sasl plain authentication with client password specified in a file.
-        """
+        """Make qdstat use sasl plain authentication with client password specified in a file."""
         password_file = os.getcwd() + '/sasl-client-password-file.txt'
         # Create a SASL configuration file.
         with open(password_file, 'w') as sasl_client_password_file:
@@ -451,9 +450,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
 
     @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_aaa_qdstat_connect_sasl_over_ssl(self):
-        """
-        Make qdstat use sasl plain authentication over ssl.
-        """
+        """Make qdstat use sasl plain authentication over ssl."""
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c',
              # The following are SASL args
@@ -510,6 +507,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
 
 
 class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
+
     @staticmethod
     def ssl_file(name):
         return os.path.join(DIR, 'ssl_certs', name)
@@ -701,9 +699,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
     @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_plain_over_ssl_exists(self):
-        """
-        Tests to make sure that an inter-router connection exists between the routers since verifyHostname is 'no'.
-        """
+        """Tests to make sure that an inter-router connection exists between the routers since verifyHostname is 'no'."""
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
 
         results = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()
@@ -712,9 +708,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
     @unittest.skipIf(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_zzz_delete_create_ssl_profile(self):
-        """
-        Deletes a connector and its corresponding ssl profile and recreates both
-        """
+        """Deletes a connector and its corresponding ssl profile and recreates both"""
         local_node = self.routers[1].management
 
         connections = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()

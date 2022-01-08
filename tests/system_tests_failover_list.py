@@ -67,6 +67,7 @@ class RouterTest(TestCase):
 
 
 class FailoverTest(MessagingHandler):
+
     def __init__(self, host, count, elements=None):
         super(FailoverTest, self).__init__()
         self.host     = host

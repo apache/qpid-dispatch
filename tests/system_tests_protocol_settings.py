@@ -257,8 +257,7 @@ class ProtocolSettingsSniffer(MessagingHandler):
 
 
 class ConnectorSettingsSniffer(MessagingHandler):
-    """Similar to ProtocolSettingsSniffer, but for router-initiated connections
-    """
+    """Similar to ProtocolSettingsSniffer, but for router-initiated connections"""
     def __init__(self, url, **kwargs):
         super(ConnectorSettingsSniffer, self).__init__(**kwargs)
         self.listener_addr = url

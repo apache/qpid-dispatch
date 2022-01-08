@@ -25,9 +25,7 @@ from http1_tests import CommonHttp1Edge2EdgeTest
 
 class Http1OverTcpOneRouterTest(Http1OneRouterTestBase,
                                 CommonHttp1OneRouterTest):
-    """
-    Test HTTP servers and clients attached to a standalone router
-    """
+    """Test HTTP servers and clients attached to a standalone router"""
     @classmethod
     def setUpClass(cls):
         """Start a router"""

@@ -42,9 +42,7 @@ class RouterEngine:
     """
 
     def __init__(self, router_adapter, router_id, area, max_routers, config_override=None):
-        """
-        Initialize an instance of a router for a domain.
-        """
+        """Initialize an instance of a router for a domain."""
         config_override = config_override or {}
         ##
         # Record important information about this router instance
@@ -79,9 +77,7 @@ class RouterEngine:
     # ========================================================================================
 
     def getId(self):
-        """
-        Return the router's ID
-        """
+        """Return the router's ID"""
         return self.id
 
     @property
@@ -163,9 +159,7 @@ class RouterEngine:
             self.log(LOG_ERROR, "Control message error: opcode=%s body=%r" % (opcode, body))
 
     def receive(self, message, link_id, cost):
-        """
-        This is the IoAdapter message-receive handler
-        """
+        """This is the IoAdapter message-receive handler"""
         try:
             self.handleControlMessage(message.properties['opcode'], message.body, link_id, cost)
         except Exception:
@@ -197,37 +191,27 @@ class RouterEngine:
     # ========================================================================================
 
     def log(self, level, text):
-        """
-        Emit a log message to the host's event log
-        """
+        """Emit a log message to the host's event log"""
         info = extract_stack(limit=2)[0]  # Caller frame info
         self._log_general.log(level, text, info[0], info[1])
 
     def log_hello(self, level, text):
-        """
-        Emit a log message to the host's event log
-        """
+        """Emit a log message to the host's event log"""
         info = extract_stack(limit=2)[0]  # Caller frame info
         self._log_hello.log(level, text, info[0], info[1])
 
     def log_ls(self, level, text):
-        """
-        Emit a log message to the host's event log
-        """
+        """Emit a log message to the host's event log"""
         info = extract_stack(limit=2)[0]  # Caller frame info
         self._log_ls.log(level, text, info[0], info[1])
 
     def log_ma(self, level, text):
-        """
-        Emit a log message to the host's event log
-        """
+        """Emit a log message to the host's event log"""
         info = extract_stack(limit=2)[0]  # Caller frame info
         self._log_ma.log(level, text, info[0], info[1])
 
     def send(self, dest, msg):
-        """
-        Send a control message to another router.
-        """
+        """Send a control message to another router."""
         app_props = {'opcode' : msg.get_opcode()}
         self.io_adapter[0].send(Message(address=dest, properties=app_props, body=msg.to_dict()), True, True)
 

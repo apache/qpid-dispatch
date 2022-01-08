@@ -585,9 +585,7 @@ class LinkRouteTest(TestCase):
         blocking_connection.close()
 
     def test_zzz_qdmanage_delete_link_route(self):
-        """
-        We are deleting the link route using qdmanage short name. This should be the last test to run
-        """
+        """We are deleting the link route using qdmanage short name. This should be the last test to run"""
 
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
         res = local_node.query(type='org.apache.qpid.dispatch.router')
@@ -651,9 +649,7 @@ class LinkRouteTest(TestCase):
         self.assertEqual(hello_world_1, received_message.body)
 
     def test_yyy_delivery_tag(self):
-        """
-        Tests that the router carries over the delivery tag on a link routed delivery
-        """
+        """Tests that the router carries over the delivery tag on a link routed delivery"""
         listening_address = self.routers[1].addresses[1]
         sender_address = self.routers[2].addresses[0]
         qdstat_address = self.routers[2].addresses[0]
@@ -761,9 +757,7 @@ class LinkRouteTest(TestCase):
         self.assertIsNone(test.error)
 
     def test_bad_link_route_config(self):
-        """
-        What happens when the link route create request is malformed?
-        """
+        """What happens when the link route create request is malformed?"""
         mgmt = self.routers[1].management
 
         # zero length prefix
@@ -842,6 +836,7 @@ class LinkRouteTest(TestCase):
 
 
 class DeliveryTagsTest(MessagingHandler):
+
     def __init__(self, sender_address, listening_address, qdstat_address):
         super(DeliveryTagsTest, self).__init__()
         self.sender_address = sender_address
@@ -1024,6 +1019,7 @@ class DynamicSourceTest(MessagingHandler):
 
 
 class DynamicTarget(LinkOption):
+
     def apply(self, link):
         link.target.dynamic = True
         link.target.address = None
@@ -1208,6 +1204,7 @@ class DetachMixedCloseTest(MessagingHandler):
 
 # Test to validate fix for DISPATCH-927
 class EchoDetachReceived(MessagingHandler):
+
     def __init__(self, sender_address, recv_address):
         super(EchoDetachReceived, self).__init__()
         self.sender_address = sender_address
@@ -1561,8 +1558,7 @@ class LinkRouteProtocolTest(TestCase):
         cls.router = cls.tester.qdrouterd('A', config, wait=False)
 
     def _fake_broker(self, cls):
-        """Spawn a fake broker listening on the broker's connector
-        """
+        """Spawn a fake broker listening on the broker's connector"""
         fake_broker = cls(self.router.connector_addresses[0])
         # wait until the connection to the fake broker activates
         self.router.wait_connectors()
@@ -1636,6 +1632,7 @@ class FakeBrokerDrain(FakeBroker):
 
 
 class DrainReceiver(MessagingHandler):
+
     def __init__(self, url, fake_broker):
         super(DrainReceiver, self).__init__(prefetch=0, auto_accept=False)
         self.url = url
@@ -1746,8 +1743,7 @@ class LinkRouteDrainTest(TestCase):
         cls.router = cls.tester.qdrouterd('A', config, wait=False)
 
     def _fake_broker(self, cls):
-        """Spawn a fake broker listening on the broker's connector
-        """
+        """Spawn a fake broker listening on the broker's connector"""
         fake_broker = cls(self.router.connector_addresses[0])
         # wait until the connection to the fake broker activates
         self.router.wait_connectors()
@@ -1806,9 +1802,7 @@ class EmptyTransferTest(TestCase):
         cls.router = cls.tester.qdrouterd('A', config, wait=False)
 
     def _fake_broker(self, cls):
-        """
-        Spawn a fake broker listening on the broker's connector
-        """
+        """Spawn a fake broker listening on the broker's connector"""
         fake_broker = cls(self.router.connector_addresses[0])
         # wait until the connection to the fake broker activates
         self.router.wait_connectors()
@@ -1837,8 +1831,7 @@ class EmptyTransferTest(TestCase):
         return None
 
     def _send_frame(self, frame: Data, sock: socket.socket):
-        """Encode and send frame over sock
-        """
+        """Encode and send frame over sock"""
         frame.rewind()
         fbytes = frame.encode()
         flen = len(fbytes) + 8
@@ -1849,8 +1842,7 @@ class EmptyTransferTest(TestCase):
 
     def _construct_transfer(self, delivery_id, tag, more=False, add_ma=False,
                             add_body=False) -> Data:
-        """Construct a Transfer frame in a proton Data object
-        """
+        """Construct a Transfer frame in a proton Data object"""
         t1_frame = Data()
         t1_frame.put_described()
         t1_frame.enter()
@@ -2312,6 +2304,7 @@ class ConnectionLinkRouteTest(TestCase):
 
 
 class ConnLinkRouteService(FakeBroker):
+
     def __init__(self, url, container_id, config, timeout=TIMEOUT):
         self.conn = None
         self.mgmt_proxy = None
@@ -2343,9 +2336,7 @@ class ConnLinkRouteService(FakeBroker):
             raise Exception("Timed out waiting for configuration delete")
 
     def on_start(self, event):
-        """
-        Do not create an acceptor, actively connect instead
-        """
+        """Do not create an acceptor, actively connect instead"""
         event.container.selectable(self._event_injector)
         self.conn = event.container.connect(self.url)
 
@@ -2452,8 +2443,7 @@ class ConnLinkRouteMgmtProxy:
 
 
 class InvalidTagTest(MessagingHandler):
-    """Verify that a message with an invalid tag length is rejected
-    """
+    """Verify that a message with an invalid tag length is rejected"""
 
     def __init__(self, router_addr):
         super(InvalidTagTest, self).__init__(auto_accept=False, auto_settle=False)
@@ -2613,6 +2603,7 @@ class Dispatch1428(TestCase):
 
 
 class SendReceive(MessagingHandler):
+
     def __init__(self, send_url, recv_url, message=None):
         super(SendReceive, self).__init__()
         self.send_url = send_url
@@ -2865,6 +2856,7 @@ class LinkRoute3Hop(TestCase):
         """
 
         class FakeServiceModified(FakeService):
+
             def on_message(self, event):
                 # set non-default values for delivery state for delivery to
                 # remote endpoint
@@ -2903,6 +2895,7 @@ class LinkRoute3Hop(TestCase):
         """
 
         class FakeServiceReject(FakeService):
+
             def on_message(self, event):
                 # set non-default values for delivery state for delivery to
                 # remote endpoint

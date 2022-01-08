@@ -33,16 +33,12 @@ def direction_out():
 
 
 def lozenge():
-    """
-    :return: HTML document lozenge character
-    """
+    """:return: HTML document lozenge character"""
     return "&#9674;"
 
 
 def nbsp():
-    """
-    :return: HTML Non-breaking space
-    """
+    """:return: HTML Non-breaking space"""
     return "&#160;"
 
 

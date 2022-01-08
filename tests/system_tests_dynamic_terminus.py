@@ -80,6 +80,7 @@ class RouterTest(TestCase):
 
 
 class DynamicSourceTest(MessagingHandler):
+
     def __init__(self, router_1_host, router_2_host):
         super(DynamicSourceTest, self).__init__()
         self.router_1_host = router_1_host
@@ -157,12 +158,14 @@ class DynamicSourceTest(MessagingHandler):
 
 
 class DynamicTarget(LinkOption):
+
     def apply(self, link):
         link.target.dynamic = True
         link.target.address = None
 
 
 class DynamicTargetTest(MessagingHandler):
+
     def __init__(self, sender_host, receiver_host):
         super(DynamicTargetTest, self).__init__()
         self.sender_host   = sender_host

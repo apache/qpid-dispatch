@@ -24,9 +24,7 @@ from .policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionM
 
 
 class PolicyKeys:
-    """
-    String constants
-    """
+    """String constants"""
     # Common key words
     KW_IGNORED_NAME             = "name"
     KW_IGNORED_IDENTITY         = "identity"
@@ -150,16 +148,14 @@ class PolicyCompiler:
     ]
 
     def __init__(self):
-        """
-        Create a validator
-        """
+        """Create a validator"""
         pass
 
     def validateNumber(self, val, v_min, v_max, errors):
         """
         Range check a numeric int policy value
         @param[in] val policy value to check
-        @param[in] v_min minumum value
+        @param[in] v_min minimum value
         @param[in] v_max maximum value. zero disables check
         @param[out] errors failure message
         @return v_min <= val <= v_max
@@ -509,9 +505,7 @@ class PolicyCompiler:
 #
 #
 class AppStats:
-    """
-    Maintain live state and statistics for an vhost.
-    """
+    """Maintain live state and statistics for an vhost."""
 
     def __init__(self, id, manager, ruleset):
         self.my_id = id
@@ -576,9 +570,7 @@ class ConnectionFacts:
 
 
 class PolicyLocal:
-    """
-    The local policy database.
-    """
+    """The local policy database."""
 
     def __init__(self, manager):
         """
@@ -742,9 +734,7 @@ class PolicyLocal:
     # db enumerator
     #
     def policy_db_get_names(self):
-        """
-        Return a list of vhost names in this policy
-        """
+        """Return a list of vhost names in this policy"""
         return list(self.rulesetdb.keys())
 
     def set_default_vhost(self, name):

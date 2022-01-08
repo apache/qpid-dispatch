@@ -636,9 +636,7 @@ class OversizeMulticastTransferTest(MessagingHandler):
 
 
 class MaxMessageSizeBlockOversize(TestCase):
-    """
-    verify that maxMessageSize blocks oversize messages
-    """
+    """verify that maxMessageSize blocks oversize messages"""
     @classmethod
     def setUpClass(cls):
         """Start the router"""
@@ -1059,9 +1057,7 @@ class MaxMessageSizeBlockOversize(TestCase):
 
 
 class Dummy(FakeBroker):
-    """
-    Open a link and sit there. No traffic is expected to reach this broker
-    """
+    """Open a link and sit there. No traffic is expected to reach this broker"""
 
     def __init__(self, url, container_id):
         super(Dummy, self).__init__(url, container_id)
@@ -1072,9 +1068,7 @@ class Dummy(FakeBroker):
 
 
 class MaxMessageSizeLinkRouteOversize(TestCase):
-    """
-    verify that maxMessageSize blocks oversize messages over link route
-    """
+    """verify that maxMessageSize blocks oversize messages over link route"""
     @classmethod
     def setUpClass(cls):
         """Start the router"""

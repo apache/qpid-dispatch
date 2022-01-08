@@ -24,10 +24,6 @@ class RouterTestDeprecatedLinkRoute(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """
-
-        :return:
-        """
         super(RouterTestDeprecatedLinkRoute, cls).setUpClass()
 
         name = "test-router"

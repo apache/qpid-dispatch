@@ -220,6 +220,7 @@ class LinkRouteTest(TestCase):
 
 
 class SendReceive(MessagingHandler):
+
     def __init__(self, send_url, recv_url, message=None):
         super(SendReceive, self).__init__()
         self.send_url = send_url

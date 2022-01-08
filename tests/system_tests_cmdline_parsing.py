@@ -32,9 +32,7 @@ from system_test import unittest
 
 
 class CommandLineTest(TestCase):
-    """
-    System tests for command line arguments parsing
-    """
+    """System tests for command line arguments parsing"""
     testport = 0
     testname = ""
 
@@ -94,9 +92,7 @@ class CommandLineTest(TestCase):
 
 
 class CommandLineTest2(TestCase):
-    """
-    System tests for command line arguments parsing
-    """
+    """System tests for command line arguments parsing"""
     testport = 0
     testname = ""
 
@@ -145,10 +141,7 @@ class CommandLineTest2(TestCase):
             raise Exception("%s\n%s" % (ex, out))
 
     def test_02_config_full_path(self):
-        """
-        Starts qdrouterd as daemon, enforcing a config file name with
-        full path.
-        """
+        """Starts qdrouterd as daemon, enforcing a config file name with full path."""
 
         try:
             self.run_qdrouterd_as_daemon(os.getcwd() + "/test-router-2.conf",

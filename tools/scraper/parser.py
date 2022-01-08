@@ -773,9 +773,7 @@ class ParsedLogLine:
                 spl[-SEQUENCE_TRANSFER_SIZE:])
 
     def adverbl_link_to(self):
-        """
-        :return: html link to the main adverbl data display for this line
-        """
+        """:return: html link to the main adverbl data display for this line"""
         return "<a href=\"#%s\">%s</a>" % (self.fid, "%s%d_%s" %
                                            (common.log_letter_of(self.index), self.instance, str(self.lineno)))
 

@@ -1659,6 +1659,7 @@ class LinkRouteProxyTest(TestCase):
             self.skipTest("Test skipped during development.")
 
         class AttachDropper(FakeService):
+
             def __init__(self, *args, **kwargs):
                 super(AttachDropper, self).__init__(*args, **kwargs)
                 self.link_dropped = Event()
@@ -1706,9 +1707,7 @@ class LinkRouteProxyTest(TestCase):
         self._wait_address_gone(self.INT_B, "CfgLinkRoute1")
 
     def test_02_thrashing_link_routes(self):
-        """
-        Rapidly add and delete link routes at the edge
-        """
+        """Rapidly add and delete link routes at the edge"""
         if self.skip['test_02'] :
             self.skipTest("Test skipped during development.")
 
@@ -1738,9 +1737,7 @@ class LinkRouteProxyTest(TestCase):
         self._wait_address_gone(self.INT_B, "CfgLinkRoute1")
 
     def _validate_topology(self, router, expected_links, address):
-        """
-        query existing links and verify they are set up as expected
-        """
+        """query existing links and verify they are set up as expected"""
         mgmt = QdManager(self, address=router)
         # fetch all the connections
         cl = mgmt.query('org.apache.qpid.dispatch.connection')
@@ -1763,9 +1760,7 @@ class LinkRouteProxyTest(TestCase):
             self.assertEqual(len(matches), 1, msg=matches)
 
     def test_03_interior_conn_lost(self):
-        """
-        What happens when the interior connection bounces?
-        """
+        """What happens when the interior connection bounces?"""
         if self.skip['test_03'] :
             self.skipTest("Test skipped during development.")
 
@@ -2009,6 +2004,7 @@ class LinkRouteProxyTest(TestCase):
 
 
 class ConnectivityTest(MessagingHandler):
+
     def __init__(self, interior_host, edge_host, edge_id):
         super(ConnectivityTest, self).__init__()
         self.interior_host = interior_host
@@ -2063,6 +2059,7 @@ class ConnectivityTest(MessagingHandler):
 
 
 class DynamicAddressTest(MessagingHandler):
+
     def __init__(self, receiver_host, sender_host):
         super(DynamicAddressTest, self).__init__()
         self.receiver_host = receiver_host
@@ -2381,6 +2378,7 @@ class MobileAddressTest(MessagingHandler):
 
 
 class MobileAddressOneSenderTwoReceiversTest(MessagingHandler):
+
     def __init__(self, receiver1_host, receiver2_host, sender_host, address):
         super(MobileAddressOneSenderTwoReceiversTest, self).__init__()
         self.receiver1_host = receiver1_host
@@ -2940,9 +2938,7 @@ class EdgeListenerSender(TestCase):
 
 
 class StreamingMessageTest(TestCase):
-    """
-    Test streaming message flows across edge and interior routers
-    """
+    """Test streaming message flows across edge and interior routers"""
 
     SIG_TERM = -15  # Process.terminate() sets this exit value
     BODY_MAX = 4294967295  # AMQP 1.0 allows types of length 2^32-1
@@ -3102,9 +3098,7 @@ class StreamingMessageTest(TestCase):
         return self.popen(cmd, expect=expect, env=env)
 
     def test_01_streaming_link_route(self):
-        """
-        Verify that a streaming message can be delivered over a link route
-        """
+        """Verify that a streaming message can be delivered over a link route"""
         fake_broker = self._start_broker_EB1()
 
         rx = self.spawn_receiver(self.EB1, count=1,
@@ -3168,9 +3162,7 @@ class StreamingMessageTest(TestCase):
         self._streaming_test("closest/test-address")
 
     def test_03_streaming_multicast(self):
-        """
-        Verify a streaming multicast message is forwarded correctly
-        """
+        """Verify a streaming multicast message is forwarded correctly"""
 
         routers = [self.EB1, self.INT_B, self.INT_A]
         streaming_rx = [self.spawn_receiver(router,
@@ -3203,9 +3195,7 @@ class StreamingMessageTest(TestCase):
         self._wait_address_gone(self.INT_B, "multicast/test_address")
 
     def test_04_streaming_balanced(self):
-        """
-        Verify streaming balanced messages are forwarded correctly.
-        """
+        """Verify streaming balanced messages are forwarded correctly."""
         balanced_rx = [self.spawn_receiver(self.EB1,
                                            count=1,
                                            address="balanced/test-address")
@@ -3388,9 +3378,7 @@ class StreamingMessageTest(TestCase):
         self._wait_address_gone(self.INT_B,  "multicast/test-address")
 
     def test_13_streaming_balanced_parallel(self):
-        """
-        Verify streaming does not block other balanced traffic.
-        """
+        """Verify streaming does not block other balanced traffic."""
 
         # create 2 consumers on the balanced address. Since our Process class
         # requires the exit code to be known when the process is spawned and we

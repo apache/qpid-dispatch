@@ -28,6 +28,7 @@ from proton.reactor import Container
 
 
 class FailoverServer(MessagingHandler):
+
     def __init__(self, address):
         super(FailoverServer, self).__init__()
         self.listener = None

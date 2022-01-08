@@ -30,9 +30,7 @@ from proton.utils import LinkDetached
 
 
 class LinkRouteLookupTest(TestCase):
-    """
-    Tests link route address lookup
-    """
+    """Tests link route address lookup"""
     # hardcoded values from the router's C code
     QD_TERMINUS_ADDRESS_LOOKUP = '_$qd.addr_lookup'
     PROTOCOL_VERSION = 1
@@ -122,9 +120,7 @@ class LinkRouteLookupTest(TestCase):
         cls.INT_B.wait_router_connected('INT.A')
 
     def _lookup_request(self, lr_address, direction):
-        """
-        Construct a link route lookup request message
-        """
+        """Construct a link route lookup request message"""
         return Message(body=[lr_address,
                              direction],
                        properties={"version": self.PROTOCOL_VERSION,
@@ -169,9 +165,7 @@ class LinkRouteLookupTest(TestCase):
         bc.close()
 
     def test_link_route_lookup_not_found(self):
-        """
-        verify correct handling of lookup misses
-        """
+        """verify correct handling of lookup misses"""
         bc = BlockingConnection(self.INT_A.edge_listener, timeout=TIMEOUT)
         srr = SyncRequestResponse(bc, self.QD_TERMINUS_ADDRESS_LOOKUP)
 
@@ -179,9 +173,7 @@ class LinkRouteLookupTest(TestCase):
         self.assertEqual(self.QCM_ADDR_LOOKUP_NOT_FOUND, rsp[0])
 
     def test_link_route_lookup_not_link_route(self):
-        """
-        verify correct handling of matches to mobile addresses
-        """
+        """verify correct handling of matches to mobile addresses"""
         addr = "not.a.linkroute"
         client = AsyncTestReceiver(self.INT_A.listener, addr)
         self.INT_A.wait_address(addr)
@@ -196,9 +188,7 @@ class LinkRouteLookupTest(TestCase):
         client.stop()
 
     def test_link_route_lookup_no_dest(self):
-        """
-        verify correct handling of matches to mobile addresses
-        """
+        """verify correct handling of matches to mobile addresses"""
         bc = BlockingConnection(self.INT_A.edge_listener, timeout=TIMEOUT)
         srr = SyncRequestResponse(bc, self.QD_TERMINUS_ADDRESS_LOOKUP)
         rsp = self._check_response(srr.call(self._lookup_request("org.apache.A.nope", True)))
@@ -219,9 +209,7 @@ class LinkRouteLookupTest(TestCase):
         bc.close()
 
     def test_link_route_invalid_request(self):
-        """
-        Test various invalid message content
-        """
+        """Test various invalid message content"""
 
         # empty message
         self._invalid_request_test(Message())
@@ -262,9 +250,7 @@ class LinkRouteLookupTest(TestCase):
         self._invalid_request_test(msg)
 
     def test_lookup_bad_connection(self):
-        """
-        Verify that clients connected via non-edge connections fail
-        """
+        """Verify that clients connected via non-edge connections fail"""
         bc = BlockingConnection(self.INT_A.listener, timeout=TIMEOUT)
         self.assertRaises(LinkDetached, SyncRequestResponse, bc, self.QD_TERMINUS_ADDRESS_LOOKUP)
         bc.close()

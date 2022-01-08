@@ -170,9 +170,7 @@ class Counts():
 
 
 class ConnectionDetail():
-    """
-    Holds facts about sessions over the connection's lifetime
-    """
+    """Holds facts about sessions over the connection's lifetime"""
 
     def __init__(self, id, router, conn):
         # id in form 'A_15':
@@ -232,9 +230,7 @@ class ConnectionDetail():
 
 
 class SessionDetail:
-    """
-    Holds facts about a session
-    """
+    """Holds facts about a session"""
 
     def __init__(self, id, conn_detail, conn_seq, start_time):
         # parent connection

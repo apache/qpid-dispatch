@@ -41,6 +41,7 @@ CONNECTION_PROPERTIES_BINARY = {b'client_identifier': b'policy_server'}
 
 
 class StandaloneRouterQdManageTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(StandaloneRouterQdManageTest, cls).setUpClass()
@@ -113,6 +114,7 @@ class StandaloneRouterQdManageTest(TestCase):
 
 
 class EdgeRouterQdManageTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(EdgeRouterQdManageTest, cls).setUpClass()
@@ -595,9 +597,7 @@ class OneRouterTest(TestCase):
         self.assertTrue(test.reject_count_match)
 
     def test_37_connection_properties_unicode_string(self):
-        """
-        Tests connection property that is a map of unicode strings and integers
-        """
+        """Tests connection property that is a map of unicode strings and integers"""
         connection = BlockingConnection(self.router.addresses[0],
                                         timeout=TIMEOUT,
                                         properties=CONNECTION_PROPERTIES_UNICODE_STRING)
@@ -618,9 +618,7 @@ class OneRouterTest(TestCase):
         client.connection.close()
 
     def test_38_connection_properties_symbols(self):
-        """
-        Tests connection property that is a map of symbols
-        """
+        """Tests connection property that is a map of symbols"""
         connection = BlockingConnection(self.router.addresses[0],
                                         timeout=TIMEOUT,
                                         properties=CONNECTION_PROPERTIES_SYMBOL)
@@ -806,10 +804,9 @@ class ReleasedChecker:
 
 
 class ExtensionCapabilitiesTest(MessagingHandler):
+
     def __init__(self, address, capabilities):
-        """
-        capabilities: sent by this client to the router
-        """
+        """capabilities: sent by this client to the router"""
         super(ExtensionCapabilitiesTest, self).__init__()
         self._addr = address
         self._caps = capabilities
@@ -841,6 +838,7 @@ class ExtensionCapabilitiesTest(MessagingHandler):
 
 
 class UnexpectedReleaseTest(MessagingHandler):
+
     def __init__(self, address):
         super(UnexpectedReleaseTest, self).__init__(auto_accept=False)
         self.address = address
@@ -927,6 +925,7 @@ class UnexpectedReleaseTest(MessagingHandler):
 
 
 class SemanticsClosest(MessagingHandler):
+
     def __init__(self, address):
         super(SemanticsClosest, self).__init__()
         self.address = address
@@ -999,6 +998,7 @@ class SemanticsClosest(MessagingHandler):
 
 
 class MessageAnnotaionsPreExistingOverride(MessagingHandler):
+
     def __init__(self, address):
         super(MessageAnnotaionsPreExistingOverride, self).__init__()
         self.address = address
@@ -1047,6 +1047,7 @@ class MessageAnnotaionsPreExistingOverride(MessagingHandler):
 
 
 class SemanticsMulticast(MessagingHandler):
+
     def __init__(self, address):
         """
         Verify that for every 1 unsettled mcast message received, N messages are sent
@@ -1132,6 +1133,7 @@ class SemanticsMulticast(MessagingHandler):
 
 
 class ManagementNotImplemented(MessagingHandler):
+
     def __init__(self, address):
         super(ManagementNotImplemented, self).__init__()
         self.address = address
@@ -1179,6 +1181,7 @@ class ManagementNotImplemented(MessagingHandler):
 
 
 class ManagementGetOperationsTest(MessagingHandler):
+
     def __init__(self, address):
         super(ManagementGetOperationsTest, self).__init__()
         self.address = address
@@ -1230,6 +1233,7 @@ class ManagementGetOperationsTest(MessagingHandler):
 
 
 class ManagementTest(MessagingHandler):
+
     def __init__(self, address):
         super(ManagementTest, self).__init__()
         self.address = address
@@ -1328,6 +1332,7 @@ class CustomTimeout:
 
 
 class SemanticsBalanced(MessagingHandler):
+
     def __init__(self, address):
         super(SemanticsBalanced, self).__init__(auto_accept=False, prefetch=0)
         self.address = address
@@ -1498,6 +1503,7 @@ class PresettledCustomTimeout:
 
 
 class DroppedPresettledTest(MessagingHandler):
+
     def __init__(self, addr, n_messages, begin_ingress_count, begin_dropped_presettled_count):
         super(DroppedPresettledTest, self).__init__()
         self.addr = addr
@@ -2525,6 +2531,7 @@ HELLO_WORLD = "Hello World!"
 
 
 class SndSettleModeTest(MessagingHandler):
+
     def __init__(self, address):
         super(SndSettleModeTest, self).__init__()
         self.address = address
@@ -2559,6 +2566,7 @@ class SndSettleModeTest(MessagingHandler):
 
 
 class ExcessDeliveriesReleasedTest(MessagingHandler):
+
     def __init__(self, address):
         super(ExcessDeliveriesReleasedTest, self).__init__(prefetch=0)
         self.address = address
@@ -2606,6 +2614,7 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
 
 
 class UnavailableBase(MessagingHandler):
+
     def __init__(self, address):
         super(UnavailableBase, self).__init__()
         self.address = address
@@ -2642,6 +2651,7 @@ class UnavailableBase(MessagingHandler):
 
 
 class UnavailableSender(UnavailableBase):
+
     def __init__(self, address):
         super(UnavailableSender, self).__init__(address)
 
@@ -2655,6 +2665,7 @@ class UnavailableSender(UnavailableBase):
 
 
 class UnavailableReceiver(UnavailableBase):
+
     def __init__(self, address):
         super(UnavailableReceiver, self).__init__(address)
 
@@ -2736,6 +2747,7 @@ class MulticastUnsettledTest(MessagingHandler):
 
 
 class LargeMessageStreamCloseConnTest(MessagingHandler):
+
     def __init__(self, address):
         super(LargeMessageStreamCloseConnTest, self).__init__()
         self.address = address
@@ -2793,6 +2805,7 @@ class LargeMessageStreamCloseConnTest(MessagingHandler):
 
 
 class LargeMessageStreamTest(MessagingHandler):
+
     def __init__(self, address):
         super(LargeMessageStreamTest, self).__init__()
         self.address = address
@@ -2841,6 +2854,7 @@ class LargeMessageStreamTest(MessagingHandler):
 
 
 class MultiframePresettledTest(MessagingHandler):
+
     def __init__(self, address):
         super(MultiframePresettledTest, self).__init__(prefetch=0)
         self.address = address
@@ -2927,6 +2941,7 @@ class UptimeLastDlvChecker:
 
 
 class ConnectionUptimeLastDlvTest(MessagingHandler):
+
     def __init__(self, address, dest):
         super(ConnectionUptimeLastDlvTest, self).__init__()
         self.timer = None
@@ -3006,6 +3021,7 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
 
 
 class AnonymousSenderNoRecvLargeMessagedTest(MessagingHandler):
+
     def __init__(self, address):
         super(AnonymousSenderNoRecvLargeMessagedTest, self).__init__(auto_accept=False)
         self.timer = None
@@ -3048,6 +3064,7 @@ class AnonymousSenderNoRecvLargeMessagedTest(MessagingHandler):
 
 
 class ReleasedVsModifiedTest(MessagingHandler):
+
     def __init__(self, address):
         super(ReleasedVsModifiedTest, self).__init__(prefetch=0, auto_accept=False)
         self.address = address
@@ -3113,6 +3130,7 @@ class ReleasedVsModifiedTest(MessagingHandler):
 
 
 class AppearanceOfBalanceTest(MessagingHandler):
+
     def __init__(self, address):
         super(AppearanceOfBalanceTest, self).__init__()
         self.address = address
@@ -3171,6 +3189,7 @@ class AppearanceOfBalanceTest(MessagingHandler):
 
 
 class BatchedSettlementTest(MessagingHandler):
+
     def __init__(self, address):
         super(BatchedSettlementTest, self).__init__(auto_accept=False)
         self.address = address
@@ -3232,6 +3251,7 @@ class BatchedSettlementTest(MessagingHandler):
 
 
 class RejectCoordinatorTest(MessagingHandler, TransactionHandler):
+
     def __init__(self, url):
         super(RejectCoordinatorTest, self).__init__(prefetch=0)
         self.url = Url(url)
@@ -3285,6 +3305,7 @@ class RejectCoordinatorTest(MessagingHandler, TransactionHandler):
 
 
 class PresettledOverflowTest(MessagingHandler):
+
     def __init__(self, address):
         super(PresettledOverflowTest, self).__init__(prefetch=0)
         self.address = address
@@ -3342,6 +3363,7 @@ class PresettledOverflowTest(MessagingHandler):
 
 
 class RejectDispositionTest(MessagingHandler):
+
     def __init__(self, address):
         super(RejectDispositionTest, self).__init__(auto_accept=False)
         self.address = address
@@ -3392,6 +3414,7 @@ class RejectDispositionTest(MessagingHandler):
 
 
 class UnsettledLargeMessageTest(MessagingHandler):
+
     def __init__(self, addr, n_messages):
         super(UnsettledLargeMessageTest, self).__init__()
         self.addr = addr
@@ -3479,6 +3502,7 @@ class UnsettledLargeMessageTest(MessagingHandler):
 
 
 class OneRouterUnavailableCoordinatorTest(TestCase):
+
     @classmethod
     def setUpClass(cls):
         super(OneRouterUnavailableCoordinatorTest, cls).setUpClass()
@@ -3533,6 +3557,7 @@ class OneRouterUnavailableCoordinatorTest(TestCase):
 
 
 class RejectCoordinatorGoodMessageTest(RejectCoordinatorTest):
+
     def __init__(self, url, link_route_present=False):
         super(RejectCoordinatorGoodMessageTest, self).__init__(url)
         self.link_route_present = link_route_present
@@ -3659,6 +3684,7 @@ class Q2HoldoffDropTest(MessagingHandler):
         if self.n_rx == 3:  # first will arrive, second is blocked
 
             class CloseTimer(Timeout):
+
                 def __init__(self, parent):
                     self.parent = parent
 
@@ -3689,9 +3715,7 @@ class Q2HoldoffDropTest(MessagingHandler):
 
 
 class OneRouterTransactionalAttachTest(TestCase):
-    """
-    Verify that a transaction is properly forwarded through the router
-    """
+    """Verify that a transaction is properly forwarded through the router"""
 
     class FakeTxnBroker(FakeBroker):
         """
@@ -3807,9 +3831,7 @@ class OneRouterTransactionalAttachTest(TestCase):
         cls.router.wait_address("closest/queue01", count=2)
 
     def test_01_verify_attach(self):
-        """
-        Verify the transaction link attach is correctly forwarded to the broker
-        """
+        """Verify the transaction link attach is correctly forwarded to the broker"""
         client = self.TxSender(url=self.listener)
         Container(client).run()
         self.assertTrue(client.declare_failed)

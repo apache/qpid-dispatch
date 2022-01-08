@@ -22,9 +22,7 @@ from ..dispatch import LOG_TRACE
 
 
 class LinkStateEngine:
-    """
-    This module is responsible for running the Link State protocol.
-    """
+    """This module is responsible for running the Link State protocol."""
 
     def __init__(self, container):
         self.container = container
