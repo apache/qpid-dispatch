@@ -31,7 +31,7 @@ from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
 from qpid_dispatch_internal.router.engine import HelloProtocol, PathEngine
 
 
-class Adapter(object):
+class Adapter:
     def __init__(self, domain):
         self._domain = domain
 

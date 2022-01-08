@@ -1416,7 +1416,7 @@ class TerminusAddrTest(MessagingHandler):
 
 
 class MultiLinkSendReceive(MessagingHandler):
-    class SendState(object):
+    class SendState:
         def __init__(self, link):
             self.link = link
             self.sent = False
@@ -1439,7 +1439,7 @@ class MultiLinkSendReceive(MessagingHandler):
                 self.link.close()
                 self.link.connection.close()
 
-    class RecvState(object):
+    class RecvState:
         def __init__(self, link):
             self.link = link
             self.received = False
@@ -2426,7 +2426,7 @@ class ConnLinkRouteService(FakeBroker):
                     pass
 
 
-class ConnLinkRouteMgmtProxy(object):
+class ConnLinkRouteMgmtProxy:
     """
     Manage connection scoped link routes over a given connection.
     While the connection remains open the connection scoped links will remain

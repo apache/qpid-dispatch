@@ -309,7 +309,7 @@ class Process(subprocess.Popen):
             error("exit code %s, expected %s" % (status, self.expect))
 
 
-class Config(object):
+class Config:
     """Base class for configuration objects that provide a convenient
     way to create content for configuration files."""
 
@@ -731,7 +731,7 @@ class Qdrouterd(Process):
         return os.path.join(self.outdir, self.logfile)
 
 
-class Tester(object):
+class Tester:
     """Tools for use by TestCase
 - Create a directory for the test.
 - Utilities to create processes and servers, manage ports etc.
@@ -1128,7 +1128,7 @@ class AsyncTestSender(MessagingHandler):
         self._logger.dump()
 
 
-class QdManager(object):
+class QdManager:
     """
     A means to invoke qdmanage during a testcase
     """
@@ -1202,11 +1202,11 @@ class QdManager(object):
         return json.loads(self(cmd))
 
 
-class MgmtMsgProxy(object):
+class MgmtMsgProxy:
     """
     Utility for creating and inspecting management messages
     """
-    class _Response(object):
+    class _Response:
         def __init__(self, status_code, status_description, body):
             self.status_code        = status_code
             self.status_description = status_description
@@ -1305,7 +1305,7 @@ class MgmtMsgProxy(object):
         return Message(properties=ap, reply_to=self.reply_addr)
 
 
-class TestTimeout(object):
+class TestTimeout:
     """
     A callback object for MessagingHandler class
     parent: A MessagingHandler with a timeout() method
@@ -1319,7 +1319,7 @@ class TestTimeout(object):
         self.parent.timeout()
 
 
-class PollTimeout(object):
+class PollTimeout:
     """
     A callback object for MessagingHandler scheduled timers
     parent: A MessagingHandler with a poll_timeout() method
@@ -1370,7 +1370,7 @@ def get_inter_router_links(address):
     return inter_router_links
 
 
-class Timestamp(object):
+class Timestamp:
     """
     Time stamps for logging.
     """
@@ -1382,7 +1382,7 @@ class Timestamp(object):
         return self.ts.strftime("%Y-%m-%d %H:%M:%S.%f")
 
 
-class Logger(object):
+class Logger:
     """
     Record an event log for a self test.
     May print per-event or save events to be printed later.

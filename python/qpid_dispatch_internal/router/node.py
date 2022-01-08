@@ -22,7 +22,7 @@ from .data import LinkState, ProtocolVersion
 from .address import Address
 
 
-class NodeTracker(object):
+class NodeTracker:
     """
     This module is responsible for tracking the set of router nodes that are known to this
     router.  It tracks whether they are neighbor or remote and whether they are reachable.
@@ -369,7 +369,7 @@ class NodeTracker(object):
             self.next_maskbit = i
 
 
-class RouterNode(object):
+class RouterNode:
     """
     RouterNode is used to track remote routers in the router network.
     """

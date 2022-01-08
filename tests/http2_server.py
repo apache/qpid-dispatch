@@ -34,7 +34,7 @@ except ImportError:
 app = Quart(__name__)
 
 
-class MyInfo(object):
+class MyInfo:
     def __init__(self, fname, lname, id=None):
         self.fname = fname
         self.lname = lname

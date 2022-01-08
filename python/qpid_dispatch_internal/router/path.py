@@ -18,7 +18,7 @@
 #
 
 
-class PathEngine(object):
+class PathEngine:
     """
     This module is responsible for computing the next-hop for every router in the domain
     based on the collection of link states that have been gathered.
@@ -159,7 +159,7 @@ class PathEngine(object):
         return next_hops, cost, valid_origins, radius
 
 
-class NodeSet(object):
+class NodeSet:
     """
     This data structure is an ordered list of node IDs, sorted in increasing order by their cost.
     Equal cost nodes are secondarily sorted by their ID in order to provide deterministic and

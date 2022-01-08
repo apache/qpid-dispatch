@@ -88,7 +88,7 @@ class TestService(MessagingHandler):
     """a service that the core client can communicate with"""
     __test__ = False
 
-    class Timeout(object):
+    class Timeout:
         def __init__(self, service):
             self.service = service
 
@@ -232,7 +232,7 @@ class TestCallTimeout(TestService):
     """test that the timeout is handled properly"""
     __test__ = False
 
-    class PeriodicLogScrape(object):
+    class PeriodicLogScrape:
         # periodically scan the log for the timeout error
         def __init__(self, service):
             self.service = service

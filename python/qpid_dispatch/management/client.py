@@ -67,7 +67,7 @@ class Entity(EntityBase):
         self.call('DELETE', expect=error.NO_CONTENT)
 
 
-class Node(object):
+class Node:
     """Client proxy for an AMQP management node"""
 
     def clean_attrs(self, attrs):
@@ -192,7 +192,7 @@ class Node(object):
         self.check_response(response, expect=expect)
         return response
 
-    class QueryResponse(object):
+    class QueryResponse:
         """
         Result returned by L{query}.
         @ivar attribute_names: List of attribute names for the results.

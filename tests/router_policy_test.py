@@ -110,7 +110,7 @@ class PolicyHostAddrTest(TestCase):
         self.expect_deny("0:ff:0,0:fe:ffff:ffff::0", "a > b")
 
 
-class QpidDispatch(object):
+class QpidDispatch:
     def qd_dispatch_policy_c_counts_alloc(self):
         return 100
 
@@ -118,7 +118,7 @@ class QpidDispatch(object):
         pass
 
 
-class MockAgent(object):
+class MockAgent:
     def __init__(self):
         self.qd = QpidDispatch()
 
@@ -126,7 +126,7 @@ class MockAgent(object):
         pass
 
 
-class MockPolicyManager(object):
+class MockPolicyManager:
     def __init__(self):
         self.agent = MockAgent()
         self.logs = []

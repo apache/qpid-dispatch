@@ -24,7 +24,7 @@ from proton.reactor import Container
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 
 
-class HeartbeatTimer(object):
+class HeartbeatTimer:
     def __init__(self, parent):
         self.parent = parent
 

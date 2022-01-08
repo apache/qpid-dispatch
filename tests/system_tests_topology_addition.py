@@ -33,7 +33,7 @@ from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 
 # Named timers allow test code to distinguish between several
 # simultaneous timers, going off at different rates.
-class Timeout (object):
+class Timeout:
     def __init__(self, parent, name):
         self.parent = parent
         self.name   = name

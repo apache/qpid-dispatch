@@ -46,10 +46,10 @@ try:
     from TCP_echo_client import TcpEchoClient
     from TCP_echo_server import TcpEchoServer
 except ImportError:
-    class TCP_echo_client(object):
+    class TCP_echo_client:
         pass
 
-    class TCP_echo_server(object):
+    class TCP_echo_server:
         pass
 
 

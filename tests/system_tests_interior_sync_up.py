@@ -24,7 +24,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
 
-class AddrTimer(object):
+class AddrTimer:
     def __init__(self, parent):
         self.parent = parent
 
@@ -75,7 +75,7 @@ class RouterTest(TestCase):
         self.assertIsNone(test.error)
 
 
-class DelayTimeout(object):
+class DelayTimeout:
     def __init__(self, parent):
         self.parent = parent
 

@@ -37,7 +37,7 @@ from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LO
 from ..dispatch import TREATMENT_MULTICAST_FLOOD
 
 
-class RouterEngine(object):
+class RouterEngine:
     """
     """
 

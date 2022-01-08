@@ -30,7 +30,7 @@ from proton import Message
 from proton.handlers import MessagingHandler
 
 
-class ConsolePreReq(object):
+class ConsolePreReq:
     @staticmethod
     def is_cmd(name):
         ''' determine if a command is present and executes on the system '''

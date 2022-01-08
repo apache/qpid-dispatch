@@ -459,7 +459,7 @@ class RouterMultitenantPolicyTest(TestCase):
         self.assertIsNone(test.error)
 
 
-class Entity(object):
+class Entity:
     def __init__(self, status_code, status_description, attrs):
         self.status_code        = status_code
         self.status_description = status_description
@@ -469,7 +469,7 @@ class Entity(object):
         return self.attrs[key]
 
 
-class RouterProxy(object):
+class RouterProxy:
     def __init__(self, reply_addr):
         self.reply_addr = reply_addr
 

@@ -33,7 +33,7 @@ from system_test import unittest
 # ------------------------------------------------
 
 
-class Timeout(object):
+class Timeout:
     """
     Named timeout object can handle multiple simultaneous
     timers, by telling the parent which one fired.
@@ -47,7 +47,7 @@ class Timeout(object):
         self.parent.timeout(self.name)
 
 
-class ManagementMessageHelper (object):
+class ManagementMessageHelper:
     """
     Format management messages.
     """

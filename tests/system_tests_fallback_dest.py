@@ -28,7 +28,7 @@ from system_test import unittest, skip_test_in_ci
 from system_test import Logger
 
 
-class AddrTimer(object):
+class AddrTimer:
     def __init__(self, parent):
         self.parent = parent
 

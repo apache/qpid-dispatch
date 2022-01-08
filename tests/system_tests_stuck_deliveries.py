@@ -25,7 +25,7 @@ from system_test import unittest
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout
 
 
-class AddrTimer(object):
+class AddrTimer:
     def __init__(self, parent):
         self.parent = parent
 

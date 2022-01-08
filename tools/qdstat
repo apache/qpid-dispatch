@@ -40,7 +40,7 @@ def get(obj, attr):
     return getattr(obj, attr, None)
 
 
-class BusManager(object):
+class BusManager:
 
     schema = QdSchema()
 

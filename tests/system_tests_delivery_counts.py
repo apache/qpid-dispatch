@@ -291,7 +291,7 @@ class TwoRouterReleasedDroppedPresettledTest(TestCase):
         self.two_router_released_dropped_counts(True)
 
 
-class AddressCheckerTimeout (object):
+class AddressCheckerTimeout :
     def __init__(self, parent):
         self.parent = parent
 
@@ -299,7 +299,7 @@ class AddressCheckerTimeout (object):
         self.parent.address_check_timeout()
 
 
-class CounterCheckerTimeout (object):
+class CounterCheckerTimeout :
     def __init__(self, parent):
         self.parent = parent
 

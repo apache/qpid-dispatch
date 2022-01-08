@@ -22,7 +22,7 @@
 import json
 
 
-class Message(object):
+class Message:
     """
     Holder for message attributes used by python IoAdapter send/receive.
 

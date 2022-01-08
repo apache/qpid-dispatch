@@ -36,7 +36,7 @@ from system_test import TestCase, Qdrouterd, main_module
 # Helper classes for all tests.
 # ================================================
 
-class Stopwatch (object) :
+class Stopwatch:
 
     def __init__(self, name, timer, initial_time, repeat_time) :
         self.name         = name
@@ -45,7 +45,7 @@ class Stopwatch (object) :
         self.repeat_time  = repeat_time
 
 
-class Timeout(object):
+class Timeout:
     """
     Named timeout object can handle multiple simultaneous
     timers, by telling the parent which one fired.
@@ -59,7 +59,7 @@ class Timeout(object):
         self.parent.timeout(self.name)
 
 
-class ManagementMessageHelper (object) :
+class ManagementMessageHelper:
     """
     Format management messages.
     """

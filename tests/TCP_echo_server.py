@@ -33,7 +33,7 @@ from system_test import Logger
 from system_test import TIMEOUT
 
 
-class ClientRecord(object):
+class ClientRecord:
     """
     Object to register with the selector 'data' field
     for incoming user connections. This is *not* used

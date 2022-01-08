@@ -32,7 +32,7 @@ from system_test import unittest, Logger
 # ------------------------------------------------
 
 
-class AddressCheckResponse(object):
+class AddressCheckResponse:
     """
     Convenience class for the responses returned by an AddressChecker.
     """
@@ -50,7 +50,7 @@ class AddressCheckResponse(object):
             (self.status_code, self.status_description, self.attrs)
 
 
-class AddressChecker (object):
+class AddressChecker:
     """
     Format address-query messages and parse the responses.
     """
@@ -71,7 +71,7 @@ class AddressChecker (object):
         return Message(properties=ap, reply_to=self.reply_addr)
 
 
-class AddressCheckerTimeout (object):
+class AddressCheckerTimeout:
     def __init__(self, parent):
         self.parent = parent
 
@@ -79,7 +79,7 @@ class AddressCheckerTimeout (object):
         self.parent.address_check_timeout()
 
 
-class DistributionSkipMapper(object):
+class DistributionSkipMapper:
     # 1 means skip that test.
     skip = {'test_01': 0,
             'test_02': 0,

@@ -43,7 +43,7 @@ from test_broker import FakeBroker
 from test_broker import FakeService
 
 
-class AddrTimer(object):
+class AddrTimer:
     def __init__(self, parent):
         self.parent = parent
 
@@ -2109,7 +2109,7 @@ class DynamicAddressTest(MessagingHandler):
         Container(self).run()
 
 
-class CustomTimeout(object):
+class CustomTimeout:
     def __init__(self, parent):
         self.parent = parent
 

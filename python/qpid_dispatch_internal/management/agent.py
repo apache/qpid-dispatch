@@ -104,7 +104,7 @@ def not_implemented(operation, entity_type):
     raise NotImplementedStatus("Operation '%s' not implemented on %s"  % (operation, entity_type))
 
 
-class AtomicCount(object):
+class AtomicCount:
     """Simple atomic counter"""
 
     def __init__(self, count=0):
@@ -118,7 +118,7 @@ class AtomicCount(object):
             return n
 
 
-class Implementation(object):
+class Implementation:
     """Abstract implementation wrapper"""
 
     def __init__(self, entity_type, key):
@@ -642,7 +642,7 @@ class HttpConnectorEntity(EntityAdapter):
         self._qd.qd_dispatch_delete_http_connector(self._dispatch, self._implementations[0].key)
 
 
-class EntityCache(object):
+class EntityCache:
     """
     Searchable cache of entities, can be refreshed from implementation objects.
     """
@@ -885,8 +885,8 @@ class ManagementEntity(EntityAdapter):
         raise BadRequestStatus("Bad profile request %s" % (request))
 
 
-class Agent(object):
-    """AMQP managment agent. Manages entities, directs requests to the correct entity."""
+class Agent:
+    """AMQP management agent. Manages entities, directs requests to the correct entity."""
 
     def __init__(self, dispatch, qd):
         self.qd = qd

@@ -42,7 +42,7 @@ import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError
 
 
-class Frame(object):
+class Frame:
     """
     Represents info for a single stack frame
     """
@@ -64,7 +64,7 @@ class Frame(object):
         return hash(self.__str__())
 
 
-class ErrorBase(object):
+class ErrorBase:
     """
     Base class representing a single valgrind error
     """
