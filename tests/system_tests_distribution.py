@@ -3564,7 +3564,6 @@ class SerialWaypointTest (MessagingHandler):
              'receiver'   : None,
              'n_received' : 0,
              'queue'      : [],
-             'n_sent'     : 0,
              'name'       : '1'
              },
             {'sender'     : None,
@@ -3572,7 +3571,6 @@ class SerialWaypointTest (MessagingHandler):
              'receiver'   : None,
              'n_received' : 0,
              'queue'      : [],
-             'n_sent'     : 0,
              'name'       : '2'
              }
         ]
@@ -3857,7 +3855,6 @@ class ParallelWaypointTest (MessagingHandler):
              'receiver'   : None,
              'n_received' : 0,
              'queue'      : [],
-             'n_sent'     : 0,
              'name'       : '1'
              },
             {'sender'     : None,
@@ -3865,7 +3862,6 @@ class ParallelWaypointTest (MessagingHandler):
              'receiver'   : None,
              'n_received' : 0,
              'queue'      : [],
-             'n_sent'     : 0,
              'name'       : '2'
              }
         ]

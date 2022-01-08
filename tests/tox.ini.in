@@ -160,7 +160,6 @@ disable =
     dangerous-default-value,
     deprecated-module,
     duplicate-code,
-    duplicate-key,
     empty-docstring,
     fatal,
     fixme,
