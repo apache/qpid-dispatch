@@ -895,7 +895,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
-        success = odelta == 1 and (idelta == 0 or idelta == 1)
+        success = odelta == 1 and idelta in (0, 1)
         if not success:
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
@@ -1254,7 +1254,7 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
         iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
-        success = odelta == 1 and (idelta == 0 or idelta == 1)
+        success = odelta == 1 and idelta in (0, 1)
         if not success:
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))

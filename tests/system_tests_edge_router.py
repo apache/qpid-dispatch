@@ -2337,7 +2337,7 @@ class MobileAddressTest(MessagingHandler):
                 self.n_accepted += 1
                 self.logger.log("on_settled sender: ACCEPTED %d (of %d)" %
                                 (self.n_accepted, self.normal_count))
-            elif rdisp == "RELEASED" or rdisp == "MODIFIED":
+            elif rdisp in ('RELEASED', 'MODIFIED'):
                 self.n_rel_or_mod += 1
                 self.logger.log("on_settled sender: %s %d (of %d)" %
                                 (rdisp, self.n_rel_or_mod, self.extra_count))
@@ -2786,7 +2786,7 @@ class MobileAddressEventTest(MessagingHandler):
     def on_link_opened(self, event):
         if self.r_attaches == 3:
             return
-        if event.receiver == self.receiver1 or event.receiver == self.receiver2 or event.receiver == self.receiver3:
+        if event.receiver in (self.receiver1, self.receiver2, self.receiver3):
             self.r_attaches += 1
 
         if self.r_attaches == 3:

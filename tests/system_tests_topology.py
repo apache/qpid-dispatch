@@ -481,9 +481,10 @@ class TopologyFailover (MessagingHandler):
 
     def on_message(self, event):
 
-        if event.receiver == self.routers['B']['mgmt_receiver'] or \
-           event.receiver == self.routers['C']['mgmt_receiver'] or \
-           event.receiver == self.routers['D']['mgmt_receiver'] :
+        if event.receiver in (
+                self.routers['B']['mgmt_receiver'],
+                self.routers['C']['mgmt_receiver'],
+                self.routers['D']['mgmt_receiver']):
 
             # ----------------------------------------------------------------
             # This is a management message.

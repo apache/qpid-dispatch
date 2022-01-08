@@ -973,10 +973,7 @@ class TopologyDisposition (MessagingHandler):
         # ----------------------------------------------------------------
         # Is this a management message?
         # ----------------------------------------------------------------
-        if event.receiver == self.routers['A']['mgmt_receiver'] or \
-           event.receiver == self.routers['B']['mgmt_receiver'] or \
-           event.receiver == self.routers['C']['mgmt_receiver'] or \
-           event.receiver == self.routers['D']['mgmt_receiver'] :
+        if event.receiver in (router['mgmt_receiver'] for router in self.routers.values()):
 
             if self.state == 'topo checking' :
                 # In the 'topo checking' state, we send management messages to
@@ -997,7 +994,7 @@ class TopologyDisposition (MessagingHandler):
                         self.state_transition('topo check successful', 'link checking')
                         self.check_links()
 
-            elif self.state == 'link checking' or self.state == 'post mortem' :
+            elif self.state in ('link checking', 'post mortem'):
                 # Link checking was used during initial debugging of this test,
                 # to visually check on the number of undelivered and unsettled
                 # messages in each link, especially during the "post mortem"

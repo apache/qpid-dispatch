@@ -152,7 +152,6 @@ disable =
     consider-using-dict-items,
     consider-using-enumerate,
     consider-using-f-string,
-    consider-using-in,
     consider-using-with,
     deprecated-module,
     duplicate-code,
