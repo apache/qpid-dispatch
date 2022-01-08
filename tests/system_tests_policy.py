@@ -17,7 +17,7 @@
 # under the License.
 #
 
-import unittest as unittest
+import unittest
 import os
 import json
 import re
