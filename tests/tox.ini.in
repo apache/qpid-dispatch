@@ -157,7 +157,6 @@ disable =
     consider-using-in,
     consider-using-max-builtin,
     consider-using-with,
-    dangerous-default-value,
     deprecated-module,
     duplicate-code,
     empty-docstring,

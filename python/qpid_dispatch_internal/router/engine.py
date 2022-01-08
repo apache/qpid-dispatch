@@ -41,10 +41,11 @@ class RouterEngine:
     """
     """
 
-    def __init__(self, router_adapter, router_id, area, max_routers, config_override={}):
+    def __init__(self, router_adapter, router_id, area, max_routers, config_override=None):
         """
         Initialize an instance of a router for a domain.
         """
+        config_override = config_override or {}
         ##
         # Record important information about this router instance
         ##

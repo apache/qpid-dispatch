@@ -67,11 +67,11 @@ class RouterTest(TestCase):
 
 
 class FailoverTest(MessagingHandler):
-    def __init__(self, host, count, elements=[]):
+    def __init__(self, host, count, elements=None):
         super(FailoverTest, self).__init__()
         self.host     = host
         self.count    = count
-        self.elements = elements
+        self.elements = elements or []
         self.conn     = None
         self.error    = None
 
