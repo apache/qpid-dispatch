@@ -2846,12 +2846,11 @@ class LinkRoute3Hop(TestCase):
         for tx in senders:
             out_text, out_err = tx.communicate(timeout=TIMEOUT)
             if tx.returncode:
-                raise Exception("Sender failed: %s %s" % (out_text, out_err))
+                raise Exception(f"Sender failed: {out_text} {out_err}")
 
         if rx.wait(timeout=TIMEOUT):
-            raise Exception("Receiver failed to consume all messages in=%s out=%s",
-                            fake_service.in_count,
-                            fake_service.out_count)
+            raise Exception(
+                f"Receiver failed to consume all messages in={fake_service.in_count} out={fake_service.out_count}")
 
         fake_service.join()
         self.assertEqual(total, fake_service.in_count)

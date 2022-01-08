@@ -188,7 +188,6 @@ disable =
     pointless-statement,
     protected-access,
     raise-missing-from,
-    raising-format-tuple,
     redefined-builtin,
     redefined-outer-name,
     redundant-unittest-assert,
