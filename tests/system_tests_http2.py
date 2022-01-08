@@ -134,7 +134,7 @@ class CommonHttp2Tests:
         out = self.run_curl(address)
         i = 0
         ret_string = ""
-        while (i < 1000):
+        while i < 1000:
             ret_string += str(i) + ","
             i += 1
         self.assertIn(ret_string, out)
@@ -228,7 +228,7 @@ class CommonHttp2Tests:
         out = self.run_curl(client_addr)
         ret_string = ""
         i = 0
-        while (i < 1000):
+        while i < 1000:
             ret_string += str(i) + ","
             i += 1
         self.assertIn(ret_string, out)
@@ -318,7 +318,7 @@ class CommonHttp2Tests:
         while tries < num_tries:
             connections = qd_manager.query('org.apache.qpid.dispatch.connection')
             tries += 1
-            if (len(connections) < 2):
+            if len(connections) < 2:
                 sleep(2)
             else:
                 conn_present = True
@@ -327,7 +327,7 @@ class CommonHttp2Tests:
         out = self.run_curl(client_addr)
         ret_string = ""
         i = 0
-        while (i < 1000):
+        while i < 1000:
             ret_string += str(i) + ","
             i += 1
         self.assertIn(ret_string, out)

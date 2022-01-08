@@ -340,10 +340,10 @@ class PolicyAppConnectionMgr:
         """
         Unregister a connection
         """
-        assert(self.connections_active > 0)
-        assert(user in self.per_user_state)
-        assert(conn_id in self.per_user_state[user])
-        assert(conn_id in self.per_host_state[host])
+        assert self.connections_active > 0
+        assert user in self.per_user_state
+        assert conn_id in self.per_user_state[user]
+        assert conn_id in self.per_host_state[host]
         self.connections_active -= 1
         self.per_user_state[user].remove(conn_id)
         self.per_host_state[host].remove(conn_id)

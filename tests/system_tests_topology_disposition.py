@@ -855,7 +855,7 @@ class TopologyDisposition (MessagingHandler):
             return
         elif name == 'sender':
             if self.state == 'sending' :
-                if not (self.timeout_count % 20):
+                if not self.timeout_count % 20:
                     if self.kill_count < len(self.kill_list):
                         self.kill_a_connector(self.kill_list[self.kill_count])
                         self.kill_count += 1

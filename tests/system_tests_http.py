@@ -214,11 +214,11 @@ class RouterTestHttp(TestCase):
             result = urlopen("http://localhost:%d/metrics" % port, cafile=self.ssl_file('ca-certificate.pem'))
             self.assertEqual(200, result.getcode())
             data = result.read().decode('utf-8')
-            assert('connections' in data)
-            assert('deliveries_ingress' in data)
-            assert('deliveries_delayed_1sec' in data)
-            assert('deliveries_delayed_10sec' in data)
-            assert('deliveries_redirected_to_fallback' in data)
+            assert 'connections' in data
+            assert 'deliveries_ingress' in data
+            assert 'deliveries_delayed_1sec' in data
+            assert 'deliveries_delayed_10sec' in data
+            assert 'deliveries_redirected_to_fallback' in data
 
         # Sequential calls on multiple ports
         for port in r.ports:

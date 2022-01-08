@@ -86,7 +86,7 @@ class ManyLogFilesTest(TestCase):
             with open(self.router.outdir + '/test-router-server.log', 'r') as server_log:
                 for line in server_log:
                     parts = line.split(" ")
-                    if (parts[3] != "SERVER"):
+                    if parts[3] != "SERVER":
                         all_server_logs = False
                         break
         except:
@@ -101,7 +101,7 @@ class ManyLogFilesTest(TestCase):
             with open(self.router.outdir + '/test-router-protocol.log', 'r') as protocol_log:
                 for line in protocol_log:
                     parts = line.split(" ")
-                    if (parts[3] != "PROTOCOL"):
+                    if parts[3] != "PROTOCOL":
                         all_protocol_logs = False
                         break
         except:

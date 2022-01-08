@@ -930,8 +930,8 @@ class TcpAdaptor(TestCase):
         logger.log(name + " Start")
         out = self.run_ncat(TcpAdaptor.tcp_client_listener_ports[client][server], logger, data=b'abcd')
         logger.log("run_ncat returns: '%s'" % out)
-        assert(len(out) > 0)
-        assert("abcd" in out)
+        assert len(out) > 0
+        assert "abcd" in out
         logger.log(tname + " Stop")
 
     # half-closed handling
@@ -960,20 +960,20 @@ class TcpAdaptor(TestCase):
         for output in outputs:
             if output['name'].startswith("ES"):
                 # Check only echo server listeners
-                assert("connectionsOpened" in output)
-                assert(output["connectionsOpened"] > 0)
-                assert(output["connectionsOpened"] == output["connectionsClosed"])
-                assert(output["bytesIn"] == output["bytesOut"])
+                assert "connectionsOpened" in output
+                assert output["connectionsOpened"] > 0
+                assert output["connectionsOpened"] == output["connectionsClosed"]
+                assert output["bytesIn"] == output["bytesOut"]
         # Verify connector stats
         query_command = 'QUERY --type=tcpConnector'
         outputs = json.loads(self.run_qdmanage(query_command))
         for output in outputs:
-            assert(output['address'].startswith("ES"))
-            assert("connectionsOpened" in output)
-            assert(output["connectionsOpened"] > 0)
+            assert output['address'].startswith("ES")
+            assert "connectionsOpened" in output
+            assert output["connectionsOpened"] > 0
             # egress_dispatcher connection opens and should never close
-            assert(output["connectionsOpened"] == output["connectionsClosed"] + 1)
-            assert(output["bytesIn"] == output["bytesOut"])
+            assert output["connectionsOpened"] == output["connectionsClosed"] + 1
+            assert output["bytesIn"] == output["bytesOut"]
         self.logger.log(tname + " SUCCESS")
 
 

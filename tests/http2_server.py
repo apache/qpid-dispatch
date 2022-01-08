@@ -69,7 +69,7 @@ async def create_myinfo():
 def large_string(length):
     i = 0
     ret_string = ""
-    while (i < length):
+    while i < length:
         ret_string += str(i) + ","
         i += 1
     return ret_string
