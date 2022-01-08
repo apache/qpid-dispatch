@@ -208,7 +208,6 @@ disable =
     too-many-public-methods,
     too-many-return-statements,
     too-many-statements,
-    unidiomatic-typecheck,
     unnecessary-pass,
     unspecified-encoding,
     unsubscriptable-object,
