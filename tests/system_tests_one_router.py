@@ -22,9 +22,7 @@ import os
 from subprocess import PIPE, STDOUT
 from time import sleep
 
-from proton import Condition, Message, Delivery, Url, symbol, Timeout
-from proton import Data, symbol
-from proton import Terminus
+from proton import Condition, Data, Delivery, Message, Terminus, Timeout, Url, symbol
 from proton import VERSION as PROTON_VERSION
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.utils import BlockingConnection, SyncRequestResponse

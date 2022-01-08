@@ -196,7 +196,6 @@ disable =
     redefined-outer-name,
     redundant-u-string-prefix,
     redundant-unittest-assert,
-    reimported,
     simplifiable-if-expression,
     singleton-comparison,
     super-init-not-called,
