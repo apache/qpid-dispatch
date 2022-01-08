@@ -17,19 +17,20 @@
 # under the License.
 #
 
-from proton import Condition, Message, Delivery, Url, symbol, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process, unittest, QdManager, TestTimeout
-from proton.handlers import MessagingHandler, TransactionHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce
-from proton.utils import BlockingConnection, SyncRequestResponse
-from proton import VERSION as PROTON_VERSION
-from proton import Terminus
-from proton import Data, symbol
-from qpid_dispatch.management.client import Node
-import os
 import json
+import os
 from subprocess import PIPE, STDOUT
 from time import sleep
+
+from proton import Condition, Data, Delivery, Message, Terminus, Timeout, Url, symbol
+from proton import VERSION as PROTON_VERSION
+from proton.handlers import MessagingHandler, TransactionHandler
+from proton.utils import BlockingConnection, SyncRequestResponse
+from proton.reactor import Container, AtMostOnce, AtLeastOnce
+
+from qpid_dispatch.management.client import Node
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process, unittest, QdManager, TestTimeout
 from test_broker import FakeBroker
 
 
@@ -744,14 +745,14 @@ class OneRouterTest(TestCase):
             # check the caps sent by router.
             self.assertTrue(test.remote_offered is not None)
             self.assertTrue(test.remote_desired is not None)
-            ro = [c for c in test.remote_offered]
-            rd = [c for c in test.remote_desired]
+            ro = list(test.remote_offered)
+            rd = list(test.remote_desired)
             for rc in [ro, rd]:
                 self.assertIn(symbol('ANONYMOUS-RELAY'), rc)
                 self.assertIn(symbol('qd.streaming-links'), rc)
 
 
-class Entity(object):
+class Entity:
     def __init__(self, status_code, status_description, attrs):
         self.status_code        = status_code
         self.status_description = status_description
@@ -761,7 +762,7 @@ class Entity(object):
         return self.attrs[key]
 
 
-class RouterProxy(object):
+class RouterProxy:
     def __init__(self, reply_addr):
         self.reply_addr = reply_addr
 
@@ -796,7 +797,7 @@ class RouterProxy(object):
         return Message(properties=ap, reply_to=self.reply_addr)
 
 
-class ReleasedChecker(object):
+class ReleasedChecker:
     def __init__(self, parent):
         self.parent = parent
 
@@ -1295,7 +1296,7 @@ class ManagementTest(MessagingHandler):
         Container(self).run()
 
 
-class CustomTimeout(object):
+class CustomTimeout:
     def __init__(self, parent):
         self.parent = parent
 
@@ -1461,7 +1462,7 @@ class PreSettled (MessagingHandler) :
             self.bail(None)
 
 
-class PresettledCustomTimeout(object):
+class PresettledCustomTimeout:
     def __init__(self, parent):
         self.parent = parent
         self.num_tries = 0
@@ -2886,7 +2887,7 @@ class MultiframePresettledTest(MessagingHandler):
         Container(self).run()
 
 
-class UptimeLastDlvChecker(object):
+class UptimeLastDlvChecker:
     def __init__(self, parent, lastDlv=None, uptime=0):
         self.parent = parent
         self.uptime = uptime

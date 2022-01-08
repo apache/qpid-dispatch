@@ -22,8 +22,9 @@ Qpid Dispatch Router management schema and config file parsing.
 """
 import json
 from pkgutil import get_data
-from . import schema
+
 from qpid_dispatch_internal.compat import JSON_LOAD_KWARGS
+from . import schema
 
 
 class QdSchema(schema.Schema):
@@ -66,7 +67,7 @@ class QdSchema(schema.Schema):
             # There are 4 roles for listeners - normal, inter-router, route-container, edge
             if router_mode and listener_connector_role:
                 # Standalone routers cannot have inter-router or edge listeners/connectors
-                if router_mode == "standalone" and (listener_connector_role == "inter-router" or listener_connector_role == "edge"):
+                if router_mode == "standalone" and listener_connector_role in ('inter-router', 'edge'):
                     raise schema.ValidationError(
                         "role='standalone' not allowed to connect to or accept connections from other routers.")
 

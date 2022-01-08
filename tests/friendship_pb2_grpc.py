@@ -5,7 +5,7 @@ import grpc
 import friendship_pb2 as friendship__pb2
 
 
-class FriendshipStub(object):
+class FriendshipStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -36,7 +36,7 @@ class FriendshipStub(object):
                 )
 
 
-class FriendshipServicer(object):
+class FriendshipServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Create(self, request, context):
@@ -97,7 +97,7 @@ def add_FriendshipServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Friendship(object):
+class Friendship:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

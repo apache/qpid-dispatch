@@ -36,7 +36,7 @@ from system_test import TestCase, Qdrouterd, main_module
 # Helper classes for all tests.
 # ================================================
 
-class Stopwatch (object) :
+class Stopwatch:
 
     def __init__(self, name, timer, initial_time, repeat_time) :
         self.name         = name
@@ -45,7 +45,7 @@ class Stopwatch (object) :
         self.repeat_time  = repeat_time
 
 
-class Timeout(object):
+class Timeout:
     """
     Named timeout object can handle multiple simultaneous
     timers, by telling the parent which one fired.
@@ -59,7 +59,7 @@ class Timeout(object):
         self.parent.timeout(self.name)
 
 
-class ManagementMessageHelper (object) :
+class ManagementMessageHelper:
     """
     Format management messages.
     """
@@ -855,7 +855,7 @@ class TopologyDisposition (MessagingHandler):
             return
         elif name == 'sender':
             if self.state == 'sending' :
-                if not (self.timeout_count % 20):
+                if not self.timeout_count % 20:
                     if self.kill_count < len(self.kill_list):
                         self.kill_a_connector(self.kill_list[self.kill_count])
                         self.kill_count += 1
@@ -973,10 +973,7 @@ class TopologyDisposition (MessagingHandler):
         # ----------------------------------------------------------------
         # Is this a management message?
         # ----------------------------------------------------------------
-        if event.receiver == self.routers['A']['mgmt_receiver'] or \
-           event.receiver == self.routers['B']['mgmt_receiver'] or \
-           event.receiver == self.routers['C']['mgmt_receiver'] or \
-           event.receiver == self.routers['D']['mgmt_receiver'] :
+        if event.receiver in (router['mgmt_receiver'] for router in self.routers.values()):
 
             if self.state == 'topo checking' :
                 # In the 'topo checking' state, we send management messages to
@@ -997,7 +994,7 @@ class TopologyDisposition (MessagingHandler):
                         self.state_transition('topo check successful', 'link checking')
                         self.check_links()
 
-            elif self.state == 'link checking' or self.state == 'post mortem' :
+            elif self.state in ('link checking', 'post mortem'):
                 # Link checking was used during initial debugging of this test,
                 # to visually check on the number of undelivered and unsettled
                 # messages in each link, especially during the "post mortem"

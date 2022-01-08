@@ -19,20 +19,24 @@
 
 """System tests for management of qdrouter"""
 
-import system_test
-import re
-import os
 import json
+import os
+import re
+from itertools import chain
+
+from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
-from proton import Message
-from qpid_dispatch.management.client import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus
+
+from qpid_dispatch.management.client import Node, Url
+from qpid_dispatch.management.error import ManagementError, BadRequestStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.compat import BINARY
+
+import system_test
 from system_test import Qdrouterd, Process
 from system_test import unittest
-from itertools import chain
 
 PREFIX = 'org.apache.qpid.dispatch.'
 MANAGEMENT = PREFIX + 'management'

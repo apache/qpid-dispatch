@@ -371,7 +371,7 @@ class DescribedType:
                 self.dict[key] = val
 
 
-class ParsedLogLine(object):
+class ParsedLogLine:
     """
     Grind through the log line and record some facts about it.
     * Constructor returns Null if the log line is to be ignored

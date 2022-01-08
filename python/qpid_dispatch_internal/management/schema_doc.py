@@ -24,7 +24,7 @@ import sys
 from .schema import AttributeType
 
 
-class SchemaWriter(object):
+class SchemaWriter:
     """Write the schema as an asciidoc document"""
 
     def __init__(self, output, schema, quiet=True):

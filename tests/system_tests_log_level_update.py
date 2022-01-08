@@ -17,14 +17,15 @@
 # under the License.
 #
 
-from system_test import TestCase, Qdrouterd
-from system_test import QdManager
-from proton.utils import BlockingConnection
+import time
+
 from proton import Message
+from proton.utils import BlockingConnection
 from proton.reactor import AtMostOnce
 from proton.reactor import Container
 
-import time
+from system_test import TestCase, Qdrouterd
+from system_test import QdManager
 
 apply_options = AtMostOnce()
 
@@ -85,7 +86,7 @@ class ManyLogFilesTest(TestCase):
             with open(self.router.outdir + '/test-router-server.log', 'r') as server_log:
                 for line in server_log:
                     parts = line.split(" ")
-                    if (parts[3] != "SERVER"):
+                    if parts[3] != "SERVER":
                         all_server_logs = False
                         break
         except:
@@ -100,7 +101,7 @@ class ManyLogFilesTest(TestCase):
             with open(self.router.outdir + '/test-router-protocol.log', 'r') as protocol_log:
                 for line in protocol_log:
                     parts = line.split(" ")
-                    if (parts[3] != "PROTOCOL"):
+                    if parts[3] != "PROTOCOL":
                         all_protocol_logs = False
                         break
         except:

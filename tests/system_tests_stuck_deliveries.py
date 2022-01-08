@@ -18,13 +18,14 @@
 #
 
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout
-from system_test import unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+from system_test import unittest
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout
 
-class AddrTimer(object):
+
+class AddrTimer:
     def __init__(self, parent):
         self.parent = parent
 
@@ -41,7 +42,7 @@ class RouterTest(TestCase):
         """Start a router"""
         super(RouterTest, cls).setUpClass()
 
-        def router(name, mode, connection, extra=None, args=[]):
+        def router(name, mode, connection, extra=None, args=None):
             config = [
                 ('router', {'mode': mode, 'id': name}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
@@ -51,7 +52,7 @@ class RouterTest(TestCase):
             if extra:
                 config.append(extra)
             config = Qdrouterd.Config(config)
-            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True, cl_args=args))
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True, cl_args=args or []))
 
         cls.routers = []
 

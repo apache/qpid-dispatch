@@ -17,16 +17,16 @@
 # under the License.
 #
 
+import json
 from time import sleep
 from subprocess import PIPE, STDOUT
-
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout
-from system_test import unittest
 
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
-import json
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout
+from system_test import unittest
 
 
 def parse_record(fields, line):

@@ -76,12 +76,12 @@ from ctypes import c_void_p, py_object, c_long
 from subprocess import Popen
 
 import qpid_dispatch_site
-from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
+from qpid_dispatch.management.entity import camelcase
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
-from qpid_dispatch.management.entity import camelcase
 from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
+from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from ..router.message import Message
 from ..router.address import Address
 from ..policy.policy_manager import PolicyManager
@@ -104,7 +104,7 @@ def not_implemented(operation, entity_type):
     raise NotImplementedStatus("Operation '%s' not implemented on %s"  % (operation, entity_type))
 
 
-class AtomicCount(object):
+class AtomicCount:
     """Simple atomic counter"""
 
     def __init__(self, count=0):
@@ -118,7 +118,7 @@ class AtomicCount(object):
             return n
 
 
-class Implementation(object):
+class Implementation:
     """Abstract implementation wrapper"""
 
     def __init__(self, entity_type, key):
@@ -255,18 +255,18 @@ class RouterEntity(EntityAdapter):
         return self.attributes.get('id')
 
     def create(self):
-        if u"id" in self.attributes.keys():
-            for ch in self.attributes[u"id"]:
+        if "id" in self.attributes.keys():
+            for ch in self.attributes["id"]:
                 try:
                     disallowed = unicodedata.category(ch)[0] in "CZ"
                 except TypeError:
                     disallowed = unicodedata.category(ch.decode('utf-8'))[0] in "CZ"
                 if disallowed:  # disallow control and whitespace characters
-                    raise AttributeError("Router id attribute containing character '%s' in id '%s' is disallowed." % (ch, self.attributes[u"id"]))
+                    raise AttributeError("Router id attribute containing character '%s' in id '%s' is disallowed." % (ch, self.attributes["id"]))
         try:
-            self.attributes[u"hostName"] = socket.gethostbyaddr(socket.gethostname())[0]
+            self.attributes["hostName"] = socket.gethostbyaddr(socket.gethostname())[0]
         except:
-            self.attributes[u"hostName"] = ''
+            self.attributes["hostName"] = ''
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
 
     def __str__(self):
@@ -642,7 +642,7 @@ class HttpConnectorEntity(EntityAdapter):
         self._qd.qd_dispatch_delete_http_connector(self._dispatch, self._implementations[0].key)
 
 
-class EntityCache(object):
+class EntityCache:
     """
     Searchable cache of entities, can be refreshed from implementation objects.
     """
@@ -825,7 +825,7 @@ class ManagementEntity(EntityAdapter):
 
     def get_attributes(self, request):
         type = self.requested_type(request)
-        return (OK, dict((t, [a for a in et.attributes])
+        return (OK, dict((t, list(et.attributes))
                          for t, et in self._schema.entity_types.items()
                          if not type or type.name == t))
 
@@ -885,8 +885,8 @@ class ManagementEntity(EntityAdapter):
         raise BadRequestStatus("Bad profile request %s" % (request))
 
 
-class Agent(object):
-    """AMQP managment agent. Manages entities, directs requests to the correct entity."""
+class Agent:
+    """AMQP management agent. Manages entities, directs requests to the correct entity."""
 
     def __init__(self, dispatch, qd):
         self.qd = qd

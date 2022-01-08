@@ -36,14 +36,14 @@ class UsageError(Exception):
     pass
 
 
-def main(run, argv=sys.argv, parser=None):
+def main(run, argv=None, parser=None):
     """
     Call run(argv) with exception handling, do appropriate sys.exit().
     @param parser: a Parser to use for usage related error messages.
     @return: exit value for sys.exit
     """
     try:
-        run(argv)
+        run(argv or sys.argv)
         return 0
     except KeyboardInterrupt:
         print()
@@ -237,7 +237,7 @@ def get_password(file=None):
     return None
 
 
-class Sasl(object):
+class Sasl:
     """
     A simple object to hold sasl mechanisms, sasl username and password
     """

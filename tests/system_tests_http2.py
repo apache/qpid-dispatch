@@ -21,15 +21,16 @@ import os
 import sys
 import hashlib
 import unittest
+from subprocess import PIPE
 from time import sleep
+
 import system_test
 from system_test import TestCase, Qdrouterd, QdManager, Process
 from system_test import curl_available, TIMEOUT, skip_test_in_ci
-from subprocess import PIPE
 
 h2hyper_installed = True
 try:
-    import h2.connection # noqa F401: imported but unused
+    import h2.connection # noqa F401: imported but unused  # pylint: disable=unused-import
 except ImportError:
     h2hyper_installed = False
 
@@ -133,7 +134,7 @@ class CommonHttp2Tests:
         out = self.run_curl(address)
         i = 0
         ret_string = ""
-        while (i < 1000):
+        while i < 1000:
             ret_string += str(i) + ","
             i += 1
         self.assertIn(ret_string, out)
@@ -227,7 +228,7 @@ class CommonHttp2Tests:
         out = self.run_curl(client_addr)
         ret_string = ""
         i = 0
-        while (i < 1000):
+        while i < 1000:
             ret_string += str(i) + ","
             i += 1
         self.assertIn(ret_string, out)
@@ -317,7 +318,7 @@ class CommonHttp2Tests:
         while tries < num_tries:
             connections = qd_manager.query('org.apache.qpid.dispatch.connection')
             tries += 1
-            if (len(connections) < 2):
+            if len(connections) < 2:
                 sleep(2)
             else:
                 conn_present = True
@@ -326,7 +327,7 @@ class CommonHttp2Tests:
         out = self.run_curl(client_addr)
         ret_string = ""
         i = 0
-        while (i < 1000):
+        while i < 1000:
             ret_string += str(i) + ","
             i += 1
         self.assertIn(ret_string, out)

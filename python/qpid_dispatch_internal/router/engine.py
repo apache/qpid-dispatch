@@ -17,6 +17,9 @@
 # under the License.
 #
 
+import time
+from traceback import format_exc, extract_stack
+
 from .data import MessageHELLO, MessageRA, MessageLSU, MessageLSR, \
     isCompatibleVersion, getIdAndVersion
 from .hello import HelloProtocol
@@ -25,8 +28,6 @@ from .path import PathEngine
 from .node import NodeTracker
 from .message import Message
 
-from traceback import format_exc, extract_stack
-import time
 
 ##
 # Import the Dispatch adapters from the environment.  If they are not found
@@ -36,14 +37,15 @@ from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LO
 from ..dispatch import TREATMENT_MULTICAST_FLOOD
 
 
-class RouterEngine(object):
+class RouterEngine:
     """
     """
 
-    def __init__(self, router_adapter, router_id, area, max_routers, config_override={}):
+    def __init__(self, router_adapter, router_id, area, max_routers, config_override=None):
         """
         Initialize an instance of a router for a domain.
         """
+        config_override = config_override or {}
         ##
         # Record important information about this router instance
         ##

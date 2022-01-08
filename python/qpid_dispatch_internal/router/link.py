@@ -21,7 +21,7 @@ from .data import MessageRA, MessageLSU, MessageLSR
 from ..dispatch import LOG_TRACE
 
 
-class LinkStateEngine(object):
+class LinkStateEngine:
     """
     This module is responsible for running the Link State protocol.
     """

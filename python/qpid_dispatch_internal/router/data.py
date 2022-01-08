@@ -74,7 +74,7 @@ def getIdAndVersion(body):
     return result
 
 
-class LinkState(object):
+class LinkState:
     """
     The link-state of a single router.  The link state consists of a list of neighbor routers reachable from
     the reporting router.  The link-state-sequence number is incremented each time the link state changes.
@@ -128,7 +128,7 @@ class LinkState(object):
         self.ls_seq += 1
 
 
-class MessageHELLO(object):
+class MessageHELLO:
     """
     HELLO Message
     scope: neighbors only - HELLO messages travel at most one hop
@@ -167,7 +167,7 @@ class MessageHELLO(object):
         return self.seen_peers.count(_id) > 0
 
 
-class MessageRA(object):
+class MessageRA:
     """
     Router Advertisement (RA) Message
     scope: all routers in the area and all designated routers
@@ -207,7 +207,7 @@ class MessageRA(object):
                 'mobile_seq' : self.mobile_seq}
 
 
-class MessageLSU(object):
+class MessageLSU:
     """
     """
 
@@ -243,7 +243,7 @@ class MessageLSU(object):
                 'ls'       : self.ls.to_dict()}
 
 
-class MessageLSR(object):
+class MessageLSR:
     """
     """
 
@@ -269,7 +269,7 @@ class MessageLSR(object):
                 'area'    : self.area}
 
 
-class MessageMAU(object):
+class MessageMAU:
     """
     """
 
@@ -328,7 +328,7 @@ class MessageMAU(object):
         return body
 
 
-class MessageMAR(object):
+class MessageMAR:
     """
     """
 

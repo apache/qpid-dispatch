@@ -37,7 +37,7 @@ except ImportError:
     _log_imported = False
 
 
-class Config(object):
+class Config:
     """Load config entities from qdrouterd.conf and validated against L{QdSchema}."""
 
     def __init__(self, filename=None, schema=QdSchema(), raw_json=False):

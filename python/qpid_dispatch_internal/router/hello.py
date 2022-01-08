@@ -21,7 +21,7 @@ from .data import MessageHELLO
 from ..dispatch import LOG_TRACE, LOG_CRITICAL
 
 
-class HelloProtocol(object):
+class HelloProtocol:
     """
     This module is responsible for running the HELLO protocol.
     """

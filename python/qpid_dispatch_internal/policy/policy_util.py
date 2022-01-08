@@ -47,7 +47,7 @@ def is_ipv6_enabled():
     return ipv6_enabled
 
 
-class HostStruct(object):
+class HostStruct:
     """
     HostStruct represents a single, binary socket address from getaddrinfo
         - name     : name given to constructor; numeric IP or host name
@@ -114,7 +114,7 @@ class HostStruct(object):
 #
 
 
-class HostAddr(object):
+class HostAddr:
     """
     Provide HostIP address ranges and comparison functions.
     A HostIP may be:
@@ -205,7 +205,7 @@ class HostAddr(object):
             if len(self.hoststructs) == 1:
                 return c0 == 0
             c1 = self.memcmp(candidate.binary, self.hoststructs[1].binary)
-            return c0 >= 0 and c1 <= 0
+            return c0 >= 0 and c1 <= 0  # pylint: disable=chained-comparison
         except PolicyError:
             return False
         except Exception as e:
@@ -229,7 +229,7 @@ class HostAddr(object):
 #
 
 
-class PolicyAppConnectionMgr(object):
+class PolicyAppConnectionMgr:
     """
     Track policy user/host connection limits and statistics for one app.
     # limits - set at creation and by update()
@@ -340,10 +340,10 @@ class PolicyAppConnectionMgr(object):
         """
         Unregister a connection
         """
-        assert(self.connections_active > 0)
-        assert(user in self.per_user_state)
-        assert(conn_id in self.per_user_state[user])
-        assert(conn_id in self.per_host_state[host])
+        assert self.connections_active > 0
+        assert user in self.per_user_state
+        assert conn_id in self.per_user_state[user]
+        assert conn_id in self.per_host_state[host]
         self.connections_active -= 1
         self.per_user_state[user].remove(conn_id)
         self.per_host_state[host].remove(conn_id)

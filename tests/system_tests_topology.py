@@ -17,22 +17,23 @@
 # under the License.
 #
 
+import time
+
 from proton import Message, Timeout
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
+
 from system_test import AsyncTestReceiver
 from system_test import TestCase, Qdrouterd, main_module
 from system_test import TIMEOUT
 from system_test import unittest
-from proton.handlers import MessagingHandler
-from proton.reactor import Container
-
-import time
 
 # ------------------------------------------------
 # Helper classes for all tests.
 # ------------------------------------------------
 
 
-class Timeout(object):
+class Timeout:
     """
     Named timeout object can handle multiple simultaneous
     timers, by telling the parent which one fired.
@@ -46,7 +47,7 @@ class Timeout(object):
         self.parent.timeout(self.name)
 
 
-class ManagementMessageHelper (object):
+class ManagementMessageHelper:
     """
     Format management messages.
     """
@@ -480,9 +481,10 @@ class TopologyFailover (MessagingHandler):
 
     def on_message(self, event):
 
-        if event.receiver == self.routers['B']['mgmt_receiver'] or \
-           event.receiver == self.routers['C']['mgmt_receiver'] or \
-           event.receiver == self.routers['D']['mgmt_receiver'] :
+        if event.receiver in (
+                self.routers['B']['mgmt_receiver'],
+                self.routers['C']['mgmt_receiver'],
+                self.routers['D']['mgmt_receiver']):
 
             # ----------------------------------------------------------------
             # This is a management message.

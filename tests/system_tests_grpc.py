@@ -187,8 +187,8 @@ class GrpcServiceMethodsTest(TestCase):
             friends = []
             for friend in self.grpc_stub.ListFriends(pe):
                 friends.append(friend.email)
-            assert(all(f in self.EXP_FRIENDS[key] for f in friends))
-            assert(all(f in friends for f in self.EXP_FRIENDS[key]))
+            assert all(f in self.EXP_FRIENDS[key] for f in friends)
+            assert all(f in friends for f in self.EXP_FRIENDS[key])
 
     @unittest.skipIf(skip_test(), "grpcio is needed to run grpc tests")
     def test_grpc_04_client_stream(self):
@@ -201,5 +201,5 @@ class GrpcServiceMethodsTest(TestCase):
             exp_friends = self.COMMON_FRIENDS_EXP[i]
             res = self.grpc_stub.CommonFriendsCount(self.common_friends_list(friends))
             assert res.count == len(exp_friends)
-            assert (all(f in res.friends for f in exp_friends))
-            assert (all(f in exp_friends for f in res.friends))
+            assert all(f in res.friends for f in exp_friends)
+            assert all(f in exp_friends for f in res.friends)

@@ -1416,7 +1416,7 @@ class TerminusAddrTest(MessagingHandler):
 
 
 class MultiLinkSendReceive(MessagingHandler):
-    class SendState(object):
+    class SendState:
         def __init__(self, link):
             self.link = link
             self.sent = False
@@ -1439,7 +1439,7 @@ class MultiLinkSendReceive(MessagingHandler):
                 self.link.close()
                 self.link.connection.close()
 
-    class RecvState(object):
+    class RecvState:
         def __init__(self, link):
             self.link = link
             self.received = False
@@ -2426,7 +2426,7 @@ class ConnLinkRouteService(FakeBroker):
                     pass
 
 
-class ConnLinkRouteMgmtProxy(object):
+class ConnLinkRouteMgmtProxy:
     """
     Manage connection scoped link routes over a given connection.
     While the connection remains open the connection scoped links will remain
@@ -2846,12 +2846,11 @@ class LinkRoute3Hop(TestCase):
         for tx in senders:
             out_text, out_err = tx.communicate(timeout=TIMEOUT)
             if tx.returncode:
-                raise Exception("Sender failed: %s %s" % (out_text, out_err))
+                raise Exception(f"Sender failed: {out_text} {out_err}")
 
         if rx.wait(timeout=TIMEOUT):
-            raise Exception("Receiver failed to consume all messages in=%s out=%s",
-                            fake_service.in_count,
-                            fake_service.out_count)
+            raise Exception(
+                f"Receiver failed to consume all messages in={fake_service.in_count} out={fake_service.out_count}")
 
         fake_service.join()
         self.assertEqual(total, fake_service.in_count)

@@ -16,8 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import system_test
+import json
 import os
+import system_test
+
 from quart import Quart, request
 try:
     from quart.static import send_file
@@ -29,11 +31,10 @@ try:
 except ImportError:
     from werkzeug.exceptions import InternalServerError as HTTPStatusException
 
-import json
 app = Quart(__name__)
 
 
-class MyInfo(object):
+class MyInfo:
     def __init__(self, fname, lname, id=None):
         self.fname = fname
         self.lname = lname
@@ -68,7 +69,7 @@ async def create_myinfo():
 def large_string(length):
     i = 0
     ret_string = ""
-    while (i < length):
+    while i < length:
         ret_string += str(i) + ","
         i += 1
     return ret_string

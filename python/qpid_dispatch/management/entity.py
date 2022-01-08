@@ -37,7 +37,7 @@ def clean_dict(items, **kwargs):
                 if v is not None)
 
 
-class EntityBase(object):
+class EntityBase:
     """
     A collection of named attributes.
 

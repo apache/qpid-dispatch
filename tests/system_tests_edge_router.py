@@ -19,11 +19,18 @@
 
 import os
 import re
+from subprocess import PIPE
 from time import sleep
 from threading import Event
 from threading import Timer
 
 from proton import Message
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
+from proton.utils import BlockingConnection
+
+from qpid_dispatch.management.client import Node
+
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
@@ -34,14 +41,9 @@ from system_test import Process
 from system_tests_link_routes import ConnLinkRouteService
 from test_broker import FakeBroker
 from test_broker import FakeService
-from proton.handlers import MessagingHandler
-from proton.reactor import Container
-from proton.utils import BlockingConnection
-from qpid_dispatch.management.client import Node
-from subprocess import PIPE
 
 
-class AddrTimer(object):
+class AddrTimer:
     def __init__(self, parent):
         self.parent = parent
 
@@ -1645,10 +1647,7 @@ class LinkRouteProxyTest(TestCase):
             ts.dump_log()
         return error
 
-    def test_01_immedate_detach_reattach(self):
-        if self.skip['test_01'] :
-            self.skipTest("Test skipped during development.")
-
+    def test_01_immediate_detach_reattach(self):
         """
         Have a service for a link routed address abruptly detach
         in response to an incoming link attach
@@ -1656,6 +1655,9 @@ class LinkRouteProxyTest(TestCase):
         The attaching client from EB1 will get an attach response then an
         immediate detach.  The client will immediately re-establish the link.
         """
+        if self.skip['test_01']:
+            self.skipTest("Test skipped during development.")
+
         class AttachDropper(FakeService):
             def __init__(self, *args, **kwargs):
                 super(AttachDropper, self).__init__(*args, **kwargs)
@@ -2107,7 +2109,7 @@ class DynamicAddressTest(MessagingHandler):
         Container(self).run()
 
 
-class CustomTimeout(object):
+class CustomTimeout:
     def __init__(self, parent):
         self.parent = parent
 
@@ -2335,7 +2337,7 @@ class MobileAddressTest(MessagingHandler):
                 self.n_accepted += 1
                 self.logger.log("on_settled sender: ACCEPTED %d (of %d)" %
                                 (self.n_accepted, self.normal_count))
-            elif rdisp == "RELEASED" or rdisp == "MODIFIED":
+            elif rdisp in ('RELEASED', 'MODIFIED'):
                 self.n_rel_or_mod += 1
                 self.logger.log("on_settled sender: %s %d (of %d)" %
                                 (rdisp, self.n_rel_or_mod, self.extra_count))
@@ -2784,7 +2786,7 @@ class MobileAddressEventTest(MessagingHandler):
     def on_link_opened(self, event):
         if self.r_attaches == 3:
             return
-        if event.receiver == self.receiver1 or event.receiver == self.receiver2 or event.receiver == self.receiver3:
+        if event.receiver in (self.receiver1, self.receiver2, self.receiver3):
             self.r_attaches += 1
 
         if self.r_attaches == 3:

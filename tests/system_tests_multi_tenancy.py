@@ -18,10 +18,12 @@
 #
 
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout, Logger
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
+
 from qpid_dispatch_internal.compat import UNICODE
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout, Logger
 
 
 class RouterTest(TestCase):
@@ -440,7 +442,7 @@ class RouterTest(TestCase):
         self.assertIsNone(test.error)
 
 
-class Entity(object):
+class Entity:
     def __init__(self, status_code, status_description, attrs):
         self.status_code        = status_code
         self.status_description = status_description
@@ -450,7 +452,7 @@ class Entity(object):
         return self.attrs[key]
 
 
-class RouterProxy(object):
+class RouterProxy:
     def __init__(self, reply_addr):
         self.reply_addr = reply_addr
 

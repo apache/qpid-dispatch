@@ -24,6 +24,8 @@ import socket
 import sys
 import time
 import traceback
+from subprocess import PIPE
+from subprocess import STDOUT
 
 from system_test import Logger
 from system_test import main_module
@@ -32,9 +34,6 @@ from system_test import Qdrouterd
 from system_test import TestCase
 from system_test import TIMEOUT
 from system_test import unittest
-
-from subprocess import PIPE
-from subprocess import STDOUT
 
 # Tests in this file are organized by classes that inherit TestCase.
 # The first instance is TcpAdaptor(TestCase).
@@ -47,17 +46,17 @@ try:
     from TCP_echo_client import TcpEchoClient
     from TCP_echo_server import TcpEchoServer
 except ImportError:
-    class TCP_echo_client(object):
+    class TCP_echo_client:
         pass
 
-    class TCP_echo_server(object):
+    class TCP_echo_server:
         pass
 
 
 DISABLE_SELECTOR_TESTS = False
 DISABLE_SELECTOR_REASON = ''
 try:
-    import selectors  # noqa F401: imported but unused (echo server and echo client import this, they run as subprocesses)
+    import selectors  # noqa F401: imported but unused (echo server and echo client import this, they run as subprocesses)  # pylint: disable=unused-import
 except ImportError:
     DISABLE_SELECTOR_TESTS = True
     DISABLE_SELECTOR_REASON = "Python selectors module is not available on this platform."
@@ -931,8 +930,8 @@ class TcpAdaptor(TestCase):
         logger.log(name + " Start")
         out = self.run_ncat(TcpAdaptor.tcp_client_listener_ports[client][server], logger, data=b'abcd')
         logger.log("run_ncat returns: '%s'" % out)
-        assert(len(out) > 0)
-        assert("abcd" in out)
+        assert len(out) > 0
+        assert "abcd" in out
         logger.log(tname + " Stop")
 
     # half-closed handling
@@ -961,20 +960,20 @@ class TcpAdaptor(TestCase):
         for output in outputs:
             if output['name'].startswith("ES"):
                 # Check only echo server listeners
-                assert("connectionsOpened" in output)
-                assert(output["connectionsOpened"] > 0)
-                assert(output["connectionsOpened"] == output["connectionsClosed"])
-                assert(output["bytesIn"] == output["bytesOut"])
+                assert "connectionsOpened" in output
+                assert output["connectionsOpened"] > 0
+                assert output["connectionsOpened"] == output["connectionsClosed"]
+                assert output["bytesIn"] == output["bytesOut"]
         # Verify connector stats
         query_command = 'QUERY --type=tcpConnector'
         outputs = json.loads(self.run_qdmanage(query_command))
         for output in outputs:
-            assert(output['address'].startswith("ES"))
-            assert("connectionsOpened" in output)
-            assert(output["connectionsOpened"] > 0)
+            assert output['address'].startswith("ES")
+            assert "connectionsOpened" in output
+            assert output["connectionsOpened"] > 0
             # egress_dispatcher connection opens and should never close
-            assert(output["connectionsOpened"] == output["connectionsClosed"] + 1)
-            assert(output["bytesIn"] == output["bytesOut"])
+            assert output["connectionsOpened"] == output["connectionsClosed"] + 1
+            assert output["bytesIn"] == output["bytesOut"]
         self.logger.log(tname + " SUCCESS")
 
 
@@ -1233,10 +1232,10 @@ class TcpAdaptorManagementTest(TestCase):
             time.sleep(0.25)
 
         # Delete the connector and listener
-        out = mgmt.delete(type=CONNECTOR_TYPE, name=connector_name)
+        out = mgmt.delete(type=CONNECTOR_TYPE, name=connector_name)  # pylint: disable=assignment-from-no-return
         self.assertIsNone(out)
         self.assertEqual(0, len(mgmt.query(type=CONNECTOR_TYPE).results))
-        out = mgmt.delete(type=LISTENER_TYPE, name=listener_name)
+        out = mgmt.delete(type=LISTENER_TYPE, name=listener_name)  # pylint: disable=assignment-from-no-return
         self.assertIsNone(out)
         self.assertEqual(0, len(mgmt.query(type=LISTENER_TYPE).results))
 

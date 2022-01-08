@@ -18,10 +18,11 @@
 #
 
 from proton import Message, symbol, int32
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
-from system_test import unittest, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from system_test import unittest, TestTimeout
 
 
 class RouterTest(TestCase):

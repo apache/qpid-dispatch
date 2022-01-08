@@ -17,15 +17,14 @@
 # under the License
 #
 
-"""
-AMQP management client for Qpid dispatch.
-"""
+"""AMQP management client for Qpid dispatch."""
 
 import proton
 from proton import Url
-from .error import *  # noqa F403: import all error symbols for convenience to users.
+from proton.utils import BlockingConnection, SyncRequestResponse
+
+from . import error
 from .entity import EntityBase, clean_dict
-from proton.utils import SyncRequestResponse, BlockingConnection
 
 
 class Entity(EntityBase):
@@ -49,7 +48,7 @@ class Entity(EntityBase):
         super(Entity, self).__init__(attributes, **kwattrs)
         self.__dict__['_node'] = node  # Avoid getattr recursion
 
-    def call(self, operation, expect=OK, **arguments):
+    def call(self, operation, expect=error.OK, **arguments):
         """Call an arbitrary management method on this entity"""
         request = self._node.request(
             operation=operation, type=self.type, identity=self.identity, **arguments)
@@ -57,18 +56,18 @@ class Entity(EntityBase):
 
     def read(self):
         """Read the remote entity attributes into the local attributes."""
-        self.attributes = self.call('READ', expect=OK)
+        self.attributes = self.call('READ', expect=error.OK)
 
     def update(self):
         """Update the remote entity attributes from the local attributes."""
-        self.attributes = self.call('UPDATE', expect=OK, body=self.attributes)
+        self.attributes = self.call('UPDATE', expect=error.OK, body=self.attributes)
 
     def delete(self):
         """Delete the remote entity"""
-        self.call('DELETE', expect=NO_CONTENT)
+        self.call('DELETE', expect=error.NO_CONTENT)
 
 
-class Node(object):
+class Node:
     """Client proxy for an AMQP management node"""
 
     def clean_attrs(self, attrs):
@@ -153,7 +152,7 @@ class Node(object):
         return "%s(%s)" % (self.__class__.__name__, self.url)
 
     @staticmethod
-    def check_response(response, expect=OK):
+    def check_response(response, expect=error.OK):
         """
         Check a management response message for errors and correlation ID.
         """
@@ -161,10 +160,10 @@ class Node(object):
         if code != expect:
             if 200 <= code <= 299:
                 raise ValueError("Response was %s(%s) but expected %s(%s): %s" % (
-                    code, STATUS_TEXT[code], expect, STATUS_TEXT[expect],
+                    code, error.STATUS_TEXT[code], expect, error.STATUS_TEXT[expect],
                     response.properties.get('statusDescription')))
             else:
-                raise ManagementError.create(code, response.properties.get('statusDescription'))
+                raise error.ManagementError.create(code, response.properties.get('statusDescription'))
 
     def request(self, body=None, **properties):
         """
@@ -184,7 +183,7 @@ class Node(object):
         """Construct a request for the managment node itself"""
         return self.request(body, name=self.name, type=self.type, **properties)
 
-    def call(self, request, expect=OK):
+    def call(self, request, expect=error.OK):
         """
         Send a management request message, wait for a response.
         @return: Response message.
@@ -193,7 +192,7 @@ class Node(object):
         self.check_response(response, expect=expect)
         return response
 
-    class QueryResponse(object):
+    class QueryResponse:
         """
         Result returned by L{query}.
         @ivar attribute_names: List of attribute names for the results.
@@ -229,11 +228,11 @@ class Node(object):
 
         def get_dicts(self, clean=False):
             """Results as list of dicts."""
-            return [d for d in self.iter_dicts(clean=clean)]
+            return list(self.iter_dicts(clean=clean))
 
         def get_entities(self, clean=False):
             """Results as list of entities."""
-            return [d for d in self.iter_entities(clean=clean)]
+            return list(self.iter_entities(clean=clean))
 
         def __repr__(self):
             return "QueryResponse(attribute_names=%r, results=%r" % (self.attribute_names, self.results)
@@ -314,7 +313,7 @@ class Node(object):
         type = type or attributes.get('type')
         name = name or attributes.get('name')
         request = self.request(operation='CREATE', type=type, name=name, body=attributes)
-        return Entity(self, self.call(request, expect=CREATED).body)
+        return Entity(self, self.call(request, expect=error.CREATED).body)
 
     def read(self, type=None, name=None, identity=None):
         """
@@ -367,7 +366,7 @@ class Node(object):
             name = None  # Only specify one
         request = self.request(operation='DELETE', type=type, name=name,
                                identity=identity)
-        self.call(request, expect=NO_CONTENT)
+        self.call(request, expect=error.NO_CONTENT)
 
     def get_types(self, type=None):
         return self.call(self.node_request(operation="GET-TYPES", entityType=type)).body

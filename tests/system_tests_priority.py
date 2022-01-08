@@ -19,18 +19,19 @@
 
 
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
 from qpid_dispatch_internal.compat import UNICODE
+
+from system_test import TestCase, Qdrouterd, main_module, unittest
 
 # ------------------------------------------------
 # Helper classes for all tests.
 # ------------------------------------------------
 
 
-class Timeout(object):
+class Timeout:
     """
     Named timeout object can handle multiple simultaneous
     timers, by telling the parent which one fired.
@@ -44,7 +45,7 @@ class Timeout(object):
         self.parent.timeout(self.name)
 
 
-class ManagementMessageHelper (object):
+class ManagementMessageHelper:
     """
     Format management messages.
     """

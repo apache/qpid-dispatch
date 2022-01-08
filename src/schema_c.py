@@ -47,7 +47,7 @@ copyright = """/*
 """
 
 
-class Generator(object):
+class Generator:
 
     def __init__(self):
         self.schema = QdSchema()
@@ -71,7 +71,7 @@ class Generator(object):
 
     def type_name(self, names): return self.prefix_name(names + ['t'])
 
-    class EnumGenerator(object):
+    class EnumGenerator:
         def __init__(self, generator, entity, attribute):
             self.generator, self.entity, self.attribute = generator, entity, attribute
             self.tags = attribute.atype.tags

@@ -20,11 +20,13 @@
 from time import sleep
 
 from proton import Message, Delivery
-from system_test import TestCase, Qdrouterd, TIMEOUT, get_link_info, \
-    get_inter_router_links, has_mobile_dest_in_address_table, PollTimeout, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
 from qpid_dispatch.management.client import Node
+
+from system_test import TestCase, Qdrouterd, TIMEOUT, get_link_info, \
+    get_inter_router_links, has_mobile_dest_in_address_table, PollTimeout, TestTimeout
 
 LARGE_PAYLOAD = ("X" * 1024) * 30
 
@@ -289,7 +291,7 @@ class TwoRouterReleasedDroppedPresettledTest(TestCase):
         self.two_router_released_dropped_counts(True)
 
 
-class AddressCheckerTimeout (object):
+class AddressCheckerTimeout :
     def __init__(self, parent):
         self.parent = parent
 
@@ -297,7 +299,7 @@ class AddressCheckerTimeout (object):
         self.parent.address_check_timeout()
 
 
-class CounterCheckerTimeout (object):
+class CounterCheckerTimeout :
     def __init__(self, parent):
         self.parent = parent
 

@@ -21,6 +21,7 @@
 # Test the multicast forwarder
 #
 
+import abc
 import sys
 from time import sleep
 
@@ -477,7 +478,7 @@ class Link3Ack(LinkOption):
         link.rcv_settle_mode = Link.RCV_SECOND
 
 
-class MulticastBase(MessagingHandler):
+class MulticastBase(MessagingHandler, metaclass=abc.ABCMeta):
     """
     Common multicast boilerplate code
     """
@@ -531,13 +532,13 @@ class MulticastBase(MessagingHandler):
         self.error = "Timeout Expired"
         self.done()
 
+    @abc.abstractmethod
     def create_receiver(self, container, conn, source, name):
-        # must override in subclass
-        assert(False)
+        """must override in subclass"""
 
+    @abc.abstractmethod
     def create_sender(self, container, conn, target, name):
-        # must override in subclass
-        assert(False)
+        """must override in subclass"""
 
     def on_start(self, event):
         self.reactor = event.reactor
@@ -546,7 +547,7 @@ class MulticastBase(MessagingHandler):
         for cfg in self.config:
             for name in cfg['receivers']:
                 conn = event.container.connect(cfg['router'].listener)
-                assert(name not in self.r_conns)
+                assert name not in self.r_conns
                 self.r_conns[name] = conn
                 self.create_receiver(event.container, conn, self.topic, name)
                 self.n_receivers += 1
@@ -562,7 +563,7 @@ class MulticastBase(MessagingHandler):
                 for cfg in self.config:
                     for name in cfg['senders']:
                         conn = event.container.connect(cfg['router'].listener)
-                        assert(name not in self.s_conns)
+                        assert name not in self.s_conns
                         self.s_conns[name] = conn
                         self.create_sender(event.container, conn, self.topic, name)
                         self.n_senders += 1
@@ -916,7 +917,7 @@ class MulticastUnsettled3AckMA(MulticastUnsettled3Ack):
             "my-map": {"my-map-key1": "X",
                        "my-map-key2": 0x12,
                        "my-map-key3": "+0123456789" * 101,
-                       "my-map-list": [i for i in range(97)]
+                       "my-map-list": list(range(97))
                        },
             "my-last-key": "so long, folks!"
         }

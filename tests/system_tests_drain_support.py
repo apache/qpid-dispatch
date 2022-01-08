@@ -250,7 +250,7 @@ class DrainMessagesMoreHandler(MessagingHandler):
                    + ", sender_credit:" + str(self.sender.credit))
 
     def printme(self, str):
-        if (self.verbose_printing):
+        if self.verbose_printing:
             print(str + " " + self.show_state())
 
     def timeout(self):

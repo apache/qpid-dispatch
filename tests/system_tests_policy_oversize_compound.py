@@ -20,12 +20,13 @@
 import unittest
 import sys
 import time
-
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, Logger, TestTimeout
 from subprocess import PIPE, STDOUT
+
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, Logger, TestTimeout
 from test_broker import FakeBroker
 
 # How many worker threads?
@@ -802,7 +803,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 0 and idelta == 1
-        if (not success):
+        if not success:
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
@@ -811,7 +812,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         # Verfiy that a link was closed with the expected pattern(s)
         ilink1, olink1 = self.sense_n_closed_lines(self.EB1, pattern=OVERSIZE_LINK_CONDITION_NAME)
         success = olink1 > 0
-        if (not success):
+        if not success:
             test.logger.log("FAIL: Did not see link close in log file. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
@@ -850,7 +851,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 0 and idelta == 1
-        if (not success):
+        if not success:
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
@@ -894,8 +895,8 @@ class MaxMessageSizeBlockOversize(TestCase):
         iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
-        success = odelta == 1 and (idelta == 0 or idelta == 1)
-        if (not success):
+        success = odelta == 1 and idelta in (0, 1)
+        if not success:
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
@@ -945,7 +946,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 0 and idelta == 1
-        if (not success):
+        if not success:
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
@@ -995,7 +996,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 1 and idelta == 0
-        if (not success):
+        if not success:
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
@@ -1045,7 +1046,7 @@ class MaxMessageSizeBlockOversize(TestCase):
         idelta = iafter - ibefore
         odelta = oafter - obefore
         success = odelta == 1 and idelta == 0
-        if (not success):
+        if not success:
             test.logger.log(
                 "FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                 (obefore, oafter, ibefore, iafter))
@@ -1253,8 +1254,8 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
         iafter, oafter = self.sense_n_closed_lines(self.EB1)
         idelta = iafter - ibefore
         odelta = oafter - obefore
-        success = odelta == 1 and (idelta == 0 or idelta == 1)
-        if (not success):
+        success = odelta == 1 and idelta in (0, 1)
+        if not success:
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()

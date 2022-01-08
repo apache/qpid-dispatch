@@ -22,7 +22,7 @@ from .data import LinkState, ProtocolVersion
 from .address import Address
 
 
-class NodeTracker(object):
+class NodeTracker:
     """
     This module is responsible for tracking the set of router nodes that are known to this
     router.  It tracks whether they are neighbor or remote and whether they are reachable.
@@ -59,7 +59,7 @@ class NodeTracker(object):
             "index": 0,
             "protocolVersion": ProtocolVersion,
             "instance": self.container.instance,  # Boot number, integer
-            "linkState": [ls for ls in self.link_state.peers],  # List of neighbour nodes
+            "linkState": list(self.link_state.peers),  # List of neighbour nodes
             "nextHop": "(self)",
             "validOrigins": [],
             "address": Address.topological(self.my_id, area=self.container.area),
@@ -369,7 +369,7 @@ class NodeTracker(object):
             self.next_maskbit = i
 
 
-class RouterNode(object):
+class RouterNode:
     """
     RouterNode is used to track remote routers in the router network.
     """
@@ -403,7 +403,7 @@ class RouterNode(object):
             "index": self.maskbit,
             "protocolVersion": self.version,
             "instance": self.instance,  # Boot number, integer
-            "linkState": [ls for ls in self.link_state.peers],  # List of neighbour nodes
+            "linkState": list(self.link_state.peers),  # List of neighbour nodes
             "nextHop": self.next_hop_router and self.next_hop_router.id,
             "validOrigins": self.valid_origins,
             "address": Address.topological(self.id, area=self.parent.container.area),

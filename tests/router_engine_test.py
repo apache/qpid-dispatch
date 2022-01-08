@@ -20,7 +20,7 @@
 import os
 import sys
 
-import mock  # noqa F401: imported for side-effects (installs mock definitions for tests)
+import mock  # noqa F401: imported for side-effects (installs mock definitions for tests)  # pylint: disable=unused-import
 
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
 
@@ -31,7 +31,7 @@ from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
 from qpid_dispatch_internal.router.engine import HelloProtocol, PathEngine
 
 
-class Adapter(object):
+class Adapter:
     def __init__(self, domain):
         self._domain = domain
 
@@ -204,7 +204,7 @@ class NeighborTest(unittest.TestCase):
         self.engine.handle_hello(MessageHELLO(None, 'R5', ['R2']), 2.5, 0, 1)
         self.engine.handle_hello(MessageHELLO(None, 'R6', ['R1']), 2.5, 0, 1)
         self.engine.tick(3.0)
-        keys = sorted([k for k in self.neighbors.keys()])
+        keys = sorted(self.neighbors.keys())
         self.assertEqual(keys, ['R2', 'R3', 'R4', 'R6'])
 
 

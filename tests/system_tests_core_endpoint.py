@@ -18,9 +18,10 @@
 #
 
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 
 
 class RouterTest(TestCase):
@@ -32,7 +33,7 @@ class RouterTest(TestCase):
         """Start a router"""
         super(RouterTest, cls).setUpClass()
 
-        def router(name, connection, args=[]):
+        def router(name, connection, args=None):
 
             config = [
                 ('router', {'mode': 'interior', 'id': name}),
@@ -48,7 +49,7 @@ class RouterTest(TestCase):
 
             config = Qdrouterd.Config(config)
 
-            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True, cl_args=args))
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True, cl_args=args or []))
 
         cls.routers = []
         inter_router_port = cls.tester.get_port()

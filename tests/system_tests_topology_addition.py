@@ -20,9 +20,10 @@
 import unittest
 
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 
 
 # ====================================================
@@ -32,7 +33,7 @@ from proton.reactor import Container
 
 # Named timers allow test code to distinguish between several
 # simultaneous timers, going off at different rates.
-class Timeout (object):
+class Timeout:
     def __init__(self, parent, name):
         self.parent = parent
         self.name   = name
