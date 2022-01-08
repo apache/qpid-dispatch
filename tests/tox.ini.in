@@ -166,7 +166,6 @@ disable =
     invalid-name,
     line-too-long,
     method-hidden,
-    misplaced-bare-raise,
     missing-docstring,
     missing-function-docstring,
     missing-module-docstring,
