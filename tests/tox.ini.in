@@ -185,7 +185,6 @@ disable =
     no-name-in-module,
     no-self-use,
     parse-error,
-    pointless-statement,
     protected-access,
     raise-missing-from,
     redefined-builtin,
