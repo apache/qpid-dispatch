@@ -188,7 +188,6 @@ disable =
     no-self-use,
     parse-error,
     pointless-statement,
-    pointless-string-statement,
     protected-access,
     raise-missing-from,
     raising-format-tuple,

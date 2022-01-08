@@ -16,9 +16,10 @@
 # specific language governing permissions and limitations
 # under the License
 #
-import json
 
 """Python class to hold message data"""
+
+import json
 
 
 class Message(object):

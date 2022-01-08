@@ -1647,10 +1647,7 @@ class LinkRouteProxyTest(TestCase):
             ts.dump_log()
         return error
 
-    def test_01_immedate_detach_reattach(self):
-        if self.skip['test_01'] :
-            self.skipTest("Test skipped during development.")
-
+    def test_01_immediate_detach_reattach(self):
         """
         Have a service for a link routed address abruptly detach
         in response to an incoming link attach
@@ -1658,6 +1655,9 @@ class LinkRouteProxyTest(TestCase):
         The attaching client from EB1 will get an attach response then an
         immediate detach.  The client will immediately re-establish the link.
         """
+        if self.skip['test_01']:
+            self.skipTest("Test skipped during development.")
+
         class AttachDropper(FakeService):
             def __init__(self, *args, **kwargs):
                 super(AttachDropper, self).__init__(*args, **kwargs)

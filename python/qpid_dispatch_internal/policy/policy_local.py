@@ -17,18 +17,10 @@
 # under the License
 #
 
-"""
+"""Entity implementing the business logic of user connection/access policy."""
 
-"""
 import json
 from .policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr, is_ipv6_enabled
-
-"""
-Entity implementing the business logic of user connection/access policy.
-"""
-
-#
-#
 
 
 class PolicyKeys(object):

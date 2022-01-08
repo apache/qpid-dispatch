@@ -17,19 +17,12 @@
 # under the License
 #
 
-"""
-
-"""
+"""Entity implementing the glue between the policy engine and the rest of the system."""
 
 import traceback
 
 from .policy_local import PolicyLocal
 from ..dispatch import LogAdapter, LOG_INFO, LOG_TRACE, LOG_DEBUG, LOG_ERROR, LOG_WARNING
-
-
-"""
-Entity implementing the glue between the policy engine and the rest of the system.
-"""
 
 
 class PolicyManager(object):
