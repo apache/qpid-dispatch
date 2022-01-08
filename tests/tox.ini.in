@@ -143,7 +143,6 @@ python_files = *.py
 disable =
     access-member-before-definition,
     arguments-differ,
-    assignment-from-no-return,
     attribute-defined-outside-init,
     bad-classmethod-argument,
     bad-super-call,

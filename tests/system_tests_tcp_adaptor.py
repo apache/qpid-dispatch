@@ -1232,10 +1232,10 @@ class TcpAdaptorManagementTest(TestCase):
             time.sleep(0.25)
 
         # Delete the connector and listener
-        out = mgmt.delete(type=CONNECTOR_TYPE, name=connector_name)
+        out = mgmt.delete(type=CONNECTOR_TYPE, name=connector_name)  # pylint: disable=assignment-from-no-return
         self.assertIsNone(out)
         self.assertEqual(0, len(mgmt.query(type=CONNECTOR_TYPE).results))
-        out = mgmt.delete(type=LISTENER_TYPE, name=listener_name)
+        out = mgmt.delete(type=LISTENER_TYPE, name=listener_name)  # pylint: disable=assignment-from-no-return
         self.assertIsNone(out)
         self.assertEqual(0, len(mgmt.query(type=LISTENER_TYPE).results))
 
