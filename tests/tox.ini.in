@@ -210,7 +210,6 @@ disable =
     too-many-statements,
     unidiomatic-typecheck,
     unnecessary-pass,
-    unneeded-not,
     unspecified-encoding,
     unsubscriptable-object,
     unused-argument,

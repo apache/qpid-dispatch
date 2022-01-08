@@ -165,7 +165,7 @@ class TcpEchoClient:
                                     # Received all bytes of all chunks - done.
                                     self.keep_running = False
                                     # Verify the received data
-                                    if not payload_in == payload_out:
+                                    if payload_in != payload_out:
                                         for idxc in range(self.count):
                                             if not payload_in[idxc] == payload_out[idxc]:
                                                 for idxs in range(self.size):
