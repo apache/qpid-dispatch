@@ -148,7 +148,6 @@ disable =
     bad-super-call,
     bare-except,
     broad-except,
-    chained-comparison,
     consider-iterating-dictionary,
     consider-using-dict-comprehension,
     consider-using-dict-items,

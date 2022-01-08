@@ -205,7 +205,7 @@ class HostAddr:
             if len(self.hoststructs) == 1:
                 return c0 == 0
             c1 = self.memcmp(candidate.binary, self.hoststructs[1].binary)
-            return c0 >= 0 and c1 <= 0
+            return c0 >= 0 and c1 <= 0  # pylint: disable=chained-comparison
         except PolicyError:
             return False
         except Exception as e:

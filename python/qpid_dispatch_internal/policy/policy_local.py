@@ -172,7 +172,7 @@ class PolicyCompiler:
         if v_int < v_min:
             errors.append("Value '%s' is below minimum '%s'." % (val, v_min))
             return False
-        if v_max > 0 and v_int > v_max:
+        if 0 < v_max < v_int:
             errors.append("Value '%s' is above maximum '%s'." % (val, v_max))
             return False
         return True
