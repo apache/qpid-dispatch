@@ -193,7 +193,6 @@ disable =
     redefined-outer-name,
     redundant-u-string-prefix,
     redundant-unittest-assert,
-    simplifiable-if-expression,
     singleton-comparison,
     super-init-not-called,
     super-with-arguments,

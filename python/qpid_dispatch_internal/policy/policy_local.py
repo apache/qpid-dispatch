@@ -303,7 +303,7 @@ class PolicyCompiler:
                          PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE
                          ]:
                 if isinstance(val, str) and val.lower() in ['true', 'false']:
-                    val = True if val == 'true' else False
+                    val = val == 'true'
                 if not isinstance(val, bool):
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal boolean value '%s'." %
                                   (vhostname, usergroup, key, val))
