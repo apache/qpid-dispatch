@@ -25,15 +25,30 @@ skip_missing_interpreters = True
 skip_install = True
 
 [testenv]
-commands = flake8 --count --show-source \
-  ${CMAKE_SOURCE_DIR}/python \
-  ${CMAKE_SOURCE_DIR}/console \
-  ${CMAKE_SOURCE_DIR}/docs \
-  ${CMAKE_SOURCE_DIR}/tests \
-  ${CMAKE_SOURCE_DIR}/tools \
-  ${CMAKE_SOURCE_DIR}/tools/qdstat \
-  ${CMAKE_SOURCE_DIR}/tools/qdmanage
-deps = hacking>=1.1.0
+commands =
+  flake8 --count --show-source \
+    ${CMAKE_SOURCE_DIR}/python \
+    ${CMAKE_SOURCE_DIR}/console \
+    ${CMAKE_SOURCE_DIR}/docs \
+    ${CMAKE_SOURCE_DIR}/tests \
+    ${CMAKE_SOURCE_DIR}/tools \
+    ${CMAKE_SOURCE_DIR}/tools/qdstat \
+    ${CMAKE_SOURCE_DIR}/tools/qdmanage
+
+  # TODO(pylint#5648): crash while parsing system_test.py
+  pylint --rcfile ${CMAKE_BINARY_DIR}/tests/tox.ini \
+    --ignore=system_test.py \
+    ${CMAKE_SOURCE_DIR}/python \
+    ${CMAKE_SOURCE_DIR}/console \
+    ${CMAKE_SOURCE_DIR}/docs \
+    ${CMAKE_SOURCE_DIR}/tests \
+    ${CMAKE_SOURCE_DIR}/tools \
+    ${CMAKE_SOURCE_DIR}/tools/qdstat \
+    ${CMAKE_SOURCE_DIR}/tools/qdmanage
+
+deps =
+    hacking>=1.1.0
+    pylint
 
 [testenv:py36]
 basepython = python3.6
@@ -122,3 +137,98 @@ exclude =
 # https://github.com/pytest-dev/pytest/blob/main/src/_pytest/junitxml.py
 # do not filter test file names
 python_files = *.py
+
+# pylint
+[MESSAGE_CONTROL]
+disable =
+    access-member-before-definition,
+    arguments-differ,
+    assignment-from-no-return,
+    attribute-defined-outside-init,
+    bad-classmethod-argument,
+    bad-super-call,
+    bare-except,
+    broad-except,
+    cell-var-from-loop,
+    chained-comparison,
+    consider-iterating-dictionary,
+    consider-using-dict-comprehension,
+    consider-using-dict-items,
+    consider-using-enumerate,
+    consider-using-f-string,
+    consider-using-in,
+    consider-using-max-builtin,
+    consider-using-with,
+    dangerous-default-value,
+    deprecated-module,
+    duplicate-code,
+    duplicate-key,
+    empty-docstring,
+    fatal,
+    fixme,
+    function-redefined,
+    global-statement,
+    import-error,
+    import-outside-toplevel,
+    inconsistent-return-statements,
+    invalid-name,
+    keyword-arg-before-vararg,
+    line-too-long,
+    method-hidden,
+    misplaced-bare-raise,
+    missing-docstring,
+    missing-function-docstring,
+    missing-module-docstring,
+    multiple-statements,
+    no-else-break,
+    no-else-raise,
+    no-else-return,
+    no-member,
+    no-name-in-module,
+    no-self-use,
+    parse-error,
+    pointless-statement,
+    pointless-string-statement,
+    protected-access,
+    raise-missing-from,
+    raising-format-tuple,
+    redefined-builtin,
+    redefined-outer-name,
+    redundant-u-string-prefix,
+    redundant-unittest-assert,
+    reimported,
+    simplifiable-if-expression,
+    singleton-comparison,
+    super-init-not-called,
+    super-with-arguments,
+    superfluous-parens,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-branches,
+    too-many-instance-attributes,
+    too-many-lines,
+    too-many-locals,
+    too-many-nested-blocks,
+    too-many-public-methods,
+    too-many-return-statements,
+    too-many-statements,
+    ungrouped-imports,
+    unidiomatic-typecheck,
+    unnecessary-comprehension,
+    unnecessary-pass,
+    unneeded-not,
+    unspecified-encoding,
+    unsubscriptable-object,
+    unused-argument,
+    unused-import,
+    unused-variable,
+    unused-wildcard-import,
+    use-dict-literal,
+    use-list-literal,
+    useless-else-on-loop,
+    useless-import-alias,
+    useless-object-inheritance,
+    useless-super-delegation,
+    wildcard-import,
+    wrong-import-order,
+    wrong-import-position,
