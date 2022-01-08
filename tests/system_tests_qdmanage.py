@@ -24,13 +24,13 @@ from subprocess import PIPE, STDOUT
 from time import sleep
 
 from proton.utils import BlockingConnection
-from system_test import QdManager
 
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 
-from system_test import Logger, TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from system_test import unittest
+from system_test import Logger, TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
+from system_test import QdManager
 
 DUMMY = "org.apache.qpid.dispatch.dummy"
 

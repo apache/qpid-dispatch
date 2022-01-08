@@ -212,7 +212,6 @@ disable =
     too-many-public-methods,
     too-many-return-statements,
     too-many-statements,
-    ungrouped-imports,
     unidiomatic-typecheck,
     unnecessary-comprehension,
     unnecessary-pass,

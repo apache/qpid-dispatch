@@ -19,13 +19,13 @@
 
 import json
 
-from system_test import unittest
-
 from qpid_dispatch_internal.policy.policy_util import HostAddr, is_ipv6_enabled
 from qpid_dispatch_internal.policy.policy_util import HostStruct
 from qpid_dispatch_internal.policy.policy_util import PolicyError
 from qpid_dispatch_internal.policy.policy_util import PolicyAppConnectionMgr
 from qpid_dispatch_internal.policy.policy_local import PolicyLocal
+
+from system_test import unittest
 from system_test import TestCase, main_module
 
 

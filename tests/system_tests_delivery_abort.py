@@ -18,10 +18,12 @@
 #
 
 from proton import Message
-from system_test import Logger, TestCase, Qdrouterd, main_module, unittest, TIMEOUT, TestTimeout, PollTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
 from qpid_dispatch_internal.compat import BINARY
+
+from system_test import Logger, TestCase, Qdrouterd, main_module, unittest, TIMEOUT, TestTimeout, PollTimeout
 
 
 class RouterTest(TestCase):

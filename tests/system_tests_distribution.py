@@ -20,10 +20,11 @@
 from time import sleep
 
 from proton import Message, Delivery
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout
-from system_test import unittest, Logger
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, LinkOption, ApplicationEvent, EventInjector
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout
+from system_test import unittest, Logger
 
 
 # ------------------------------------------------

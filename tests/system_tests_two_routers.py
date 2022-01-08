@@ -17,13 +17,21 @@
 # under the License.
 #
 
-from time import sleep
 import json
 import os
 import logging
+from time import sleep
 from threading import Timer
 from subprocess import PIPE, STDOUT
+
+from proton import Described, ulong
 from proton import Message, Delivery, symbol, Condition
+from proton.handlers import MessagingHandler
+from proton.reactor import Container, AtLeastOnce
+from proton.utils import BlockingConnection
+
+from qpid_dispatch.management.client import Node
+
 from system_test import Logger, TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR, TestTimeout, PollTimeout
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
@@ -31,12 +39,6 @@ from system_test import get_inter_router_links
 from system_test import unittest
 from test_broker import FakeService
 
-from proton import Described, ulong
-
-from proton.handlers import MessagingHandler
-from proton.reactor import Container, AtLeastOnce
-from proton.utils import BlockingConnection
-from qpid_dispatch.management.client import Node
 CONNECTION_PROPERTIES_UNICODE_STRING = {'connection': 'properties', 'int_property': 6451}
 
 

@@ -21,9 +21,11 @@ import os
 import re
 import unittest
 from subprocess import PIPE
+
 from proton import Url, SSLDomain, SSLUnavailable, SASL
-from system_test import main_module, TIMEOUT, TestCase, Qdrouterd, DIR
 from proton.utils import BlockingConnection
+
+from system_test import main_module, TIMEOUT, TestCase, Qdrouterd, DIR
 
 
 class QdstatTestBase(TestCase):

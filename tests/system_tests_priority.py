@@ -19,11 +19,12 @@
 
 
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
 from qpid_dispatch_internal.compat import UNICODE
+
+from system_test import TestCase, Qdrouterd, main_module, unittest
 
 # ------------------------------------------------
 # Helper classes for all tests.

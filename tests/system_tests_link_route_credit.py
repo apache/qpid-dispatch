@@ -18,9 +18,10 @@
 #
 
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout, PollTimeout, unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout, PollTimeout, unittest
 
 
 class AddrTimer(object):

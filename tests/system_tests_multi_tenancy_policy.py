@@ -18,10 +18,12 @@
 #
 
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout, Logger
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
+
 from qpid_dispatch_internal.compat import UNICODE
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout, Logger
 
 
 class RouterMultitenantPolicyTest(TestCase):
