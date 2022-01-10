@@ -45,6 +45,8 @@ static char *container_role = "route-container";
 static char *edge_role      = "edge";
 static char *direct_prefix;
 static char *node_id;
+static uint8_t *encoded_node_id;
+static size_t encoded_node_id_len;
 
 static void deferred_AMQP_rx_handler(void *context, bool discard);
 static bool parse_failover_property_list(qd_router_t *router, qd_connection_t *conn, pn_data_t *props);
@@ -673,7 +675,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
     }
 
-    const char *ma_error = qd_message_message_annotations(msg);
+    const char *ma_error = qd_message_parse_annotations(msg);
     if (ma_error) {
         qd_log(router->log_source, QD_LOG_DEBUG,
                "[C%"PRIu64"][L%"PRIu64"] Message rejected - invalid MA section: %s",
@@ -1588,11 +1590,22 @@ static qd_node_type_t router_node = {"router", 0, 0,
 // not api, but needed by unit tests
 void qd_router_id_initialize(const char *area, const char *id)
 {
-    size_t dplen = 9 + strlen(area) + strlen(id);
+    size_t dplen = 2 + strlen(area) + strlen(id);
     node_id = (char*) qd_malloc(dplen);
     strcpy(node_id, area);
     strcat(node_id, "/");
     strcat(node_id, id);
+
+    // Node ID as an AMQP encoded str value.  Used when composing trace list
+    // and ingress message annotations into the outgoing message
+
+    const uint32_t id_len = strlen(node_id);
+    const uint32_t extra = 5;  // 5 octets = max AMQP STRx header length
+    encoded_node_id = (uint8_t*) qd_malloc(id_len + extra + 1); // 1 = string terminator
+    const int hdr_len = qd_compose_str_header(encoded_node_id, id_len);
+    assert(hdr_len <= extra);
+    strcpy((char*) &encoded_node_id[hdr_len], node_id);
+    encoded_node_id_len = hdr_len + id_len;
 }
 
 
@@ -1601,6 +1614,9 @@ void qd_router_id_finalize(void)
 {
     free(node_id);
     node_id = 0;
+    free(encoded_node_id);
+    encoded_node_id = 0;
+    encoded_node_id_len = 0;
 }
 
 
@@ -2150,6 +2166,14 @@ const char *qd_router_id(void)
 {
     assert(node_id);
     return node_id;
+}
+
+
+const uint8_t *qd_router_id_encoded(size_t *len)
+{
+    assert(encoded_node_id && encoded_node_id_len);
+    *len = encoded_node_id_len;
+    return encoded_node_id;
 }
 
 

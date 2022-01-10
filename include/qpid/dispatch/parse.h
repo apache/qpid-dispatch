@@ -20,6 +20,7 @@
  */
 
 #include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/buffer_field.h"
 #include "qpid/dispatch/iterator.h"
 
 /**@file
@@ -109,6 +110,21 @@ qd_iterator_t *qd_parse_raw(qd_parsed_field_t *field);
  * @return A field iterator that describes the field's typed content.
  */
 qd_iterator_t *qd_parse_typed(qd_parsed_field_t *field);
+
+/**
+ * Return the location and length of the raw value of the parsed field.
+ *
+ * The returned value does not include the parsed fields header. If the field
+ * is a container (map/list) then the returned value is the content of the
+ * container, including each entries encoded header.
+ *
+ * IMPORTANT: The returned location remains valid for the lifetime of the
+ * parsed field.
+ *
+ * @param field The field pointer returned by qd_parse.
+ * @return The location in the buffer chain containing the field's raw content.
+ */
+qd_buffer_field_t qd_parse_value(const qd_parsed_field_t *field);
 
 /**
  * Return the raw content as an unsigned integer up to 32-bits.  This is
@@ -252,7 +268,7 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
  * @param ma_phase returned parsed field: phase
  * @param ma_to_override returned parsed field: override
  * @param ma_trace returned parsed field: trace
- * @param blob_pointer returned buffer pointer to user's annotation blob
+ * @param  returned buffer pointer to user's annotation blob
  * @param blob_item_count number of map entries referenced by blob_iterator
  */
 const char *qd_parse_annotations(
@@ -263,8 +279,8 @@ const char *qd_parse_annotations(
     qd_parsed_field_t    **ma_to_override,
     qd_parsed_field_t    **ma_trace,
     qd_parsed_field_t    **ma_stream,
-    qd_iterator_pointer_t *blob_pointer,
-    uint32_t              *blob_item_count);
+    qd_buffer_field_t     *user_annotations,
+    uint32_t              *user_count);
 
 /**
  * Identify which annotation is being parsed
@@ -277,6 +293,23 @@ typedef enum {
     QD_MAE_STREAM,
     QD_MAE_NONE
 } qd_ma_enum_t;
+
+
+/**
+ * Parse a 32 bit unsigned integer in network order to a native uint32 value.
+ *
+ * This is used throughout the code for decoding the size and count components
+ * of variable-sized AMQP types.
+ *
+ * The caller must ensure buf references four contiguous octets in memory.
+ */
+static inline uint32_t qd_parse_uint32_decode(const uint8_t buf[])
+{
+    return (((uint32_t) buf[0]) << 24)
+        |  (((uint32_t) buf[1]) << 16)
+        |  (((uint32_t) buf[2]) << 8)
+        |  ((uint32_t) buf[3]);
+}
 
 ///@}
 

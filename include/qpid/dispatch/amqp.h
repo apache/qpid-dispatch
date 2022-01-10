@@ -19,6 +19,8 @@
  * under the License.
  */
 
+#include <stdint.h>
+
 /**@file
  * AMQP constants.
  *
@@ -105,26 +107,36 @@ typedef enum {
 } qd_amqp_type_t;
 
 /** @name Message Annotation Headers */
+/// These are the map keys used for router-specific message annotations.
+/// Pre-encoded values are used to optimize building the annotations for
+/// outgoing messages.  Please keep these in sync with the values defined in
+/// amqp.c
 /// @{
-extern const char * const QD_MA_PREFIX;
-extern const char * const QD_MA_INGRESS;  ///< Ingress Router
-extern const char * const QD_MA_TRACE;    ///< Trace
-extern const char * const QD_MA_TO;       ///< To-Override
-extern const char * const QD_MA_PHASE;    ///< Phase for override address
-extern const char * const QD_MA_CLASS;    ///< Message-Class (deprecated)
-extern const char * const QD_MA_STREAM;   ///< Indicate streaming message
+extern const char * const    QD_MA_PREFIX;   /// key prefix
+extern const char * const    QD_MA_INGRESS;  ///< Ingress Router Id
+extern const uint8_t * const QD_MA_INGRESS_ENCODED;
+extern const char * const    QD_MA_TRACE;    ///< Trace list
+extern const uint8_t * const QD_MA_TRACE_ENCODED;
+extern const char * const    QD_MA_TO;       ///< To-Override
+extern const uint8_t * const QD_MA_TO_ENCODED;
+extern const char * const    QD_MA_PHASE;    ///< Phase for override address
+extern const uint8_t * const QD_MA_PHASE_ENCODED;
+extern const char * const    QD_MA_STREAM;   ///< Indicate streaming message
+extern const uint8_t * const QD_MA_STREAM_ENCODED;
+extern const char * const    QD_MA_CLASS;    ///< Message-Class (deprecated)
 
-#define QD_MA_PREFIX_LEN  (9)
-#define QD_MA_INGRESS_LEN (16)
-#define QD_MA_TRACE_LEN   (14)
-#define QD_MA_TO_LEN      (11)
-#define QD_MA_PHASE_LEN   (14)
+#define QD_MA_PREFIX_LEN          (9)
+#define QD_MA_INGRESS_LEN         (16)
+#define QD_MA_INGRESS_ENCODED_LEN (2 + QD_MA_INGRESS_LEN)
+#define QD_MA_TRACE_LEN           (14)
+#define QD_MA_TRACE_ENCODED_LEN   (2 + QD_MA_TRACE_LEN)
+#define QD_MA_TO_LEN              (11)
+#define QD_MA_TO_ENCODED_LEN      (2 + QD_MA_TO_LEN)
+#define QD_MA_PHASE_LEN           (14)
+#define QD_MA_PHASE_ENCODED_LEN   (2 + QD_MA_PHASE_LEN)
+#define QD_MA_STREAM_LEN          (15)
+#define QD_MA_STREAM_ENCODED_LEN  (2 + QD_MA_STREAM_LEN)
 #define QD_MA_CLASS_LEN   (14)
-#define QD_MA_STREAM_LEN  (15)
-
-extern const int          QD_MA_MAX_KEY_LEN;  ///< strlen of longest key name
-extern const int          QD_MA_N_KEYS;       ///< number of router annotation keys
-extern const int          QD_MA_FILTER_LEN;   ///< size of annotation filter buffer
 /// @}
 
 /** @name Container Capabilities */

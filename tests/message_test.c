@@ -429,7 +429,7 @@ static char* test_parse_message_annotations(void *context)
         goto exit;
     }
 
-    error = (char*) qd_message_message_annotations(msg);
+    error = (char*) qd_message_parse_annotations(msg);
     if (error) {
         goto exit;
     }
@@ -1607,12 +1607,12 @@ static char *test_local_message_compose(void * context)
         goto exit;
     }
 
-    if (content->ma_count != 4) {
+    if (content->ma_user_count != 4) {
         result = "failed to find user message annotations";
         goto exit;
     }
 
-    if (content->field_user_annotations.length != 52) {
+    if (content->ma_user_annotations.remaining != 52) {
         result = "wrong length of user annotations";
         goto exit;
     }

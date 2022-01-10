@@ -99,7 +99,6 @@ typedef struct {
     qd_field_location_t  section_application_properties;  // The application properties list
     qd_field_location_t  section_body;                    // The message body: Data
     qd_field_location_t  section_footer;                  // The footer
-    qd_field_location_t  field_user_annotations;          // Opaque user message annotations, not a real field.
 
     qd_field_location_t  field_message_id;                // The string value of the message-id
     qd_field_location_t  field_user_id;                   // The string value of the user-id
@@ -120,10 +119,12 @@ typedef struct {
     qd_message_depth_t   parse_depth;                     // Depth to which message content has been parsed
     qd_iterator_t       *ma_field_iter_in;                // Iter for msg.FIELD_MESSAGE_ANNOTATION
 
-    qd_iterator_pointer_t ma_user_annotation_blob;        // Original user annotations
-                                                          //  with router annotations stripped
-    uint32_t             ma_count;                        // Number of map elements in blob
-                                                          //  after router fields stripped
+    // Original user-supplied message annotations: this is the location in the
+    // received message of all annotation key/value pairs provided by the
+    // origin endpoint.  Router-specific message annotations appear after these
+    // user values.
+    qd_buffer_field_t    ma_user_annotations;
+    uint32_t             ma_user_count;   // total # of user map entries
 
     // Locations in the received message for the ingress-router ID, the
     // to-override address, and the router trace list.  These fields are only

@@ -47,8 +47,8 @@ struct qd_parsed_field_t {
     qd_iterator_t           *typed_iter;  // iterator over the full field (header and value)
     qd_iterator_t           *raw_iter;    // iterator over just the value
     const char              *parse_error;
-    qd_buffer_field_t        full_field;  // contains un-encoded AMQP type header and value
-    qd_amqp_field_t          amqp;        // decoded field
+    qd_buffer_field_t        full_field;  // contains encoded AMQP type header and value
+    qd_amqp_field_t          amqp;        // decoded header and raw value
 };
 
 ALLOC_DECLARE(qd_parsed_field_t);
@@ -331,6 +331,13 @@ qd_iterator_t *qd_parse_typed(qd_parsed_field_t *field)
                                                      ITER_VIEW_ALL);
     }
     return field->typed_iter;
+}
+
+
+qd_buffer_field_t qd_parse_value(const qd_parsed_field_t *field)
+{
+    assert(field && !field->parse_error);
+    return field->amqp.value;
 }
 
 
@@ -714,15 +721,15 @@ const char *qd_parse_annotations(
     qd_parsed_field_t    **ma_to_override,
     qd_parsed_field_t    **ma_trace,
     qd_parsed_field_t    **ma_stream,
-    qd_iterator_pointer_t *blob_pointer,
-    uint32_t              *blob_item_count)
+    qd_buffer_field_t     *user_annotations,
+    uint32_t              *user_count)
 {
     *ma_ingress             = 0;
     *ma_phase               = 0;
     *ma_to_override         = 0;
     *ma_trace               = 0;
-    ZERO(blob_pointer);
-    *blob_item_count        = 0;
+    ZERO(user_annotations);
+    *user_count        = 0;
 
     if (!ma_iter_in)
         return 0;  // ok - MA not present
@@ -757,8 +764,8 @@ const char *qd_parse_annotations(
     // come after any user-supplied MA data. Snapshot the current location for
     // the start of user data
 
-    blob_pointer->buffer = ma_map.value.buffer;
-    blob_pointer->cursor = (unsigned char*) ma_map.value.cursor;
+    user_annotations->buffer = ma_map.value.buffer;
+    user_annotations->cursor = ma_map.value.cursor;
 
     bool user_anno = true;       // assume first annotations are non-router
     size_t user_annos_size = 0;
@@ -874,8 +881,8 @@ const char *qd_parse_annotations(
         }
      }
 
-    blob_pointer->remaining = user_annos_size;
-    *blob_item_count = user_annos_count;
+    user_annotations->remaining = user_annos_size;
+    *user_count = user_annos_count;
 
     return 0;
 }

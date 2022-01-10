@@ -151,7 +151,7 @@ qd_message_t *qd_message_copy(qd_message_t *msg);
  * @param msg Pointer to a received message.
  * @return 0 on success, else an error message
  */
-const char *qd_message_message_annotations(qd_message_t *msg);
+const char *qd_message_parse_annotations(qd_message_t *msg);
 
 /**
  * Set the value for the QD_MA_TO field in the outgoing message annotations for

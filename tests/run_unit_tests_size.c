@@ -20,6 +20,7 @@
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/buffer.h"
 #include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/router.h"
 
 void qd_log_initialize(void);
 void qd_log_finalize(void);
@@ -33,9 +34,115 @@ int field_tests();
 int parse_tests();
 int buffer_tests();
 
+// validate router id constructor/encoder
+//
+static int router_id_tests(void)
+{
+    int result = 0;
+    const char *id;
+    const uint8_t *encoded_id;
+    size_t len = 0;
+    char boundary_id[257];
+
+    qd_router_id_initialize("0", "shortId");
+    id = qd_router_id();
+    if (strcmp(id, "0/shortId") != 0) {
+        fprintf(stderr, "Invalid shortId (%s)\n", id);
+        result = 1;
+        goto exit;
+    }
+
+    encoded_id = qd_router_id_encoded(&len);
+    if (len != strlen(id) + 2) {
+        fprintf(stderr, "shortId encode failed - bad len\n");
+        result = 1;
+        goto exit;
+    }
+    if (encoded_id[0] != QD_AMQP_STR8_UTF8
+        || encoded_id[1] != strlen(id)
+        || memcmp(&encoded_id[2], id, strlen(id)) != 0) {
+
+        fprintf(stderr, "shortId encode failed - bad format\n");
+        result = 1;
+        goto exit;
+    }
+
+    qd_router_id_finalize();
+
+    //
+    // this ID will be exactly 255 chars long (STR8).
+    //
+
+    memset(boundary_id, 'B', 253);
+    boundary_id[253] = 0;
+
+    qd_router_id_initialize("0", boundary_id);
+    id = qd_router_id();
+    assert(strlen(id) == 255);
+    if (strncmp(id, "0/", 2) != 0 || strcmp(&id[2], boundary_id) != 0) {
+        fprintf(stderr, "Invalid boundary 255 id (%s)\n", id);
+        result = 1;
+        goto exit;
+    }
+
+    encoded_id = qd_router_id_encoded(&len);
+    if (len != strlen(id) + 2) {
+        fprintf(stderr, "bounary 255 encode failed - bad len\n");
+        result = 1;
+        goto exit;
+    }
+    if (encoded_id[0] != QD_AMQP_STR8_UTF8
+        || encoded_id[1] != strlen(id)
+        || memcmp(&encoded_id[2], id, strlen(id)) != 0) {
+
+        fprintf(stderr, "boundary encode failed - bad format\n");
+        result = 1;
+        goto exit;
+    }
+
+    qd_router_id_finalize();
+
+    //
+    // this ID will be exactly 256 chars long (STR32).
+    //
+
+    memset(boundary_id, 'B', 254);
+    boundary_id[255] = 0;
+
+    qd_router_id_initialize("0", boundary_id);
+    id = qd_router_id();
+    assert(strlen(id) == 256);
+    if (strncmp(id, "0/", 2) != 0 || strcmp(&id[2], boundary_id) != 0) {
+        fprintf(stderr, "Invalid boundary 256 id (%s)\n", id);
+        result = 1;
+        goto exit;
+    }
+
+    encoded_id = qd_router_id_encoded(&len);
+    if (len != strlen(id) + 5) {
+        fprintf(stderr, "bounary 256 encode failed - bad len\n");
+        result = 1;
+        goto exit;
+    }
+    if (encoded_id[0] != QD_AMQP_STR32_UTF8
+        || qd_parse_uint32_decode(&encoded_id[1]) != strlen(id)
+        || memcmp(&encoded_id[5], id, strlen(id)) != 0) {
+
+        fprintf(stderr, "boundary 256 encode failed - bad format\n");
+        result = 1;
+        goto exit;
+    }
+
+
+exit:
+    qd_router_id_finalize();
+    return result;
+}
+
 int main(int argc, char** argv)
 {
     size_t buffer_size = 512;
+    int result = 0;
 
     if (argc > 1) {
         buffer_size = atoi(argv[1]);
@@ -47,9 +154,10 @@ int main(int argc, char** argv)
     qd_log_initialize();
     qd_error_initialize();
     qd_buffer_set_size(buffer_size);
+
+    result += router_id_tests();
     qd_router_id_initialize("0", "UnitTestRouter");
 
-    int result = 0;
     result += message_tests();
     result += field_tests();
     result += parse_tests();
