@@ -918,7 +918,6 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
         // avoid waiting for entire request to be buffered on
         // intermediate routers
         qd_message_set_streaming_annotation(hreq->request_msg);
-    qdr_new_message_annotate(hreq->base.hconn->adaptor->core, hreq->request_msg);
 
     // future-proof: ensure the message headers have not caused Q2
     // blocking.  We only check for Q2 events while adding body data.

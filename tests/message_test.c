@@ -32,15 +32,19 @@
 #define FLAT_BUF_SIZE (100000)
 static unsigned char buffer[FLAT_BUF_SIZE];
 
-static size_t flatten_bufs(qd_message_content_t *content)
+// given a buffer list, copy the data it contains into a single contiguous
+// buffer.
+static size_t flatten_bufs(const qd_buffer_list_t *content)
 {
     unsigned char *cursor = buffer;
-    qd_buffer_t *buf      = DEQ_HEAD(content->buffers);
+    qd_buffer_t *buf      = DEQ_HEAD((*content));
 
     while (buf) {
+        // if this asserts you need a bigger buffer!
+        assert(((size_t) (cursor - buffer)) + qd_buffer_size(buf) < FLAT_BUF_SIZE);
         memcpy(cursor, qd_buffer_base(buf), qd_buffer_size(buf));
         cursor += qd_buffer_size(buf);
-        buf = buf->next;
+        buf = DEQ_NEXT(buf);
     }
 
     return (size_t) (cursor - buffer);
@@ -49,20 +53,10 @@ static size_t flatten_bufs(qd_message_content_t *content)
 
 static void set_content(qd_message_content_t *content, unsigned char *buffer, size_t len)
 {
-    unsigned char        *cursor = buffer;
-    qd_buffer_t *buf;
+    qd_buffer_list_t blist = DEQ_EMPTY;
 
-    while (len > (size_t) (cursor - buffer)) {
-        buf = qd_buffer();
-        size_t segment   = qd_buffer_capacity(buf);
-        size_t remaining = len - (size_t) (cursor - buffer);
-        if (segment > remaining)
-            segment = remaining;
-        memcpy(qd_buffer_base(buf), cursor, segment);
-        cursor += segment;
-        qd_buffer_insert(buf, segment);
-        DEQ_INSERT_TAIL(content->buffers, buf);
-    }
+    qd_buffer_list_append(&blist, buffer, len);
+    DEQ_APPEND(content->buffers, blist);
     SET_ATOMIC_FLAG(&content->receive_complete);
 }
 
@@ -106,7 +100,7 @@ static char* test_send_to_messenger(void *context)
     }
 
     pn_message_t *pn_msg = pn_message();
-    size_t len = flatten_bufs(content);
+    size_t len = flatten_bufs(&content->buffers);
     int result = pn_message_decode(pn_msg, (char *)buffer, len);
     if (result != 0) {
         pn_message_free(pn_msg);
@@ -466,7 +460,7 @@ static char* test_parse_message_annotations(void *context)
         goto exit;
     }
 
-    qd_parsed_field_t *pf_ingress = qd_message_get_ingress(msg);
+    qd_parsed_field_t *pf_ingress = qd_message_get_ingress_router(msg);
     if (!pf_ingress) {
         error = "INGRESS not found!";
         goto exit;
@@ -491,7 +485,6 @@ exit:
 
     pn_message_free(pn_msg);
     qd_message_free(msg);
-
     return error;
 }
 
@@ -734,7 +727,7 @@ exit:
 // Testing protocol adapter 'stream_data' interfaces
 //
 
-static void stream_data_generate_message(qd_message_t *msg, char *s_chunk_size, char *s_n_chunks)
+static qd_message_t *stream_data_generate_message(char *s_chunk_size, char *s_n_chunks, bool flatten)
 {
     // Fill a message with n_chunks of vbin chunk_size body data.
 
@@ -756,36 +749,41 @@ static void stream_data_generate_message(qd_message_t *msg, char *s_chunk_size, 
     qd_compose_insert_string(props, "whom-it-may-concern");    // to
     qd_compose_end_list(props);
 
+    qd_message_t *msg = qd_message();
     qd_message_compose_3(msg, header, props, false);
     qd_compose_free(header);
     qd_compose_free(props);
 
-    // Add the chunks. This creates the test state for not-flattened buffers.
+    // Generate the chunks. Each chunk is wrapped in a BODY_DATA section. Each
+    // body section resides in its own buffer list.  This creates a sparse body
+    // buffer chain which will exercise buffer boundary checking.
+
+    unsigned char *buf2 = (unsigned char *)malloc(chunk_size);
+    qd_buffer_list_t body = DEQ_EMPTY;
+
     for (int j=0; j<n_chunks; j++) {
-        // Create 'buf2' as a linear buffer of the raw data to be sent.
-        // Buffer filled with chunk index + 1.
-        unsigned char *buf2 = (unsigned char *)malloc(chunk_size);
-        memset(buf2, j+1, chunk_size);
-
-        // Use 'set_content' to convert raw buffer 'buf2'
-        // into a buffer list in message 'mule'.
-        qd_message_t *mule = qd_message();
-        qd_message_content_t *mule_content = MSG_CONTENT(mule);
-        set_content(mule_content, buf2, chunk_size);
-
-        // Extend message 'msg' with the buffer list in 'mule'
-        // and wrap the addition in a BODY_DATA performative.
-        // After this the content buffer list in 'mule' is empty and
-        // the buffers in 'field' are inserted into message 'msg'.
+        qd_buffer_list_t     tmp = DEQ_EMPTY;
         qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
-        qd_compose_insert_binary_buffers(field, &mule_content->buffers);
-        qd_message_extend(msg, field, 0);
 
-        // Clean up temporary resources
-        free(buf2);
+        memset(buf2, j+1, chunk_size);
+        qd_compose_insert_binary(field, (const uint8_t*) buf2, chunk_size);
+        qd_compose_take_buffers(field, &tmp);
+        DEQ_APPEND(body, tmp);
         qd_compose_free(field);
-        qd_message_free(mule);
     }
+
+    if (!flatten) {
+        DEQ_APPEND(MSG_CONTENT(msg)->buffers, body);
+    } else {
+        // compact the separate body buffer chains into the smallest buffer
+        // chain possible
+        size_t flat_size = flatten_bufs(&body);
+        qd_buffer_list_append(&(MSG_CONTENT(msg)->buffers), buffer, flat_size);
+        qd_buffer_list_free_buffers(&body);
+    }
+
+    free(buf2);
+    return msg;
 }
 
 static void free_stream_data_list(qd_message_t *msg_in)
@@ -821,36 +819,15 @@ static char *check_stream_data(char *s_chunk_size, char *s_n_chunks, bool flatte
     char *result     = 0;
     int   received;     // got this much of chunk_size chunk
 
-    // Messages for setting/sensing body data
-    qd_message_t         *msg     = qd_message();
-    qd_message_t         *copy    = qd_message_copy(msg);
-    qd_message_pvt_t     *msg_pvt = (qd_message_pvt_t *)msg;
-
     // Set the original message content
-    stream_data_generate_message(msg, s_chunk_size, s_n_chunks);
 
-    // flatten if required
-    if (flatten) {
-        // check that the flatten buffer is big enough
-        assert(FLAT_BUF_SIZE > (n_chunks * (chunk_size
-                                            // per-chunk vbin descriptor overhead:
-                                            + (chunk_size > 511 ? 8 : 5))
-                                + 100));  // leave plenty of allocaton for header
-
-        // compress message into flatten buffer
-        size_t flat_size = flatten_bufs(MSG_CONTENT(msg));
-
-        // erase buffer list in msg and copy
-        qd_buffer_list_free_buffers(&msg_pvt->content->buffers);
-
-        // reconstruct buffer list from flat buffer
-        qd_buffer_list_append(&msg_pvt->content->buffers, buffer, flat_size);
-    }
+    qd_message_t *msg = stream_data_generate_message(s_chunk_size, s_n_chunks, flatten);
 
     // check the chunks
     // Define the number of raw buffers to be extracted on each loop
 #define N_PN_RAW_BUFFS (2)
 
+    qd_message_t *copy = qd_message_copy(msg);
     qd_message_stream_data_t *stream_data;
 
     for (int j=0; j<n_chunks; j++) {

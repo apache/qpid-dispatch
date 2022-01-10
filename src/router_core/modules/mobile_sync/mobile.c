@@ -260,21 +260,6 @@ static qd_message_t *qcm_mobile_sync_compose_differential_mau(qdrm_mobile_sync_t
 
     qd_message_t *msg = qd_message_compose(headers, body, 0, true);
 
-    //
-    // Add the ingress and trace annotations to the message to prevent this multicast from bouncing
-    // back to us.
-    //
-    qd_composed_field_t *ingress = qd_compose_subfield(0);
-    qd_compose_insert_string(ingress, qd_router_id(msync->core->qd));
-
-    qd_composed_field_t *trace = qd_compose_subfield(0);
-    qd_compose_start_list(trace);
-    qd_compose_insert_string(trace, qd_router_id(msync->core->qd));
-    qd_compose_end_list(trace);
-
-    qd_message_set_ingress_annotation(msg, ingress);
-    qd_message_set_trace_annotation(msg, trace);
-
     return msg;
 }
 

@@ -154,22 +154,6 @@ qd_message_t *qd_message_copy(qd_message_t *msg);
 const char *qd_message_message_annotations(qd_message_t *msg);
 
 /**
- * Set the value for the QD_MA_TRACE field in the outgoing message annotations
- * for the message.
- *
- * IMPORTANT: This method takes ownership of the trace_field - the calling
- * method must not reference it after this call.
- *
- * @param msg Pointer to an outgoing message.
- * @param trace_field Pointer to a composed field representing the list that
- * will be used as the value for the QD_MA_TRACE map entry.  If null, the
- * message will not have a QA_MA_TRACE message annotation field.  Ownership of
- * this field is transferred to the message.
- *
- */
-void qd_message_set_trace_annotation(qd_message_t *msg, qd_composed_field_t *trace_field);
-
-/**
  * Set the value for the QD_MA_TO field in the outgoing message annotations for
  * the message.
  *
@@ -225,22 +209,6 @@ int qd_message_is_streaming(const qd_message_t *msg);
  * MA on receive and restoring/composing MA on send.
  */
 void qd_message_disable_router_annotations(qd_message_t *in_msg);
-
-/**
- * Set the value for the QD_MA_INGRESS field in the outgoing message
- * annotations for the message.
- *
- * IMPORTANT: This method takes ownership of the ingress_field - the calling
- * method must not reference it after this call.
- *
- * @param msg Pointer to an outgoing message.
- * @param ingress_field Pointer to a composed field representing ingress router
- * that will be used as the value for the QD_MA_INGRESS map entry.  If null,
- * the message will not have a QA_MA_INGRESS message annotation field.
- * Ownership of this field is transferred to the message.
- *
- */
-void qd_message_set_ingress_annotation(qd_message_t *msg, qd_composed_field_t *ingress_field);
 
 /**
  * Receive message data frame by frame via a delivery.  This function may be called more than once on the same
@@ -475,28 +443,66 @@ int qd_message_repr_len();
 qd_log_source_t* qd_message_log_source();
 
 /**
- * Accessor for message field ingress
+ * Accessor for incoming messages ingress router annotation
  *
  * @param msg A pointer to the message
- * @return the parsed field
+ * @return the parsed field or 0 if no ingress present in msg
  */
-qd_parsed_field_t *qd_message_get_ingress(qd_message_t *msg);
+qd_parsed_field_t *qd_message_get_ingress_router(qd_message_t *msg);
+
+/**
+ * Discard received ingress router annotation.  This will cause the forwarded
+ * message to use the local router ID for the ingress router annotation.
+ *
+ * Used by exchange-bindings feature.
+ *
+ * @param msg A pointer to the message
+ */
+void qd_message_reset_ingress_router_annotation(qd_message_t *msg);
+
+/**
+ * Do not include a ingress router annotation in the forwarded message.
+ *
+ * Used by the edge-router to filter out the ingress router annotation.
+ *
+ * @param msg A pointer to the message
+ */
+void qd_message_disable_ingress_router_annotation(qd_message_t *msg);
 
 /**
  * Accessor for message field to_override
- * 
+ *
  * @param msg A pointer to the message
- * @return the parsed field
+ * @return the parsed field or 0 if no to_override present
  */
 qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg);
 
 /**
- * Accessor for message field trace
- * 
- * @param msg A pointer to the message
+ * Accessor for incoming messages trace annotation
+ *
+ * @param msg A pointer to the received message
  * @return the parsed field
  */
 qd_parsed_field_t *qd_message_get_trace(qd_message_t *msg);
+
+/**
+ * Discard received trace annotations.  This will cause the forwarded message
+ * to re-start the trace list with the current router ID as the only entry.
+ *
+ * Used by exchange-bindings feature.
+ *
+ * @param msg A pointer to the message
+ */
+void qd_message_reset_trace_annotation(qd_message_t *msg);
+
+/**
+ * Do not include a trace list annotation in the forwarded message.
+ *
+ * Used by the edge-router to filter out the trace list.
+ *
+ * @param msg A pointer to the message
+ */
+void qd_message_disable_trace_annotation(qd_message_t *msg);
 
 /**
  * Should the message be discarded.

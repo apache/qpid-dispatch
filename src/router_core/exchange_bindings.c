@@ -220,16 +220,8 @@ int qdr_forward_exchange_CT(qdr_core_t     *core,
             in_delivery->link_exclusion = 0;
         }
 
-        const char *node_id = qd_router_id(core->qd);
-        qd_composed_field_t *trace_field = qd_compose_subfield(0);
-        qd_compose_start_list(trace_field);
-        qd_compose_insert_string(trace_field, node_id);
-        qd_compose_end_list(trace_field);
-        qd_message_set_trace_annotation(msg, trace_field);
-
-        qd_composed_field_t *ingress_field = qd_compose_subfield(0);
-        qd_compose_insert_string(ingress_field, node_id);
-        qd_message_set_ingress_annotation(msg, ingress_field);
+        qd_message_reset_trace_annotation(msg);
+        qd_message_reset_ingress_router_annotation(msg);
     }
 
     next_hop_t *next_hop = DEQ_HEAD(transmit_list);

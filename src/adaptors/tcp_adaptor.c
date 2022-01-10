@@ -358,7 +358,6 @@ static int handle_incoming(qdr_tcp_connection_t *conn, const char *msg)
 
         qd_message_t *msg = qd_message_compose(props, 0, 0, false);
         qd_message_set_streaming_annotation(msg);
-        qdr_new_message_annotate(tcp_adaptor->core, msg);
 
         // set up message q2 unblocked callback handler
         qd_alloc_safe_ptr_t conn_sp = QD_SAFE_PTR_INIT(conn);

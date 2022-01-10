@@ -1043,8 +1043,6 @@ void qd_message_free(qd_message_t *in_msg)
     qd_message_q2_unblocker_t  q2_unblock = {0};
 
     free(msg->ma_to_override);
-    qd_buffer_list_free_buffers(&msg->ma_trace);
-    qd_buffer_list_free_buffers(&msg->ma_ingress);
 
     sys_atomic_destroy(&msg->send_complete);
 
@@ -1149,10 +1147,12 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     if (!content->ma_disabled) {
         if (msg->ma_to_override)
             copy->ma_to_override = qd_strdup(msg->ma_to_override);
-        qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
-        qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
-        copy->ma_phase = msg->ma_phase;
-        copy->ma_streaming = msg->ma_streaming;
+        copy->ma_filter_trace   = msg->ma_filter_trace;
+        copy->ma_filter_ingress = msg->ma_filter_ingress;
+        copy->ma_reset_trace    = msg->ma_reset_trace;
+        copy->ma_reset_ingress  = msg->ma_reset_ingress;
+        copy->ma_phase          = msg->ma_phase;
+        copy->ma_streaming      = msg->ma_streaming;
         qd_message_message_annotations((qd_message_t*) copy);
     }
 
@@ -1212,21 +1212,9 @@ const char *qd_message_message_annotations(qd_message_t *in_msg)
         qd_parse_free(ma_pf_stream);
     }
 
-    if (content->ma_pf_to_override) {
-        msg->ma_to_override = qd_parse_as_string(content->ma_pf_to_override);
-    }
-
     return 0;
 }
 
-
-void qd_message_set_trace_annotation(qd_message_t *in_msg, qd_composed_field_t *trace_field)
-{
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    qd_buffer_list_free_buffers(&msg->ma_trace);
-    qd_compose_take_buffers(trace_field, &msg->ma_trace);
-    qd_compose_free(trace_field);
-}
 
 void qd_message_set_to_override_annotation(qd_message_t *in_msg, char *to_field)
 {
@@ -1234,6 +1222,7 @@ void qd_message_set_to_override_annotation(qd_message_t *in_msg, char *to_field)
     free(msg->ma_to_override);
     msg->ma_to_override = to_field;
 }
+
 
 void qd_message_set_phase_annotation(qd_message_t *in_msg, int phase)
 {
@@ -1251,14 +1240,6 @@ void qd_message_set_streaming_annotation(qd_message_t *in_msg)
 {
     qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
     msg->ma_streaming = true;
-}
-
-void qd_message_set_ingress_annotation(qd_message_t *in_msg, qd_composed_field_t *ingress_field)
-{
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    qd_buffer_list_free_buffers(&msg->ma_ingress);
-    qd_compose_take_buffers(ingress_field, &msg->ma_ingress);
-    qd_compose_free(ingress_field);
 }
 
 
@@ -1720,9 +1701,9 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
         return;
 
     // add dispatch router specific annotations if any are defined
-    if (msg->ma_to_override ||
-        !DEQ_IS_EMPTY(msg->ma_trace) ||
-        !DEQ_IS_EMPTY(msg->ma_ingress) ||
+    if ((msg->ma_to_override || msg->content->ma_pf_to_override) ||
+        !msg->ma_filter_trace ||
+        !msg->ma_filter_ingress ||
         msg->ma_phase != 0 ||
         msg->ma_streaming) {
 
@@ -1735,17 +1716,40 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
             qd_compose_insert_symbol(field, QD_MA_TO);
             qd_compose_insert_string(field, msg->ma_to_override);
             field_count++;
-        }
-
-        if (!DEQ_IS_EMPTY(msg->ma_trace)) {
-            qd_compose_insert_symbol(field, QD_MA_TRACE);
-            qd_compose_insert_buffers(field, &msg->ma_trace);
+        } else if (msg->content->ma_pf_to_override) {
+            char *to_override = qd_parse_as_string(msg->content->ma_pf_to_override);
+            qd_compose_insert_symbol(field, QD_MA_TO);
+            qd_compose_insert_string(field, to_override);
+            free(to_override);
             field_count++;
         }
 
-        if (!DEQ_IS_EMPTY(msg->ma_ingress)) {
+        if (!msg->ma_filter_trace) {
+            qd_compose_insert_symbol(field, QD_MA_TRACE);
+            qd_compose_start_list(field);
+            if (!msg->ma_reset_trace && msg->content->ma_pf_trace) {
+                uint32_t idx = 0;
+                qd_parsed_field_t *trace_item;
+                while ((trace_item = qd_parse_sub_value(msg->content->ma_pf_trace, idx++)) != 0) {
+                    qd_iterator_t *iter = qd_parse_raw(trace_item);
+                    qd_iterator_reset_view(iter, ITER_VIEW_ALL);
+                    qd_compose_insert_string_iterator(field, iter);
+                }
+            }
+            qd_compose_insert_string(field, qd_router_id());
+            qd_compose_end_list(field);
+            field_count++;
+        }
+
+        if (!msg->ma_filter_ingress) {
             qd_compose_insert_symbol(field, QD_MA_INGRESS);
-            qd_compose_insert_buffers(field, &msg->ma_ingress);
+            if (!msg->ma_reset_ingress && msg->content->ma_pf_ingress) {
+                qd_iterator_t *iter = qd_parse_raw(msg->content->ma_pf_ingress);
+                qd_iterator_reset_view(iter, ITER_VIEW_ALL);
+                qd_compose_insert_string_iterator(field, iter);
+            } else {
+                qd_compose_insert_string(field, qd_router_id());
+            }
             field_count++;
         }
 
@@ -2862,9 +2866,23 @@ int qd_message_read_body(qd_message_t *in_msg, pn_raw_buffer_t* buffers, int len
 }
 
 
-qd_parsed_field_t *qd_message_get_ingress(qd_message_t *msg)
+qd_parsed_field_t *qd_message_get_ingress_router(qd_message_t *msg)
 {
     return ((qd_message_pvt_t*) msg)->content->ma_pf_ingress;
+}
+
+
+// used by exchange bindings to erase original ingress node id
+void qd_message_reset_ingress_router_annotation(qd_message_t *in_msg)
+{
+    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
+    msg->ma_reset_ingress = true;
+}
+
+
+void qd_message_disable_ingress_router_annotation(qd_message_t *msg)
+{
+    ((qd_message_pvt_t*) msg)->ma_filter_ingress = true;
 }
 
 
@@ -2877,6 +2895,20 @@ qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg)
 qd_parsed_field_t *qd_message_get_trace(qd_message_t *msg)
 {
     return ((qd_message_pvt_t*) msg)->content->ma_pf_trace;
+}
+
+
+void qd_message_disable_trace_annotation(qd_message_t *msg)
+{
+    ((qd_message_pvt_t*) msg)->ma_filter_trace = true;
+}
+
+
+// used by exchange bindings to erase old message trace list
+void qd_message_reset_trace_annotation(qd_message_t *in_msg)
+{
+    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
+    msg->ma_reset_trace = true;
 }
 
 

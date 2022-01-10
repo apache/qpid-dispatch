@@ -770,17 +770,6 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
     if (compose_python_message(&field, message, ioa->qd) == QD_ERROR_NONE) {
         qd_message_t *msg = qd_message_compose(field, 0, 0, true);
 
-        qd_composed_field_t *ingress = qd_compose_subfield(0);
-        qd_compose_insert_string(ingress, qd_router_id(ioa->qd));
-
-        qd_composed_field_t *trace = qd_compose_subfield(0);
-        qd_compose_start_list(trace);
-        qd_compose_insert_string(trace, qd_router_id(ioa->qd));
-        qd_compose_end_list(trace);
-
-        qd_message_set_ingress_annotation(msg, ingress);
-        qd_message_set_trace_annotation(msg, trace);
-
         PyObject *address = PyObject_GetAttrString(message, "address");
         if (address) {
             char *a_str = py_obj_2_c_string(address);

@@ -24,6 +24,9 @@
 void qd_log_initialize(void);
 void qd_log_finalize(void);
 void qd_error_initialize();
+void qd_router_id_initialize(const char *, const char *);
+void qd_router_id_finalize(void);
+
 
 int message_tests();
 int field_tests();
@@ -44,6 +47,7 @@ int main(int argc, char** argv)
     qd_log_initialize();
     qd_error_initialize();
     qd_buffer_set_size(buffer_size);
+    qd_router_id_initialize("0", "UnitTestRouter");
 
     int result = 0;
     result += message_tests();
@@ -54,6 +58,8 @@ int main(int argc, char** argv)
     qd_log_finalize();
     qd_alloc_finalize();
     qd_iterator_finalize();
+    qd_router_id_finalize();
+
     return result;
 }
 

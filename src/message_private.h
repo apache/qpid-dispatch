@@ -124,6 +124,11 @@ typedef struct {
                                                           //  with router annotations stripped
     uint32_t             ma_count;                        // Number of map elements in blob
                                                           //  after router fields stripped
+
+    // Locations in the received message for the ingress-router ID, the
+    // to-override address, and the router trace list.  These fields are only
+    // present if the message has arrived from another router (not a client
+    // endpoint).
     qd_parsed_field_t   *ma_pf_ingress;
     qd_parsed_field_t   *ma_pf_to_override;
     qd_parsed_field_t   *ma_pf_trace;
@@ -157,11 +162,13 @@ struct qd_message_pvt_t {
     qd_message_depth_t             sent_depth;      // Depth of outgoing sent message
     qd_message_content_t          *content;         // Singleton content shared by reference between
                                                     //  incoming and all outgoing copies
-    qd_buffer_list_t               ma_trace;        // Trace list in outgoing message annotations
-    qd_buffer_list_t               ma_ingress;      // Ingress field in outgoing message annotations
     char                          *ma_to_override;  // new outgoing value for to-override MA
     int                            ma_phase;        // Phase for override address
     bool                           ma_streaming;    // Do not attempt to wait for entire msg to arrive.
+    bool                           ma_filter_trace; // Do not add trace list to outbound msg (sending to edge-router)
+    bool                           ma_filter_ingress;  // Do not add ingress router to outbound msg (sending to edge-router)
+    bool                           ma_reset_trace;     // exchange-bindings: discard incoming trace, replace with local node id
+    bool                           ma_reset_ingress;   // exchange-bindings: discard incoming ingress, replace with local node id
     qd_message_stream_data_list_t  stream_data_list;// Stream data parse structure
                                                     // TODO - move this to the content for one-time parsing (TLR)
     unsigned char                 *body_cursor;     // Stream: tracks the point in the content buffer chain
