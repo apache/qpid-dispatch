@@ -65,9 +65,7 @@ const char * const QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY     = "port";
 const char * const QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY   = "scheme";
 const char * const QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY = "hostname";
 const char * const QD_CONNECTION_PROPERTY_ADAPTOR_KEY           = "qd.adaptor";
-const char * const QD_CONNECTION_PROPERTY_TCP_ADAPTOR_VALUE     = "tcp";
 const char * const QD_CONNECTION_PROPERTY_ANNOTATIONS_VERSION_KEY = "qd.annotations-version";
-
 const char * const QD_TERMINUS_EDGE_ADDRESS_TRACKING = "_$qd.edge_addr_tracking";
 const char * const QD_TERMINUS_ADDRESS_LOOKUP        = "_$qd.addr_lookup";
 const char * const QD_TERMINUS_HEARTBEAT             = "_$qd.edge_heartbeat";

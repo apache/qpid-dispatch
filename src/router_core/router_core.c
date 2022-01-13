@@ -51,8 +51,7 @@ static void qdr_core_setup_init(qdr_core_t *core)
     //
     // DISPATCH-1867: These functions used to be called inside the router_core_thread() function in router_core_thread.c
     // which meant they were executed asynchronously by the core thread which meant qd_router_setup_late() could
-    // return before these functions executed in the core thread. But we need the adaptors and modules to be initialized *before* qd_router_setup_late() completes
-    // so that python can successfully initialize httpConnectors and httpListeners.
+    // return before these functions executed in the core thread. But we need the adaptors and modules to be initialized *before* qd_router_setup_late() completes.
     //
     qdr_forwarder_setup_CT(core);
     qdr_route_table_setup_CT(core);
@@ -63,7 +62,7 @@ static void qdr_core_setup_init(qdr_core_t *core)
     qdr_modules_init(core);
 
     //
-    // Initialize all registered adaptors (HTTP1, HTTP2, TCP)
+    // Initialize all registered adaptors.
     //
     qdr_adaptors_init(core);
 }

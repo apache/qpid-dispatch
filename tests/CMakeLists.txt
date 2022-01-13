@@ -106,10 +106,6 @@ if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http system_tests_websockets)
 endif()
 
-if(USE_LIBNGHTTP2)
-  set(SYSTEM_TESTS_HTTP2 system_tests_http2 system_tests_grpc)
-endif(USE_LIBNGHTTP2)
-
 if(CONSOLE_INSTALL)
   set(CONSOLE_TEST system_tests_console)
 endif(CONSOLE_INSTALL)
@@ -173,10 +169,6 @@ foreach(py_test_module
     system_tests_log_level_update
     system_tests_routing_protocol
     system_tests_open_properties
-    ${SYSTEM_TESTS_HTTP2}
-    system_tests_http1_adaptor
-    system_tests_http1_over_tcp
-    system_tests_tcp_adaptor
     system_tests_heartbeats
     )
 

@@ -33,7 +33,6 @@ add_executable(c-benchmarks
         c_benchmarks_main.cpp
         bm_router_initialization.cpp
         bm_parse_tree.cpp
-        bm_tcp_adapter.cpp
         echo_server.cpp echo_server.hpp
         socket_utils.cpp socket_utils.hpp
         Socket.cpp Socket.hpp

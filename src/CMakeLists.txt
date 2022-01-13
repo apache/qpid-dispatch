@@ -38,15 +38,6 @@ add_custom_command (
 
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
-  adaptors/reference_adaptor.c
-  adaptors/adaptor_utils.c
-  adaptors/http_common.c
-  adaptors/http1/http1_codec.c
-  adaptors/http1/http1_adaptor.c
-  adaptors/http1/http1_client.c
-  adaptors/http1/http1_server.c
-  adaptors/http1/http1_request_info.c
-  adaptors/tcp_adaptor.c
   alloc.c
   alloc_pool.c
   aprintf.c
@@ -161,13 +152,6 @@ else(USE_LIBWEBSOCKETS)
   list(APPEND qpid_dispatch_SOURCES http-none.c)
 endif(USE_LIBWEBSOCKETS)
 
-if(USE_LIBNGHTTP2)
-  list(APPEND qpid_dispatch_SOURCES adaptors/http2/http2_adaptor.c)
-  list(APPEND qpid_dispatch_INCLUDES ${NGHTTP2_INCLUDE_DIRS})
-  list(APPEND qpid_dispatch_LIBRARIES ${NGHTTP2_LIBRARIES})
-else(USE_LIBNGHTTP2)
-  list(APPEND qpid_dispatch_SOURCES adaptors/http2/http2_adaptor_none.c)
-endif(USE_LIBNGHTTP2)
 
 # DISPATCH-654 There are, in fact, no strict-aliasing violations and newer compilers don't complain.
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
