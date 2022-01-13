@@ -45,48 +45,49 @@ typedef enum plog_record_type {
 } plog_record_type_t;
 
 typedef enum plog_attribute {
-    PLOG_ATTRIBUTE_IDENTITY         = 0x00,  // Reference (cannot be set by the user)
-    PLOG_ATTRIBUTE_PARENT           = 0x01,  // Reference (set during object creation only)
-    PLOG_ATTRIBUTE_SIBLING          = 0x02,  // Reference
-    PLOG_ATTRIBUTE_PROCESS          = 0x03,  // Reference
+    PLOG_ATTRIBUTE_IDENTITY         = 0,   // Reference (cannot be set by the user)
+    PLOG_ATTRIBUTE_PARENT           = 1,   // Reference (set during object creation only)
+    PLOG_ATTRIBUTE_COUNTERFLOW      = 2,   // Reference
+    PLOG_ATTRIBUTE_PEER             = 3,   // Reference to another record that represents the same flow
 
-    PLOG_ATTRIBUTE_SIBLING_ORDINAL  = 0x04,  // uint
-    PLOG_ATTRIBUTE_LOCATION         = 0x05,  // String
-    PLOG_ATTRIBUTE_PROVIDER         = 0x06,  // String
-    PLOG_ATTRIBUTE_PLATFORM         = 0x07,  // String
+    PLOG_ATTRIBUTE_PROCESS          = 4,   // Reference
+    PLOG_ATTRIBUTE_SIBLING_ORDINAL  = 5,   // uint
+    PLOG_ATTRIBUTE_LOCATION         = 6,   // String
+    PLOG_ATTRIBUTE_PROVIDER         = 7,   // String
 
-    PLOG_ATTRIBUTE_NAMESPACE        = 0x08,  // String
-    PLOG_ATTRIBUTE_MODE             = 0x09,  // String
-    PLOG_ATTRIBUTE_SOURCE_HOST      = 0x0a,  // String
-    PLOG_ATTRIBUTE_DESTINATION_HOST = 0x0b,  // String
+    PLOG_ATTRIBUTE_PLATFORM         = 8,   // String
+    PLOG_ATTRIBUTE_NAMESPACE        = 9,   // String
+    PLOG_ATTRIBUTE_MODE             = 10,  // String
+    PLOG_ATTRIBUTE_SOURCE_HOST      = 11,  // String
 
-    PLOG_ATTRIBUTE_PROTOCOL         = 0x0c,  // String
-    PLOG_ATTRIBUTE_SOURCE_PORT      = 0x0d,  // String
-    PLOG_ATTRIBUTE_DESTINATION_PORT = 0x0e,  // String
-    PLOG_ATTRIBUTE_VAN_ADDRESS      = 0x0f,  // String
+    PLOG_ATTRIBUTE_DESTINATION_HOST = 12,  // String
+    PLOG_ATTRIBUTE_PROTOCOL         = 13,  // String
+    PLOG_ATTRIBUTE_SOURCE_PORT      = 14,  // String
+    PLOG_ATTRIBUTE_DESTINATION_PORT = 15,  // String
 
-    PLOG_ATTRIBUTE_IMAGE_NAME       = 0x10,  // String
-    PLOG_ATTRIBUTE_IMAGE_VERSION    = 0x11,  // String
-    PLOG_ATTRIBUTE_HOST_NAME        = 0x12,  // String
-    PLOG_ATTRIBUTE_FLOW_TYPE        = 0x13,
+    PLOG_ATTRIBUTE_VAN_ADDRESS      = 16,  // String
+    PLOG_ATTRIBUTE_IMAGE_NAME       = 17,  // String
+    PLOG_ATTRIBUTE_IMAGE_VERSION    = 18,  // String
+    PLOG_ATTRIBUTE_HOST_NAME        = 19,  // String
 
-    PLOG_ATTRIBUTE_OCTETS           = 0x14,  // uint
-    PLOG_ATTRIBUTE_START_LATENCY    = 0x15,  // uint
-    PLOG_ATTRIBUTE_BACKLOG          = 0x16,  // uint
-    PLOG_ATTRIBUTE_METHOD           = 0x17,  // String  
+    PLOG_ATTRIBUTE_FLOW_TYPE        = 20,
+    PLOG_ATTRIBUTE_OCTETS           = 21,  // uint
+    PLOG_ATTRIBUTE_START_LATENCY    = 22,  // uint
+    PLOG_ATTRIBUTE_BACKLOG          = 23,  // uint
 
-    PLOG_ATTRIBUTE_RESULT           = 0x18,  // String
-    PLOG_ATTRIBUTE_REASON           = 0x19,  // String
-    PLOG_ATTRIBUTE_NAME             = 0x1a,  // String
-    PLOG_ATTRIBUTE_TRACE            = 0x1b,  // List of Strings (use plog_set_trace function)
+    PLOG_ATTRIBUTE_METHOD           = 24,  // String  
+    PLOG_ATTRIBUTE_RESULT           = 25,  // String
+    PLOG_ATTRIBUTE_REASON           = 26,  // String
+    PLOG_ATTRIBUTE_NAME             = 27,  // String
 
-    PLOG_ATTRIBUTE_BUILD_VERSION    = 0x1c,  // String
+    PLOG_ATTRIBUTE_TRACE            = 28,  // List of Strings (use plog_set_trace function)
+    PLOG_ATTRIBUTE_BUILD_VERSION    = 29,  // String
 } plog_attribute_t;
 
-#define VALID_REF_ATTRS    0x0000000c
-#define VALID_UINT_ATTRS   0x00700010
-#define VALID_STRING_ATTRS 0x1787ffe0
-#define VALID_TRACE_ATTRS  0x08000000
+#define VALID_REF_ATTRS    0x0000001c
+#define VALID_UINT_ATTRS   0x00e00020
+#define VALID_STRING_ATTRS 0x2f0fffc0
+#define VALID_TRACE_ATTRS  0x10000000
 
 
 /**

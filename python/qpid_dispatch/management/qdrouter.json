@@ -1391,7 +1391,7 @@
                         "PROTOCOL",
                         "TCP_ADAPTOR",
                         "HTTP_ADAPTOR",
-                        "PROTOCOL_LOG",
+                        "FLOW_LOG",
                         "DEFAULT"
                     ],
                     "required": true,

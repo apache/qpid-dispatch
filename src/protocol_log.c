@@ -561,7 +561,8 @@ static const char *_plog_attribute_name(const plog_attribute_data_t *data)
     switch (data->attribute_type) {
     case PLOG_ATTRIBUTE_IDENTITY         : return "identity";
     case PLOG_ATTRIBUTE_PARENT           : return "parent";
-    case PLOG_ATTRIBUTE_SIBLING          : return "sibling";
+    case PLOG_ATTRIBUTE_COUNTERFLOW      : return "counterflow";
+    case PLOG_ATTRIBUTE_PEER             : return "peer";
     case PLOG_ATTRIBUTE_PROCESS          : return "process";
     case PLOG_ATTRIBUTE_SIBLING_ORDINAL  : return "sib_ordinal";
     case PLOG_ATTRIBUTE_LOCATION         : return "location";
@@ -948,7 +949,7 @@ static void _plog_init(qdr_core_t *core, void **adaptor_context)
     router_area = qdr_core_dispatch(core)->router_area;
     router_name = qdr_core_dispatch(core)->router_id;
 
-    log       = qd_log_source("PROTOCOL_LOG");
+    log       = qd_log_source("FLOW_LOG");
     lock      = sys_mutex();
     condition = sys_cond();
     thread    = sys_thread(_plog_thread, 0);

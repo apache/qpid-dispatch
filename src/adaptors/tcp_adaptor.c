@@ -1595,7 +1595,7 @@ static int qdr_tcp_push(void *context, qdr_link_t *link, int limit)
 
 /**
  * @brief Find the flow-id in the message's application properties, it it's there and use
- * it as the sibling-link of the connection's flow record.
+ * it as the counterflow reference of the connection's flow record.
  * 
  * @param tc Pointer to the tcp connection state
  * @param msg Pointer to the message received from the ingress (listener) side
@@ -1634,7 +1634,7 @@ static void qdr_associate_plog_flows(qdr_tcp_connection_t *tc, qd_message_t *msg
             }
 
             if (!!id_value) {
-                plog_set_ref_from_parsed(tc->plog, PLOG_ATTRIBUTE_SIBLING, id_value);
+                plog_set_ref_from_parsed(tc->plog, PLOG_ATTRIBUTE_COUNTERFLOW, id_value);
             }
         } while (false);
         qd_parse_free(ap);

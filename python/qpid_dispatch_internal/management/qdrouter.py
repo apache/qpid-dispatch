@@ -33,6 +33,7 @@ class QdSchema(schema.Schema):
 
     CONFIGURATION_ENTITY = "configurationEntity"
     OPERATIONAL_ENTITY = "operationalEntity"
+    ILLEGAL_ID_CHARS = "|"
 
     def __init__(self):
         """Load schema."""
@@ -52,35 +53,43 @@ class QdSchema(schema.Schema):
         entities = list(entities)  # Iterate twice
         super(QdSchema, self).validate_add(attributes, entities)
         entities.append(attributes)
-        router_mode = listener_connector_role = listener_role = None
+        router_mode = router_id = listener_connector_role = listener_role = None
         for e in entities:
             short_type = self.short_name(e['type'])
             if short_type == "router":
                 router_mode = e['mode']
+                if 'id' in e:
+                    router_id = e['id']
             if short_type in ["listener", "connector"]:
                 if short_type == "listener":
                     listener_role = e['role']
                 list_conn_entity = e
                 listener_connector_role = e['role']
 
-            # There are 4 roles for listeners - normal, inter-router, route-container, edge
-            if router_mode and listener_connector_role:
-                # Standalone routers cannot have inter-router or edge listeners/connectors
-                if router_mode == "standalone" and (listener_connector_role == "inter-router" or listener_connector_role == "edge"):
-                    raise schema.ValidationError(
-                        "role='standalone' not allowed to connect to or accept connections from other routers.")
+        # Check the router-id for prohibited characters
+        if router_id:
+            for c in router_id:
+                if c in self.ILLEGAL_ID_CHARS:
+                    raise schema.ValidationError('Router ID "%s" containes at least one illegal character ("%s").' % (router_id, self.ILLEGAL_ID_CHARS))
 
-                # Only interior routers can have inter-router listeners/connectors
-                if router_mode != "interior" and listener_connector_role == "inter-router":
-                    raise schema.ValidationError(
-                        "role='inter-router' only allowed with router mode='interior' for %s" % list_conn_entity)
+        # There are 4 roles for listeners - normal, inter-router, route-container, edge
+        if router_mode and listener_connector_role:
+            # Standalone routers cannot have inter-router or edge listeners/connectors
+            if router_mode == "standalone" and (listener_connector_role == "inter-router" or listener_connector_role == "edge"):
+                raise schema.ValidationError(
+                    "role='standalone' not allowed to connect to or accept connections from other routers.")
 
-            if router_mode and listener_role:
-                # Edge routers cannot have edge listeners. Other edge routers cannot make connections into this
-                # edge router
-                if router_mode == "edge" and listener_role == "edge":
-                    raise schema.ValidationError(
-                        "role='edge' only allowed with router mode='interior' for %s" % list_conn_entity)
+            # Only interior routers can have inter-router listeners/connectors
+            if router_mode != "interior" and listener_connector_role == "inter-router":
+                raise schema.ValidationError(
+                    "role='inter-router' only allowed with router mode='interior' for %s" % list_conn_entity)
+
+        if router_mode and listener_role:
+            # Edge routers cannot have edge listeners. Other edge routers cannot make connections into this
+            # edge router
+            if router_mode == "edge" and listener_role == "edge":
+                raise schema.ValidationError(
+                    "role='edge' only allowed with router mode='interior' for %s" % list_conn_entity)
 
     def is_configuration(self, entity_type):
         return entity_type and self.configuration_entity in entity_type.all_bases
