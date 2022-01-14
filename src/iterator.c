@@ -84,8 +84,8 @@ typedef enum {
 
 
 static bool  edge_mode = false;
-static char *my_area   = "";
-static char *my_router = "";
+static char *my_area   = 0;
+static char *my_router = 0;
 
 static const char    *SEPARATORS = "./";
 
@@ -156,6 +156,7 @@ static void parse_address_view(qd_iterator_t *iter)
         }
 
         if (qd_iterator_prefix(iter, "topo/")) {
+            assert(my_area && my_router);  // ensure qd_iterator_set_address called!
             if (qd_iterator_prefix(iter, "all/") || qd_iterator_prefix(iter, my_area)) {
                 if (qd_iterator_prefix(iter, "all/")) {
                     iter->prefix = QD_ITER_HASH_PREFIX_TOPOLOGICAL;
@@ -567,19 +568,18 @@ static void qd_iterator_free_hash_segments(qd_iterator_t *iter)
 
 void qd_iterator_set_address(bool _edge_mode, const char *area, const char *router)
 {
-    static char  buf[64];
-    static char *ptr   = buf;
-    size_t area_size   = strlen(area);
-    size_t router_size = strlen(router);
-
-    if (area_size + router_size + 1 >= sizeof(buf))
-        ptr = (char*) malloc(area_size + router_size + 2);
-
-    sprintf(ptr, "%s/%c%s/", area, '\0', router);
+    const size_t area_size   = strlen(area);
+    const size_t router_size = strlen(router);
 
     edge_mode = _edge_mode;
-    my_area   = ptr;
-    my_router = ptr + area_size + 2;
+
+    free(my_area);
+    my_area = qd_malloc(area_size + 2);  // include trailing '\'
+    sprintf(my_area, "%s/", area);
+
+    free(my_router);
+    my_router = qd_malloc(router_size + 2);
+    sprintf(my_router, "%s/", router);
 }
 
 
@@ -1142,4 +1142,15 @@ void qd_iterator_get_view_cursor(
     ptr->buffer    = iter->view_pointer.buffer;
     ptr->cursor    = iter->view_pointer.cursor;
     ptr->remaining = iter->view_pointer.remaining;
+}
+
+
+void qd_iterator_finalize(void)
+{
+    free(my_area);
+    free(my_router);
+
+    // unit tests need these zeroed
+    my_area = 0;
+    my_router = 0;
 }

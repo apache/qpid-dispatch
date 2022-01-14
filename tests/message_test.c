@@ -1167,9 +1167,9 @@ static char *test_check_stream_data_fanout(void *context)
 
     // "fan out" the message
     out_msg1 = qd_message_copy(in_msg);
-    qd_message_add_fanout(in_msg, out_msg1);
+    qd_message_add_fanout(out_msg1);
     out_msg2 = qd_message_copy(in_msg);
-    qd_message_add_fanout(in_msg, out_msg2);
+    qd_message_add_fanout(out_msg2);
 
     // walk the data streams for both messages:
     qd_message_stream_data_t *out_sd1[sd_count] = {0};
@@ -1291,9 +1291,9 @@ static char *test_check_stream_data_footer(void *context)
 
     // "fan out" the message
     out_msg1 = qd_message_copy(in_msg);
-    qd_message_add_fanout(in_msg, out_msg1);
+    qd_message_add_fanout(out_msg1);
     out_msg2 = qd_message_copy(in_msg);
-    qd_message_add_fanout(in_msg, out_msg2);
+    qd_message_add_fanout(out_msg2);
 
     qd_message_stream_data_t *stream_data = 0;
     bool done = false;

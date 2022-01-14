@@ -140,6 +140,12 @@ typedef struct {
  */
 
 /**
+ * Clean up any internal state in the iterator library.  This must be called at
+ * shutdown after all iterators have been released.
+ */
+void qd_iterator_finalize(void);
+
+/**
  * Set the area and router names for the local router.  These are used to match
  * my-area and my-router in address fields.  These settings are global and used
  * for all iterators in the process.

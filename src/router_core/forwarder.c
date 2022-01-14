@@ -180,7 +180,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     //
     // Add one to the message fanout. This will later be used in the qd_message_send function that sends out messages.
     //
-    qd_message_add_fanout(msg, out_dlv->msg);
+    qd_message_add_fanout(out_dlv->msg);
 
     //
     // Create peer linkage if the outgoing delivery is unsettled. This peer linkage is necessary to deal with dispositions that show up in the future.
@@ -439,7 +439,7 @@ static inline bool qdr_forward_edge_echo_CT(qdr_delivery_t *in_dlv, qdr_link_t *
  */
 static void qdr_forward_to_subscriber_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_delivery_t *in_dlv, qd_message_t *in_msg, bool receive_complete)
 {
-    qd_message_add_fanout(in_msg, 0);
+    qd_message_add_fanout(in_msg);
 
     //
     // Only if the message has been completely received, forward it to the subscription.

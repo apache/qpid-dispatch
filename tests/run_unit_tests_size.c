@@ -19,6 +19,7 @@
 
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/buffer.h"
+#include "qpid/dispatch/iterator.h"
 
 void qd_log_initialize(void);
 void qd_log_finalize(void);
@@ -52,6 +53,7 @@ int main(int argc, char** argv)
 
     qd_log_finalize();
     qd_alloc_finalize();
+    qd_iterator_finalize();
     return result;
 }
 

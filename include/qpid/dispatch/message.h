@@ -547,12 +547,10 @@ void qd_message_set_tag_sent(qd_message_t *msg, bool tag_sent);
 /**
  * Increase the fanout of the message by 1.
  *
- * @param in_msg A pointer to the inbound message.
- * @param out_msg A pointer to the outbound message or 0 if forwarding to a
- * local subscriber.
+ * @param out_msg A pointer to the message to be sent outbound or to a local
+ * subscriber.
  */
-void qd_message_add_fanout(qd_message_t *in_msg,
-                           qd_message_t *out_msg);
+void qd_message_add_fanout(qd_message_t *out_msg);
 
 /**
  * Disable the Q2-holdoff for this message.
