@@ -1274,12 +1274,9 @@ void qd_message_set_discard(qd_message_t *msg, bool discard)
 
 // update the buffer reference counts for a new outgoing message
 //
-void qd_message_add_fanout(qd_message_t *in_msg,
-                           qd_message_t *out_msg)
+void qd_message_add_fanout(qd_message_t *out_msg)
 {
-    if (!out_msg)
-        return;
-
+    assert(out_msg);
     qd_message_pvt_t *msg = (qd_message_pvt_t *)out_msg;
     msg->is_fanout = true;
 
