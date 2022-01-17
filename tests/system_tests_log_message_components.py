@@ -26,6 +26,12 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from qpid_dispatch_internal.compat import BINARY
 
+# force streaming in order to check that
+# freeing sent buffers does not lose fields
+# needed by logging
+MAX_FRAME = 1024
+BIG_BODY = 'X' * 1000000
+
 
 class RouterMessageLogTestBase(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
@@ -55,7 +61,17 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR'}),
 
-            ('listener', {'port': cls.tester.get_port(), 'messageLoggingComponents': 'all'}),
+            ('listener', {'port': cls.tester.get_port(),
+                          'maxFrameSize': MAX_FRAME,
+                          'messageLoggingComponents': 'all'}),
+
+            ('log', {'module': 'MESSAGE',
+                     'enable': 'trace+',
+                     'outputFile': 'QDR-message.log'}),
+            ('log', {'module': 'DEFAULT',
+                     'enable': 'info+',
+                     'includeSource': 'true',
+                     'outputFile': 'QDR.log'}),
 
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),
             ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
@@ -201,12 +217,12 @@ class LogMessageTest(MessagingHandler):
             application_properties['app-property'] = [10, 20, 30]
             application_properties['some-other'] = symbol("O_one")
             msg.properties = application_properties
-            msg.body = "Hello World!"
+            msg.body = ["Hello World!", BIG_BODY]
             event.sender.send(msg)
             self.sent = True
 
     def on_message(self, event):
-        if "Hello World!" == event.message.body:
+        if "Hello World!" == event.message.body[0]:
             self.message_received = True
         event.connection.close()
 
