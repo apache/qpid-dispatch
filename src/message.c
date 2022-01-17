@@ -2082,9 +2082,19 @@ static qd_message_depth_status_t qd_message_check_LH(qd_message_content_t *conte
     if (depth <= content->parse_depth || depth == QD_DEPTH_NONE)
         return QD_MESSAGE_DEPTH_OK; // We've already parsed at least this deep
 
+    // Is there any data to check?  This will also check for null messages, which
+    // are not valid:
+    //
     qd_buffer_t *buffer  = DEQ_HEAD(content->buffers);
-    if (!buffer) {
+    if (!buffer || qd_buffer_size(buffer) == 0) {
         return IS_ATOMIC_FLAG_SET(&content->receive_complete) ? QD_MESSAGE_DEPTH_INVALID : QD_MESSAGE_DEPTH_INCOMPLETE;
+    }
+
+    if (content->buffers_freed) {
+        // this is likely a bug: the caller is attempting to access a
+        // section after the start of the message has already been sent and
+        // released, rendering the parse_buffer/cursor position invalid.
+        return QD_MESSAGE_DEPTH_INVALID;
     }
 
     if (content->parse_buffer == 0) {
@@ -2162,12 +2172,6 @@ static qd_message_depth_status_t qd_message_check_LH(qd_message_content_t *conte
         // fallthrough
 
     case QD_DEPTH_BODY:
-        // In the case of multi-buffer streaming we may discard buffers that
-        // contain only the Body or Footer section for those messages that are
-        // through-only.  We really cannot validate those sections if that should happen
-        //
-        if (content->buffers_freed)
-            return QD_MESSAGE_DEPTH_OK;
 
         //
         // BODY (not optional, but proton allows it - see PROTON-2085)
@@ -2200,9 +2204,6 @@ static qd_message_depth_status_t qd_message_check_LH(qd_message_content_t *conte
         //
         // FOOTER (optional)
         //
-        if (content->buffers_freed) // see above
-            return QD_MESSAGE_DEPTH_OK;
-
         last_section = QD_DEPTH_ALL;
         rc = message_check_depth_LH(content, QD_DEPTH_ALL,
                                     FOOTER_LONG, FOOTER_SHORT, TAGS_MAP,
@@ -2834,61 +2835,6 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
 
     UNLOCK(content->lock);
     return result;
-}
-
-
-int qd_message_read_body(qd_message_t *in_msg, pn_raw_buffer_t* buffers, int length)
-{
-    qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
-    if (!(msg->cursor.buffer && msg->cursor.cursor)) {
-        qd_field_location_t  *loc     = qd_message_field_location(in_msg, QD_FIELD_BODY);
-        if (!loc || loc->tag == QD_AMQP_NULL)
-            return 0;
-        // TODO: need to actually determine this, could be different if vbin32 sent
-        int preamble = 5;
-        if (loc->offset + preamble < qd_buffer_size(loc->buffer)) {
-            msg->cursor.buffer = loc->buffer;
-            msg->cursor.cursor = qd_buffer_base(loc->buffer) + loc->offset + preamble;
-        } else {
-            msg->cursor.buffer = DEQ_NEXT(loc->buffer);
-            if (!msg->cursor.buffer) return 0;
-            msg->cursor.cursor = qd_buffer_base(msg->cursor.buffer) + ((loc->offset + preamble) - qd_buffer_size(loc->buffer));
-        }
-    }
-
-    qd_buffer_t   *buf    = msg->cursor.buffer;
-    unsigned char *cursor = msg->cursor.cursor;
-
-    // if we are at the end of the current buffer, try to move to the
-    // next buffer
-    if (cursor == qd_buffer_base(buf) + qd_buffer_size(buf)) {
-        buf = DEQ_NEXT(buf);
-        if (buf) {
-            cursor = qd_buffer_base(buf);
-            msg->cursor.buffer = buf;
-            msg->cursor.cursor = cursor;
-        } else {
-            return 0;
-        }
-    }
-
-    int count;
-    for (count = 0; count < length && buf; count++) {
-        buffers[count].bytes = (char*) qd_buffer_base(buf);
-        buffers[count].capacity = qd_buffer_size(buf);
-        buffers[count].size = qd_buffer_size(buf);
-        buffers[count].offset = cursor - qd_buffer_base(buf);
-        buffers[count].context = (uintptr_t) buf;
-        buf = DEQ_NEXT(buf);
-        if (buf) {
-            cursor = qd_buffer_base(buf);
-            msg->cursor.buffer = buf;
-            msg->cursor.cursor = cursor;
-        } else {
-            msg->cursor.cursor = qd_buffer_base(msg->cursor.buffer) + qd_buffer_size(msg->cursor.buffer);
-        }
-    }
-    return count;
 }
 
 
