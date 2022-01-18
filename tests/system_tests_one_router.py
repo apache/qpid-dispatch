@@ -308,7 +308,8 @@ class OneRouterTest(TestCase):
         super(OneRouterTest, cls).setUpClass()
         name = "test-router"
         policy_config_path = os.path.join(DIR, 'one-router-policy')
-        OneRouterTest.listen_port = cls.tester.get_port()
+        ##OneRouterTest.listen_port = cls.tester.get_port()
+        OneRouterTest.listen_port = 5672
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR', 'allowUnsettledMulticast': 'yes'}),
             ('policy', {'policyDir': policy_config_path,
@@ -416,7 +417,14 @@ class OneRouterTest(TestCase):
     def test_09_message_annotations(self) :
         addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
         OneRouterTest.closest_count += 1
-        test = MessageAnnotations(addr, n_messages=10)
+        test = MessageAnnotations(addr)
+        test.run()
+        self.assertIsNone(test.error)
+
+    def test_09_1_bad_message_annotations(self) :
+        addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
+        OneRouterTest.closest_count += 1
+        test = BadMessageAnnotations(addr)
         test.run()
         self.assertIsNone(test.error)
 
@@ -1993,15 +2001,10 @@ class ThreeAck (MessagingHandler) :
     # See PROTON-395 .
 
 
-class MessageAnnotations (MessagingHandler) :
-    def __init__(self,
-                 addr,
-                 n_messages
-                 ) :
-        super(MessageAnnotations, self) . __init__(prefetch=n_messages)
-        self.addr        = addr
-        self.n_messages  = n_messages
-
+class MessageAnnotations(MessagingHandler):
+    def __init__(self, addr) :
+        super(MessageAnnotations, self).__init__()
+        self.addr       = addr
         self.test_timer = None
         self.sender     = None
         self.receiver   = None
@@ -2012,9 +2015,11 @@ class MessageAnnotations (MessagingHandler) :
     def run(self) :
         Container(self).run()
 
-    def bail(self, travail) :
+    def bail(self, travail):
         self.bailing = True
         self.error = travail
+        if self.error:
+            print("message annotations failure: %s" % self.error, flush=True)
         self.send_conn.close()
         self.recv_conn.close()
         self.test_timer.cancel()
@@ -2031,75 +2036,172 @@ class MessageAnnotations (MessagingHandler) :
         self.test_timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
     def on_sendable(self, event) :
-
-        if event.sender.credit < 1 :
+        if self.n_sent == 5:
             return
+
         # No added annotations.
-        msg = Message(body=self.n_sent)
+        msg = Message(body="Message [0]")
         self.n_sent += 1
         self.sender.send(msg)
 
         # Add an annotation.
-        msg = Message(body=self.n_sent)
+        msg = Message(body="Message [1]")
         self.n_sent += 1
-        msg.annotations = {'x-opt-qd.ingress': 'i_changed_the_annotation'}
+        msg.annotations = {'x-opt-qd.ingress':
+                           'i_changed_the_annotation'}
         self.sender.send(msg)
 
-        # Try to supply an invalid type for trace.
-        msg = Message(body=self.n_sent)
+        # Supply a trace list.
+        msg = Message(body="Message [2]")
         self.n_sent += 1
-        msg.annotations = {'x-opt-qd.trace' : 45}
+        msg.annotations = {'x-opt-qd.trace': ['0/first-hop']}
         self.sender.send(msg)
 
-        # Add a value to the trace list.
-        msg = Message(body=self.n_sent)
+        # ensure obsolete MA are not propagated
+        msg = Message(body="Message [3]")
         self.n_sent += 1
-        msg.annotations = {'x-opt-qd.trace' : ['0/first-hop']}
+        msg.annotations = {'userA': 'A',
+                           'userB': 'B',
+                           'x-opt-qd.class': 9,
+                           'x-opt-qd.': 'X'}
+        self.sender.send(msg)
+
+        # supply a phase and stream
+        msg = Message(body="Message [4]")
+        self.n_sent += 1
+        msg.annotations = {'x-opt-qd.phase': 7,
+                           'x-opt-qd.stream': 1}
         self.sender.send(msg)
 
     def on_message(self, event) :
         ingress_router_name = '0/QDR'
         self.n_received += 1
-        if self.n_received >= self.n_messages :
-            self.bail(None)
-            return
 
         annotations = event.message.annotations
+        body = event.message.body
 
-        if self.n_received == 1 :
-            if annotations['x-opt-qd.ingress'] != ingress_router_name :
-                self.bail('Bad ingress router name on msg %d' % self.n_received)
+        if body == "Message[0]":
+            ingress = annotations.get('x-opt-qd.ingress')
+            if ingress != ingress_router_name:
+                self.bail('Msg[0] bad ingress router value: %s' % annotations)
                 return
-            if annotations['x-opt-qd.trace'] != [ingress_router_name] :
-                self.bail('Bad trace on msg %d.' % self.n_received)
-                return
-
-        elif self.n_received == 2 :
-            if annotations['x-opt-qd.ingress'] != 'i_changed_the_annotation' :
-                self.bail('Bad ingress router name on msg %d' % self.n_received)
-                return
-            if annotations['x-opt-qd.trace'] != [ingress_router_name] :
-                self.bail('Bad trace on msg %d .' % self.n_received)
+            trace = annotations.get('x-opt-qd.trace')
+            if trace != [ingress_router_name]:
+                self.bail('Msg[0] bad ingress trace value: %s' % annotations)
                 return
 
-        elif self.n_received == 3 :
-            # The invalid type for trace has no effect.
-            if annotations['x-opt-qd.ingress'] != ingress_router_name :
-                self.bail('Bad ingress router name on msg %d ' % self.n_received)
-                return
-            if annotations['x-opt-qd.trace'] != [ingress_router_name] :
-                self.bail('Bad trace on msg %d' % self.n_received)
+        elif body == "Message[1]":
+            ingress = annotations.get('x-opt-qd.ingress')
+            if ingress != 'i_changed_the_annotation':
+                self.bail('Msg[1] bad ingress router value: %s' % annotations)
                 return
 
-        elif self.n_received == 4 :
-            if annotations['x-opt-qd.ingress'] != ingress_router_name :
-                self.bail('Bad ingress router name on msg %d ' % self.n_received)
+        elif body == "Message[2]":
+            trace = annotations.get('x-opt-qd.trace')
+            if trace != ['0/first-hop', ingress_router_name]:
+                self.bail('Msg[2] bad ingress trace value: %s' % annotations)
                 return
-            # The sender prepended a value to the trace list.
-            if annotations['x-opt-qd.trace'] != ['0/first-hop', ingress_router_name] :
-                self.bail('Bad trace on msg %d' % self.n_received)
+
+        elif body == "Message[3]":
+            if 'x-opt-qd.class' in annotations:
+                self.bail('Msg[3] unexpected class value: %s' % annotations)
                 return
-            # success
+            if 'x-opt-qd.' in annotations:
+                self.bail('Msg[3] unexpected null value: %s' % annotations)
+                return
+            if (annotations.get('userA') != 'A' or annotations.get('userB') != 'B'):
+                self.bail('Msg[3] unexpected user values: %s' % annotations)
+                return
+
+        elif body == "Message[4]":
+            if annotations.get('phase') != 7:
+                self.bail('Msg[4] unexpected phase: %s' % annotations)
+                return
+            if annotations.get('stream') != 2:
+                self.bail('Msg[4] unexpected streaming: %s' % annotations)
+                return
+
+        if self.n_received == 5:
+            self.bail(None)
+
+
+class BadMessageAnnotations(MessagingHandler):
+    """
+    Ensure the router can handle incorrectly formatted message annotations
+    """
+    def __init__(self, addr) :
+        super(BadMessageAnnotations, self).__init__(auto_accept=False)
+        self.addr       = addr
+        self.test_timer = None
+        self.sender     = None
+        self.receiver   = None
+        self.n_sent     = 0
+        self.n_received = 0
+        self.bailing    = False
+        self.messages = [
+            Message(body="Bad Message 1",
+                    annotations={'x-opt-qd.to': 3.145}),
+            Message(body="Bad Message 2",
+                    annotations={'x-opt-qd.trace': 'stringy'}),
+            Message(body="Bad Message 3",
+                    annotations={'x-opt-qd.trace': ['0/rA', '0/rB', 12, '0/rC']}),
+            Message(body="Bad Message 4",
+                    annotations={'x-opt-qd.ingress': ['0/rA']}),
+            Message(body="Good Message",
+                    annotations={'key': ['value']})]
+
+    def run(self) :
+        Container(self).run()
+
+    def bail(self, travail):
+        self.bailing = True
+        self.error = travail
+        if self.error:
+            print("test failure: %s" % self.error, flush=True)
+        self.send_conn.close()
+        self.recv_conn.close()
+        self.test_timer.cancel()
+
+    def timeout(self):
+        self.bail("Timeout Expired")
+
+    def on_start(self, event):
+        self.send_conn = event.container.connect(self.addr)
+        self.recv_conn = event.container.connect(self.addr)
+
+        self.sender      = event.container.create_sender(self.send_conn, self.addr)
+        self.receiver    = event.container.create_receiver(self.recv_conn, self.addr)
+        self.test_timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+
+    def on_sendable(self, event) :
+        if self.n_sent == len(self.messages):
+            return
+
+        self.sender.send(self.messages[self.n_sent])
+        self.n_sent += 1
+
+    def on_message(self, event) :
+        self.n_received += 1
+        if event.message.body != "Good Message":
+            self.bail("Got a bad message: %s" % event.message)
+            return
+        if event.message.annotations.get('key') != ['value']:
+            self.bail("Got unexpected user annotations: %s" % event.message.annotations)
+            return
+        event.delivery.update(Delivery.ACCEPTED)
+        event.delivery.settle()
+
+        if self.n_received == len(self.messages):
+            self.bail(None)
+
+    def on_rejected(self, event):
+        self.n_received += 1
+        rc = event.delivery.remote.condition
+        if rc.name != "amqp:invalid-field":
+            self.bail("Unexpected rejection: %s:%s" % (rc.name,
+                                                       rc.description))
+            return
+        if self.n_received == len(self.messages):
             self.bail(None)
 
 

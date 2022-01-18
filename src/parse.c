@@ -689,6 +689,13 @@ int qd_parse_is_scalar(qd_parsed_field_t *field)
 }
 
 
+static inline bool qd_parse_is_string(const qd_parsed_field_t *field)
+{
+    return field->amqp.tag == QD_AMQP_STR8_UTF8
+        || field->amqp.tag == QD_AMQP_STR32_UTF8;
+}
+
+
 qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *key)
 {
     if (!key)
@@ -803,6 +810,8 @@ const char *qd_parse_annotations(
                         (*ma_to_override) = qd_parse_internal(&ma_fields, 0);
                         if (!qd_parse_ok((*ma_to_override)))
                             return (*ma_to_override)->parse_error;
+                        if (!qd_parse_is_string(*ma_to_override))
+                            return "to-override not a valid string type";
                     }
                 }
                 break;
@@ -816,6 +825,16 @@ const char *qd_parse_annotations(
                         (*ma_trace) = qd_parse_internal(&ma_fields, 0);
                         if (!qd_parse_ok((*ma_trace)))
                             return (*ma_trace)->parse_error;
+                        if (!qd_parse_is_list((*ma_trace)))
+                            return "trace annotation is not a list";
+                        bool all_str = true;
+                        for (qd_parsed_field_t *node = DEQ_HEAD((*ma_trace)->children);
+                             node && all_str;
+                             node = DEQ_NEXT(node)) {
+                            all_str = qd_parse_is_string(node);
+                        }
+                        if (!all_str)
+                            return "trace list contains non-string entries";
                     }
 
                 } else if (qd_buffer_field_equal(&key.value, (uint8_t*) QD_MA_PHASE, QD_MA_PHASE_LEN)) {
@@ -853,6 +872,8 @@ const char *qd_parse_annotations(
                         (*ma_ingress) = qd_parse_internal(&ma_fields, 0);
                         if (!qd_parse_ok((*ma_ingress)))
                             return (*ma_ingress)->parse_error;
+                        if (!qd_parse_is_string(*ma_ingress))
+                            return "ingress router not a string type";
                     }
                 }
                 break;

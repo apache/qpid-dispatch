@@ -677,13 +677,16 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
 
     const char *ma_error = qd_message_parse_annotations(msg);
     if (ma_error) {
-        qd_log(router->log_source, QD_LOG_DEBUG,
+        qd_log(router->log_source, QD_LOG_WARNING,
                "[C%"PRIu64"][L%"PRIu64"] Message rejected - invalid MA section: %s",
                conn->connection_id, qd_link_link_id(link), ma_error);
 
+        pn_condition_t *condition = pn_disposition_condition(pn_delivery_local(pnd));
+        pn_condition_set_name(condition, "amqp:invalid-field");
+        pn_condition_set_description(condition, ma_error);
+        pn_delivery_update(pnd, PN_REJECTED);
         qd_message_set_discard(msg, true);
         pn_link_flow(pn_link, 1);
-        pn_delivery_update(pnd, PN_REJECTED);
         if (receive_complete) {
             pn_delivery_settle(pnd);
             qd_message_free(msg);
