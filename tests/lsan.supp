@@ -37,6 +37,7 @@ leak:sys_mutex
 
 # leak of qd_message_t (DISPATCH-1699)
 leak:^qd_message_copy$
+leak:^qd_message_message_annotations
 
 # Ubuntu 16.04 (Xenial)
 #
