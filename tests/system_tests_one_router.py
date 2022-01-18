@@ -308,8 +308,7 @@ class OneRouterTest(TestCase):
         super(OneRouterTest, cls).setUpClass()
         name = "test-router"
         policy_config_path = os.path.join(DIR, 'one-router-policy')
-        ##OneRouterTest.listen_port = cls.tester.get_port()
-        OneRouterTest.listen_port = 5672
+        OneRouterTest.listen_port = cls.tester.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR', 'allowUnsettledMulticast': 'yes'}),
             ('policy', {'policyDir': policy_config_path,
