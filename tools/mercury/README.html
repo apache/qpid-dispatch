@@ -1,0 +1,493 @@
+<h1>Mercury</h1>
+
+<h2>interactive Golang Testing System for Qpid Dispatch Router</h2>
+
+<p><br/></p>
+
+<h3>Requirements</h3>
+
+<ol>
+<li>the go language on your machine</li>
+<li>installed proton and dispatch router software</li>
+</ol>
+
+
+<p><br/></p>
+
+<h3>Mercury Audience</h3>
+
+<p>Mercury is a tool for developers. The user has one or more installed versions of the Dispatch Router + Proton code and wantsto easily set up a complex network including interior routers, edge routers, and clients with nontrivial addressing patterns. Currently the creation of nontrivial networks is difficult enough that it discourages extensive testing during development.</p>
+
+<p>Especially Mercury provides a more interactive form of development testing, in which a developer easily creates a network, and easily iterates through a cycle of altering the network, running it, and seeing results from the run. At the end of such a &lsquo;session&rsquo; all of the developer&rsquo;s actions have been captured and will be reproducible later if desired. The captured session is a runnable script, and can be edited and used as a standardized test.</p>
+
+<p><br/></p>
+
+<h3>The C Client</h3>
+
+<p>The client is written in C to the proactor interface and has been heavily adapted from an original by Alan Conway. It needs to be built before Mercury will be able to do anything useful. Look at the directory mercury/clients, look at the file in there called &ldquo;m&rdquo;, adapt it for your system, and run it so you get an executable.</p>
+
+<p>Having Mercury&rsquo;s own client allows it to do things like:</p>
+
+<ol>
+<li>throttle send-speed with the &ldquo;&ndash;throttle&rdquo; argument</li>
+<li>Tell the client to form multiple links with multiple &ldquo;&ndash;address&rdquo; arguments.</li>
+<li>Tell it where to send its log files and so on.</li>
+</ol>
+
+
+<p><br/></p>
+
+<h3>Starting Mercury</h3>
+
+<p>The directory from which to run Mercury is also called mercury.  So it&rsquo;s mercury/mercury.  And an example of a simple run-script is &lsquo;example_run_script&rsquo;.
+In that script you will see that it sets an environment variable MERCURY_ROOT. On your system, please change this to something appropriate to your installation.</p>
+
+<p><br/></p>
+
+<h3>Getting Help</h3>
+
+<p>When Mercury is running, type &lsquo;help&rsquo;, and you will see a list of commands with brief descriptions. If you then type &ldquo;help COMMAND_NAME&rdquo; you will get detailed help for that command, plus its arguments.</p>
+
+<p><br/></p>
+
+<h3>Running the Test Files</h3>
+
+<p>There is a growing collection of tests scripts in the directory  mercury/mercury/tests.  They are designed to illustrate different aspects of Mercury. You can run them by using the &lsquo;r&rsquo; script in mercury/mercury and editing it to have the test script you want on the command line, or you can just start Mercury and type &ldquo;inc tests/05_addresses&rdquo; or whatever.</p>
+
+<p>The test scripts includes one other file with the &lsquo;inc&rsquo; command &ndash; a file called &lsquo;versions&rsquo; which defines two different versions of the router code.</p>
+
+<p>You will also need to change that &lsquo;versions&rsquo; file to point to one or more versions that you have installed on your system, and then change the &lsquo;test&rsquo; file to only use your versions.  (If you only define one version, then it will be the default and will get used whenever you create a new router if you just don&rsquo;t use the &lsquo;version&rsquo; arg in the &lsquo;routers&rsquo; command.</p>
+
+<p><br/></p>
+
+<h3>Debugging Startup</h3>
+
+<p>When Mercury starts up a router, it saves all the information you need to reproduce the same startup by hand. The router config file, the environment variables that are set, and the command line that is used are all saved in MERCURY_ROOT/mercury/sessions/session_TIMESTAMP/config. Router config files have the same names as their routers.</p>
+
+<p>Here is an example:</p>
+
+<pre><code>/home/your_name/mercury/mercury/sessions/session\_2019\_03\_05\_2115/config/
+    |-- A.conf
+    |-- B.conf
+    |-- command_line
+    |-- environment_variables
+</code></pre>
+
+<p>If you have a router fail to start, or it starts up and is immediately defunct, use this information to reproduce the same startup by hand, and see what&rsquo;s happening.</p>
+
+<p><br/></p>
+
+<h3>Running a test &lsquo;By Hand&rsquo;</h3>
+
+<p>One nice way to use Mercury is to use it to run a test for you and then see how it did that, so you can run the same setup &lsquo;by hand&rsquo;.  You can look in the session/config directory and see all the environment variables it set and the command lines it used for the routers and the clients.</p>
+
+<p>The command lines for the routers will point to the config files that it created, and those config files have ports that were chosen because they were free at that moment. It is possible that they will <em>no longer</em> be free when you run the test &lsquo;by hand&rsquo; if you have other stuff running on your system. But unlikely.</p>
+
+<p><br/></p>
+
+<h3>Versions</h3>
+
+<p>A &lsquo;version&rsquo; represents a version of the dispatch router + proton code. The idea is that you have as many dispatch+proton installations as you like on your system, you define a Mercury version for each one of them, and then when you create a new router in Mercury you can tell it which version you want that router to use. Mercury will use the executable that corresponds to that version, and make it point to the correct libraries.</p>
+
+<p>You can define a version in one of two different ways</p>
+
+<ol>
+<li><p>You can provide the root directories for the proton and dispatch installation, and let Mercury calculate from them all the paths it needs, or</p></li>
+<li><p>You can directly provide all the paths. This second option is meant for situations where your installation is different somehow from what Mercury expects.</p></li>
+</ol>
+
+
+<p>To define a version with roots, use the &lsquo;version_roots&rsquo; command something like this:  (Here we define two different versions.)</p>
+
+<pre><code>version_roots name latest dispatch /home/your_name/latest/install/dispatch proton /home/your_name/latest/install/proton
+version_roots name later  dispatch /home/your_name/later/install/dispatch  proton /home/your_name/later/install/proton
+</code></pre>
+
+<p>After defining those two versions, you can define a two-router network using those two different versions this way:</p>
+
+<pre><code>routers 1
+routers 1 version later
+</code></pre>
+
+<p>The first &lsquo;routers&rsquo; command does not specify a version, so it will get the default version, which is the first one that you defined.  (In this example, &lsquo;latest&rsquo;. )</p>
+
+<p>The second &lsquo;routers&rsquo; command does specify a version &lsquo;later&rsquo;.
+Both of these commands created 1 router apiece.</p>
+
+<p>Now connect them with the command</p>
+
+<pre><code>connect A B
+</code></pre>
+
+<p>And you have a heterogeneous network!</p>
+
+<p><br/></p>
+
+<h3>Sessions</h3>
+
+<p>Each time Mercury starts up, it defines a new session. The name of the session is  &ldquo;session_YEAR_MONTH_DAY_HOURMINUTE&rdquo;, for example: session_2019_03_08_0336".  A directory is made with that name as a subdirectory of mercury/mercury/sessions, and all information from that session is stored in there.</p>
+
+<p>To replay a session, you just use the mercury log file name on the command line as the script for Mercury to run.
+For example (see example of whole startup script, above) :</p>
+
+<pre><code>go run ./*.go  ~/mercury/mercury/sessions/session_2019_03_08_0659/mercury_log
+</code></pre>
+
+<p>And it will replay your session.  The only thing is, that sessin-recording will have a &lsquo;quit&rsquo; command at the end that you might want to delete first.</p>
+
+<p><br/></p>
+
+<h3>Client Status Reporting</h3>
+
+<p>When the network creates clients it gives each one of them their own individual log file in the directory SESSION/logs .  When the network starts running, a ticker is started that expires every 10 seconds. Every time it expires, a goroutine in the network code checks each clients status as written in the log files.</p>
+
+<p>Right now the only notification you get in Mercury is when the client &lsquo;completes&rsquo; &ndash; i.e. it has sent or received all the messages it was expecting to send or receive.</p>
+
+<p><br/></p>
+
+<h3>Router Status Reporting</h3>
+
+<p>TODO</p>
+
+<p><br/></p>
+
+<h3>Creating many clients with different addresses</h3>
+
+<p>You can quickly create a large number of clients, each with its own address, with a command like this:</p>
+
+<p>send A count 100 address my_address_%d</p>
+
+<p>That will add 100 sender clients to router A, and each one will have its own address. Mercury will notice the &ldquo;%d&rdquo; in the address, and it will replace that string with numbers that start at 1 and count up. So you will get  &ldquo;my_address_1, my_address_2, &hellip; my_address_100&rdquo;.</p>
+
+<p>Then you can do the same thing with receivers:</p>
+
+<p>recv C count 100 address my_address_%d</p>
+
+<p>So now you will have 100 sender-receiver pairs, each connected by a unique address.</p>
+
+<p>If you want the address-numbers to start from some number other than 1, you can control that also:</p>
+
+<p>send B count 100 address my_address_%d  start_at 101</p>
+
+<p><br/></p>
+
+<h3>Distributing Clients over Routers</h3>
+
+<p>TODO</p>
+
+<p><br/></p>
+
+<h3>One-Command Networks</h3>
+
+<p>There are some network topologies that we tend to use a lot, and Mercury gives you a way to create each of these with a single command. Here are some examples to try:</p>
+
+<pre><code>linear 3
+mesh   4
+ring   6
+random_network 6
+teds_diamond
+</code></pre>
+
+<p><br/></p>
+
+<h3>Repeatable Randomness</h3>
+
+<p>TODO</p>
+
+<p><br/></p>
+
+<h3>Command Theories of Operation</h3>
+
+<p>Here are more detailed explanations for each command.
+<br/>
+But first, a word about the commands in general.
+<br/>
+Most of the commands process their command lines the same way.</p>
+
+<ol>
+<li>They look for named arguments, and take them all.</li>
+<li>They look at whatever is left and assume that those must be &lsquo;unlabeled&rsquo; arguments.</li>
+<li>There can be at most two unlabeled args: one string and one int. Mercury will know which is which as long as your string doesn&rsquo;t look like an int. These are used for the (very common) cases where you almost always use one arg for a particular command, so you can just say, for example, &ldquo;sleep 5&rdquo; instead of &ldquo;sleep seconds 5&rdquo; and it will do what you want.</li>
+<li>All commands that have unlabelable args will tell you what they are when you give the command:   help COMMAND</li>
+<li>All arguments of commands can occur in any order. Order does not matter.</li>
+</ol>
+
+
+<p><br/>
+OK. Now, here are more detailed explanations for each command.</p>
+
+<p><br/></p>
+
+<h4>connect</h4>
+
+<p>Connect two routers that you have already created.
+    Example: connect A B   <br/>
+This will cause router A to initiate a connection with router B.
+This command does not parse its arguments the way most of them do, so there are no named arguments. Just the two router names.</p>
+
+<p><br/>
+typical usage : connect A B</p>
+
+<p><br/></p>
+
+<h4>console_ports</h4>
+
+<p>Every router (even edge routers) has an HTTP-enabled listener for the console. The A-router (the first core router created) always uses the special-magic port 5673 for this (which will be a problem if you run two Mercury tests at once on one system) but all the other routers use whatever free ports they could find. This command lists all the console ports that are available, so you can attach Ernie&rsquo;s Console if you like.</p>
+
+<p><br/>
+typical usage : console_ports</p>
+
+<p><br/></p>
+
+<h4>echo</h4>
+
+<p>This command has its own way of processing its command line, and does not have any named arguments.
+It just echoes the whole line (not including the word &lsquo;echo&rsquo; to the console.
+You can use this as a way of documenting scripts, so that the user can see what is going on as the script runs.</p>
+
+<p><br/>
+typical usage :   echo This line will be echoed to the console!</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>echo_all</h4>
+
+<p>Once you issue this command, all further commands are echoed to the console. ( Until you issue &ldquo;echo_all off&rdquo; . )  This is handy if you are using a Mercury script to do a demo and you want people to be able to see the commands.  ( In that case, you should also look at the &lsquo;prompt&rsquo; command. )</p>
+
+<p><br/>
+typical usage :   echo_all</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>edges</h4>
+
+<p>Create edge routers attached to a core router. You can specify how many edge routers you want and which router they should be attached to with the unlabelable &ldquo;count&rdquo; and &ldquo;router&rdquo; args. You can also specify which version of the code they should use, with the &ldquo;version&rdquo; arg, if you have defined a version.</p>
+
+<p><br/>
+typical usage : edges 10 A version VERSION_NAME</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>failsafe</h4>
+
+<p>This command tells the system how many seconds to wait (after reporting on clients begins) until it should shut down with failure. There are ( or will be ) other ways to shut down, but you can use this to specify a shutdown time in case all else fails.</p>
+
+<p><br/>
+typical usage : failsafe 60</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>help</h4>
+
+<p>Print the names of all commands and give a brief description of each, or print a detailed description of a single command, including descriptions of each argument.</p>
+
+<p><br/>
+typical usage : help     ~OR~      help COMMAND_NAME</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>inc</h4>
+
+<p>Include another file at this point in your script or interactive session. If you are doing an interactive session, this is a nice way to avoid having to type &lsquo;boilerplate&rsquo; commands that never change, for example the commands that define your various versions of the dispatch and router code to be tested.</p>
+
+<p><br/>
+typical usage : inc FILENAME</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>kill</h4>
+
+<p>Kill a router!   Useful in stress testing. Just gives its name and BOOM. Dead router.</p>
+
+<p><br/>
+typical usage :  kill ROUTER_NAME</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>kill_and_restart</h4>
+
+<p>Kill a router and immediately restart it. Useful in stress-testing.</p>
+
+<p><br/>
+typical usage : kill_and_restart ROUTER_NAME</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>linear</h4>
+
+<p>This is a network-command. It takes an unlabelable arg &lsquo;count&rsquo; to tell how large the network should be, and then makes a network of that size, whose topology is linear. You can also specify what version you would like to use for the routers with  &lsquo;version VERSION_NAME&rsquo;  or you can say &lsquo;version RANDOM&rsquo; to tell Mercury to select randomly from your set of versions as it creates each router.</p>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>mesh</h4>
+
+<p>Network command that create a full-connected graph of routers, as large as you wish. Don&rsquo;t go nuts. Fully-connected graphs gets lots of connections proportional to N<sup>2</sup>.</p>
+
+<p><br/>
+typical usage :  mesh N</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>prompt</h4>
+
+<p>Turns prompting on or off (default on), which means that Mercury stops after each command and asks you to hit enter. If you are doing a demo from a prepared script, you should use this plus the echo_all command, so your audience will be able to see each command before it executes.</p>
+
+<p><br/>
+typical usage : prompt</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>quit</h4>
+
+<p>Halts Mercury.</p>
+
+<p><br/>
+typical usage : quit</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>random_network</h4>
+
+<p>This is a network-command. Tell it how many nodes you want, and it will create a randomly-connected network with that many nodes. It just starts making connections between random pairs of routers, and stops as soon as it has a connected graph. The only rule is that you cannot have more than one connection between any two routers.</p>
+
+<p><br/>
+typical usage :  random_network  6</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>recv</h4>
+
+<p>Create one or more receivers on one or more routers, all using the same version of code, or all selecting randomly.  There are lots of arguments &ndash; look at &ldquo;help recv&rdquo;.  Below is an example in which we create 100 receivers distributed across all edge-routers connected to router A, using random versions of the code, and each expecting 1000 messages. And there 5 addresses per receiver, i.e. receiver_1 gets addr_1 to addr_5, receiver_2 gets addr_6 to addr_10, etc.</p>
+
+<p><br/>
+typical usage : recv count 100 apc 5 n_messages 1000 edges A</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>ring</h4>
+
+<p>This is a network-command. Tell it how many nodes you want, and it will create a ring-shaped network of that size.</p>
+
+<p><br/>
+typical usage : ring 5</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>routers</h4>
+
+<p>Create some routers. You can specify how many, and what version of the code they should use. Version will default to the first one that was defined, if you don&rsquo;t say anything.</p>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>run</h4>
+
+<p>No args. This is what starts things running. Sometimes it&rsquo;s best to issue this command more than once in the course of a test. For example, you make a network of a bunch of routers. Issue this command to start them going, so they will take care of their inter-router chatter. <em>Then</em> make the receivers, and issue &lsquo;run&rsquo; again, so that the routers will learn about all the addresses. Then make the senders and call run one more time, to start them up. Each time, the clients or senders that were not already running get started when you call &lsquo;run&rsquo;.</p>
+
+<p><br/>
+typical usage : run</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>seed</h4>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>send</h4>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>sleep</h4>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>start_client_status_check</h4>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>teds_diamond</h4>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>verbose</h4>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/></p>
+
+<h4>version_roots</h4>
+
+<p><br/>
+typical usage :</p>
+
+<p><br/></p>
+
+<p><br/>
+<br/></p>

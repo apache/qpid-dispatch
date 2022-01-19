@@ -1,0 +1,15 @@
+#! /usr/bin/bash
+
+
+# NOTE -- change MERCURY_ROOT to suit your installation.
+
+export MERCURY_ROOT=${HOME}/qpid-dispatch/tools/mercury
+export GOPATH=${MERCURY_ROOT}
+
+
+go run ./*.go ./example_script
+
+
+
+
+
