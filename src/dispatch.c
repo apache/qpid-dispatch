@@ -195,8 +195,16 @@ static void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char 
 
 qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 {
+    char *router_id = qd_entity_opt_string(entity, "id", 0); QD_ERROR_RET();
+    if (router_id) {
+        if (strlen(router_id) > QD_ROUTER_ID_MAX) {
+            free(router_id);
+            return qd_error(QD_ERROR_VALUE, "Router ID exceeds maximum length of %d characters", QD_ROUTER_ID_MAX);
+        }
+    }
     qd_dispatch_set_router_default_distribution(qd, qd_entity_opt_string(entity, "defaultDistribution", 0)); QD_ERROR_RET();
-    qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "id", 0)); QD_ERROR_RET();
+    qd_dispatch_set_router_id(qd, router_id);
+
     qd->router_mode = qd_entity_get_long(entity, "mode"); QD_ERROR_RET();
     if (!qd->router_id) {
         char *mode = 0;
@@ -206,7 +214,7 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
         case QD_ROUTER_MODE_EDGE:       mode = "Edge_";       break;
         case QD_ROUTER_MODE_ENDPOINT:   mode = "Endpoint_";   break;
         }
-        
+
         qd->router_id = (char*) malloc(strlen(mode) + QD_DISCRIMINATOR_SIZE + 2);
         strcpy(qd->router_id, mode);
         qd_generate_discriminator(qd->router_id + strlen(qd->router_id));
