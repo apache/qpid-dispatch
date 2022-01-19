@@ -244,3 +244,47 @@ class RouterTestIdFailWhiteSpace(TestCase):
         if "AttributeError" not in out:
             print("output: ", out)
             assert False, "AttributeError not in process output"
+
+
+class RouterTestIdFailTooLong(TestCase):
+    """
+    This test case sets up a router using a configuration router id
+    that is illegal (too long). The router should not start.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(RouterTestIdFailTooLong, cls).setUpClass()
+        cls.name = "test-router-id-too-long"
+
+    def __init__(self, test_method):
+        TestCase.__init__(self, test_method)
+
+    @classmethod
+    def tearDownClass(cls):
+        super(RouterTestIdFailTooLong, cls).tearDownClass()
+
+    def test_verify_reject_too_long_id(self):
+        """
+        Writes illegal config, runs router, examines console output
+        """
+        bad_name = 'X' * 128  # max valid name < 128 characters
+        parent_path = os.path.dirname(os.getcwd())
+        conf_path = os.path.join(parent_path, "setUpClass/test-router-long-id.conf")
+        with open(conf_path, 'w') as router_conf:
+            router_conf.write("router { \n")
+            router_conf.write("    id: %s \n" % bad_name)
+            router_conf.write("}")
+        lib_include_path = os.path.join(os.environ["QPID_DISPATCH_HOME"], "python")
+        p = self.popen(
+            ['qdrouterd', '-c', conf_path, '-I', lib_include_path],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_FAIL,
+            universal_newlines=True)
+        out = p.communicate(timeout=TIMEOUT)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+
+        if p.returncode == 0 or "exceeds the maximum allowed length" not in out:
+            print("output:\n [%s]\n" % out, flush=True)
+            assert False, "Router accepted an ID of illegal length"

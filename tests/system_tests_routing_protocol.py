@@ -211,6 +211,8 @@ class HugeRouterIdTest(TestCase):
 
     Deploy a mesh of four routers with ids > 64 octets in length.
     """
+    MAX_ID_LEN = 127
+
     @classmethod
     def setUpClass(cls):
         super(HugeRouterIdTest, cls).setUpClass()
@@ -235,27 +237,27 @@ class HugeRouterIdTest(TestCase):
         ir_port_C = cls.tester.get_port()
         ir_port_D = cls.tester.get_port()
 
-        name_suffix = "." + "X" * 128
+        name_suffix = "X" * (cls.MAX_ID_LEN - 2)
 
-        cls.RA_name = 'A' + name_suffix
+        cls.RA_name = 'A.' + name_suffix
         cls.RA = router(cls.RA_name,
                         [('listener', {'role': 'inter-router', 'port': ir_port_A}),
                          ('connector', {'role': 'inter-router', 'port': ir_port_B}),
                          ('connector', {'role': 'inter-router', 'port': ir_port_C}),
                          ('connector', {'role': 'inter-router', 'port': ir_port_D})])
 
-        cls.RB_name = 'B' + name_suffix
+        cls.RB_name = 'B.' + name_suffix
         cls.RB = router(cls.RB_name,
                         [('listener', {'role': 'inter-router', 'port': ir_port_B}),
                          ('connector', {'role': 'inter-router', 'port': ir_port_C}),
                          ('connector', {'role': 'inter-router', 'port': ir_port_D})])
 
-        cls.RC_name = 'C' + name_suffix
+        cls.RC_name = 'C.' + name_suffix
         cls.RC = router(cls.RC_name,
                         [('listener', {'role': 'inter-router', 'port': ir_port_C}),
                          ('connector', {'role': 'inter-router', 'port': ir_port_D})])
 
-        cls.RD_name = 'D' + name_suffix
+        cls.RD_name = 'D.' + name_suffix
         cls.RD = router(cls.RD_name,
                         [('listener', {'role': 'inter-router', 'port': ir_port_D})])
 
