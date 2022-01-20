@@ -20,6 +20,10 @@
  */
 
 
+
+// QD_DISCRIMINATOR_SIZE includes null terminator byte. The
+// strlen() of a discriminator will be 15
+
 #define QD_DISCRIMINATOR_SIZE 16
 
 /**
