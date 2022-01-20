@@ -18,7 +18,7 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-fontawesome": "^1.7.1",
-    "react-router-dom": "^5.2.0",
+    "react-router-dom": "^6.2.1",
     "rhea": "^2.0.4",
     "topojson-client": "^3.1.0"
   },
