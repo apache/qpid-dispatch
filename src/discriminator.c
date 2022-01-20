@@ -20,6 +20,8 @@
 #include "qpid/dispatch/discriminator.h"
 
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
 void qd_generate_discriminator(char *string)
 {
@@ -36,6 +38,6 @@ void qd_generate_discriminator(char *string)
         string[cursor++] = table[(rnd3 >> (idx * 6)) & 63];
     }
     string[cursor] = '\0';
-
+    assert(strlen(string) < QD_DISCRIMINATOR_SIZE);
 }
 

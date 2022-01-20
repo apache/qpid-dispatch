@@ -84,28 +84,47 @@ static char* disambiguated_link_name(qdr_connection_info_t *conn, char *original
 
 /**
  * Generate a temporary routable address for a destination connected to this
- * router node.
+ * router node. Caller must free() return value when done.
  */
-static void qdr_generate_temp_addr(qdr_core_t *core, char *buffer, size_t length)
+static char *qdr_generate_temp_addr(qdr_core_t *core)
 {
+    static const char edge_template[] = "amqp:/_edge/%s/temp.%s";
+    static const char topo_template[] = "amqp:/_topo/%s/%s/temp.%s";
+    const size_t      max_template    = 19;  // printable chars
     char discriminator[QD_DISCRIMINATOR_SIZE];
+
     qd_generate_discriminator(discriminator);
-    if (core->router_mode == QD_ROUTER_MODE_EDGE)
-        snprintf(buffer, length, "amqp:/_edge/%s/temp.%s", core->router_id, discriminator);
-    else
-        snprintf(buffer, length, "amqp:/_topo/%s/%s/temp.%s", core->router_area, core->router_id, discriminator);
+    size_t len = max_template + QD_DISCRIMINATOR_SIZE +
+        strlen(core->router_id) + strlen(core->router_area) + 1;
+
+    int rc;
+    char *buffer = qd_malloc(len);
+    if (core->router_mode == QD_ROUTER_MODE_EDGE) {
+        rc = snprintf(buffer, len, edge_template, core->router_id, discriminator);
+    } else {
+        rc = snprintf(buffer, len, topo_template, core->router_area, core->router_id, discriminator);
+    }
+    (void)rc; assert(rc < len);
+    return buffer;
 }
 
 
 /**
  * Generate a temporary mobile address for a producer connected to this
- * router node.
+ * router node. Caller must free() return value when done.
  */
-static void qdr_generate_mobile_addr(qdr_core_t *core, char *buffer, size_t length)
+static char *qdr_generate_mobile_addr(qdr_core_t *core)
 {
+    static const char mobile_template[] = "amqp:/_$temp.%s";
+    const size_t      max_template      = 13; // printable chars
     char discriminator[QD_DISCRIMINATOR_SIZE];
+
     qd_generate_discriminator(discriminator);
-    snprintf(buffer, length, "amqp:/_$temp.%s", discriminator);
+    size_t len = max_template + QD_DISCRIMINATOR_SIZE + 1;
+    char *buffer = qd_malloc(len);
+    int rc = snprintf(buffer, len, mobile_template, discriminator);
+    (void)rc; assert(rc < len);
+    return buffer;
 }
 
 
@@ -182,7 +201,6 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
         if (!accept_dynamic)
             return 0;
 
-        char temp_addr[200];
         bool generating = true;
         while (generating) {
             //
@@ -190,10 +208,11 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
             // address collides with a previously generated address (this should be _highly_
             // unlikely).
             //
+            char *temp_addr = 0;
             if (dir == QD_OUTGOING)
-                qdr_generate_temp_addr(core, temp_addr, 200);
+                temp_addr = qdr_generate_temp_addr(core);
             else
-                qdr_generate_mobile_addr(core, temp_addr, 200);
+                temp_addr = qdr_generate_mobile_addr(core);
 
             qd_iterator_t *temp_iter = qd_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
             qd_hash_retrieve(core->addr_hash, temp_iter, (void**) &addr);
@@ -205,6 +224,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
                 generating = false;
             }
             qd_iterator_free(temp_iter);
+            free(temp_addr);
         }
         return addr;
     }
