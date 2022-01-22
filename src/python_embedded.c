@@ -412,14 +412,15 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field)
     uint8_t   tag    = qd_parse_tag(field);
     switch (tag) {
       case QD_AMQP_NULL:
-        Py_INCREF(Py_None);
         result = Py_None;
+        Py_INCREF(result);
         break;
 
       case QD_AMQP_BOOLEAN:
       case QD_AMQP_TRUE:
       case QD_AMQP_FALSE:
         result = qd_parse_as_uint(field) ? Py_True : Py_False;
+        Py_INCREF(result);
         break;
 
       case QD_AMQP_UBYTE:
