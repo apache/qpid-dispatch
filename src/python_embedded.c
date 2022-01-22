@@ -57,15 +57,22 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
     if (python_pkgdir)
         dispatch_python_pkgdir = PyUnicode_FromString(python_pkgdir);
 
-    qd_python_lock_state_t ls = qd_python_lock();
     Py_Initialize();
+#if PY_VERSION_HEX < 0x03070000
+    PyEval_InitThreads(); // necessary for Python 3.6 and older versions
+#endif
     qd_python_setup();
-    qd_python_unlock(ls);
+    PyEval_SaveThread(); // drop the Python GIL; we will reacquire it in other threads as needed
+    qd_python_lock_state_t lk = qd_python_lock();
+    qd_python_setup();
+    qd_python_unlock(lk);
 }
 
 
 void qd_python_finalize(void)
 {
+    (void) PyGILState_Ensure(); // not qd_python_lock(), because that function has to be paired with an _unlock
+
     sys_mutex_free(ilock);
     Py_DECREF(dispatch_module);
     dispatch_module = 0;
@@ -900,11 +907,12 @@ qd_python_lock_state_t qd_python_lock(void)
 {
     sys_mutex_lock(ilock);
     lock_held = true;
-    return 0;
+    return PyGILState_Ensure();
 }
 
 void qd_python_unlock(qd_python_lock_state_t lock_state)
 {
+    PyGILState_Release(lock_state);
     lock_held = false;
     sys_mutex_unlock(ilock);
 }

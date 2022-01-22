@@ -1450,7 +1450,9 @@ void qd_server_free(qd_server_t *qd_server)
     sys_mutex_free(qd_server->lock);
     sys_mutex_free(qd_server->conn_activation_lock);
     sys_cond_free(qd_server->cond);
+    qd_python_lock_state_t ls = qd_python_lock();
     Py_XDECREF((PyObject *)qd_server->py_displayname_obj);
+    qd_python_unlock(ls);
     free(qd_server);
 }
 
