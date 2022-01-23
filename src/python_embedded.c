@@ -639,6 +639,11 @@ static uint64_t qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, 
     IoAdapter *self = (IoAdapter*) context;
     *error = 0;
 
+    if (self->handler == NULL) {
+        *error = qdr_error(QD_AMQP_COND_INTERNAL_ERROR, "Router is shutting down");
+        return PN_REJECTED;
+    }
+
     //
     // Parse the message through the body and exit if the message is not well formed.
     //
