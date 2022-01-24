@@ -106,6 +106,7 @@ typedef enum {
 
 /** @name Message Annotation Headers */
 /// @{
+#define QD_ROUTER_ANNOTATIONS_VERSION     1
 extern const char * const QD_MA_PREFIX;
 extern const char * const QD_MA_INGRESS;  ///< Ingress Router
 extern const char * const QD_MA_TRACE;    ///< Trace
@@ -170,6 +171,7 @@ extern const char * const QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY;
 extern const char * const QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY;
 extern const char * const QD_CONNECTION_PROPERTY_ADAPTOR_KEY;
 extern const char * const QD_CONNECTION_PROPERTY_TCP_ADAPTOR_VALUE;
+extern const char * const QD_CONNECTION_PROPERTY_ANNOTATIONS_VERSION_KEY;
 /// @}
 
 /** @name Terminus Addresses */

@@ -1310,7 +1310,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
             const size_t num_items = pn_data_get_map(props);
             int props_found = 0;  // once all props found exit loop
             pn_data_enter(props);
-            for (int i = 0; i < num_items / 2 && props_found < 3; ++i) {
+            for (int i = 0; i < num_items / 2 && props_found < 4; ++i) {
                 if (!pn_data_next(props)) break;
                 if (pn_data_type(props) != PN_SYMBOL) break;  // invalid properties map
                 pn_bytes_t key = pn_data_get_symbol(props);
@@ -1342,6 +1342,16 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                         size_t vlen = MIN(sizeof(rversion) - 1, vdata.size);
                         strncpy(rversion, vdata.start, vlen);
                         rversion[vlen] = 0;
+                    }
+
+                } else if ((key.size == strlen(QD_CONNECTION_PROPERTY_ANNOTATIONS_VERSION_KEY)
+                           && strncmp(key.start, QD_CONNECTION_PROPERTY_ANNOTATIONS_VERSION_KEY, key.size) == 0)) {
+                    props_found += 1;
+                    if (!pn_data_next(props)) break;
+                    if (is_router && pn_data_type(props) == PN_INT) {
+                        const int annos_version = (int) pn_data_get_int(props);
+                        qd_log(router->log_source, QD_LOG_DEBUG,
+                               "Remote router annotations version: %d", annos_version);
                     }
 
                 } else {

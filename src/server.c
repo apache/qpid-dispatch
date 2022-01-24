@@ -489,6 +489,14 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
     }
 
     if (config) {
+
+        if (strcmp(config->role, "inter-router") == 0 || strcmp(config->role, "edge") == 0) {
+            pn_data_put_symbol(pn_connection_properties(conn),
+                               pn_bytes(strlen(QD_CONNECTION_PROPERTY_ANNOTATIONS_VERSION_KEY),
+                                        QD_CONNECTION_PROPERTY_ANNOTATIONS_VERSION_KEY));
+            pn_data_put_int(pn_connection_properties(conn), QD_ROUTER_ANNOTATIONS_VERSION);
+        }
+
         qd_failover_list_t *fol = config->failover_list;
         if (fol) {
             pn_data_put_symbol(pn_connection_properties(conn),

@@ -381,5 +381,122 @@ class OpenPropertiesBadConfigTest(TestCase):
                 self.assertTrue(self._find_in_output(router.outfile + '.out', err))
 
 
+def get_log_line(filename, pattern):
+    with open(filename, 'r') as out_file:
+        for line in out_file:
+            if pattern in line:
+                return line
+    return None
+
+
+class OpenPropertiesInterRouterTest(TestCase):
+    """
+    Verifies Open Properties passed between routers
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start a router and a messenger"""
+        super(OpenPropertiesInterRouterTest, cls).setUpClass()
+
+        ir_port = cls.tester.get_port()
+        cls.RouterA = cls.tester.qdrouterd("RouterA",
+                                           Qdrouterd.Config([
+                                               ('router', {'mode': 'interior',
+                                                           'id': 'RouterA'}),
+                                               ('listener', {'port':
+                                                             cls.tester.get_port()}),
+                                               ('listener', {'role':
+                                                             'inter-router',
+                                                             'port':
+                                                             ir_port})]),
+                                           wait=False)
+        cls.RouterB = cls.tester.qdrouterd("RouterB",
+                                           Qdrouterd.Config([
+                                               ('router', {'mode': 'interior',
+                                                           'id': 'RouterB'}),
+                                               ('listener', {'port':
+                                                             cls.tester.get_port()}),
+                                               ('connector', {'role':
+                                                              'inter-router',
+                                                              'port':
+                                                              ir_port})]),
+                                           wait=True)
+        cls.RouterA.wait_router_connected('RouterB')
+        cls.RouterB.wait_router_connected('RouterA')
+
+    def test_01_check_annotations(self):
+        """
+        Verify the router annotations version
+        """
+        a_logfile = self.RouterA.logfile_path
+        b_logfile = self.RouterB.logfile_path
+        self.RouterA.teardown()
+        self.RouterB.teardown()
+
+        log_msg = "ROUTER (debug) Remote router annotations version: 1"
+        line = get_log_line(a_logfile, log_msg)
+        self.assertIsNotNone(line)
+
+        line = get_log_line(b_logfile, log_msg)
+        self.assertIsNotNone(line)
+
+
+class OpenPropertiesEdgeRouterTest(TestCase):
+    """
+    Verifies Open Properties passed between interior and edge routers
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start a router and a messenger"""
+        super(OpenPropertiesEdgeRouterTest, cls).setUpClass()
+
+        ir_port = cls.tester.get_port()
+        cls.RouterA = cls.tester.qdrouterd("RouterA",
+                                           Qdrouterd.Config([
+                                               ('router', {'mode': 'interior',
+                                                           'id': 'RouterA'}),
+                                               ('listener', {'port':
+                                                             cls.tester.get_port()}),
+                                               ('listener', {'role':
+                                                             'edge',
+                                                             'port':
+                                                             ir_port})]),
+                                           wait=False)
+        cls.RouterB = cls.tester.qdrouterd("RouterB",
+                                           Qdrouterd.Config([
+                                               ('router', {'mode': 'edge',
+                                                           'id': 'RouterB'}),
+                                               ('listener', {'port':
+                                                             cls.tester.get_port()}),
+                                               ('connector', {'role':
+                                                              'edge',
+                                                              'port':
+                                                              ir_port})]),
+                                           wait=True)
+        cls.RouterA.wait_ready()
+        mgmt = cls.RouterA.management
+        while True:
+            results = mgmt.query(type='org.apache.qpid.dispatch.connection',
+                                 attribute_names=['container']).get_dicts()
+            if len([c for c in results if c['container'] == 'RouterB']):
+                break
+
+    def test_01_check_annotations(self):
+        """
+        Verify the router annotations version
+        """
+        a_logfile = self.RouterA.logfile_path
+        b_logfile = self.RouterB.logfile_path
+        self.RouterA.teardown()
+        self.RouterB.teardown()
+
+        log_msg = "ROUTER (debug) Remote router annotations version: 1"
+        line = get_log_line(a_logfile, log_msg)
+        self.assertIsNotNone(line)
+
+        line = get_log_line(b_logfile, log_msg)
+        self.assertIsNotNone(line)
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
