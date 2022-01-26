@@ -671,8 +671,7 @@ static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discar
             DEQ_INSERT_TAIL(addr->subscriptions, sub);
             qdr_addr_start_inlinks_CT(core, addr);
         }
-    } else
-        free(sub);
+    }
 
     qdr_field_free(address);
 }
