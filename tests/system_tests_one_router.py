@@ -399,10 +399,14 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
-    def test_07_unsettled_undeliverable(self) :
+    def test_07_no_consumer_no_credit(self):
+        """
+        Ensure a sending client never gets credit if there is no
+        consumer present.
+        """
         addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
         OneRouterTest.closest_count += 1
-        test = UsettledUndeliverable(addr, n_messages=10)
+        test = NoConsumerNoCredit(addr)
         test.run()
         self.assertIsNone(test.error)
 
@@ -1863,35 +1867,31 @@ class PropagatedDisposition (MessagingHandler) :
         dlv.update(Delivery.ACCEPTED)
 
 
-class UsettledUndeliverable (MessagingHandler) :
-    def __init__(self,
-                 addr,
-                 n_messages
-                 ) :
-        super(UsettledUndeliverable, self) . __init__(prefetch=n_messages)
-        self.addr        = addr
-        self.n_messages  = n_messages
+class NoConsumerNoCredit(MessagingHandler):
+    def __init__(self, addr):
+        super(NoConsumerNoCredit, self).__init__()
+        self.addr         = addr
+        self.test_timer   = None
+        self.credit_timer = None
+        self.sender       = None
+        self.bailing      = False
 
-        self.test_timer = None
-        self.sender     = None
-        self.n_sent     = 0
-        self.n_received = 0
-        self.bailing    = False
-
-    def run(self) :
+    def run(self):
         Container(self).run()
 
-    def bail(self, travail) :
+    def bail(self, travail):
         self.bailing = True
         self.error = travail
         self.send_conn.close()
-        self.test_timer.cancel()
+        self.test_timer and self.test_timer.cancel()
+        self.credit_timer and self.credit_timer.cancel()
 
     def timeout(self):
-        if self.n_sent > 0 :
-            self.bail("Messages sent with no receiver.")
-        else :
-            self.bail(None)
+        self.bail("Test timed out - should not happen!")
+
+    def on_timer_task(self, event):
+        # no credit arrived: success
+        self.bail(None)
 
     def on_start(self, event):
         self.send_conn = event.container.connect(self.addr)
@@ -1899,15 +1899,17 @@ class UsettledUndeliverable (MessagingHandler) :
         # Uh-oh. We are not creating a receiver!
         self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
-    def on_sendable(self, event) :
-        while self.n_sent < self.n_messages :
-            msg = Message(body=self.n_sent)
-            dlv = self.sender.send(msg)
-            dlv.settle()
-            self.n_sent += 1
+    def on_link_opened(self, event):
+        # delay to ensure no credit arrives
+        if event.link == self.sender:
+            self.credit_timer = event.reactor.schedule(1.0, self)
+
+    def on_sendable(self, event):
+        if event.link == self.sender:
+            self.bail("Received credit even though no consumer present")
 
     def on_message(self, event) :
-        self.n_received += 1
+        self.bail("on_message should never happen")
 
 
 class ThreeAck (MessagingHandler) :
