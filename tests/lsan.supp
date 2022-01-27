@@ -58,6 +58,8 @@ leak:^PyThread_allocate_lock$
 leak:^PyMem_Malloc$
 leak:^PyMem_Calloc$
 leak:^PyMem_Realloc$
+leak:^_PyMem_RawMalloc$
+leak:^_PyMem_RawRealloc$
 leak:^_PyObject_GC_Resize$
 # Python uses these alloc functions if you define PYTHONDEVMODE=1
 leak:^_PyMem_DebugRawAlloc$

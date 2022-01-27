@@ -196,6 +196,10 @@ jobs:
       LD_LIBRARY_PATH: ${{github.workspace}}/install/lib
       QPID_SYSTEM_TEST_TIMEOUT: 300
       QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST: True
+      # the PyMalloc mechanism is incompatible with Valgrind, different mechanism must be set here
+      #  https://docs.python.org/3/using/cmdline.html#envvar-PYTHONMALLOC
+      #  https://pythonextensionpatterns.readthedocs.io/en/latest/debugging/debug_python.html#debug-version-of-python-memory-alloc-label
+      PYTHONMALLOC: malloc_debug
       PYTHONTRACEMALLOC: 5
     steps:
 
@@ -228,7 +232,10 @@ jobs:
       - name: Install Python runtime/test dependencies
         run: ${{matrix.python}} -m pip install tox quart selectors h2 grpcio protobuf websockets pytest
 
-      - name: Install qpid-proton python wheel
+      - name: Replace /usr/bin/python3 with ${{matrix.python}}, for tools such as qdmanage
+        run: sudo ln -sf ${{matrix.python}} /usr/bin/python3
+
+      - name: Install qpid-proton python wheel (python3-dbg)
         run: ${{matrix.python}} -m pip install $(find ${ProtonBuildDir}/python/ -name 'python_qpid_proton*.whl')
 
       - name: CTest
