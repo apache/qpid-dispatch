@@ -29,6 +29,7 @@ race:qdr_link_stalled_outbound
 
 # DISPATCH-2126
 race:qdr_delivery_mcast_inbound_update_CT
+race:qdr_delivery_mcast_outbound_settled_CT
 race:qdr_delivery_anycast_update_CT
 
 # DISPATCH-2127
