@@ -134,7 +134,7 @@ qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *end
     qdr_delivery_t *dlv = new_qdr_delivery_t();
 
     if (endpoint->link->conn)
-        endpoint->link->conn->last_delivery_time = core->uptime_ticks;
+        endpoint->link->conn->last_delivery_time = qdr_core_uptime_ticks(core);
 
     ZERO(dlv);
     set_safe_ptr_qdr_link_t(endpoint->link, &dlv->link_sp);

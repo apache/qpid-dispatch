@@ -242,7 +242,7 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
         break;
 
     case QDR_ROUTER_UPTIME_SECONDS:
-        qd_compose_insert_uint(body, core->uptime_ticks);
+        qd_compose_insert_uint(body, qdr_core_uptime_ticks(core));
         break;
 
     case QDR_ROUTER_MEMORY_USAGE: {

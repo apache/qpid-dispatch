@@ -269,7 +269,7 @@ static int handle_incoming_raw_read(qdr_tcp_connection_t *conn, qd_buffer_list_t
     if (result > 0) {
         // account for any incoming bytes just read
 
-        conn->last_in_time = tcp_adaptor->core->uptime_ticks;
+        conn->last_in_time = qdr_core_uptime_ticks(tcp_adaptor->core);
         conn->bytes_in      += result;
         LOCK(conn->bridge->stats_lock);
         conn->bridge->bytes_in += result;
@@ -772,7 +772,7 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
                                          false,
                                          NULL,
                                          &(tc->incoming_id));
-    tc->opened_time = tcp_adaptor->core->uptime_ticks;
+    tc->opened_time = qdr_core_uptime_ticks(tcp_adaptor->core);
     qdr_link_set_context(tc->incoming, tc);
 
     qdr_action_t *action = qdr_action(qdr_add_tcp_connection_CT, "add_tcp_connection");
@@ -794,7 +794,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             break;
         } else {
             conn->remote_address = get_address_string(conn->pn_raw_conn);
-            conn->opened_time = tcp_adaptor->core->uptime_ticks;
+            conn->opened_time = qdr_core_uptime_ticks(tcp_adaptor->core);
             qd_log(log, QD_LOG_INFO,
                    "[C%"PRIu64"] PN_RAW_CONNECTION_CONNECTED Connector egress connected to %s",
                    conn->conn_id, conn->remote_address);
@@ -896,7 +896,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             conn->write_buffer.size = 0;
             conn->write_buffer.offset = 0;
             conn->write_buffer.context = 0;
-            conn->last_out_time = tcp_adaptor->core->uptime_ticks;
+            conn->last_out_time = qdr_core_uptime_ticks(tcp_adaptor->core);
             conn->bytes_out += written;
             LOCK(conn->bridge->stats_lock);
             conn->bridge->bytes_out += written;
@@ -1868,21 +1868,21 @@ static void insert_column(qdr_core_t *core, qdr_tcp_connection_t *conn, int col,
         break;
 
     case QDR_TCP_CONNECTION_UPTIME_SECONDS:
-        qd_compose_insert_uint(body, core->uptime_ticks - conn->opened_time);
+        qd_compose_insert_uint(body, qdr_core_uptime_ticks(core) - conn->opened_time);
         break;
 
     case QDR_TCP_CONNECTION_LAST_IN_SECONDS:
         if (conn->last_in_time==0)
             qd_compose_insert_null(body);
         else
-            qd_compose_insert_uint(body, core->uptime_ticks - conn->last_in_time);
+            qd_compose_insert_uint(body, qdr_core_uptime_ticks(core) - conn->last_in_time);
         break;
 
     case QDR_TCP_CONNECTION_LAST_OUT_SECONDS:
         if (conn->last_out_time==0)
             qd_compose_insert_null(body);
         else
-            qd_compose_insert_uint(body, core->uptime_ticks - conn->last_out_time);
+            qd_compose_insert_uint(body, qdr_core_uptime_ticks(core) - conn->last_out_time);
         break;
 
     }

@@ -260,14 +260,14 @@ static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *
         break;
 
     case QDR_CONNECTION_UPTIME_SECONDS:
-        qd_compose_insert_uint(body, core->uptime_ticks - conn->conn_uptime);
+        qd_compose_insert_uint(body, qdr_core_uptime_ticks(core) - conn->conn_uptime);
         break;
 
     case QDR_CONNECTION_LAST_DLV_SECONDS:
         if (conn->last_delivery_time==0)
             qd_compose_insert_null(body);
         else
-            qd_compose_insert_uint(body, core->uptime_ticks - conn->last_delivery_time);
+            qd_compose_insert_uint(body, qdr_core_uptime_ticks(core) - conn->last_delivery_time);
         break;
 
     case QDR_CONNECTION_PROPERTIES: {

@@ -78,6 +78,7 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->router_area         = area;
     core->router_id           = id;
     core->worker_thread_count = qd->thread_count;
+    sys_atomic_init(&core->uptime_ticks, 0);
 
     DEQ_INIT(core->exchanges);
 

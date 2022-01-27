@@ -56,7 +56,7 @@ static void _on_transfer(void           *link_context,
 
     endpoint_ref_t *epr = (endpoint_ref_t*) link_context;
 
-    epr->last_heartbeat = _server_state.core->uptime_ticks;
+    epr->last_heartbeat = qdr_core_uptime_ticks(_server_state.core);
 
     qdrc_endpoint_settle_CT(_server_state.core, delivery, PN_ACCEPTED);
     qdrc_endpoint_flow_CT(_server_state.core, epr->endpoint, 1, false);
@@ -87,7 +87,7 @@ static void _on_first_attach(void            *bind_context,
     endpoint_ref_t *epr = new_endpoint_ref_t();
     ZERO(epr);
     epr->endpoint       = endpoint;
-    epr->last_heartbeat = _server_state.core->uptime_ticks;
+    epr->last_heartbeat = qdr_core_uptime_ticks(_server_state.core);
     epr->container_id   = (conn->connection_info) ? conn->connection_info->container : "<unknown>";
     epr->conn           = conn;
     epr->conn_id        = conn->identity;
@@ -131,7 +131,7 @@ static void on_timer(qdr_core_t *core, void *context)
     qdr_core_timer_schedule_CT(core, _server_state.timer, 2);
     endpoint_ref_t *epr = DEQ_HEAD(_server_state.endpoints);
     while (epr) {
-        if (core->uptime_ticks - epr->last_heartbeat > HEARTBEAT_THRESHOLD) {
+        if (qdr_core_uptime_ticks(core) - epr->last_heartbeat > HEARTBEAT_THRESHOLD) {
             qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Lost heartbeat from container %s, closing connection",
             epr->conn_id, epr->container_id);
             qdr_close_connection_CT(core, epr->conn);
