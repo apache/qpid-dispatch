@@ -832,7 +832,7 @@ struct qdr_core_t {
     qdr_core_timer_list_t    scheduled_timers;
     qdr_general_work_list_t  work_list;
     qd_timer_t              *work_timer;
-    uint32_t                 uptime_ticks;
+    sys_atomic_t             uptime_ticks;
 
     qdr_protocol_adaptor_list_t  protocol_adaptors;
     qdr_connection_list_t        open_connections;
@@ -1071,5 +1071,13 @@ void qdr_reset_sheaf(qdr_core_t *core, uint8_t n);
  * logging.
  */
 void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link);
+
+/**
+ * Access core uptime
+ */
+static inline uint32_t qdr_core_uptime_ticks(qdr_core_t *core)
+{
+    return sys_atomic_get(&core->uptime_ticks);
+}
 
 #endif

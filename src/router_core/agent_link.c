@@ -256,7 +256,7 @@ static void qdr_agent_write_column_CT(qdr_core_t *core, qd_composed_field_t *bod
         break;
 
     case QDR_LINK_SETTLE_RATE: {
-        uint32_t delta_time = core->uptime_ticks - link->core_ticks;
+        uint32_t delta_time = qdr_core_uptime_ticks(core) - link->core_ticks;
         if (delta_time > 0) {
             if (delta_time > QDR_LINK_RATE_DEPTH)
                 delta_time = QDR_LINK_RATE_DEPTH;
@@ -264,7 +264,7 @@ static void qdr_agent_write_column_CT(qdr_core_t *core, qd_composed_field_t *bod
                 link->rate_cursor = (link->rate_cursor + 1) % QDR_LINK_RATE_DEPTH;
                 link->settled_deliveries[link->rate_cursor] = 0;
             }
-            link->core_ticks = core->uptime_ticks;
+            link->core_ticks = qdr_core_uptime_ticks(core);
         }
 
         uint64_t total = 0;
@@ -282,7 +282,7 @@ static void qdr_agent_write_column_CT(qdr_core_t *core, qd_composed_field_t *bod
         if (link->zero_credit_time == 0)
             qd_compose_insert_uint(body, 0);
         else
-            qd_compose_insert_uint(body, core->uptime_ticks - link->zero_credit_time);
+            qd_compose_insert_uint(body, qdr_core_uptime_ticks(core) - link->zero_credit_time);
         break;
 
     default:

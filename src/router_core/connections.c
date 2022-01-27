@@ -109,7 +109,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
     DEQ_INIT(conn->streaming_link_pool);
     conn->connection_info->role = conn->role;
     conn->work_lock = sys_mutex();
-    conn->conn_uptime = core->uptime_ticks;
+    conn->conn_uptime = qdr_core_uptime_ticks(core);
 
     if (vhost) {
         conn->tenant_space_len = strlen(vhost) + 1;
@@ -259,7 +259,7 @@ void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link)
             //
             // The link has transitioned from positive credit to zero credit.
             //
-            link->zero_credit_time = core->uptime_ticks;
+            link->zero_credit_time = qdr_core_uptime_ticks(core);
         } else if (link->credit_reported == 0 && pn_credit > 0) {
             //
             // The link has transitioned from zero credit to positive credit.
@@ -641,8 +641,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->credit_pending = conn->link_capacity;
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
-    link->core_ticks     = conn->core->uptime_ticks;
-    link->zero_credit_time = conn->core->uptime_ticks;
+    link->core_ticks     = qdr_core_uptime_ticks(conn->core);
+    link->zero_credit_time = link->core_ticks;
     link->terminus_survives_disconnect = qdr_terminus_survives_disconnect(local_terminus);
     link->no_route = no_route;
     link->priority = QDR_DEFAULT_PRIORITY;
@@ -1178,8 +1178,8 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
     link->insert_prefix  = 0;
     link->strip_prefix   = 0;
     link->attach_count   = 1;
-    link->core_ticks     = core->uptime_ticks;
-    link->zero_credit_time = core->uptime_ticks;
+    link->core_ticks     = qdr_core_uptime_ticks(core);
+    link->zero_credit_time = link->core_ticks;
     link->priority       = priority;
 
     link->strip_annotations_in  = conn->strip_annotations_in;

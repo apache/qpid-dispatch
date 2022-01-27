@@ -47,9 +47,6 @@ deadlock:qd_policy_socket_close
 # DISPATCH-2131
 race:qdr_record_link_credit
 
-# DISPATCH-2132
-race:qdr_process_tick_CT
-
 # DISPATCH-2133 (harmless)
 race:qd_log_enabled
 

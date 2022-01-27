@@ -146,7 +146,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
 {
     qdr_delivery_t *out_dlv = new_qdr_delivery_t();
     if (out_link->conn)
-        out_link->conn->last_delivery_time = core->uptime_ticks;
+        out_link->conn->last_delivery_time = qdr_core_uptime_ticks(core);
 
     ZERO(out_dlv);
     set_safe_ptr_qdr_link_t(out_link, &out_dlv->link_sp);
@@ -167,7 +167,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
         }
     } else {
         out_dlv->settled       = true;
-        out_dlv->ingress_time  = core->uptime_ticks;
+        out_dlv->ingress_time  = qdr_core_uptime_ticks(core);
         out_dlv->ingress_index = -1;
     }
 
@@ -1033,8 +1033,8 @@ void qdr_forward_link_direct_CT(qdr_core_t       *core,
     out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
     out_link->admin_enabled  = true;
     out_link->attach_count   = 1;
-    out_link->core_ticks     = conn->core->uptime_ticks;
-    out_link->zero_credit_time = core->uptime_ticks;
+    out_link->core_ticks     = qdr_core_uptime_ticks(core);
+    out_link->zero_credit_time = out_link->core_ticks;
     out_link->strip_annotations_in  = conn->strip_annotations_in;
     out_link->strip_annotations_out = conn->strip_annotations_out;
     out_link->priority       = in_link->priority;
