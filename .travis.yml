@@ -152,6 +152,8 @@ jobs:
     os: linux
     dist: focal
     before_install:
+      - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test && sudo apt-get update
+      - sudo apt-get install -y g++-11
       # Update pip, it may prevent issues later
       - sudo apt-get install -y python3-pip
       - python3 -m pip install --user --upgrade pip
@@ -163,6 +165,8 @@ jobs:
       # Install grpcio and protobuf to run the grpc tests.
       - python3 -m pip install --user grpcio protobuf
     env:
+    - CC=gcc-11
+    - CXX=g++-11
     - QPID_SYSTEM_TEST_TIMEOUT=300
     - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
     - QPID_SYSTEM_TEST_SKIP_HTTP2_LARGE_IMAGE_UPLOAD_TEST=True
