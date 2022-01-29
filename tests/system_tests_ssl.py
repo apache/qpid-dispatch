@@ -117,6 +117,7 @@ class RouterTestSslClient(RouterTestSslBase):
             p = Popen(['openssl', 'version'], stdout=PIPE, universal_newlines=True)
             openssl_out = p.communicate()[0]
             m = re.search(r'[0-9]+\.[0-9]+\.[0-9]+', openssl_out)
+            assert m is not None
             OPENSSL_OUT_VER = m.group(0)
             OPENSSL_VER_1_1_GT = StrictVersion(OPENSSL_OUT_VER) >= StrictVersion('1.1')
             print("OpenSSL Version found = %s" % OPENSSL_OUT_VER)
@@ -132,13 +133,8 @@ class RouterTestSslClient(RouterTestSslBase):
     OPENSSL_ALLOW_TLSV1_3 = False
 
     # Test if OpenSSL has TLSv1_3
-    OPENSSL_HAS_TLSV1_3 = False
-    if OPENSSL_VER_1_1_GT:
-        try:
-            _ = ssl.TLSVersion.TLSv1_3
-            OPENSSL_HAS_TLSV1_3 = True
-        except AttributeError:
-            pass
+    #  (see https://mypy.readthedocs.io/en/stable/common_issues.html#python-version-and-system-platform-checks for mypy considerations)
+    OPENSSL_HAS_TLSV1_3 = OPENSSL_VER_1_1_GT and sys.version_info >= (3, 7) and ssl.HAS_TLSv1_3
 
     # Test if Proton supports TLSv1_3
     try:

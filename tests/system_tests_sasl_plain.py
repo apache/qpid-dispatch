@@ -676,10 +676,6 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
         cls.routers[1].wait_router_connected('QDR.X')
 
-    @staticmethod
-    def ssl_file(name):
-        return os.path.join(DIR, 'ssl_certs', name)
-
     def common_asserts(self, results):
         search = "QDR.X"
         found = False

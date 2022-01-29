@@ -117,5 +117,14 @@ async def process_upload_data():
     return "Success!"
 
 
-#app.run(port=5000, certfile='cert.pem', keyfile='key.pem')
-app.run(port=os.getenv('SERVER_LISTEN_PORT'))
+def main():
+    port = os.getenv('SERVER_LISTEN_PORT')
+    if port is None:
+        raise RuntimeError("Environment variable `SERVER_LISTEN_PORT` is not set.")
+
+    # app.run(port=5000, certfile='cert.pem', keyfile='key.pem')
+    app.run(port=int(port))
+
+
+if __name__ == '__main__':
+    main()

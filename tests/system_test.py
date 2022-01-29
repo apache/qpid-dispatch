@@ -28,6 +28,8 @@ Features:
 - Sundry other tools.
 """
 
+from typing import Callable
+
 import errno
 import sys
 import time
@@ -126,7 +128,7 @@ def retry_delay(deadline, delay, max_delay):
 TIMEOUT = float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 60))
 
 
-def retry(function, timeout=TIMEOUT, delay=.001, max_delay=1):
+def retry(function: Callable[[], bool], timeout: float = TIMEOUT, delay: float = .001, max_delay: float = 1):
     """Call function until it returns a true value or timeout expires.
     Double the delay for each retry up to max_delay.
     Returns what function returns or None if timeout expires.
@@ -363,7 +365,7 @@ class Http2Server(HttpServer):
 class Qdrouterd(Process):
     """Run a Qpid Dispatch Router Daemon"""
 
-    class Config(list, Config):
+    class Config(list, Config):  # type: ignore[misc]  # Cannot resolve name "Config" (possible cyclic definition)  # mypy#10958
         """
         A router configuration.
 

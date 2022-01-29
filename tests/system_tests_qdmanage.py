@@ -210,10 +210,6 @@ class QdmanageTest(TestCase):
 
     def test_get_attributes(self):
         out = json.loads(self.run_qdmanage("get-attributes"))
-        self.assertEqual(len(out), 28)
-
-    def test_get_attributes(self):
-        out = json.loads(self.run_qdmanage("get-attributes"))
         self.assertEqual(len(out), TOTAL_ENTITIES)
 
     def test_get_operations(self):

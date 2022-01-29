@@ -42,5 +42,3 @@ for m in test_modules:
     all_tests.addTest(tests)
 result = unittest.TextTestRunner(verbosity=2).run(all_tests)
 sys.exit(not result.wasSuccessful())
-
-sys.argv = ['unittest', '-v'] + tests

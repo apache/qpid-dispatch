@@ -88,20 +88,29 @@ def handle(sock):
             sock.sendall(data_to_send)
 
 
-signal.signal(signal.SIGHUP, receive_signal)
-signal.signal(signal.SIGINT, receive_signal)
-signal.signal(signal.SIGQUIT, receive_signal)
-signal.signal(signal.SIGILL, receive_signal)
-signal.signal(signal.SIGTERM, receive_signal)
+def main():
+    signal.signal(signal.SIGHUP, receive_signal)
+    signal.signal(signal.SIGINT, receive_signal)
+    signal.signal(signal.SIGQUIT, receive_signal)
+    signal.signal(signal.SIGILL, receive_signal)
+    signal.signal(signal.SIGTERM, receive_signal)
 
-sock = socket.socket()
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-sock.bind(('0.0.0.0', int(os.getenv('SERVER_LISTEN_PORT'))))
-sock.listen(5)
+    port = os.getenv('SERVER_LISTEN_PORT')
+    if port is None:
+        raise RuntimeError("Environment variable `SERVER_LISTEN_PORT` is not set.")
 
-while True:
-    # The accept method blocks until someone attempts to connect to our TCP
-    # port: when they do, it returns a tuple: the first element is a new
-    # socket object, the second element is a tuple of the address the new
-    # connection is from
-    handle(sock.accept()[0])
+    sock = socket.socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('0.0.0.0', int(port)))
+    sock.listen(5)
+
+    while True:
+        # The accept method blocks until someone attempts to connect to our TCP
+        # port: when they do, it returns a tuple: the first element is a new
+        # socket object, the second element is a tuple of the address the new
+        # connection is from
+        handle(sock.accept()[0])
+
+
+if __name__ == '__main__':
+    main()

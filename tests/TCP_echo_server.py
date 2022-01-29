@@ -83,7 +83,7 @@ def split_chunk_for_display(raw_bytes):
 class TcpEchoServer:
 
     def __init__(self, prefix="ECHO_SERVER", port: Union[str, int] = "0", echo_count=0, timeout=0.0, logger=None,
-                 conn_stall=0.0, close_on_conn=False, close_on_data=False):
+                 conn_stall=0.0, close_on_conn=False, close_on_data=False) -> None:
         """
         Start echo server in separate thread
 
@@ -92,9 +92,8 @@ class TcpEchoServer:
         :param echo_count: exit after echoing this many bytes
         :param timeout: exit after this many seconds
         :param logger: Logger() object
-        :return:
         """
-        self.sock = None
+        self.sock: socket.socket
         self.prefix = prefix
         self.port = int(port)
         self.echo_count = echo_count

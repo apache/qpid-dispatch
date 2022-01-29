@@ -28,7 +28,6 @@ skip_install = True
 commands =
   flake8 --count --show-source \
     ${CMAKE_SOURCE_DIR}/python \
-    ${CMAKE_SOURCE_DIR}/console \
     ${CMAKE_SOURCE_DIR}/docs \
     ${CMAKE_SOURCE_DIR}/tests \
     ${CMAKE_SOURCE_DIR}/tools \
@@ -36,19 +35,31 @@ commands =
     ${CMAKE_SOURCE_DIR}/tools/qdmanage
 
   # TODO(pylint#5648): crash while parsing system_test.py
-  pylint --rcfile ${CMAKE_BINARY_DIR}/tests/tox.ini \
+  pylint --jobs 2 --rcfile ${CMAKE_BINARY_DIR}/tests/tox.ini \
     --ignore=system_test.py \
     ${CMAKE_SOURCE_DIR}/python \
-    ${CMAKE_SOURCE_DIR}/console \
     ${CMAKE_SOURCE_DIR}/docs \
     ${CMAKE_SOURCE_DIR}/tests \
     ${CMAKE_SOURCE_DIR}/tools \
     ${CMAKE_SOURCE_DIR}/tools/qdstat \
     ${CMAKE_SOURCE_DIR}/tools/qdmanage
 
+  mypy --config-file ${CMAKE_BINARY_DIR}/tests/tox.ini \
+    ${CMAKE_SOURCE_DIR}/python \
+    ${CMAKE_SOURCE_DIR}/docs \
+    ${CMAKE_SOURCE_DIR}/tests \
+    ${CMAKE_SOURCE_DIR}/tools \
+    ${CMAKE_BINARY_DIR}/python/qpid_dispatch_site.py
+
+# new checker versions sometimes add new checks; pin the versions to avoid unexpected
+#  surprises to folks just trying to get their job done (c.f. DISPATCH-1305, DISPATCH-1466, DISPATCH-1834)
 deps =
-    hacking>=1.1.0
-    pylint
+  # TODO(DISPATCH-2321) also install python-qpid-proton here
+  hacking==4.1.0
+  # hacking 4.1.0 requires flake8<3.9.0 and >=3.8.0
+  flake8==3.8.4
+  pylint==2.12.2
+  mypy==0.910
 
 [testenv:py36]
 basepython = python3.6
@@ -205,3 +216,67 @@ disable =
     useless-else-on-loop,
     useless-super-delegation,
     wrong-import-position,
+
+[mypy]
+warn_redundant_casts = True
+warn_unused_ignores = True
+
+# mypy cannot handle overridden attributes
+# https://github.com/python/mypy/issues/7505
+allow_untyped_globals = True
+
+# https://mypy.readthedocs.io/en/stable/error_codes.html#displaying-error-codes
+show_error_codes = True
+
+# this would print lots and lots of errors
+# check_untyped_defs = True
+
+# ignore missing stub files for dependencies
+
+#[mypy-_ssl]
+#ignore_missing_imports = True
+
+[mypy-proton.*]
+ignore_missing_imports = True
+
+[mypy-cproton]
+ignore_missing_imports = True
+
+[mypy-qpidtoollibs]
+ignore_missing_imports = True
+
+[mypy-qpid_messaging]
+ignore_missing_imports = True
+
+[mypy-pyprof2calltree]
+ignore_missing_imports = True
+
+[mypy-quart.*]
+ignore_missing_imports = True
+
+[mypy-werkzeug.*]
+ignore_missing_imports = True
+
+[mypy-selectors]
+ignore_missing_imports = True
+
+[mypy-h2.*]
+ignore_missing_imports = True
+
+[mypy-google.protobuf]
+ignore_missing_imports = True
+
+[mypy-grpc]
+ignore_missing_imports = True
+
+[mypy-grpcio]
+ignore_missing_imports = True
+
+[mypy-protobuf]
+ignore_missing_imports = True
+
+[mypy-websockets]
+ignore_missing_imports = True
+
+[mypy-pytest]
+ignore_missing_imports = True

@@ -114,27 +114,27 @@ def _error_class(status):
     return Error
 
 
-class BadRequestStatus(_error_class(BAD_REQUEST)):
+class BadRequestStatus(_error_class(BAD_REQUEST)):  # type: ignore[misc]  #  Unsupported dynamic base class "_error_class"
     pass
 
 
-class UnauthorizedStatus(_error_class(UNAUTHORIZED)):
+class UnauthorizedStatus(_error_class(UNAUTHORIZED)):  # type: ignore[misc]
     pass
 
 
-class ForbiddenStatus(_error_class(FORBIDDEN)):
+class ForbiddenStatus(_error_class(FORBIDDEN)):  # type: ignore[misc]
     pass
 
 
-class NotFoundStatus(_error_class(NOT_FOUND)):
+class NotFoundStatus(_error_class(NOT_FOUND)):  # type: ignore[misc]
     pass
 
 
-class InternalServerErrorStatus(_error_class(INTERNAL_SERVER_ERROR)):
+class InternalServerErrorStatus(_error_class(INTERNAL_SERVER_ERROR)):  # type: ignore[misc]
     pass
 
 
-class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)):
+class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)):  # type: ignore[misc]
     pass
 
 

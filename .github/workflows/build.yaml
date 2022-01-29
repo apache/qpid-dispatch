@@ -543,6 +543,49 @@ jobs:
           name: book.pdf
           path: ${{github.workspace}}/docs/books/user-guide/book.pdf
 
+  python:
+    name: 'Python Checkers (${{ matrix.container }})'
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os: [ 'ubuntu-20.04' ]
+        container: [ 'fedora' ]
+        containerTag: [ '35' ]
+
+    container:
+      image: 'library/${{ matrix.container }}:${{ matrix.containerTag }}'
+      volumes:
+        - ${{github.workspace}}:${{github.workspace}}
+
+    env:
+      DispatchBuildDir: ${{github.workspace}}/build
+      InstallPrefix: ${{github.workspace}}/install
+      DispatchCMakeExtraArgs: >
+        -GNinja
+        -DCONSOLE_INSTALL=OFF
+
+    steps:
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y 'dnf-command(builddep)' && dnf builddep -y qpid-dispatch-router && dnf install -y git tox ninja-build
+
+      - uses: actions/checkout@v2
+
+      - name: Create Build and Install directories
+        run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
+
+      - name: qpid-dispatch cmake configure
+        working-directory: ${{env.DispatchBuildDir}}
+        run: >
+          cmake "${{github.workspace}}" \
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
+            ${DispatchCMakeExtraArgs}
+
+      - name: CTest -R python-checker
+        working-directory: ${{env.DispatchBuildDir}}
+        run: ctest -VV -R python-checker
+
   console-test:
     name: Console Tests
     runs-on: ubuntu-latest

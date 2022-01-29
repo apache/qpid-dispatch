@@ -24,7 +24,7 @@ import unittest
 from subprocess import PIPE, STDOUT
 
 import proton
-from proton import Message, Timeout
+from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from qpid_dispatch_internal.compat import UNICODE

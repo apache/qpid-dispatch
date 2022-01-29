@@ -19,7 +19,7 @@
 
 import time
 
-from proton import Message, Timeout
+from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 

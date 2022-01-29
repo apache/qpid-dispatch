@@ -34,9 +34,9 @@ def mock_error(self, message):
     raise ValueError(message)
 
 
-argparse.ArgumentParser.error = mock_error
+argparse.ArgumentParser.error = mock_error  # type: ignore[assignment]  # Cannot assign to a method
 
-# Since BusManager file is definded in tools/qdmanage.in -> tools/qdmanage
+# Since BusManager file is defined in tools/qdmanage.in -> tools/qdmanage
 # otherwise it could be just imported
 
 
