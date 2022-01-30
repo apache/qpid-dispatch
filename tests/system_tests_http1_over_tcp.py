@@ -70,6 +70,12 @@ class Http1OverTcpOneRouterTest(Http1OneRouterTestBase,
                                                   handler_cls=RequestHandler10)
         cls.INT_A.wait_connectors()
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.http10_server.wait()
+        cls.http11_server.wait()
+        super().tearDownClass()
+
 
 class Http1OverTcpEdge2EdgeTest(Http1Edge2EdgeTestBase, CommonHttp1Edge2EdgeTest):
     """
