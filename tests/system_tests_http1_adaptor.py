@@ -208,13 +208,15 @@ class Http1AdaptorManagementTest(TestCase):
         self.assertEqual(1, len(e_mgmt.query(type=self.CONNECTOR_TYPE).results))
 
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind(("", self.http_server_port))
-        server.setblocking(True)
-        server.settimeout(5)
-        server.listen(1)
-        conn, _ = server.accept()
-        server.close()
+        try:
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            server.bind(("", self.http_server_port))
+            server.setblocking(True)
+            server.settimeout(5)
+            server.listen(1)
+            conn, _ = server.accept()
+        finally:
+            server.close()
 
         # now check the interior router for the closest/http1Service address
         self.i_router.wait_address("closest/http1Service", subscribers=1)
@@ -294,6 +296,12 @@ class Http1AdaptorOneRouterTest(Http1OneRouterTestBase,
                                        tests=cls.TESTS_10,
                                        handler_cls=RequestHandler10)
         cls.INT_A.wait_connectors()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.http10_server.wait(TIMEOUT)
+        cls.http11_server.wait(TIMEOUT)
+        super().tearDownClass()
 
     def test_005_get_10(self):
         client = HTTPConnection("127.0.0.1:%s" % self.http_listener10_port,
