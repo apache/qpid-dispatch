@@ -175,19 +175,37 @@ def get_local_host_socket(protocol_family='IPv4'):
     return s, host
 
 
-def port_available(port, protocol_family='IPv4'):
+def port_refuses_connection(port, protocol_family='IPv4'):
     """Return true if connecting to host:port gives 'connection refused'."""
     s, host = get_local_host_socket(protocol_family)
-    available = False
     try:
         s.connect((host, port))
-    except socket.error as e:
-        available = e.errno == errno.ECONNREFUSED
-    except:
-        pass
+    except OSError as e:
+        return e.errno == errno.ECONNREFUSED
+    finally:
+        s.close()
 
-    s.close()
-    return available
+    return False
+
+
+def port_permits_binding(port, protocol_family='IPv4'):
+    """Return true if binding to the port succeeds."""
+    s, _ = get_local_host_socket(protocol_family)
+    host = ""
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # so that followup binders are not blocked
+        s.bind((host, port))
+    except OSError:
+        return False
+    finally:
+        s.close()
+
+    return True
+
+
+def port_available(port, protocol_family='IPv4'):
+    """Return true if a new server will be able to bind to the port."""
+    return port_refuses_connection(port, protocol_family) and port_permits_binding(port, protocol_family)
 
 
 def wait_port(port, protocol_family='IPv4', **retry_kwargs):
