@@ -77,8 +77,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'Server Closed')
             self.wfile.flush()
-            self.close_connection = True
-            self.server.server_killed = True
+            self.close_connection = True  # server will close connection from router
+            self.server.server_killed = True  # server will not accept a reconnect
             return
         self._execute_request(self.server.system_tests["POST"])
 
@@ -136,15 +136,7 @@ class MyHTTPServer(HTTPServer):
     def __init__(self, addr, handler_cls, testcases):
         self.system_tests = testcases
         self.request_count = 0
-        HTTPServer.__init__(self, addr, handler_cls)
-
-    def server_close(self):
-        try:
-            # force immediate close of listening socket
-            self.socket.shutdown(socket.SHUT_RDWR)
-        except Exception:
-            pass
-        HTTPServer.server_close(self)
+        super().__init__(addr, handler_cls)
 
 
 class ThreadedTestClient:
@@ -160,7 +152,6 @@ class ThreadedTestClient:
         self._logger = Logger(title="TestClient: %s" % self._id,
                               print_to_console=False)
         self._thread = Thread(target=self._run)
-        self._thread.daemon = True
         self.error = None
         self.count = 0
         self._thread.start()
@@ -168,49 +159,50 @@ class ThreadedTestClient:
     def _run(self):
         self._logger.log("TestClient connecting on %s" % self._conn_addr)
         client = HTTPConnection(self._conn_addr, timeout=TIMEOUT)
-        self._logger.log("TestClient connected")
-        for loop in range(self._repeat):
-            self._logger.log("TestClient start request %d" % loop)
-            for op, tests in self._tests.items():
-                for req, _, val in tests:
-                    self._logger.log("TestClient sending %s %s request" % (op, req.target))
-                    req.send_request(client,
-                                     {"test-echo": "%s-%s-%s-%s" % (self._id,
-                                                                    loop,
-                                                                    op,
-                                                                    req.target)})
-                    self._logger.log("TestClient getting %s response" % op)
-                    try:
-                        rsp = client.getresponse()
-                    except HTTPException as exc:
-                        self._logger.log("TestClient response failed: %s" % exc)
-                        self.error = str(exc)
-                        return
-                    self._logger.log("TestClient response %s received" % op)
-                    if val:
+        try:
+            self._logger.log("TestClient connected")
+            for loop in range(self._repeat):
+                self._logger.log("TestClient start request %d" % loop)
+                for op, tests in self._tests.items():
+                    for req, _, val in tests:
+                        self._logger.log("TestClient sending %s %s request" % (op, req.target))
+                        req.send_request(client,
+                                         {"test-echo": "%s-%s-%s-%s" % (self._id,
+                                                                        loop,
+                                                                        op,
+                                                                        req.target)})
+                        self._logger.log("TestClient getting %s response" % op)
                         try:
-                            body = val.check_response(rsp)
-                        except Exception as exc:
-                            self._logger.log("TestClient response invalid: %s"
-                                             % str(exc))
-                            self.error = "client failed: %s" % str(exc)
+                            rsp = client.getresponse()
+                        except HTTPException as exc:
+                            self._logger.log("TestClient response failed: %s" % exc)
+                            self.error = str(exc)
                             return
+                        self._logger.log("TestClient response %s received" % op)
+                        if val:
+                            try:
+                                body = val.check_response(rsp)
+                            except Exception as exc:
+                                self._logger.log("TestClient response invalid: %s"
+                                                 % str(exc))
+                                self.error = "client failed: %s" % str(exc)
+                                return
 
-                        if req.method == "BODY" and body != b'':
-                            self._logger.log("TestClient response invalid: %s"
-                                             % "body present!")
-                            self.error = "error: body present!"
-                            return
-                    self.count += 1
-                    self._logger.log("TestClient request %s %s completed!" %
-                                     (op, req.target))
-        client.close()
-        self._logger.log("TestClient to %s closed" % self._conn_addr)
+                            if req.method == "BODY" and body != b'':
+                                self._logger.log("TestClient response invalid: %s"
+                                                 % "body present!")
+                                self.error = "error: body present!"
+                                return
+                        self.count += 1
+                        self._logger.log("TestClient request %s %s completed!" %
+                                         (op, req.target))
+        finally:
+            client.close()
+            self._logger.log("TestClient to %s closed" % self._conn_addr)
 
     def wait(self, timeout=TIMEOUT):
-        self._thread.join(timeout=TIMEOUT)
+        self._thread.join(timeout=timeout)
         self._logger.log("TestClient %s shut down" % self._conn_addr)
-        sleep(0.5)  # fudge factor allow socket close to complete
 
     def dump_log(self):
         self._logger.dump()
@@ -251,8 +243,8 @@ class TestServer:
                                     handler_cls or RequestHandler,
                                     tests)
         self._server.allow_reuse_address = True
+        self._server.timeout = TIMEOUT
         self._thread = Thread(target=self._run)
-        self._thread.daemon = True
         self._thread.start()
 
     def _run(self):
@@ -270,21 +262,32 @@ class TestServer:
     def wait(self, timeout=TIMEOUT):
         self._logger.log("TestServer %s:%s shutting down" % self._server_addr)
         self.request_count = 0
-        if self._thread.is_alive():
-            client = HTTPConnection("127.0.0.1:%s" % self._client_port,
-                                    timeout=TIMEOUT)
+
+        self._send_shutdown_request()
+        self._thread.join(timeout=timeout)
+        self._server.server_close()
+        self.request_count = self._server.request_count
+        self._server = None
+
+    def _send_shutdown_request(self):
+        """Sends a POST request instructing the test HTTPServer to shut down.
+
+        This is necessary because the test HTTPServer cannot be interrupted while there is an open
+        connection to it. The incoming connection in question is from a qdrouterd that we keep up
+        for the duration of the entire testclass. The only place for server to graciously die is
+        after processing an incoming request and closing the connection, but before accepting a new one.
+        """
+        client = HTTPConnection("127.0.0.1:%s" % self._client_port,
+                                timeout=TIMEOUT)
+        try:
             client.putrequest("POST", "/SHUTDOWN")
             client.putheader("Content-Length", "0")
             client.endheaders()
-            # 13 == len('Server Closed')
-            client.getresponse().read(13)
+            with client.getresponse() as response:
+                body = response.read()
+            assert body == b'Server Closed', f"Unexpectedly, response was {body}"
+        finally:
             client.close()
-            self._thread.join(timeout=TIMEOUT)
-        if self._server:
-            self._server.server_close()
-            self.request_count = self._server.request_count
-            del self._server
-        sleep(0.5)  # fudge factor allow socket close to complete
 
 
 def http1_ping(sport, cport):
@@ -356,7 +359,7 @@ class RequestMsg:
         self.headers = headers or {}
         self.body = body
 
-    def send_request(self, conn, extra_headers=None):
+    def send_request(self, conn: HTTPConnection, extra_headers=None):
         extra_headers = extra_headers or {}
         conn.putrequest(self.method, self.target)
         for key, value in self.headers.items():
@@ -381,6 +384,9 @@ class ResponseValidator:
         self.expect_body = expect_body
 
     def check_response(self, rsp):
+        # always fully read the response first
+        body = rsp.read()
+
         if self.status and rsp.status != self.status:
             raise Exception("Bad response code, expected %s got %s"
                             % (self.status, rsp.status))
@@ -389,7 +395,6 @@ class ResponseValidator:
                 raise Exception("Missing/bad header (%s), expected %s got %s"
                                 % (key, value, rsp.getheader(key)))
 
-        body = rsp.read()
         if self.expect_body and self.expect_body != body:
             raise Exception("Bad response body expected %s got %s"
                             % (self.expect_body, body))
@@ -539,17 +544,19 @@ class CommonHttp1Edge2EdgeTest:
             ]
         }
         server = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS)
-        self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
+        try:
+            self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
 
-        self.EA2.wait_connectors()
+            self.EA2.wait_connectors()
 
-        client = ThreadedTestClient(TESTS,
-                                    self.http_listener11_port,
-                                    repeat=300)
-        client.wait()
-        self.assertIsNone(client.error)
-        self.assertEqual(300, client.count)
-        server.wait()
+            client = ThreadedTestClient(TESTS,
+                                        self.http_listener11_port,
+                                        repeat=300)
+            client.wait()
+            self.assertIsNone(client.error)
+            self.assertEqual(300, client.count)
+        finally:
+            server.wait()
 
     def test_03_server_reconnect(self):
         """
@@ -654,15 +661,17 @@ class CommonHttp1Edge2EdgeTest:
 
         # ensure links recover once the server re-appears
         server = TestServer.new_server(self.http_server11_port, self.http_listener11_port, TESTS)
-        self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
+        try:
+            self.assertIsNotNone(server, TEST_SERVER_ERROR % self.http_server11_port)
 
-        self.EA2.wait_connectors()
+            self.EA2.wait_connectors()
 
-        client = ThreadedTestClient(TESTS, self.http_listener11_port)
-        client.wait()
-        self.assertIsNone(client.error)
-        self.assertEqual(1, client.count)
-        server.wait()
+            client = ThreadedTestClient(TESTS, self.http_listener11_port)
+            client.wait()
+            self.assertIsNone(client.error)
+            self.assertEqual(1, client.count)
+        finally:
+            server.wait()
 
     def test_05_large_streaming_msg(self):
         """
@@ -1408,27 +1417,29 @@ class Http1CurlTestsMixIn:
         get_url = "http://%s:%s/GET/curl_get" % (host, port)
         head_url = "http://%s:%s/HEAD/curl_head" % (host, port)
 
-        status, out, err = run_curl(["--http1.1", "-G", get_url])
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
-        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
-                      % (out, err))
+        try:
+            status, out, err = run_curl(["--http1.1", "-G", get_url])
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                          % (out, err))
 
-        status, out, err = run_curl(["--http1.1", "-I", head_url])
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
-        self.assertIn("App-Header-2", out, "Unexpected out=%s (err=%s)"
-                      % (out, err))
+            status, out, err = run_curl(["--http1.1", "-I", head_url])
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            self.assertIn("App-Header-2", out, "Unexpected out=%s (err=%s)"
+                          % (out, err))
 
-        status, out, err = run_curl(["--http1.0", "-G", get_url])
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
-        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
-                      % (out, err))
+            status, out, err = run_curl(["--http1.0", "-G", get_url])
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                          % (out, err))
 
-        status, out, err = run_curl(["--http1.1", "-G", get_url])
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
-        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
-                      % (out, err))
+            status, out, err = run_curl(["--http1.1", "-G", get_url])
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                          % (out, err))
 
-        server.wait()
+        finally:
+            server.wait()
 
     @unittest.skipIf(not _curl_ok(),
                      "required curl version >= %s" % str(CURL_VERSION))
@@ -1465,24 +1476,26 @@ class Http1CurlTestsMixIn:
         put_url = "http://%s:%s/PUT/curl_put" % (host, port)
         head_url = "http://%s:%s/HEAD/curl_head" % (host, port)
 
-        status, out, err = run_curl(["--http1.1", "-T", ".", put_url],
-                                    input="Mary had a little pug."
-                                    "\nIts fleece was brown as dirt."
-                                    "\nIts color made Mary shrug."
-                                    "\nShe should dress it in a shirt.")
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+        try:
+            status, out, err = run_curl(["--http1.1", "-T", ".", put_url],
+                                        input="Mary had a little pug."
+                                        "\nIts fleece was brown as dirt."
+                                        "\nIts color made Mary shrug."
+                                        "\nShe should dress it in a shirt.")
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
 
-        status, out, err = run_curl(["--http1.1", "-I", head_url])
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
-        self.assertIn("App-Header-2", out, "Unexpected out=%s (err=%s)"
-                      % (out, err))
+            status, out, err = run_curl(["--http1.1", "-I", head_url])
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            self.assertIn("App-Header-2", out, "Unexpected out=%s (err=%s)"
+                          % (out, err))
 
-        status, out, err = run_curl(["--http1.1", "-T", ".", put_url],
-                                    input="Ph'nglui mglw'nafh Cthulhu"
-                                    "\nR'lyeh wgah'nagl fhtagn")
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            status, out, err = run_curl(["--http1.1", "-T", ".", put_url],
+                                        input="Ph'nglui mglw'nafh Cthulhu"
+                                        "\nR'lyeh wgah'nagl fhtagn")
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
 
-        server.wait()
+        finally:
+            server.wait()
 
     @unittest.skipIf(not _curl_ok(),
                      "required curl version >= %s" % str(CURL_VERSION))
@@ -1522,22 +1535,23 @@ class Http1CurlTestsMixIn:
         post_url = "http://%s:%s/POST/curl_post" % (host, port)
         get_url = "http://%s:%s/GET/curl_get" % (host, port)
 
-        status, out, err = run_curl(["--http1.1", "-F", "name=Skupper",
-                                     "-F", "breed=Pug", post_url])
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
-        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
-                      % (out, err))
+        try:
+            status, out, err = run_curl(["--http1.1", "-F", "name=Skupper",
+                                         "-F", "breed=Pug", post_url])
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                          % (out, err))
 
-        status, out, err = run_curl(["--http1.1", "-G", get_url])
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
-        self.assertIn("0123456789", out, "Unexpected out=%s (err=%s)"
-                      % (out, err))
+            status, out, err = run_curl(["--http1.1", "-G", get_url])
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            self.assertIn("0123456789", out, "Unexpected out=%s (err=%s)"
+                          % (out, err))
 
-        status, out, err = run_curl(["--http1.1", "-F", "name=Coco",
-                                     "-F", "breed=French Bulldog",
-                                     post_url])
-        self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
-        self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
-                      % (out, err))
-
-        server.wait()
+            status, out, err = run_curl(["--http1.1", "-F", "name=Coco",
+                                         "-F", "breed=French Bulldog",
+                                         post_url])
+            self.assertEqual(0, status, "curl error '%s' '%s'" % (out, err))
+            self.assertIn("END OF TRANSMISSION", out, "Unexpected out=%s (err=%s)"
+                          % (out, err))
+        finally:
+            server.wait()
