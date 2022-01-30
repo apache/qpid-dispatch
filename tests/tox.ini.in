@@ -149,6 +149,9 @@ exclude =
 # do not filter test file names
 python_files = *.py
 
+# https://docs.pytest.org/en/6.2.x/logging.html#incompatible-changes-in-pytest-3-4
+log_level = DEBUG
+
 # pylint
 [MESSAGE_CONTROL]
 disable =
