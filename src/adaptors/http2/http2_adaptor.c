@@ -2771,7 +2771,7 @@ static void qdr_http2_adaptor_init(qdr_core_t *core, void **adaptor_context)
                                             qdr_http_conn_trace);
     adaptor->log_source = qd_log_source(QD_HTTP_LOG_SOURCE);
     adaptor->protocol_log_source = qd_log_source("PROTOCOL");
-    adaptor->lock = sys_mutex();
+    adaptor->lock = sys_mutex("HTTP2_ADAPTOR");
     *adaptor_context = adaptor;
     DEQ_INIT(adaptor->listeners);
     DEQ_INIT(adaptor->connectors);

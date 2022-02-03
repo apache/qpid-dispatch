@@ -63,7 +63,7 @@ void *thread_id_thread(void *arg)
 //
 static char *test_thread_id(void *context)
 {
-    mutex = sys_mutex();
+    mutex = sys_mutex("TEST_TID");
     sys_mutex_lock(mutex);
 
     // start threads and retain their addresses
@@ -132,7 +132,7 @@ void *test_condition_thread(void *arg)
 
 static char *test_condition(void *context)
 {
-    mutex = sys_mutex();
+    mutex = sys_mutex("TEST_COND");
     cond = sys_cond();
 
     sys_mutex_lock(mutex);

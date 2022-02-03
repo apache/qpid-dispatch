@@ -1022,7 +1022,7 @@ qd_message_t *qd_message()
     }
 
     ZERO(msg->content);
-    msg->content->lock = sys_mutex();
+    msg->content->lock = sys_mutex("PER_MSG_CONTENT");
     sys_atomic_init(&msg->content->aborted, 0);
     sys_atomic_init(&msg->content->discard, 0);
     sys_atomic_init(&msg->content->ma_stream, 0);
