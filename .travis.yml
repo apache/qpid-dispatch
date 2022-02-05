@@ -20,40 +20,13 @@
 language: c
 cache: ccache
 os: linux
-dist: xenial
+dist: focal
 jobs:
   fast_finish: true
   allow_failures:
-    - os: osx
     - arch: arm64
     - arch: s390x
   include:
-  - name: "apache-rat:check"
-    os: linux
-    env: []
-    language: java
-    addons:
-      apt:
-        packages: []
-    install: []
-    before_script: []
-    script:
-    - mvn apache-rat:check
-    before_cache:
-    - rm -rf $HOME/.m2/repository/org/apache/qpid/*
-    cache:
-      directories:
-      - $HOME/.m2/repository
-    after_script:
-    - cat target/rat.txt || true
-  # prepending /usr/bin to PATH to avoid mismatched python interpreters in /opt
-  - name: "qdrouterd:Debug (gcc on xenial)"
-    os: linux
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=main BUILD_TYPE=Debug
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
   - name: "qdrouterd:Coverage"
     os: linux
     env:
@@ -69,7 +42,6 @@ jobs:
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     os: linux
-    dist: focal
     before_install:
     - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key 2>/dev/null | sudo apt-key add -
     - sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-13 main' -y
@@ -96,7 +68,6 @@ jobs:
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on focal)"
     arch: s390x
     os: linux
-    dist: focal
     before_install:
       # Install and use the latest Node.js LTS version
       - nvm install "lts/*"
@@ -120,7 +91,6 @@ jobs:
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal) on arm64"
     arch: arm64
     os: linux
-    dist: focal
     compiler: clang
     before_install:
       - sudo apt-get install clang-12 llvm-12-dev
@@ -142,15 +112,8 @@ jobs:
       - CXX=clang++-12
       - PROTON_VERSION=0.36.0 BUILD_TYPE=RelWithDebInfo
       - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
-  - name: "qdrouterd:Default Build"
-    os: linux
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.36.0
   - name: "qdrouterd:TSAN"
     os: linux
-    dist: focal
     before_install:
       - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test && sudo apt-get update
       - sudo apt-get install -y g++-11
@@ -172,25 +135,6 @@ jobs:
     - QPID_SYSTEM_TEST_SKIP_HTTP2_LARGE_IMAGE_UPLOAD_TEST=True
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.36.0
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
-  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on macOS)"
-    os: osx
-    osx_image: xcode11
-    env:
-    - QPID_SYSTEM_TEST_TIMEOUT=300
-    - QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST=True
-    - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=main
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
-    # exclude tests that require raw_connection functionality; not available in libuv proactor
-    - DISPATCH_CTEST_EXTRA='-E system_tests_tcp_adaptor|system_tests_http1_adaptor|system_tests_http2|system_tests_grpc|system_tests_http1_over_tcp'
-    before_install:
-    - bash ./macports.sh
-    - export COLUMNS=80
-    - yes | sudo port install cmake swig swig-python libuv jsoncpp libwebsockets nghttp2 cyrus-sasl2 pkgconfig python37 py37-pip
-    # set aliases for CMake's PythonInterp and PythonLibs to find MacPort's `python` on the path first
-    - sudo port select --set python python37
-    - sudo port select --set python3 python37
-    - python3 -m venv p3venv
-    - source p3venv/bin/activate
 
 addons:
   apt:
@@ -202,10 +146,6 @@ addons:
     - sasl2-bin
     - swig
     - libnghttp2-dev
-    # documentation
-    - asciidoc
-    - asciidoctor
-    - dblatex
     # unit test requirement
     - tox
     # code coverage
@@ -245,8 +185,6 @@ script:
 - pushd ../qpid-proton
 - echo $(echo "Current proton commit:") $(git rev-parse HEAD) "(${PROTON_VERSION})"
 - popd
-# Workaround on macOS for PROTON-808 Binaries have their library locations stripped
-- if [[ "${OSTYPE}" == "darwin"* ]]; then install_name_tool -add_rpath $PREFIX/lib/. $PREFIX/lib/proton/bindings/python/_cproton.so; fi
 - ctest --timeout 1200 -V ${DISPATCH_CTEST_EXTRA} && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
 
 after_success:
