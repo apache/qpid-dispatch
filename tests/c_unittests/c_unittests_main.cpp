@@ -28,24 +28,28 @@
 bool check_stubbing_works()
 {
 
+#if (defined(_FORTIFY_SOURCE))
+    return false; // special checked glibc functions were substituted
+#endif
 #if (defined(__s390__) || defined(__s390x__) || defined(__zarch__))
     return false; // cpp-stub does not support
 #endif
 
     {
         Stub stub;
-        stub.set(probe, +[](int)->int { return 42; });
+        stub.set(probe, +[](int) -> int { return 42; });
         if (probe(0) != 42) {
             return false;
         }
     }
     {
         Stub stub;
-        stub.set(abs, +[](int)->int{ return 24; });
+        stub.set(abs, +[](int) -> int { return 24; });
         if (probe(0) != 24) {
             return false;
         }
     }
+
     return true;
 }
 
