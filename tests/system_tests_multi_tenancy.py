@@ -17,6 +17,8 @@
 # under the License.
 #
 
+import functools
+
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
@@ -229,91 +231,103 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @staticmethod
+    def _cleanup_link_routes(func):
+        """Decorator to wait for all link routes to clean up before exiting the test"""
+
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            self.routers[0].wait_address_unsubscribed("D0.0.0.0/link")
+            self.routers[1].wait_address_unsubscribed("D0.0.0.0/link")
+
+        return wrapper
+
+    @_cleanup_link_routes
     def test_17_one_router_link_route_targeted(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[0].addresses[2],
                              "link.addr_17",
                              "0.0.0.0/link.addr_17",
                              False,
-                             self.routers[0].addresses[0],
-                             self.routers)
+                             self.routers[0].addresses[0])
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes
     def test_18_one_router_link_route_targeted_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
                              self.routers[0].addresses[2],
                              "0.0.0.0/link.addr_18",
                              "0.0.0.0/link.addr_18",
                              False,
-                             self.routers[0].addresses[0],
-                             self.routers)
+                             self.routers[0].addresses[0])
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes
     def test_19_one_router_link_route_dynamic(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[0].addresses[2],
                              "link.addr_19",
                              "0.0.0.0/link.addr_19",
                              True,
-                             self.routers[0].addresses[0],
-                             self.routers)
+                             self.routers[0].addresses[0])
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes
     def test_20_one_router_link_route_dynamic_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
                              self.routers[0].addresses[2],
                              "0.0.0.0/link.addr_20",
                              "0.0.0.0/link.addr_20",
                              True,
-                             self.routers[0].addresses[0],
-                             self.routers)
+                             self.routers[0].addresses[0])
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes
     def test_21_two_router_link_route_targeted(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[1].addresses[2],
                              "link.addr_21",
                              "0.0.0.0/link.addr_21",
                              False,
-                             self.routers[0].addresses[0],
-                             self.routers)
+                             self.routers[0].addresses[0])
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes
     def test_22_two_router_link_route_targeted_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
                              self.routers[1].addresses[2],
                              "0.0.0.0/link.addr_22",
                              "0.0.0.0/link.addr_22",
                              False,
-                             self.routers[0].addresses[0],
-                             self.routers)
+                             self.routers[0].addresses[0])
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes
     def test_23_two_router_link_route_dynamic(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[1].addresses[2],
                              "link.addr_23",
                              "0.0.0.0/link.addr_23",
                              True,
-                             self.routers[0].addresses[0],
-                             self.routers)
+                             self.routers[0].addresses[0])
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes
     def test_24_two_router_link_route_dynamic_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
                              self.routers[1].addresses[2],
                              "0.0.0.0/link.addr_24",
                              "0.0.0.0/link.addr_24",
                              True,
-                             self.routers[0].addresses[0],
-                             self.routers)
+                             self.routers[0].addresses[0])
         test.run()
         self.assertIsNone(test.error)
 
@@ -667,8 +681,7 @@ class MessageTransferAnonTest(MessagingHandler):
 
 
 class LinkRouteTest(MessagingHandler):
-    def __init__(self, first_host, second_host, first_address, second_address,
-                 dynamic, lookup_host, routers):
+    def __init__(self, first_host, second_host, first_address, second_address, dynamic, lookup_host):
         super(LinkRouteTest, self).__init__(prefetch=0)
         self.logger         = Logger(title="LinkRouteTest")
         self.first_host     = first_host
@@ -677,7 +690,6 @@ class LinkRouteTest(MessagingHandler):
         self.second_address = second_address
         self.dynamic        = dynamic
         self.lookup_host    = lookup_host
-        self.routers        = routers
         self.reactor        = None
 
         self.first_conn      = None
@@ -701,10 +713,6 @@ class LinkRouteTest(MessagingHandler):
     def poll_timeout(self):
         self.poll()
 
-    def cleanup(self):
-        for router in self.routers:
-            router.wait_address_unsubscribed("D0.0.0.0/link")
-
     def done(self, error=None):
         self.error = error
         self.second_conn.close()
@@ -715,18 +723,6 @@ class LinkRouteTest(MessagingHandler):
             self.poll_timer.cancel()
         if error:
             self.logger.dump()
-
-        # give proton a chance to close all of the above connections,
-        # then wait for the route tables remove the link route
-
-        class _CleanupTimer:
-            def __init__(self, parent):
-                self.parent = parent
-
-            def on_timer_task(self, event):
-                self.parent.cleanup()
-
-        self.reactor.schedule(1.0, _CleanupTimer(self))
 
     def send(self):
         self.logger.log("Send")
