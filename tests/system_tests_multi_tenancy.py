@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from functools import wraps
+
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
@@ -229,6 +231,17 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    def _cleanup_link_routes(func):
+        """Wait for all link routes to clean up before exiting the test
+        """
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            self.routers[0].wait_address_unsubscribed("D0.0.0.0/link")
+            self.routers[1].wait_address_unsubscribed("D0.0.0.0/link")
+        return wrapper
+
+    @_cleanup_link_routes  # type: ignore
     def test_17_one_router_link_route_targeted(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[0].addresses[2],
@@ -239,6 +252,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes  # type: ignore
     def test_18_one_router_link_route_targeted_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
                              self.routers[0].addresses[2],
@@ -249,6 +263,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes  # type: ignore
     def test_19_one_router_link_route_dynamic(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[0].addresses[2],
@@ -259,6 +274,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes  # type: ignore
     def test_20_one_router_link_route_dynamic_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
                              self.routers[0].addresses[2],
@@ -269,6 +285,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes  # type: ignore
     def test_21_two_router_link_route_targeted(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[1].addresses[2],
@@ -279,6 +296,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes  # type: ignore
     def test_22_two_router_link_route_targeted_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
                              self.routers[1].addresses[2],
@@ -289,6 +307,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes   # type: ignore
     def test_23_two_router_link_route_dynamic(self):
         test = LinkRouteTest(self.routers[0].addresses[1],
                              self.routers[1].addresses[2],
@@ -299,6 +318,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertIsNone(test.error)
 
+    @_cleanup_link_routes  # type: ignore
     def test_24_two_router_link_route_dynamic_no_tenant(self):
         test = LinkRouteTest(self.routers[0].addresses[0],
                              self.routers[1].addresses[2],
@@ -661,6 +681,7 @@ class MessageTransferAnonTest(MessagingHandler):
 class LinkRouteTest(MessagingHandler):
     def __init__(self, first_host, second_host, first_address, second_address, dynamic, lookup_host):
         super(LinkRouteTest, self).__init__(prefetch=0)
+        self.logger         = Logger(title="LinkRouteTest")
         self.first_host     = first_host
         self.second_host    = second_host
         self.first_address  = first_address
@@ -683,12 +704,8 @@ class LinkRouteTest(MessagingHandler):
         self.n_settled = 0
 
     def timeout(self):
-        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_settled=%d" % (self.n_sent, self.n_rcvd, self.n_settled)
-        self.first_conn.close()
-        self.second_conn.close()
-        self.lookup_conn.close()
-        if self.poll_timer:
-            self.poll_timer.cancel()
+        self.fail("Timeout Expired: n_sent=%d n_rcvd=%d n_settled=%d" %
+                  (self.n_sent, self.n_rcvd, self.n_settled))
 
     def poll_timeout(self):
         self.poll()
@@ -701,18 +718,23 @@ class LinkRouteTest(MessagingHandler):
         self.lookup_conn.close()
         if self.poll_timer:
             self.poll_timer.cancel()
+        if text:
+            self.logger.dump()
 
     def send(self):
+        self.logger.log("Send")
         while self.first_sender.credit > 0 and self.n_sent < self.count:
             self.n_sent += 1
             m = Message(body="Message %d of %d" % (self.n_sent, self.count))
             self.first_sender.send(m)
 
     def poll(self):
+        self.logger.log("Poll")
         request = self.proxy.read_address("D0.0.0.0/link")
         self.agent_sender.send(request)
 
     def setup_first_links(self, event):
+        self.logger.log("First links")
         self.first_sender = event.container.create_sender(self.first_conn, self.first_address)
         if self.dynamic:
             self.first_receiver = event.container.create_receiver(self.first_conn,
@@ -723,6 +745,7 @@ class LinkRouteTest(MessagingHandler):
             self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
 
     def on_start(self, event):
+        self.logger.log("On Start")
         self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.first_conn     = event.container.connect(self.first_host)
         self.second_conn    = event.container.connect(self.second_host)
@@ -732,6 +755,7 @@ class LinkRouteTest(MessagingHandler):
 
     def on_link_opening(self, event):
         if event.sender:
+            self.logger.log("On sender link opening")
             self.second_sender = event.sender
             if self.dynamic:
                 if event.sender.remote_source.dynamic:
@@ -748,6 +772,7 @@ class LinkRouteTest(MessagingHandler):
                               (event.sender.remote_source.address, self.second_address))
 
         elif event.receiver:
+            self.logger.log("On receiver link opening")
             self.second_receiver = event.receiver
             if event.receiver.remote_target.address == self.second_address:
                 event.receiver.target.address = self.second_address
@@ -757,6 +782,7 @@ class LinkRouteTest(MessagingHandler):
                           (event.receiver.remote_target.address, self.second_address))
 
     def on_link_opened(self, event):
+        self.logger.log("On link opened")
         if event.receiver:
             event.receiver.flow(self.count)
 
@@ -765,14 +791,17 @@ class LinkRouteTest(MessagingHandler):
             self.poll()
 
     def on_sendable(self, event):
+        self.logger.log("On sendable")
         if event.sender == self.first_sender:
             self.send()
 
     def on_message(self, event):
         if event.receiver == self.first_receiver:
+            self.logger.log("On message 1st")
             self.n_rcvd += 1
 
         if event.receiver == self.reply_receiver:
+            self.logger.log("On message reply")
             response = self.proxy.response(event.message)
             if response.status_code == 200 and (response.remoteCount + response.containerCount) > 0:
                 if self.poll_timer:
@@ -784,6 +813,7 @@ class LinkRouteTest(MessagingHandler):
 
     def on_settled(self, event):
         if event.sender == self.first_sender:
+            self.logger.log("On settled")
             self.n_settled += 1
             if self.n_settled == self.count:
                 self.fail(None)
@@ -827,9 +857,9 @@ class WaypointTest(MessagingHandler):
         self.outs = None
 
     def timeout(self):
-        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d n_waypoint_rcvd=%d" % (self.n_sent, self.n_rcvd, self.n_thru, self.n_waypoint_rcvd)
-        self.first_conn.close()
-        self.second_conn.close()
+        self.fail("Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d"
+                  " n_waypoint_rcvd=%d" % (self.n_sent, self.n_rcvd,
+                                           self.n_thru, self.n_waypoint_rcvd))
 
     def fail(self, text):
         self.error = text
