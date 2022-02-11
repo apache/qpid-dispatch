@@ -1054,9 +1054,9 @@ static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
 
     qd_message_t *msg = rmsg->msg ? rmsg->msg : qdr_delivery_message(rmsg->dlv);
     qd_message_stream_data_append(msg, body, &q2_blocked);
-    hconn->q2_blocked = hconn->q2_blocked || q2_blocked;
-    if (q2_blocked) {
+    if (q2_blocked && !hconn->q2_blocked) {
         // note: unit tests grep for this log!
+        hconn->q2_blocked = true;
         if (rmsg->dlv)
             qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, DLV_FMT" server link blocked on Q2 limit", DLV_ARGS(rmsg->dlv));
         else

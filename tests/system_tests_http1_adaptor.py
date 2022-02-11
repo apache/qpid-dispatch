@@ -725,27 +725,25 @@ class Http1AdaptorQ2Standalone(TestCase):
     uses a single router to ensure both client facing and server facing
     Q2 components of the HTTP/1.x adaptor are triggered.
     """
-    @classmethod
-    def setUpClass(cls):
+
+    def create_router(self, name):
         """
         Single router configuration with one HTTPListener and one
         HTTPConnector.
         """
-        super(Http1AdaptorQ2Standalone, cls).setUpClass()
-
-        cls.http_server_port = cls.tester.get_port()
-        cls.http_listener_port = cls.tester.get_port()
+        http_server_port = self.tester.get_port()
+        http_listener_port = self.tester.get_port()
 
         config = [
             ('router', {'mode': 'standalone',
-                        'id': 'RowdyRoddyRouter',
+                        'id': name,
                         'allowUnsettledMulticast': 'yes'}),
             ('listener', {'role': 'normal',
-                          'port': cls.tester.get_port()}),
-            ('httpListener', {'port': cls.http_listener_port,
+                          'port': self.tester.get_port()}),
+            ('httpListener', {'port': http_listener_port,
                               'protocolVersion': 'HTTP1',
                               'address': 'testServer'}),
-            ('httpConnector', {'port': cls.http_server_port,
+            ('httpConnector', {'port': http_server_port,
                                'host': '127.0.0.1',
                                'protocolVersion': 'HTTP1',
                                'address': 'testServer'}),
@@ -753,8 +751,9 @@ class Http1AdaptorQ2Standalone(TestCase):
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
         ]
         config = Qdrouterd.Config(config)
-        cls.INT_A = cls.tester.qdrouterd("TestBadEndpoints", config, wait=True)
-        cls.INT_A.listener = cls.INT_A.addresses[0]
+        router = self.tester.qdrouterd(name, config, wait=True)
+        router.listener = router.addresses[0]
+        return (router, http_listener_port, http_server_port)
 
     def _write_until_full(self, sock, data, timeout):
         """
@@ -800,15 +799,37 @@ class Http1AdaptorQ2Standalone(TestCase):
                 break  # timeout
         return data
 
+    def check_logs(self, prefix, log_file):
+        # check router log for proper block/unblock activity
+        block_ct = 0
+        unblock_ct = 0
+        block_line = 0
+        unblock_line = 0
+        line_no = 0
+        with io.open(log_file) as f:
+            for line in f:
+                line_no += 1
+                if '%s link blocked on Q2 limit' % prefix in line:
+                    block_ct += 1
+                    block_line = line_no
+                if '%s link unblocked from Q2 limit' % prefix in line:
+                    unblock_ct += 1
+                    unblock_line = line_no
+        self.assertGreater(block_ct, 0)
+        self.assertGreaterEqual(unblock_ct, block_ct)
+        self.assertGreater(unblock_line, block_line)
+
     def test_01_backpressure_client(self):
         """
         Trigger Q2 backpressure against the HTTP client.
         """
+        router, listener_port, server_port = self.create_router("Q2Router1")
+
         # create a listener socket to act as the server service
         server_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_listener.settimeout(TIMEOUT)
         server_listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_listener.bind(('', self.http_server_port))
+        server_listener.bind(('', server_port))
         server_listener.listen(1)
 
         # block until router connects
@@ -820,7 +841,7 @@ class Http1AdaptorQ2Standalone(TestCase):
         client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_sock.settimeout(0.5)
         client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        client_sock.connect((host_port[0], self.http_listener_port))
+        client_sock.connect((host_port[0], listener_port))
 
         # send a Very Large PUSH request, expecting it to block at some point
 
@@ -870,30 +891,22 @@ class Http1AdaptorQ2Standalone(TestCase):
         server_listener.shutdown(socket.SHUT_RDWR)
         server_listener.close()
 
-        # search the router log file to verify Q2 was hit
-
-        block_ct = 0
-        unblock_ct = 0
-        with io.open(self.INT_A.logfile_path) as f:
-            for line in f:
-                if 'client link blocked on Q2 limit' in line:
-                    block_ct += 1
-                if 'client link unblocked from Q2 limit' in line:
-                    unblock_ct += 1
-        self.assertTrue(block_ct > 0)
-        self.assertEqual(block_ct, unblock_ct)
+        router.teardown()
+        self.check_logs("client", router.logfile_path)
 
     def test_02_backpressure_server(self):
         """
         Trigger Q2 backpressure against the HTTP server.
         """
+        router, listener_port, server_port = self.create_router("Q2Router2")
+
         small_get_req = b'GET / HTTP/1.1\r\nContent-Length: 0\r\n\r\n'
 
         # create a listener socket to act as the server service
         server_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_listener.settimeout(TIMEOUT)
         server_listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_listener.bind(('', self.http_server_port))
+        server_listener.bind(('', server_port))
         server_listener.listen(1)
 
         # block until router connects
@@ -905,7 +918,7 @@ class Http1AdaptorQ2Standalone(TestCase):
         client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_sock.settimeout(0.5)
         client_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        client_sock.connect((host_port[0], self.http_listener_port))
+        client_sock.connect((host_port[0], listener_port))
 
         # send GET request - expect this to be successful
         count = self._write_until_full(client_sock, small_get_req, 1.0)
@@ -951,18 +964,8 @@ class Http1AdaptorQ2Standalone(TestCase):
         server_listener.shutdown(socket.SHUT_RDWR)
         server_listener.close()
 
-        # search the router log file to verify Q2 was hit
-
-        block_ct = 0
-        unblock_ct = 0
-        with io.open(self.INT_A.logfile_path) as f:
-            for line in f:
-                if 'server link blocked on Q2 limit' in line:
-                    block_ct += 1
-                if 'server link unblocked from Q2 limit' in line:
-                    unblock_ct += 1
-        self.assertTrue(block_ct > 0)
-        self.assertEqual(block_ct, unblock_ct)
+        router.teardown()
+        self.check_logs("server", router.logfile_path)
 
 
 if __name__ == '__main__':

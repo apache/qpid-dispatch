@@ -965,9 +965,9 @@ static int _client_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
            hconn->conn_id, hconn->in_link_id, len);
 
     qd_message_stream_data_append(msg, body, &q2_blocked);
-    hconn->q2_blocked = hconn->q2_blocked || q2_blocked;
-    if (q2_blocked) {
+    if (q2_blocked && !hconn->q2_blocked) {
         // note: unit tests grep for this log!
+        hconn->q2_blocked = true;
         qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] client link blocked on Q2 limit", hconn->conn_id);
     }
 
