@@ -90,6 +90,16 @@ include(CheckSymbolExists)
 include(CheckFunctionExists)
 include(CheckIncludeFiles)
 include(CMakeDependentOption)
+include(CheckIPOSupported)
+
+check_ipo_supported(RESULT cc_has_ipo OUTPUT check_ipo_supported_output)
+message(STATUS "Interprocedural optimization (IPO/LTO) supported: ${cc_has_ipo}")
+if(NOT cc_has_ipo)
+    message(WARNING "IPO is not supported: ${output}")
+endif()
+if(NOT DEFINED(CMAKE_INTERPROCEDURAL_OPTIMIZATION))
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${cc_has_ipo})
+endif()
 
 ##
 ## Find dependencies
