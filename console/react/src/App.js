@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import React, { Component } from "react";
+import React from "react";
 import { unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
 import { createHashHistory } from "history";
 
