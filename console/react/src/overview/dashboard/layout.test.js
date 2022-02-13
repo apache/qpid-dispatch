@@ -21,6 +21,7 @@ import React from "react";
 import { render } from "@testing-library/react";
 import { service } from "../../serviceTest";
 import PageLayout from "./layout";
+import {MemoryRouter} from "react-router-dom";
 
 it("renders the correct title", async () => {
   const title = "Test Layout Page";
@@ -31,7 +32,10 @@ it("renders the correct title", async () => {
     location: { pathname: "/dashboard" }
   };
 
-  const { getAllByText } = render(<PageLayout {...props} />);
+  const { getAllByText } = render(
+    <MemoryRouter initialEntries={["/login"]}>
+      <PageLayout {...props} />
+    </MemoryRouter>);
 
   // the correct title should be found
   expect(getAllByText(title));
