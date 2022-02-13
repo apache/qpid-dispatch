@@ -43,7 +43,7 @@ import {
 
 import { cellWidth } from "@patternfly/react-table";
 import { Card, CardBody } from "@patternfly/react-core";
-import { Redirect } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { dataMap as detailsDataMap, defaultData } from "./entityData";
 import { utils } from "../common/amqp/utilities";
 
@@ -270,7 +270,7 @@ class UpdateTablePage extends React.Component {
   render() {
     if (this.state.redirect) {
       return (
-        <Redirect
+        <Navigate
           to={{
             pathname: this.state.redirectPath,
             state: this.state.redirectState

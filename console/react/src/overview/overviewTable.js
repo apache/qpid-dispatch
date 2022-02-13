@@ -27,7 +27,7 @@ import {
   TableVariant
 } from "@patternfly/react-table";
 import { Button, Pagination } from "@patternfly/react-core";
-import { Redirect } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import TableToolbar from "../common/tableToolbar";
 import { dataMap } from "./entityData";
 
@@ -279,11 +279,9 @@ class OverviewTable extends React.Component {
   render() {
     if (this.state.redirect) {
       return (
-        <Redirect
-          to={{
-            pathname: (this.dataSource && this.dataSource.detailPath) || "/details",
-            state: this.state.redirectState
-          }}
+        <Navigate
+          to={(this.dataSource && this.dataSource.detailPath) || "/details"}
+          state={this.state.redirectState}
         />
       );
     }

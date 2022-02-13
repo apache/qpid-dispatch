@@ -37,7 +37,7 @@ import {
   TableVariant
 } from "@patternfly/react-table";
 import { Card, CardBody } from "@patternfly/react-core";
-import { Redirect } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { dataMap } from "../overview/entityData";
 import { dataMap as detailsDataMap, defaultData } from "./entityData";
 import Updated from "../common/updated";
@@ -171,7 +171,7 @@ class DetailsTablePage extends React.Component {
   render() {
     if (this.state.redirect) {
       return (
-        <Redirect
+        <Navigate
           to={{
             pathname: this.state.redirectPath,
             state: this.state.redirectState

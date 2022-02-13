@@ -37,7 +37,7 @@ import {
   BreadcrumbItem
 } from "@patternfly/react-core";
 
-import { Redirect } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
 class LogDetails extends React.Component {
   constructor(props) {
@@ -128,11 +128,9 @@ class LogDetails extends React.Component {
   render() {
     if (this.state.redirect) {
       return (
-        <Redirect
-          to={{
-            pathname: this.state.redirectPath,
-            state: this.state.redirectState
-          }}
+        <Navigate
+          to={this.state.redirectPath}
+          state={this.state.redirectState}
         />
       );
     }
