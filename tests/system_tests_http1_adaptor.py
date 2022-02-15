@@ -800,7 +800,7 @@ class Http1AdaptorQ2Standalone(TestCase):
         return data
 
     def check_logs(self, prefix, log_file):
-        # check router log for proper block/unblock activity
+        """Check router log for proper block/unblock activity"""
         block_ct = 0
         unblock_ct = 0
         block_line = 0
