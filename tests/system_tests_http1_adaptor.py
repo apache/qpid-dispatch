@@ -806,7 +806,7 @@ class Http1AdaptorQ2Standalone(TestCase):
         block_line = 0
         unblock_line = 0
         line_no = 0
-        with io.open(log_file) as f:
+        with open(log_file) as f:
             for line in f:
                 line_no += 1
                 if '%s link blocked on Q2 limit' % prefix in line:
