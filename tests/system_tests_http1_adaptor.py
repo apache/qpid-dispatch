@@ -22,7 +22,6 @@
 #
 
 import errno
-import io
 import select
 import socket
 from time import sleep, time
@@ -805,10 +804,8 @@ class Http1AdaptorQ2Standalone(TestCase):
         unblock_ct = 0
         block_line = 0
         unblock_line = 0
-        line_no = 0
         with open(log_file) as f:
-            for line in f:
-                line_no += 1
+            for line_no, line in enumerate(f, start=1):
                 if '%s link blocked on Q2 limit' % prefix in line:
                     block_ct += 1
                     block_line = line_no
