@@ -80,6 +80,9 @@ race:^qd_message_send$
 # DISPATCH-2245
 race:^qdr_link_process_deliveries$
 
+# DISPATCH-2314
+race: ^qdr_delivery_continue_CT$
+
 #
 # External libraries
 #
