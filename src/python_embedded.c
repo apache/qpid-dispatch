@@ -66,6 +66,7 @@ void qd_python_finalize(void)
 {
     (void) qd_python_lock();
 
+    Py_DECREF(message_type);
     Py_DECREF(dispatch_module);
     dispatch_module = 0;
     PyGC_Collect();
