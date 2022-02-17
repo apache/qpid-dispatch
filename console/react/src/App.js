@@ -33,10 +33,10 @@ import PageLayout from "./overview/dashboard/layout";
 function App(props) {
 
   // service is passed in to make testing easier
-  let service = new QDRService();
+  const service = new QDRService();
 
   // also, a router is used here to provide PageLayout with a history property
-  let history = createHashHistory({ window });
+  const history = createHashHistory({ window });
 
   return (
     <HistoryRouter history={history}>
