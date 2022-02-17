@@ -36,7 +36,8 @@ import {
   PageSidebar
 } from "@patternfly/react-core";
 
-import { HashRouter as Router, Switch, Route, Link, Redirect } from "react-router-dom";
+import { Routes, Route, Link, Navigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import accessibleStyles from "@patternfly/patternfly/utilities/Accessibility/accessibility.css";
 import { css } from "@patternfly/react-styles";
@@ -60,6 +61,25 @@ import inflightData from "./inflightData";
 import img_avatar from "../../assets/img_avatar.svg";
 
 const SUPPRESS_NOTIFICATIONS = "noNotify";
+
+// Wrapper that injects the react-router-dom hooks into a class-based component
+// https://github.com/remix-run/react-router/blob/main/docs/faq.md
+function withRouter(Component) {
+  function ComponentWithRouterProp(props) {
+    let location = useLocation();
+    let navigate = useNavigate();
+    let params = useParams();
+    return (
+      <Component
+        {...props}
+        router={{ location, navigate, params }} // intended usage
+        location={location} navigate={navigate} params={params} // what the code currently expects
+      />
+    );
+  }
+
+  return ComponentWithRouterProp;
+}
 
 class PageLayout extends React.PureComponent {
   constructor(props) {
@@ -240,7 +260,6 @@ class PageLayout extends React.PureComponent {
             }
             return false;
           });
-          this.props.history.replace(connectPath);
           this.setState({
             user,
             activeItem,
@@ -248,6 +267,7 @@ class PageLayout extends React.PureComponent {
             connected: true,
             isConnectFormOpen: false
           });
+          this.props.navigate(connectPath);
         }
       );
     }
@@ -426,29 +446,21 @@ class PageLayout extends React.PureComponent {
     };
 
     // don't allow access to this component unless we are logged in
-    const PrivateRoute = ({ component: Component, path: rpath, ...more }) => (
-      <Route
-        path={rpath}
-        {...(more.exact ? "exact" : "")}
-        render={props =>
-          this.state.connected ? (
-            <Component
-              service={this.service}
-              handleAddNotification={this.handleAddNotification}
-              {...props}
-              {...more}
-            />
-          ) : (
-            <Redirect
-              to={{
-                pathname: `/login${this.state.connecting ? "/connecting" : ""}`,
-                state: { from: props.location }
-              }}
-            />
-          )
-        }
-      />
-    );
+    // https://gist.github.com/mjackson/d54b40a094277b7afdd6b81f51a0393f
+    const RequireLogin = ( props ) => {
+      const { component: Component, ...more } = props
+
+      return this.state.connected ? <Component
+        service={this.service}
+        handleAddNotification={this.handleAddNotification}
+        {...this.props}
+        {...more}
+        location={this.props.history.location}
+      /> : <Navigate
+        to={`/login${this.state.connecting ? "/connecting" : ""}`}
+        state={{ from: this.props.history.location }}
+      />;
+    }
 
     const connectForm = () => {
       return this.state.isConnectFormOpen ? (
@@ -471,78 +483,87 @@ class PageLayout extends React.PureComponent {
     const redirectAfterConnect = () => {
       if (this.state.connected && this.redirect) {
         this.redirect = false;
-        return <Redirect to={this.props.location.pathname} />;
+        return <Navigate to={this.props.location.pathname} />;
       } else {
         return <React.Fragment />;
       }
     };
 
     return (
-      <Router>
+      <Page
+        header={Header}
+        sidebar={sidebar(PageNav)}
+        onPageResize={this.onPageResize}
+        skipToContent={PageSkipToContent}
+        mainContainerId={pageId}
+      >
         {redirectAfterConnect()}
-        <Page
-          header={Header}
-          sidebar={sidebar(PageNav)}
-          onPageResize={this.onPageResize}
-          skipToContent={PageSkipToContent}
-          mainContainerId={pageId}
-        >
-          {connectForm()}
-          <Switch>
-            <PrivateRoute
-              path="/"
-              exact
-              throughputChartData={this.throughputChartData}
-              inflightChartData={this.inflightChartData}
-              component={DashboardPage}
-            />
-            <PrivateRoute
-              path="/dashboard"
-              throughputChartData={this.throughputChartData}
-              inflightChartData={this.inflightChartData}
-              component={DashboardPage}
-            />
-            <PrivateRoute path="/overview/:entity" component={OverviewPage} />
-            <PrivateRoute
-              path="/details"
-              schema={this.schema}
-              component={DetailsTablePage}
-            />
-            <PrivateRoute path="/topology" component={TopologyPage} />
-            <PrivateRoute path="/flow" component={MessageFlowPage} />
-            <PrivateRoute path="/logs" component={LogDetails} />
-            <PrivateRoute path="/entities" component={EntitiesPage} />
-            <PrivateRoute path="/schema" schema={this.schema} component={SchemaPage} />
-            <Route
-              path="/login"
-              render={props => (
-                <ConnectPage
-                  {...props}
-                  connecting={this.state.connecting}
-                  connectingTitle={
-                    this.state.connecting ? "Attempting to auto connect" : undefined
-                  }
-                  connectingMessage={
-                    this.state.connecting
-                      ? `Trying to connect to ${window.location.hostname}:${window.location.port}`
-                      : undefined
-                  }
-                  fromPath={"/"}
-                  service={this.service}
-                  config={this.props.config}
-                  handleConnect={this.handleConnect}
-                  handleAddNotification={this.handleAddNotification}
-                />
-              )}
-            />
-          </Switch>
-        </Page>
-      </Router>
+        {connectForm()}
+        <Routes>
+          <Route
+            exact path={"/"}
+            element={
+              <RequireLogin
+                throughputChartData={this.throughputChartData}
+                inflightChartData={this.inflightChartData}
+                component={DashboardPage}
+              />
+            }
+          />
+          <Route
+            path={"/dashboard"}
+            element={
+              <RequireLogin
+                throughputChartData={this.throughputChartData}
+                inflightChartData={this.inflightChartData}
+                component={DashboardPage}
+              />
+            }
+          />
+          <Route path="/overview/:entity" element={<RequireLogin component={OverviewPage}/>}/>
+          <Route
+            path="/details"
+            element={
+              <RequireLogin
+                schema={this.schema}
+                component={DetailsTablePage}
+              />
+            }
+          />
+          <Route path="/topology" element={<RequireLogin component={TopologyPage}/>}/>
+          <Route path="/flow" element={<RequireLogin component={MessageFlowPage}/>}/>
+          <Route path="/logs" element={<RequireLogin component={LogDetails}/>}/>
+          <Route path="/entities" element={<RequireLogin component={EntitiesPage}/>}/>
+          <Route path="/schema" element={<RequireLogin schema={this.schema} component={SchemaPage}/>}/>
+          <Route
+            path="/login/*"
+            element={
+              <ConnectPage
+                {...this.props}
+                connecting={this.state.connecting}
+                connectingTitle={
+                  this.state.connecting ? "Attempting to auto connect" : undefined
+                }
+                connectingMessage={
+                  this.state.connecting
+                    ? `Trying to connect to ${window.location.hostname}:${window.location.port}`
+                    : undefined
+                }
+                fromPath={"/"}
+                service={this.service}
+                config={this.props.config}
+                handleConnect={this.handleConnect}
+                handleAddNotification={this.handleAddNotification}
+              />
+            }
+          />
+        </Routes>
+      </Page>
     );
   }
 }
 
-export default PageLayout;
+export default withRouter(PageLayout);
 
 const idle = (elapsed, callback) => {
   let timer;

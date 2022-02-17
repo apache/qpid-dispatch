@@ -27,7 +27,7 @@ import {
   TableVariant
 } from "@patternfly/react-table";
 import { Button, Pagination } from "@patternfly/react-core";
-import { Redirect } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import TableToolbar from "../common/tableToolbar";
 import { dataMap, defaultData } from "./entityData";
 import EmptyTable from "./emptyTablePage";
@@ -402,7 +402,7 @@ class EntityListTable extends React.Component {
 
     if (this.state.redirect) {
       return (
-        <Redirect
+        <Navigate
           to={{
             pathname: this.dataSource.detailPath || "/details",
             state: this.state.redirectState
