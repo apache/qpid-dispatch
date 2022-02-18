@@ -406,7 +406,6 @@ class TopologyDispositionTests (TestCase):
                 self.assertIsNone(error)
             self.assertIsNone(error)
 
-    @unittest.skipIf(proton.VERSION > (0, 36, 0), "see DISPATCH-2276")
     def test_04_scraper_tool(self):
         name = 'test_04'
         error = str(None)
