@@ -288,9 +288,9 @@ bool qd_policy_socket_accept(qd_policy_t *policy, const char *hostname)
 void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
 {
     sys_mutex_lock(stats_lock);
+    assert (n_connections > 0);
     n_connections--;
     uint64_t nc = n_connections;
-    assert (n_connections >= 0);
     sys_mutex_unlock(stats_lock);
     if (policy->enableVhostPolicy) {
         // HACK ALERT: TODO: This should be deferred to a Python thread
