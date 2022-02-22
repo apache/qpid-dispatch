@@ -681,7 +681,7 @@ class AllDetails():
                             sdispmap = sess.rx_rcvr_disposition_map if splf.data.is_receiver else sess.rx_sndr_disposition_map
                         else:
                             sdispmap = sess.tx_rcvr_disposition_map if splf.data.is_receiver else sess.tx_sndr_disposition_map
-                        for sdid in range(int(splf.data.first), (int(splf.data.last) + 1)):
+                        for sdid in range(int(splf.data.first, 0), (int(splf.data.last, 0) + 1)):
                             did = str(sdid)
                             if did in sdispmap:
                                 old_splf = sdispmap[did]
@@ -829,7 +829,7 @@ class AllDetails():
                                     tod_of_second_attach = plf.datetime
                         if look_for_sender_delivery_id:
                             if plf.data.name == "attach" and not plf.data.is_receiver:
-                                current_delivery = int(plf.data.described_type.dict.get("initial-delivery_count", "0"))
+                                current_delivery = int(plf.data.described_type.dict.get("initial-delivery_count", "0"), 0)
                                 delivery_limit = current_delivery
                                 look_for_sender_delivery_id = False
 
@@ -838,7 +838,7 @@ class AllDetails():
                                 # a flow in the normal direction updates the delivery limit
                                 dc = plf.data.described_type.dict.get("delivery-count", "0")
                                 lc = plf.data.described_type.dict.get("link-credit", "0")
-                                delivery_limit = int(dc) + int(lc)  # TODO: wrap at 32-bits
+                                delivery_limit = int(dc, 0) + int(lc, 0)  # TODO: wrap at 32-bits
                                 if n_attaches < 2:
                                     # a working flow before sender attach - cancel initial stall
                                     init_stall = False
@@ -858,7 +858,7 @@ class AllDetails():
                             else:
                                 # flow in the opposite direction updates the senders current delivery
                                 # normally used to consume credit in response to a drain from receiver
-                                current_delivery = int(plf.data.described_type.dict.get("initial-delivery_count", "0"))
+                                current_delivery = int(plf.data.described_type.dict.get("initial-delivery_count", "0"), 0)
 
                         elif plf.data.transfer:
                             if plf.data.direction == dir_of_xfer:

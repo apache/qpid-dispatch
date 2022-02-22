@@ -296,6 +296,9 @@ class DescribedType:
             if '=' not in fields[0]:
                 raise ValueError("Field does not contain equal sign '%s'" % fields[0])
             key, val = DescribedType.get_key_and_val(fields[0])
+            # New proton logging uses hex strings. Convert to decimal strings.
+            if val.startswith("0x"):
+                val = str(int(val, 0))
             del fields[0]
             if DescribedType.is_dtype_name(val):
                 # recursing to process subtype

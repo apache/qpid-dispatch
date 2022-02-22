@@ -23,7 +23,6 @@ import time
 import unittest
 from subprocess import PIPE, STDOUT
 
-import proton
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -406,7 +405,6 @@ class TopologyDispositionTests (TestCase):
                 self.assertIsNone(error)
             self.assertIsNone(error)
 
-    @unittest.skipIf(proton.VERSION > (0, 36, 0), "see DISPATCH-2276")
     def test_04_scraper_tool(self):
         name = 'test_04'
         error = str(None)
