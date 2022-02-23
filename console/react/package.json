@@ -9,7 +9,7 @@
     "@patternfly/react-icons": "^4.43.15",
     "@patternfly/react-styles": "^4.42.15",
     "@patternfly/react-table": "^4.61.15",
-    "@patternfly/react-topology": "^4.39.15",
+    "@patternfly/react-topology": "^4.45.5",
     "d3": "^3.5.17",
     "d3-queue": "^3.0.7",
     "express": "^4.17.2",
