@@ -27,7 +27,6 @@
 #include "qpid/dispatch/error.h"
 #include "qpid/dispatch/log.h"
 #include "qpid/dispatch/router.h"
-#include "qpid/dispatch/threading.h"
 
 #include <ctype.h>
 
@@ -39,8 +38,6 @@
 //===============================================================================
 
 static qd_dispatch_t   *dispatch   = 0;
-static sys_mutex_t     *ilock      = 0;
-static bool             lock_held  = false;
 static qd_log_source_t *log_source = 0;
 static PyObject        *dispatch_module = 0;
 static PyObject        *message_type = 0;
@@ -53,7 +50,6 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
 {
     log_source = qd_log_source("PYTHON");
     dispatch = qd;
-    ilock = sys_mutex();
     if (python_pkgdir)
         dispatch_python_pkgdir = PyUnicode_FromString(python_pkgdir);
 
@@ -63,17 +59,13 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
 #endif
     qd_python_setup();
     PyEval_SaveThread(); // drop the Python GIL; we will reacquire it in other threads as needed
-    qd_python_lock_state_t lk = qd_python_lock();
-    qd_python_setup();
-    qd_python_unlock(lk);
 }
 
 
 void qd_python_finalize(void)
 {
-    (void) PyGILState_Ensure(); // not qd_python_lock(), because that function has to be paired with an _unlock
+    (void) qd_python_lock();
 
-    sys_mutex_free(ilock);
     Py_DECREF(dispatch_module);
     dispatch_module = 0;
     PyGC_Collect();
@@ -91,7 +83,7 @@ PyObject *qd_python_module(void)
 
 void qd_python_check_lock(void)
 {
-    assert(lock_held);
+    assert(PyGILState_Check());
 }
 
 
@@ -893,16 +885,12 @@ static void qd_python_setup(void)
 
 qd_python_lock_state_t qd_python_lock(void)
 {
-    sys_mutex_lock(ilock);
-    lock_held = true;
     return PyGILState_Ensure();
 }
 
 void qd_python_unlock(qd_python_lock_state_t lock_state)
 {
     PyGILState_Release(lock_state);
-    lock_held = false;
-    sys_mutex_unlock(ilock);
 }
 
 void qd_json_msgs_init(PyObject **msgs)
