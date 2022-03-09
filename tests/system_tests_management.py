@@ -66,28 +66,28 @@ class ManagementTest(system_test.TestCase):
         # Stand-alone router
         conf0 = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'solo', 'metadata': 'selftest;solo'}),
-            ('listener', {'name': 'l0', 'port': cls.get_port(), 'role': 'normal'}),
+            ('listener', {'name': 'l0', 'port': cls.tester.get_port(), 'role': 'normal'}),
             # Extra listeners to exercise managment query
-            ('listener', {'name': 'l1', 'port': cls.get_port(), 'role': 'normal'}),
-            ('listener', {'name': 'l2', 'port': cls.get_port(), 'role': 'normal'})
+            ('listener', {'name': 'l1', 'port': cls.tester.get_port(), 'role': 'normal'}),
+            ('listener', {'name': 'l2', 'port': cls.tester.get_port(), 'role': 'normal'})
         ])
         cls._router = cls.tester.qdrouterd(config=conf0, wait=False)
 
         # Trio of interior routers linked in a line so we can see some next-hop values.
         conf0 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'router0'}),
-            ('listener', {'port': cls.get_port(), 'role': 'normal'}),
-            ('listener', {'port': cls.get_port(), 'role': 'inter-router'})
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'inter-router'})
         ])
         conf1 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'router1'}),
-            ('listener', {'port': cls.get_port(), 'role': 'normal'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal'}),
             ('connector', {'port': conf0.sections('listener')[1]['port'], 'role':'inter-router'}),
-            ('listener', {'port': cls.get_port(), 'role': 'inter-router'})
+            ('listener', {'port': cls.tester.get_port(), 'role': 'inter-router'})
         ])
         conf2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'router2'}),
-            ('listener', {'port': cls.get_port(), 'role': 'normal'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal'}),
             ('connector', {'port': conf1.sections('listener')[1]['port'], 'role':'inter-router'})
         ])
         cls._routers = [cls.tester.qdrouterd(config=c, wait=False) for c in [conf0, conf1, conf2]]
@@ -95,7 +95,7 @@ class ManagementTest(system_test.TestCase):
         # Standalone router for logging tests (avoid interfering with logging for other tests.)
         conflog = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'logrouter'}),
-            ('listener', {'port': cls.get_port(), 'role': 'normal'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal'}),
         ])
         cls._logrouter = cls.tester.qdrouterd(config=conflog, wait=False)
 

@@ -40,7 +40,7 @@ class DistributedQueueTest(system_test.TestCase):  # pylint: disable=too-many-pu
         def setUpClass(cls):
             """Start 3 qpidd brokers, wait for them to be ready."""
             super(DistributedQueueTest, cls).setUpClass()
-            cls.qpidds = [cls.tester.qpidd('qpidd%s' % i, port=cls.get_port(), wait=False)
+            cls.qpidds = [cls.tester.qpidd('qpidd%s' % i, port=cls.tester.get_port(), wait=False)
                           for i in range(3)]
             for q in cls.qpidds:
                 q.wait_ready()
