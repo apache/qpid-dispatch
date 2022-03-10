@@ -2233,8 +2233,8 @@ class ConnectionLinkRouteTest(TestCase):
         fs.delete_config()
 
         # eventually the addresses will be un-published
-        mgmt_A = QdManager(self, address=self.QDR_A.addresses[0])
-        mgmt_B = QdManager(self, address=self.QDR_B.addresses[0])
+        mgmt_A = QdManager(address=self.QDR_A.addresses[0])
+        mgmt_B = QdManager(address=self.QDR_B.addresses[0])
         deadline = time() + TIMEOUT
         while (self._get_address(mgmt_A, "flea.*")
                or self._get_address(mgmt_B, "flea.*")):
@@ -2246,8 +2246,8 @@ class ConnectionLinkRouteTest(TestCase):
     # simple forwarding tests with auto delete
     def test_send_receive(self):
         COUNT = 5
-        mgmt_A = QdManager(self, address=self.QDR_A.addresses[0])
-        mgmt_B = QdManager(self, address=self.QDR_B.addresses[0])
+        mgmt_A = QdManager(address=self.QDR_A.addresses[0])
+        mgmt_B = QdManager(address=self.QDR_B.addresses[0])
 
         # connect broker to A route-container
         fs = ConnLinkRouteService(self.QDR_A.addresses[1], container_id="FakeService",
@@ -2302,8 +2302,8 @@ class ConnectionLinkRouteTest(TestCase):
         # are removed so the link route addresses must be gone
         fs.join()
 
-        mgmt_A = QdManager(self, address=self.QDR_A.addresses[0])
-        mgmt_B = QdManager(self, address=self.QDR_B.addresses[0])
+        mgmt_A = QdManager(address=self.QDR_A.addresses[0])
+        mgmt_B = QdManager(address=self.QDR_B.addresses[0])
         deadline = time() + TIMEOUT
         while (self._get_address(mgmt_A, "flea.*")
                or self._get_address(mgmt_B, "flea.*")):
@@ -2580,7 +2580,7 @@ class Dispatch1428(TestCase):
         # Now that the qdmanage has run, query the link routes and make sure that their "operStatus" is "active" before
         # running any of the tests.
         long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
-        qd_manager = QdManager(self, address=self.routers[1].addresses[0])
+        qd_manager = QdManager(address=self.routers[1].addresses[0])
 
         for i in range(5):
             all_link_routes_activated = True

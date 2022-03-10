@@ -597,7 +597,7 @@ class QdmanageTest(TestCase):
 
     def test_worker_threads(self):
         long_type = 'org.apache.qpid.dispatch.router'
-        qd_manager = QdManager(self, address=self.address())
+        qd_manager = QdManager(address=self.address())
         output = qd_manager.query('org.apache.qpid.dispatch.router')
         self.assertEqual(output[0]['workerThreads'], 4)
 

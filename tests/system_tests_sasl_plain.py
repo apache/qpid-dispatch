@@ -126,7 +126,7 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
     def test_inter_router_sasl_fail(self):
         passed = False
         long_type = 'org.apache.qpid.dispatch.connection'
-        qd_manager = QdManager(self, address=self.routers[1].addresses[0])
+        qd_manager = QdManager(address=self.routers[1].addresses[0])
         connections = qd_manager.query(long_type)
         for connection in connections:
             if connection['role'] == 'inter-router':
@@ -136,7 +136,7 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
         # There was no inter-router connection established.
         self.assertFalse(passed)
 
-        qd_manager = QdManager(self, address=self.routers[1].addresses[0])
+        qd_manager = QdManager(address=self.routers[1].addresses[0])
         logs = qd_manager.get_log()
 
         sasl_failed = False
@@ -223,7 +223,7 @@ class RouterTestPlainSaslFailureUsingLiteral(RouterTestPlainSaslCommon):
         passed = False
         long_type = 'org.apache.qpid.dispatch.connection'
 
-        qd_manager = QdManager(self, address=self.routers[1].addresses[0])
+        qd_manager = QdManager(address=self.routers[1].addresses[0])
         connections = qd_manager.query(long_type)
 
         for connection in connections:

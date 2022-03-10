@@ -124,7 +124,7 @@ class NameCollisionTest(TestCase):
         al_long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
         addr_long_type = 'org.apache.qpid.dispatch.router.config.address'
         lr_long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         test_pass = False
         try:
             mgmt.create(al_long_type, args)
@@ -137,7 +137,7 @@ class NameCollisionTest(TestCase):
         args = {"name": "linkRoute", "prefix": "linkRoute",
                 "connection": "broker", "dir": "in"}
 
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         test_pass = False
         try:
             mgmt.create(lr_long_type, args)
@@ -148,7 +148,7 @@ class NameCollisionTest(TestCase):
 
         args = {"name": "address", "prefix": "address.1",
                 "waypoint": "yes"}
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         test_pass = False
         try:
             mgmt.create(addr_long_type, args)
@@ -166,41 +166,41 @@ class NameCollisionTest(TestCase):
         # sure that is ok
         args = {"name": "autoLink", "prefix": "linkRoute",
                 "connection": "broker", "dir": "in"}
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         mgmt.create(lr_long_type, args)
 
         # insert a linkRoute with the name of an existing addr config and make
         # sure that is ok
         args = {"name": "address", "prefix": "linkRoute",
                 "connection": "broker", "dir": "in"}
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         mgmt.create(lr_long_type, args)
 
         # insert an autoLink with the name of an existing linkRoute and make
         # sure that is ok
         args = {"name": "linkRoute", "address": "autoLink1", "connection": "broker", "dir": "in"}
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         mgmt.create(al_long_type, args)
 
         # insert an autoLink with the name of an existing address and make
         # sure that is ok
         args = {"name": "address", "address": "autoLink1", "connection": "broker", "dir": "in"}
         al_long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         mgmt.create(al_long_type, args)
 
         # insert an address with the name of an existing autoLink and make
         # sure that is ok
         args = {"name": "autoLink", "prefix": "address.2",
                 "waypoint": "yes"}
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         mgmt.create(addr_long_type, args)
 
         # insert an autoLink with the name of an existing linkRoute and make
         # sure that is ok
         args = {"name": "linkRoute", "prefix": "address.3",
                 "waypoint": "yes"}
-        mgmt = QdManager(self, address=self.router.addresses[0])
+        mgmt = QdManager(address=self.router.addresses[0])
         mgmt.create(addr_long_type, args)
 
 

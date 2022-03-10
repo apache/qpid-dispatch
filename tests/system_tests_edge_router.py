@@ -1394,7 +1394,7 @@ class RouterTest(TestCase):
     def test_71_qdmanage_edge_router_option(self):
         # Makes a connection to an interior router INT.A and runs qdstat
         # asking for all connections of an edge router EA1
-        mgmt = QdManager(self, address=self.routers[0].addresses[0],
+        mgmt = QdManager(address=self.routers[0].addresses[0],
                          edge_router_id='EA1')
         conn_found = False
         outs = mgmt.query('org.apache.qpid.dispatch.connection')
@@ -1406,7 +1406,7 @@ class RouterTest(TestCase):
 
         # Makes a connection to an edge router and runs qdstat
         # asking for all connections of an edge router EA1
-        mgmt = QdManager(self, address=self.routers[2].addresses[0],
+        mgmt = QdManager(address=self.routers[2].addresses[0],
                          edge_router_id='EA1')
         conn_found = False
         outs = mgmt.query('org.apache.qpid.dispatch.connection')
@@ -1421,7 +1421,7 @@ class RouterTest(TestCase):
         # asking for all connections of an edge router EA1. The interior
         # router INT.B is connected to edge router EA1 indirectly via
         # interior router INT.A
-        mgmt = QdManager(self, address=self.routers[1].addresses[0],
+        mgmt = QdManager(address=self.routers[1].addresses[0],
                          edge_router_id='EA1')
         conn_found = False
         outs = mgmt.query('org.apache.qpid.dispatch.connection')
@@ -1483,7 +1483,7 @@ class RouterTest(TestCase):
         # EA1 and EA2 and is also connected to another interior router INT.B
         # We will connect to edge router EA1 (which has an edge
         # uplink to INT.A) and query for connections on INT.A
-        mgmt = QdManager(self, address=self.routers[2].addresses[0],
+        mgmt = QdManager(address=self.routers[2].addresses[0],
                          router_id='INT.A')
         outs = mgmt.query('org.apache.qpid.dispatch.connection')
         ea1_conn_found = False
@@ -1503,7 +1503,7 @@ class RouterTest(TestCase):
         # EA1 via INT.A
         # We will connect to edge router EA1 (which has an edge
         # uplink to INT.A) and query for connections on INT.B
-        mgmt = QdManager(self, address=self.routers[2].addresses[0],
+        mgmt = QdManager(address=self.routers[2].addresses[0],
                          router_id='INT.B')
         outs = mgmt.query('org.apache.qpid.dispatch.connection')
         eb1_conn_found = False
@@ -1741,7 +1741,7 @@ class LinkRouteProxyTest(TestCase):
         """
         query existing links and verify they are set up as expected
         """
-        mgmt = QdManager(self, address=router)
+        mgmt = QdManager(address=router)
         # fetch all the connections
         cl = mgmt.query('org.apache.qpid.dispatch.connection')
         # map them by their identity

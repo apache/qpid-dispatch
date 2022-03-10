@@ -156,7 +156,7 @@ class LogModuleProtocolTest(TestCase):
 
     def test_turn_on_protocol_trace(self):
         hello_world_0 = "Hello World_0!"
-        qd_manager = QdManager(self, self.address)
+        qd_manager = QdManager(self.address)
         blocking_connection = BlockingConnection(self.address)
 
         TEST_ADDR = "moduletest0"
@@ -267,7 +267,7 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
         return num_transfers
 
     def test_inter_router_protocol_trace(self):
-        qd_manager = QdManager(self, self.address)
+        qd_manager = QdManager(self.address)
 
         # The router already has trace logging turned on for all connections.
         # Get the connection id of the inter-router connection
@@ -332,7 +332,7 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         cls.address = cls.router.addresses[0]
 
     def test_enable_protocol_trace_on_non_existent_connection(self):
-        qd_manager = QdManager(self, self.address)
+        qd_manager = QdManager(self.address)
 
         bad_request = False
 
@@ -346,7 +346,7 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         self.assertTrue(bad_request)
 
     def test_single_connection_protocol_trace(self):
-        qd_manager = QdManager(self, self.address)
+        qd_manager = QdManager(self.address)
 
         # Turn off trace logging on all connections.
         qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"},
@@ -452,7 +452,7 @@ class LogLevelUpdateTest(TestCase):
         hello_world_2 = "Hello World_2!"
         hello_world_3 = "Hello World_3!"
         hello_world_4 = "Hello World_4!"
-        qd_manager = QdManager(self, self.address)
+        qd_manager = QdManager(self.address)
 
         blocking_connection = BlockingConnection(self.address)
         TEST_ADDR = "apachetest1"
@@ -532,7 +532,7 @@ class LogLevelUpdateTest(TestCase):
 
         # Step 1. Turn off trace logging for module DEFAULT and enable trace logging
         #         for the PROTOCOL module and make sure it works.
-        qd_manager = QdManager(self, self.address)
+        qd_manager = QdManager(self.address)
         # Set log level to info+ on the DEFAULT module
         qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"}, name="log/DEFAULT")
         # Set log level to trace+ on the PROTOCOL module
@@ -615,7 +615,7 @@ class RouterCoreModuleLogTest(TestCase):
         blocking_sender.send(msg)
         received_message = blocking_receiver.receive()
         self.assertEqual(TEST_MSG_BODY, received_message.body)
-        qd_manager = QdManager(self, self.address)
+        qd_manager = QdManager(self.address)
         logs = qd_manager.get_log()
 
         router_core_found = False
