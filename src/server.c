@@ -1512,7 +1512,7 @@ void qd_server_run(qd_dispatch_t *qd)
     assert(qd_server->container); // Server can't run without a container
     qd_log(qd_server->log_source,
            QD_LOG_NOTICE, "Operational, %d Threads Running (process ID %ld)",
-           qd_server->thread_count, (long)getpid());
+           qd_server->thread_count, (long)getpid()); // Log message is matched in system_tests
 
     const uintmax_t ram_size = qd_platform_memory_size();
     const uint64_t  vm_size = qd_router_memory_usage();
