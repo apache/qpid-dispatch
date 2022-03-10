@@ -265,10 +265,10 @@ class OpenPropertiesQdManageTest(TestCase):
                                 op})
 
             cmd = "CREATE --type=org.apache.qpid.dispatch.%s --stdin" % client_class.entity
-            output = QdManager(tester=self)(cmd=cmd,
-                                            address=router.addresses[0],
-                                            input=input,
-                                            timeout=TIMEOUT)
+            output = QdManager()(cmd=cmd,
+                                 address=router.addresses[0],
+                                 input=input,
+                                 timeout=TIMEOUT)
             rc = json.loads(output)
             self.assertIn("openProperties", rc)
             self.assertEqual(op, rc["openProperties"])

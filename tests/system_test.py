@@ -1177,38 +1177,37 @@ class QdManager:
     A means to invoke qdmanage during a testcase
     """
 
-    def __init__(self, tester=None, address=None, timeout=TIMEOUT,
-                 router_id=None,
-                 edge_router_id=None):
+    def __init__(self, address: Optional[str] = None,
+                 timeout: Optional[float] = TIMEOUT,
+                 router_id: Optional[str] = None,
+                 edge_router_id: Optional[str] = None) -> None:
         # 'tester' - can be 'self' when called in a test,
         # or an instance any class derived from Process (like Qdrouterd)
-        self._tester = tester or Tester(None)
         self._timeout = timeout
         self._address = address
         self.router_id = router_id
         self.edge_router_id = edge_router_id
-        self.router = []
+        self.router: List[str] = []
         if self.router_id:
             self.router = self.router + ['--router', self.router_id]
         elif self.edge_router_id:
             self.router = self.router + ['--edge-router', self.edge_router_id]
 
-    def __call__(self, cmd, address=None, input=None, expect=Process.EXIT_OK,
-                 timeout=None):
-        assert address or self._address, "address missing"
-        p = self._tester.popen(
-            ['qdmanage'] + cmd.split(' ')
-            + self.router + ['--bus', address or self._address,
-                             '--indent=-1',
-                             '--timeout', str(timeout or self._timeout)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
-            universal_newlines=True)
-        out = p.communicate(input)[0]
-        try:
-            p.teardown()
-        except Exception as e:
-            raise Exception("%s\n%s" % (e, out))
-        return out
+    def __call__(self, cmd: str,
+                 address: Optional[str] = None,
+                 input: Optional[str] = None,
+                 timeout: Optional[float] = None) -> str:
+        addr = address or self._address
+        assert addr, "address missing"
+        with subprocess.Popen(['qdmanage'] + cmd.split(' ') + self.router
+                              + ['--bus', addr, '--indent=-1', '--timeout',
+                                 str(timeout or self._timeout)], stdin=PIPE,
+                              stdout=PIPE, stderr=STDOUT,
+                              universal_newlines=True) as p:
+            rc = p.communicate(input)
+            if p.returncode != 0:
+                raise Exception("%s %s" % rc)
+            return rc[0]
 
     def create(self, long_type, kwargs):
         cmd = "CREATE --type=%s" % long_type

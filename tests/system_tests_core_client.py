@@ -78,7 +78,7 @@ class CoreClientAPITest(TestCase):
         self.assertTrue(ts.accepted)
 
     def test_call_timeout(self):
-        qm = QdManager(self, self.router.addresses[0])
+        qm = QdManager(self.router.addresses[0])
         ts = TestCallTimeout(self.router.addresses[0], qm)
         ts.run()
         self.assertEqual("TIMED OUT!", ts.error)

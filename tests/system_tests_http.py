@@ -139,7 +139,7 @@ class RouterTestHttp(TestCase):
 
         # Delete the listener on port http_delete_listen_port_1
         long_type = 'org.apache.qpid.dispatch.listener'
-        mgmt = QdManager(self, address=address())
+        mgmt = QdManager(address=address())
 
         if self.skip_delete_http_listener_test:
             # You are not allowed to delete a http:yes listener
@@ -339,7 +339,7 @@ class RouterTestHttp(TestCase):
         if not self.skip_delete_http_listener_test:
             # Delete the listener with name 'delete-me'
             long_type = 'org.apache.qpid.dispatch.listener'
-            mgmt = QdManager(self, address=address())
+            mgmt = QdManager(address=address())
             mgmt.delete(long_type, name=name)
 
             # Make sure that the listener got deleted.
