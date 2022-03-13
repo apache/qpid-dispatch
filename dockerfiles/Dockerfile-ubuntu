@@ -16,14 +16,17 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+
 # Copy this docker file to your local folder. Build the docker file like this - sudo docker build -t <username>/dispatch --file=Dockerfile-ubuntu . (don't miss the dot at the end)
 # To run it - sudo docker run -i -t <username>/dispatch (this will launch the dispatch router)
 
-# Gets the trusty Ubuntu from dockerhub
-FROM ubuntu:latest
+# Gets the Ubuntu from dockerhub
+FROM ubuntu:focal
 
 MAINTAINER "dev@qpid.apache.org"
+
 ARG DEBIAN_FRONTEND=noninteractive
+
 # Install all the required packages. Some in this list were picked off from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/main/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/main/README)
 RUN apt-get update && \
     apt-get install -y curl gcc g++ automake libwebsockets-dev libtool zlib1g-dev cmake libsasl2-dev libssl-dev python3-dev libuv1-dev sasl2-bin swig maven git && \
@@ -40,7 +43,7 @@ WORKDIR /qpid-dispatch
 RUN mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DUSE_VALGRIND=NO && cmake --build . --target install
 
 # Add site-packages to the PYTHONPATH environment variable. This is because Ubuntu does not list the site-packages folder in the sys.path
-ENV PYTHONPATH=/usr/lib/python2.7/site-packages
+ENV PYTHONPATH=/usr/lib/python3.8/site-packages
 
 # Uncomment the following line if you would like to run all the dispatch unit tests and system tests. 
 #RUN cd /qpid-dispatch/build && ctest -VV
