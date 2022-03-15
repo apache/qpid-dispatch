@@ -443,7 +443,7 @@ class Qdrouterd(Process):
                 ('log', {'module': 'DEFAULT', 'enable': 'trace+',
                          'includeSource': 'true', 'outputFile': self.logfile}))
         else:
-            self.logfile = default_log[0][1].get('outputfile')
+            self.logfile = default_log[0][1].get('outputFile')
         args = ['qdrouterd', '-c', config.write(name)] + cl_args
         env_home = os.environ.get('QPID_DISPATCH_HOME')
         if pyinclude:
