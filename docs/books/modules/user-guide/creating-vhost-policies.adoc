@@ -40,8 +40,8 @@ The connection limits apply to all users that are connected to the vhost. These 
 [options="nowrap",subs="+quotes"]
 ----
 vhost {
-    hostname: example.com
-    aliases: example.org, example.net
+    hostname: "example.com"
+    aliases: "example.org, example.net"
     maxConnections: 10000
     maxMessageSize: 500000
     maxConnectionsPerUser: 100
@@ -87,33 +87,36 @@ You define resource limits by user group. A user group specifies the messaging r
 
 This example shows three user groups: admin, developers, and $default:
 
-[options="nowrap",subs="+quotes"]
+[options="nowrap""]
 ----
 vhost {
     ...
     groups: {
         admin: {
-            users: admin1, admin2
-            remoteHosts: 127.0.0.1, ::1
-            sources: *
-            targets: *
+            users: "admin1, admin2"
+            remoteHosts: "127.0.0.1, ::1"
+            sources: "*"
+            targets: "*"
         }
         developers: {
-            users: dev1, dev2, dev3
-            remoteHosts: *
-            sources: myqueue1, myqueue2
-            targets: myqueue1, myqueue2
+            users: "dev1, dev2, dev3"
+            remoteHosts: "*"
+            sources: "myqueue1, myqueue2"
+            targets: "myqueue1, myqueue2"
         }
         $default: {
-            remoteHosts: *
+            remoteHosts: "*"
             allowDynamicSource: true,
             allowAdminStatusUpdate: true,
-            sources: myqueue1, myqueue2
-            targets: myqueue1, myqueue2
+            sources: "myqueue1, myqueue2"
+            targets: "myqueue1, myqueue2"
         }
     }
 }
 ----
+
+NOTE: Use quotes to define any string values.
+
 `users`::
 A list of authenticated users for this user group. Use commas to separate multiple users. A user may belong to only one vhost user group.
 

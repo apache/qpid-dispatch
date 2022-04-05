@@ -42,11 +42,11 @@ A connector vhost policy can only be applied to a connector with a `normal` or `
 [options="nowrap"]
 ----
 vhost {
-    hostname: my-connector-policy
+    hostname: "my-connector-policy"
     groups: {
         $connector: {
-            sources: *
-            targets: *
+            sources: "*"
+            targets: "*"
             maxSenders: 5
             maxReceivers: 10
             allowAnonymousSender: true
