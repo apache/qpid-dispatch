@@ -17,13 +17,14 @@
 # under the License.
 #
 
+# build with specifying root of repository as build context, e.g. `buildah -f dockerfiles/Dockerfile-debian .`
+
 FROM debian:bullseye-slim AS build
 
 LABEL org.opencontainers.image.authors="dev@qpid.apache.org"
 
 # UPGRADE: proton > 0.37.0: replace `python3/dist-packages` with `python3.9/site-packages/`
 ARG proton_version=0.37.0
-ARG dispatch_version=1.19.0
 ARG enable_console=OFF
 
 
@@ -34,8 +35,8 @@ RUN apt-get update && \
         libssl-dev libsasl2-dev swig python3-dev libwebsockets-dev npm && \
     rm -rf /var/lib/apt/lists/*
 
-RUN git clone --depth 1 -b ${dispatch_version} https://github.com/apache/qpid-dispatch.git && \
-	git clone --depth 1 -b ${proton_version} https://github.com/apache/qpid-proton.git
+# first, build Proton since there is no recent version packaged in Debian
+RUN git clone --depth 1 -b ${proton_version} https://github.com/apache/qpid-proton.git
 
 # build and install into system for laster usage by dispatch, but also install discretely so that it's easier to copy
 RUN mkdir /qpid-proton/build /qpid-proton/install-prefix && cd /qpid-proton/build && \
@@ -43,6 +44,8 @@ RUN mkdir /qpid-proton/build /qpid-proton/install-prefix && cd /qpid-proton/buil
 	cmake --build . --target install && \
 	cmake --install . --prefix /qpid-proton/install-prefix
 
+# build Dispatch Router
+ADD . /qpid-dispatch/
 RUN mkdir /qpid-dispatch/build /qpid-dispatch/install-prefix && cd /qpid-dispatch/build && \
 	cmake .. -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DUSE_VALGRIND=NO -DCONSOLE_INSTALL=${enable_console} && \
 	cmake --build . && \
