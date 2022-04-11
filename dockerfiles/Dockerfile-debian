@@ -46,7 +46,8 @@ RUN mkdir /qpid-proton/build /qpid-proton/install-prefix && cd /qpid-proton/buil
 RUN mkdir /qpid-dispatch/build /qpid-dispatch/install-prefix && cd /qpid-dispatch/build && \
 	cmake .. -GNinja -DCMAKE_INSTALL_PREFIX=/usr -DUSE_VALGRIND=NO -DCONSOLE_INSTALL=${enable_console} && \
 	cmake --build . && \
-	cmake --install . --prefix /qpid-dispatch/install-prefix
+	cmake --install . --prefix /qpid-dispatch/install-prefix && \
+	mkdir -p /usr/share/qpid-dispatch  # make sure directory exists even if web console is disabled
 
 # Uncomment the following line if you would like to run all the dispatch unit tests and system tests
 #RUN cd /qpid-dispatch/build && ctest -VV
