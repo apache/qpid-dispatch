@@ -34,8 +34,8 @@ RUN apt-get update && \
         libssl-dev libsasl2-dev swig python3-dev libwebsockets-dev npm && \
     rm -rf /var/lib/apt/lists/*
 
-RUN git clone --depth 1 -b ${dispatch_version} https://gitbox.apache.org/repos/asf/qpid-dispatch.git && \
-	git clone --depth 1 -b ${proton_version} https://gitbox.apache.org/repos/asf/qpid-proton.git
+RUN git clone --depth 1 -b ${dispatch_version} https://github.com/apache/qpid-dispatch.git && \
+	git clone --depth 1 -b ${proton_version} https://github.com/apache/qpid-proton.git
 
 # build and install into system for laster usage by dispatch, but also install discretely so that it's easier to copy
 RUN mkdir /qpid-proton/build /qpid-proton/install-prefix && cd /qpid-proton/build && \
