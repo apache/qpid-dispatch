@@ -31,7 +31,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential cmake pkg-config git ninja-build ca-certificates \
-        libssl-dev libsasl2-dev libuv1-dev swig python3-dev libwebsockets-dev npm && \
+        libssl-dev libsasl2-dev swig python3-dev libwebsockets-dev npm && \
     rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 -b ${dispatch_version} https://gitbox.apache.org/repos/asf/qpid-dispatch.git && \
@@ -39,7 +39,7 @@ RUN git clone --depth 1 -b ${dispatch_version} https://gitbox.apache.org/repos/a
 
 # build and install into system for laster usage by dispatch, but also install discretely so that it's easier to copy
 RUN mkdir /qpid-proton/build /qpid-proton/install-prefix && cd /qpid-proton/build && \
-	cmake .. -GNinja -DPROACTOR=libuv -DSYSINSTALL_BINDINGS=ON -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_PYTHON=ON && \
+	cmake .. -GNinja -DSYSINSTALL_BINDINGS=ON -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_PYTHON=ON && \
 	cmake --build . --target install && \
 	cmake --install . --prefix /qpid-proton/install-prefix
 
@@ -52,6 +52,11 @@ RUN mkdir /qpid-dispatch/build /qpid-dispatch/install-prefix && cd /qpid-dispatc
 #RUN cd /qpid-dispatch/build && ctest -VV
 
 FROM debian:bullseye-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libsasl2-2 libsasl2-modules libwebsockets16 \
+        python3 libpython3.9 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 # proton
 COPY --from=build /qpid-proton/install-prefix /usr/
@@ -68,10 +73,6 @@ COPY --from=build /usr/share/qpid-dispatch /usr/share/qpid-dispatch
 COPY --from=build /etc/sasl2 /etc/sasl2
 COPY --from=build /usr/lib/python3.9/site-packages/qpid_dispatch /usr/lib/python3.9/site-packages/qpid_dispatch
 COPY --from=build /usr/lib/python3.9/site-packages/qpid_dispatch_site.py /usr/lib/python3.9/site-packages/
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libsasl2-2 libsasl2-modules libuv1 python3 libpython3.9 libwebsockets16 && \
-    rm -rf /var/lib/apt/lists/*
 
 # Add site-packages to the PYTHONPATH environment variable
 ENV PYTHONPATH=/usr/lib/python3.9/site-packages
