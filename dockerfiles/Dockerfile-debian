@@ -25,6 +25,7 @@ LABEL org.opencontainers.image.authors="dev@qpid.apache.org"
 
 # UPGRADE: proton > 0.37.0: replace `python3/dist-packages` with `python3.9/site-packages/`
 ARG proton_version=0.37.0
+# Enable web console: use 'ON' or 'OFF'
 ARG enable_console=OFF
 
 
@@ -32,7 +33,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential cmake pkg-config git ninja-build ca-certificates \
-        libssl-dev libsasl2-dev swig python3-dev libwebsockets-dev npm && \
+        libssl-dev libsasl2-dev swig python3-dev libwebsockets-dev \
+        $(if [ "${enable_console}" = "ON" ]; then echo "npm"; fi) && \
     rm -rf /var/lib/apt/lists/*
 
 # first, build Proton since there is no recent version packaged in Debian
