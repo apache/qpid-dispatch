@@ -36,6 +36,7 @@ import pathlib
 import queue as Queue
 import random
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -451,7 +452,8 @@ class Qdrouterd(Process):
         elif env_home:
             args += ['-I', os.path.join(env_home, 'python')]
 
-        args = os.environ.get('QPID_DISPATCH_RUNNER', '').split() + args
+        # shlex.split parses -ex 'thread apply all' into two parts, not in 4 words as string split does
+        args = shlex.split(os.environ.get('QPID_DISPATCH_RUNNER', '')) + args
         super(Qdrouterd, self).__init__(args, name=name, expect=expect)
         self._management = None
         self._wait_ready = False
