@@ -67,13 +67,13 @@ jobs:
         if: ${{ always() && runner.os == 'Linux' }}
         run: env -0 | sort -z | tr '\0' '\n'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           repository: 'apache/qpid-proton'
           ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: 'qpid-dispatch'
 
@@ -339,13 +339,13 @@ jobs:
         if: ${{ always() && runner.os == 'Linux' }}
         run: env -0 | sort -z | tr '\0' '\n'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           repository: 'apache/qpid-proton'
           ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: 'qpid-dispatch'
 
@@ -487,7 +487,7 @@ jobs:
         -DCONSOLE_INSTALL=OFF
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Create Build and Install directories
         run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
@@ -566,7 +566,7 @@ jobs:
         run: |
           dnf install -y 'dnf-command(builddep)' && dnf builddep -y qpid-dispatch-router && dnf install -y git tox ninja-build
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Create Build and Install directories
         run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
@@ -586,7 +586,7 @@ jobs:
     name: Console Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Dependencies
         run: cd console/react && npm ci
@@ -598,7 +598,7 @@ jobs:
     name: Console ESLint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Dependencies
         run: cd console/react && npm ci
@@ -610,7 +610,7 @@ jobs:
     name: RAT Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/cache@v2.1.6
         with:
           path: ~/.m2/repository
