@@ -15,7 +15,12 @@
     "express": "^4.17.3",
     "font-awesome": "^4.7.0",
     "prop-types": "^15.8.1",
+    "path-browserify": "^1.0.1",
+    "buffer": "^6.0.3",
+    "process": "^0.11.10",
+    "util": "^0.12.4",
     "react": "^17.0.2",
+    "os-browserify": "^0.3.0",
     "react-dom": "^17.0.2",
     "react-fontawesome": "^1.7.1",
     "react-router-dom": "^6.2.2",
@@ -23,9 +28,9 @@
     "topojson-client": "^3.1.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -58,6 +63,7 @@
     ]
   },
   "devDependencies": {
+    "@craco/craco": "^7.0.0-alpha.3",
     "@react-mock/localstorage": "^0.1.2",
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^12.1.4",
@@ -66,7 +72,7 @@
     "browserslist": "^4.20.0",
     "jest-axe": "^6.0.0",
     "prettier": "^2.5.1",
-    "react-scripts": "^4.0.3",
+    "react-scripts": "^5.0.1",
     "typescript": "^4.6.2"
   }
 }
