@@ -78,20 +78,20 @@ typedef struct {
 /**
  * Gets the router id from the parsed field and prints the relevant error message.
  */
-static void print_error_log(qdrm_mobile_sync_t *msync, qd_parsed_field_t *id_field, bool mau)
+static void log_unknown_router(qdrm_mobile_sync_t *msync, qd_parsed_field_t *id_field, const char *opcode)
 {
     char *r_id = 0;
     if (id_field) {
         qd_iterator_t *id_iter = qd_parse_raw(id_field);
         if (id_iter) {
-            r_id = (char *)qd_iterator_copy(id_iter);
+            r_id = (char*) qd_iterator_copy(id_iter);
         }
     }
     //
     // There is a possibility here that router_id is null but that is fine. We want to print it out either way
     // which will help us in debugging.
     //
-    qd_log(msync->log, QD_LOG_ERROR, "Received %s from an unknown router with router id %s", mau? "MAU": "MAR", r_id);
+    qd_log(msync->log, QD_LOG_ERROR, "Received %s from an unknown router with router id %s", opcode, r_id);
     free(r_id);
 }
 
@@ -454,7 +454,7 @@ static void qcm_mobile_sync_on_mar_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                 qd_log(msync->log, QD_LOG_DEBUG, "Sent MAU to requestor: mobile_seq=%"PRIu64, msync->mobile_seq);
             }
         } else {
-            print_error_log(msync, id_field, false);
+            log_unknown_router(msync, id_field, "MAR");
         }
     }
 }
@@ -517,9 +517,11 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
             // If this is a differential MAU and it doesn't represent the next expected
             // update, treat this like a sequence-advance and send a MAR
             //
-            if (!exist_field && router->mobile_seq != mobile_seq - 1 && !BIT_IS_SET(router->sync_mask, ADDR_SYNC_ROUTER_MA_REQUESTED)) {
-                qcm_mobile_sync_on_router_advanced_CT(msync, router);
-                BIT_SET(router->sync_mask, ADDR_SYNC_ROUTER_MA_REQUESTED);
+            if (!exist_field && router->mobile_seq != mobile_seq - 1) {
+                if (!BIT_IS_SET(router->sync_mask, ADDR_SYNC_ROUTER_MA_REQUESTED)) {
+                    qcm_mobile_sync_on_router_advanced_CT(msync, router);
+                    BIT_SET(router->sync_mask, ADDR_SYNC_ROUTER_MA_REQUESTED);
+                }
                 return;
             }
 
@@ -688,7 +690,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
             //
             qdr_post_set_mobile_seq_CT(msync->core, router->mask_bit, mobile_seq);
         } else {
-            print_error_log(msync, id_field, true);
+            log_unknown_router(msync, id_field, "MAU");
         }
     }
 }
