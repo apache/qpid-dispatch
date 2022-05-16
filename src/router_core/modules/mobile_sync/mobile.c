@@ -91,7 +91,7 @@ static void log_unknown_router(qdrm_mobile_sync_t *msync, qd_parsed_field_t *id_
     // There is a possibility here that router_id is null but that is fine. We want to print it out either way
     // which will help us in debugging.
     //
-    qd_log(msync->log, QD_LOG_ERROR, "Received %s from an unknown router with router id %s", opcode, r_id);
+    qd_log(msync->log, QD_LOG_WARNING, "Received %s from an unknown router with router id %s", opcode, r_id);
     free(r_id);
 }
 
