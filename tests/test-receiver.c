@@ -20,12 +20,10 @@
 
 #include "proton/connection.h"
 #include "proton/delivery.h"
-#include "proton/event.h"
-#include "proton/handlers.h"
 #include "proton/link.h"
 #include "proton/message.h"
-#include "proton/reactor.h"
 #include "proton/session.h"
+#include "proton/proactor.h"
 
 #include <inttypes.h>
 #include <signal.h>
@@ -34,11 +32,13 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <assert.h>
 
 #define BOOL2STR(b) ((b)?"true":"false")
 
 bool stop = false;
 bool verbose = false;
+bool debug_mode = false;
 
 int  credit_window = 1000;
 char *source_address = "test-address";  // name of the source node to receive from
@@ -46,15 +46,28 @@ char _addr[] = "127.0.0.1:5672";
 char *host_address = _addr;
 char *container_name = "TestReceiver";
 bool drop_connection = false;
+char proactor_address[1024];
 
 pn_connection_t *pn_conn;
 pn_session_t *pn_ssn;
 pn_link_t *pn_link;
-pn_reactor_t *reactor;
+pn_proactor_t *proactor;
 pn_message_t *in_message;       // holds the current received message
 
 uint64_t count = 0;
 uint64_t limit = 0;   // if > 0 stop after limit messages arrive
+
+
+void debug(const char *format, ...)
+{
+    va_list args;
+
+    if (!debug_mode) return;
+
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+}
 
 
 static void signal_handler(int signum)
@@ -66,6 +79,7 @@ static void signal_handler(int signum)
     case SIGINT:
     case SIGQUIT:
         stop = true;
+        if (proactor) pn_proactor_interrupt(proactor);
         break;
     default:
         break;
@@ -73,23 +87,12 @@ static void signal_handler(int signum)
 }
 
 
-// Called when reactor exits to clean up app_data
-//
-static void delete_handler(pn_handler_t *handler)
-{
-    if (in_message) {
-        pn_message_free(in_message);
-        in_message = NULL;
-    }
-}
-
-
-/* Process each event posted by the reactor.
+/* Process each event posted by the proactor
  */
-static void event_handler(pn_handler_t *handler,
-                          pn_event_t *event,
-                          pn_event_type_t type)
+static bool event_handler(pn_event_t *event)
 {
+    const pn_event_type_t type = pn_event_type(event);
+    debug("new event=%s\n", pn_event_type_name(type));
     switch (type) {
 
     case PN_CONNECTION_INIT: {
@@ -140,14 +143,31 @@ static void event_handler(pn_handler_t *handler,
 
             if (limit && count == limit) {
                 stop = true;
-                pn_reactor_wakeup(reactor);
             }
         }
+    } break;
+
+    case PN_PROACTOR_TIMEOUT: {
+        if (verbose) {
+            fprintf(stdout, "Received:%"PRIu64" of %"PRIu64"\n", count, limit);
+            fflush(stdout);
+            if (!stop) {
+                pn_proactor_set_timeout(proactor, 10 * 1000);
+            }
+        }
+    } break;
+
+    case PN_PROACTOR_INACTIVE: {
+        assert(stop);  // expect: inactive due to stopping
+        debug("proactor inactive!\n");
+        return true;
     } break;
 
     default:
         break;
     }
+
+    return false;
 }
 
 static void usage(void)
@@ -160,21 +180,17 @@ static void usage(void)
     printf("-w      \tCredit window [%d]\n", credit_window);
     printf("-E      \tExit without cleanly closing the connection [off]\n");
     printf("-d      \tPrint periodic status updates [%s]\n", BOOL2STR(verbose));
+    printf("-D      \tPrint debug info [off]\n");
     exit(1);
 }
 
 
 int main(int argc, char** argv)
 {
-    /* create a handler for the connection's events.
-     */
-    pn_handler_t *handler = pn_handler_new(event_handler, 0, delete_handler);
-    pn_handler_add(handler, pn_handshaker());
-
     /* command line options */
     opterr = 0;
     int c;
-    while((c = getopt(argc, argv, "i:a:s:hdw:c:E")) != -1) {
+    while((c = getopt(argc, argv, "i:a:s:hdDw:c:E")) != -1) {
         switch(c) {
         case 'h': usage(); break;
         case 'a': host_address = optarg; break;
@@ -190,6 +206,7 @@ int main(int argc, char** argv)
             break;
         case 'E': drop_connection = true;  break;
         case 'd': verbose = true;          break;
+        case 'D': debug_mode = true;       break;
 
         default:
             usage();
@@ -210,50 +227,52 @@ int main(int argc, char** argv)
         port = "5672";
     }
 
-    reactor = pn_reactor();
-    pn_conn = pn_reactor_connection_to_host(reactor,
-                                            host,
-                                            port,
-                                            handler);
-
+    pn_conn = pn_connection();
     // the container name should be unique for each client
     pn_connection_set_container(pn_conn, container_name);
     pn_connection_set_hostname(pn_conn, host);
+    proactor = pn_proactor();
+    pn_proactor_addr(proactor_address, sizeof(proactor_address), host, port);
+    pn_proactor_connect2(proactor, pn_conn, 0, proactor_address);
 
-    // periodic wakeup
-    pn_reactor_set_timeout(reactor, 1000);
+    if (verbose) {
+        // print status every 10 seconds..
+        pn_proactor_set_timeout(proactor, 10 * 1000);
+    }
 
-    pn_reactor_start(reactor);
+    bool done = false;
+    while (!done) {
+        debug("Waiting for proactor event...\n");
+        pn_event_batch_t *events = pn_proactor_wait(proactor);
+        debug("Start new proactor batch\n");
 
-    time_t last_log = time(NULL);
-    while (pn_reactor_process(reactor)) {
+        pn_event_t *event = pn_event_batch_next(events);
+        while (!done && event) {
+            done = event_handler(event);
+            event = pn_event_batch_next(events);
+        }
+
+        debug("Proactor batch processing done\n");
+        pn_proactor_done(proactor, events);
+
         if (stop) {
-            if (drop_connection)  // hard exit
+            pn_proactor_cancel_timeout(proactor);
+            if (drop_connection) {  // hard stop
                 exit(0);
-            // close the endpoints this will cause pn_reactor_process() to
-            // eventually break the loop
-            if (pn_link) pn_link_close(pn_link);
-            if (pn_ssn) pn_session_close(pn_ssn);
-            if (pn_conn) pn_connection_close(pn_conn);
-
-        } else if (verbose) {
-
-            // periodically give status for test output logs
-
-            time_t now = time(NULL);
-            if ((now - last_log) >= 10) {
-                fprintf(stdout, "Received:%"PRIu64" of %"PRIu64"\n", count, limit);
-                fflush(stdout);
-                last_log = now;
+            }
+            if (pn_conn) {
+                debug("Stop detected - closing connection...\n");
+                if (pn_link) pn_link_close(pn_link);
+                if (pn_ssn) pn_session_close(pn_ssn);
+                pn_connection_close(pn_conn);
+                pn_link = 0;
+                pn_ssn = 0;
+                pn_conn = 0;
             }
         }
     }
 
-    if (pn_link) pn_link_free(pn_link);
-    if (pn_ssn) pn_session_free(pn_ssn);
-    if (pn_conn) pn_connection_close(pn_conn);
-
-    pn_reactor_free(reactor);
+    pn_proactor_free(proactor);
 
     if (verbose) {
         fprintf(stdout, "Received:%"PRIu64" of %"PRIu64"\n", count, limit);
