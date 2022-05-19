@@ -26,10 +26,8 @@
 
 #include "proton/connection.h"
 #include "proton/delivery.h"
-#include "proton/event.h"
-#include "proton/handlers.h"
 #include "proton/link.h"
-#include "proton/reactor.h"
+#include "proton/proactor.h"
 #include "proton/session.h"
 #include "proton/transport.h"
 
@@ -63,14 +61,14 @@ uint32_t pause_msec = 100;   // pause between sending chunks (milliseconds)
 const char *target_address = "test-address";
 const char *host_address = "127.0.0.1:5672";
 const char *container_name = "Clogger";
+char proactor_address[1024];
 
-pn_reactor_t    *reactor;
+//
+pn_proactor_t   *proactor;
 pn_connection_t *pn_conn;
 pn_session_t    *pn_ssn;
 pn_link_t       *pn_link;
 pn_delivery_t   *pn_dlv;       // current in-flight delivery
-pn_handler_t    *_handler;
-
 uint32_t         bytes_sent;   // number of body data bytes written out link
 uint32_t         remote_max_frame = DEFAULT_MAX_FRAME;  // used to limit amount written
 
@@ -119,7 +117,7 @@ static void signal_handler(int signum)
     case SIGINT:
     case SIGQUIT:
         stop = true;
-        if (reactor) pn_reactor_wakeup(reactor);
+        if (proactor) pn_proactor_interrupt(proactor);
         break;
     default:
         break;
@@ -193,9 +191,9 @@ bool send_message_data()
             pn_delivery_settle(pn_dlv);
             if (limit && sent == limit) {
                 // no need to wait for acks
-                debug("stopping...\n");
+                debug("stopping (presettled)...\n");
                 stop = true;
-                pn_reactor_wakeup(reactor);
+                pn_proactor_interrupt(proactor);
             }
         }
         pn_dlv = 0;
@@ -208,10 +206,9 @@ bool send_message_data()
 /* Process each event posted by the proactor.
    Return true if client has stopped.
  */
-static void event_handler(pn_handler_t *handler,
-                          pn_event_t *event,
-                          pn_event_type_t etype)
+static bool event_handler(pn_event_t *event)
 {
+    const pn_event_type_t etype = pn_event_type(event);
     debug("new event=%s\n", pn_event_type_name(etype));
 
     switch (etype) {
@@ -243,12 +240,11 @@ static void event_handler(pn_handler_t *handler,
             if (pn_link_credit(pn_link) > 0) {
                 if (!pn_dlv) {
                     start_message();
-                    pn_reactor_schedule(reactor, pause_msec, _handler);   // send body after pause
+                    pn_proactor_set_timeout(proactor, pause_msec);   // send body after pause
                 }
             }
         }
     } break;
-
 
     case PN_TRANSPORT: {
         ssize_t pending = pn_transport_pending(pn_event_transport(event));
@@ -288,31 +284,37 @@ static void event_handler(pn_handler_t *handler,
                 // initiate clean shutdown of the endpoints
                 debug("stopping...\n");
                 stop = true;
-                pn_reactor_wakeup(reactor);
+                pn_proactor_interrupt(proactor);
             }
         }
     } break;
 
-    case PN_TIMER_TASK: {
+    case PN_PROACTOR_TIMEOUT: {
+        if (pn_conn) pn_connection_wake(pn_conn);
+    } break;
+
+    case PN_CONNECTION_WAKE: {
         if (!send_message_data()) {   // not done sending
-            pn_reactor_schedule(reactor, pause_msec, _handler);
+            pn_proactor_set_timeout(proactor, pause_msec);
         } else if (limit == 0 || sent < limit) {
             if (pn_link_credit(pn_link) > 0) {
                 // send next message
                 start_message();
-                pn_reactor_schedule(reactor, pause_msec, _handler);
+                pn_proactor_set_timeout(proactor, pause_msec);
             }
         }
+    } break;
+
+    case PN_PROACTOR_INACTIVE: {
+        debug("proactor inactive!\n");
+        return stop;
     } break;
 
     default:
         break;
     }
-}
 
-
-static void delete_handler(pn_handler_t *handler)
-{
+    return false;
 }
 
 
@@ -374,51 +376,54 @@ int main(int argc, char** argv)
         host_address += strlen("amqp://");
     }
 
-    // convert host_address to hostname and port
+    // trim port from hostname
     char *hostname = strdup(host_address);
     char *port = strchr(hostname, ':');
-    if (!port) {
-        port = "5672";
-    } else {
+    if (port) {
         *port++ = 0;
+    } else {
+        port = "5672";
     }
 
-    _handler = pn_handler_new(event_handler, 0, delete_handler);
-    pn_handler_add(_handler, pn_handshaker());
-
-    reactor = pn_reactor();
-    pn_conn = pn_reactor_connection_to_host(reactor,
-                                            hostname,
-                                            port,
-                                            _handler);
-
+    pn_conn = pn_connection();
     // the container name should be unique for each client
     pn_connection_set_container(pn_conn, container_name);
     pn_connection_set_hostname(pn_conn, hostname);
+    proactor = pn_proactor();
+    pn_proactor_addr(proactor_address, sizeof(proactor_address), hostname, port);
+    pn_proactor_connect2(proactor, pn_conn, 0, proactor_address);
+    free(hostname);
 
-    // break out of pn_reactor_process once a second to check if done
-    pn_reactor_set_timeout(reactor, 1000);
+    bool done = false;
+    while (!done) {
+        debug("Waiting for proactor event...\n");
+        pn_event_batch_t *events = pn_proactor_wait(proactor);
+        debug("Start new proactor batch\n");
+        pn_event_t *event = pn_event_batch_next(events);
+        while (event) {
+            done = event_handler(event);
+            if (done)
+                break;
 
-    pn_reactor_start(reactor);
+            event = pn_event_batch_next(events);
+        }
 
-    while (pn_reactor_process(reactor)) {
-        if (stop) {
-            // close the endpoints this will cause pn_reactor_process() to
-            // eventually break the loop
+        debug("Proactor batch processing done\n");
+        pn_proactor_done(proactor, events);
+
+        if (stop && pn_conn) {
+            debug("Stop detected - closing connection...\n");
             if (pn_link) pn_link_close(pn_link);
             if (pn_ssn) pn_session_close(pn_ssn);
-            if (pn_conn) pn_connection_close(pn_conn);
+            pn_connection_close(pn_conn);
             pn_link = 0;
             pn_ssn = 0;
             pn_conn = 0;
         }
     }
 
-    if (pn_link) pn_link_free(pn_link);
-    if (pn_ssn) pn_session_free(pn_ssn);
-    if (pn_conn) pn_connection_close(pn_conn);
-
-    pn_reactor_free(reactor);
+    debug("Send complete!\n");
+    pn_proactor_free(proactor);
 
     if (not_accepted) {
         printf("Sent: %" PRIu64 "  Accepted: %" PRIu64 " Not Accepted: %" PRIu64 "\n", sent, accepted, not_accepted);
