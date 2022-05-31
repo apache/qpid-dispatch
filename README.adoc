@@ -110,6 +110,17 @@ After running the tests, all XML reports will be found under tests/junitxmls in 
 cmake .. -DPYTHON_TEST_COMMAND='-m;pytest;-vs;--junit-xml=junitxmls/${py_test_module}.xml;--pyargs;${py_test_module}'
 ----
 
+=== Runner for `skrouterd` in tests
+
+System tests can be configured to run `skrouterd` processes with an arbitrary wrapper.
+To do this, set the `QDROUTERD_RUNNER` CMake option to a string that will be prepended before all `skrouterd` invocations during testing.
+The following example illustrates how to run the router under `gdb`, to obtain a backtrace if the router crashes.
+
+[source,shell script]
+----
+cmake .. -DQDROUTERD_RUNNER="gdb -quiet -iex 'set pagination off' -iex 'set debuginfod enabled on' -ex run -ex 'thread apply all bt' -ex 'quit $_exitcode' --batch --args"
+----
+
 === Test Suite Code Coverage (GNU tools only)
 
 Use coverage analysis to ensure that all code paths are exercised by
