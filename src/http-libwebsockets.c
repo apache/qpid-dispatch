@@ -28,6 +28,7 @@
 #include "qpid/dispatch/timer.h"
 
 #include <proton/connection_driver.h>
+#include <proton/object.h>
 
 #include <ctype.h>
 #include <inttypes.h>

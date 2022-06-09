@@ -30,6 +30,8 @@
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 #include <proton/sasl_plugin.h>
+#include <proton/object.h>
+
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/log.h"
 
