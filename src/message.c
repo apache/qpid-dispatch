@@ -1491,7 +1491,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         qd_alloc_safe_ptr_t sp = QD_SAFE_PTR_INIT(qdl);
         qd_message_set_q2_unblocked_handler((qd_message_t*) msg, qd_link_q2_restart_receive, sp);
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
-        pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
+        pn_record_def(record, PN_DELIVERY_CTX, PN_VOID);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
         msg->content->max_message_size = qd_connection_max_message_size(qdc);
         qd_link_set_incoming_msg(qdl, (qd_message_t*) msg);
