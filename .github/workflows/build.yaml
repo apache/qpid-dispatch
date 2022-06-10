@@ -196,7 +196,7 @@ jobs:
         run: env -0 | sort -z | tr '\0' '\n'
 
       - name: Download Build
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}
 
