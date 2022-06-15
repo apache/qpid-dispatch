@@ -67,13 +67,13 @@ jobs:
         if: ${{ always() && runner.os == 'Linux' }}
         run: env -0 | sort -z | tr '\0' '\n'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           repository: 'apache/qpid-proton'
           ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: 'qpid-dispatch'
 
@@ -339,13 +339,13 @@ jobs:
         if: ${{ always() && runner.os == 'Linux' }}
         run: env -0 | sort -z | tr '\0' '\n'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           repository: 'apache/qpid-proton'
           ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: 'qpid-dispatch'
 
@@ -500,7 +500,7 @@ jobs:
       - name: Install python-checker test dependencies
         run: python3 -m pip install tox
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Create Build and Install directories
         run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
@@ -532,7 +532,7 @@ jobs:
         -DCONSOLE_INSTALL=OFF
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Create Build and Install directories
         run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
@@ -588,7 +588,7 @@ jobs:
     name: Console Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Dependencies
         run: cd console/react && npm ci
@@ -600,7 +600,7 @@ jobs:
     name: Console ESLint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Dependencies
         run: cd console/react && npm ci
@@ -612,7 +612,7 @@ jobs:
     name: RAT Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/cache@v3.0.4
         with:
           path: ~/.m2/repository
