@@ -145,7 +145,7 @@ jobs:
       - name: Display ccache stats
         run: ccache -s
 
-      # github actions/upload-artifact@v2 does not preserve executable permission on binaries
+      # github actions/upload-artifact@v3 does not preserve executable permission on binaries
       - name: Compress build
         working-directory: ${{github.workspace}}
         run: >
@@ -161,7 +161,7 @@ jobs:
             qpid-proton/build/python/pkgs
 
       - name: Upload archive
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{ matrix.protonGitRef }}
           path: /tmp/archive.tar.xz
@@ -227,14 +227,14 @@ jobs:
           ctest --timeout 1200 -C ${BuildType} -V -T Test --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2 ${{env.DispatchCTestExtraArgs}}
 
       - name: Upload test results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ ! cancelled() }}
         with:
           name: Test_Results_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: ${{env.DispatchBuildDir}}/Testing/**/*.xml
 
       - name: Upload log files (if any tests failed)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: testLogs_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
@@ -242,7 +242,7 @@ jobs:
             qpid-dispatch/build/tests
 
       - name: Upload core files (if any)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: cores_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
@@ -449,14 +449,14 @@ jobs:
           ctest --timeout 1200 -C ${BuildType} -V -T Test --output-on-failure --no-compress-output -I ${{matrix.shard}},,${{matrix.shards}} -j2 ${{env.DispatchCTestExtraArgs}}
 
       - name: Upload test results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ ! cancelled() }}
         with:
           name: Test_Results_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: ${{env.DispatchBuildDir}}/Testing/**/*.xml
 
       - name: Upload log files (if any tests failed)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: testLogs_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
@@ -464,7 +464,7 @@ jobs:
             qpid-dispatch/build/tests
 
       - name: Upload core files (if any)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: cores_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
@@ -564,13 +564,13 @@ jobs:
         run: cmake --build "${DispatchBuildDir}" -t docs
 
       - name: Store the rendered user-guide
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: UserGuide
           path: ${{env.DispatchBuildDir}}/docs/books/user-guide
 
       - name: Store the rendered html man pages
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Manpages
           path: ${{env.DispatchBuildDir}}/docs/man/*.html
@@ -579,7 +579,7 @@ jobs:
         run: asciidoctor-pdf --failure-level INFO ${{github.workspace}}/docs/books/user-guide/book.adoc
 
       - name: Store the rendered Dispatch book PDF
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: book.pdf
           path: ${{github.workspace}}/docs/books/user-guide/book.pdf
