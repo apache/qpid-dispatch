@@ -85,7 +85,7 @@ jobs:
           string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
           message("::set-output name=timestamp::${current_date}")
 
-      - uses: actions/cache@v3.0.4
+      - uses: actions/cache@v3.0.8
         env:
           cache-name: cache-ccache
         with:
@@ -370,7 +370,7 @@ jobs:
           string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
           message("::set-output name=timestamp::${current_date}")
 
-      - uses: actions/cache@v3.0.4
+      - uses: actions/cache@v3.0.8
         env:
           cache-name: cache-ccache
         with:
@@ -613,7 +613,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/cache@v3.0.4
+      - uses: actions/cache@v3.0.8
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
