@@ -20,9 +20,6 @@
 image:https://github.com/apache/qpid-dispatch/actions/workflows/build.yaml/badge.svg[
 "GitHub Actions"
 link="https://github.com/apache/qpid-dispatch/actions/workflows/build.yaml"]
-image:https://img.shields.io/travis/apache/qpid-dispatch.svg?logo=travisci[
-"Travis",
-link="https://travis-ci.com/apache/qpid-dispatch"]
 image:https://img.shields.io/github/license/apache/qpid-dispatch.svg[
 "License",
 link="https://github.com/apache/qpid-dispatch/blob/main/LICENSE"]
