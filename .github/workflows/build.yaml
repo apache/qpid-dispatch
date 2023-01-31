@@ -640,7 +640,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Build Debian image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: dockerfiles/Dockerfile-debian
           context: .
