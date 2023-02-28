@@ -1803,7 +1803,7 @@ static int compose_router_message_annotations(qd_message_pvt_t *msg, uint8_t *ma
 
         // value: first compute trace list size and count since the list header
         // must be written first
-        qd_buffer_field_t in_trace;
+        qd_buffer_field_t in_trace = {0};
         if (use_incoming) {
             in_trace = qd_parse_value(content->ma_pf_trace);
             trace_len += in_trace.remaining;
