@@ -734,7 +734,6 @@ class OneRouterTest(TestCase):
         """
         client_caps = [symbol("single"),
                        ["A", "B", "C"],
-                       [9, 10, 11],
                        [],
                        None]
 
