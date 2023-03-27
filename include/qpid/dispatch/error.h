@@ -68,7 +68,8 @@ ENUM_DECLARE(qd_error);
  */
 #define qd_verror(code, fmt, ap) qd_error_vimpl(code, __FILE__, __LINE__, fmt, ap)
 
-qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char *fmt, ...);
+qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char *fmt, ...)
+    __attribute__((format(printf, 4, 5)));
 qd_error_t qd_error_vimpl(qd_error_t code, const char *file, int line, const char *fmt, va_list ap);
 
 /**
@@ -117,6 +118,7 @@ qd_error_t qd_error_py_impl(const char *file, int line);
  */
 #define qd_error_errno(errnum, ...) qd_error_errno_impl(errnum, __FILE__, __LINE__, __VA_ARGS__)
 
-qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const char *fmt, ...);
+qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const char *fmt, ...)
+    __attribute__((format(printf, 4, 5)));
 
 #endif

@@ -49,37 +49,37 @@ TEST_CASE("test_safe_snprintf") {
 
     SUBCASE("valid_inputs") {
         SUBCASE("") {
-            len = safe_snprintf(output, LEN + 10, TEST_MESSAGE);
+            len = safe_snprintf(output, LEN + 10, "%s", TEST_MESSAGE);
             CHECK(LEN == len);
             CHECK(output == TEST_MESSAGE);
         }
 
         SUBCASE("") {
-            len = safe_snprintf(output, LEN + 1, TEST_MESSAGE);
+            len = safe_snprintf(output, LEN + 1, "%s", TEST_MESSAGE);
             CHECK(LEN == len);
             CHECK(output == TEST_MESSAGE);
         }
 
         SUBCASE("") {
-            len = safe_snprintf(output, LEN, TEST_MESSAGE);
+            len = safe_snprintf(output, LEN, "%s", TEST_MESSAGE);
             CHECK(LEN - 1 == len);
             CHECK(output == "somethin");
         }
 
         SUBCASE("") {
-            len = safe_snprintf(output, 0, TEST_MESSAGE);
+            len = safe_snprintf(output, 0, "%s", TEST_MESSAGE);
             CHECK(0 == len);
         }
 
         SUBCASE("") {
             output[0] = 'a';
-            len = safe_snprintf(output, 1, TEST_MESSAGE);
+            len       = safe_snprintf(output, 1, "%s", TEST_MESSAGE);
             CHECK(0 == len);
             CHECK('\0' == output[0]);
         }
 
         SUBCASE("") {
-            len = safe_snprintf(output, (int)-1, TEST_MESSAGE);
+            len = safe_snprintf(output, (int) -1, "%s", TEST_MESSAGE);
             CHECK(0 == len);
         }
     }
@@ -90,7 +90,7 @@ TEST_CASE("test_safe_snprintf") {
         vsnprintf_stub::rc = -1;
 
         output[0] = 'a';
-        len       = safe_snprintf(output, LEN + 10, TEST_MESSAGE);
+        len       = safe_snprintf(output, LEN + 10, "%s", TEST_MESSAGE);
         CHECK(0 == len);
         CHECK('\0' == output[0]);
     }

@@ -657,7 +657,7 @@ QD_EXPORT qd_error_t qd_log_entity(qd_entity_t *entity)
     if (error_in_output) {
         char msg[TEXT_MAX];
         snprintf(msg, sizeof(msg), "Failed to open log file '%s'", outputFile);
-        qd_error(QD_ERROR_CONFIG, msg);
+        qd_error(QD_ERROR_CONFIG, "%s", msg);
     }
     if (error_in_enable) {
         qd_error(QD_ERROR_CONFIG, "'%s' is not a valid log level. Should be one of {%s}.",  enable, level_names);

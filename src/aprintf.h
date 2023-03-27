@@ -36,6 +36,6 @@ int vaprintf(char **begin, char *end, const char *format, va_list ap_in);
    - n > 0: printing was truncated and would have printed n characters. *begin == end-1
    - n < 0: error (return value of vsnprintf) no change to *begin
  */
-int aprintf(char **begin, char *end, const char *format, ...);
+int aprintf(char **begin, char *end, const char *format, ...) __attribute__((format(printf, 3, 4)));
 
 #endif
