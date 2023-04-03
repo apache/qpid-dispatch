@@ -100,7 +100,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.6
+          python-version: 3.8
           architecture: x64
 
       - name: Install Python build dependencies
@@ -203,7 +203,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.6
+          python-version: 3.8
           architecture: x64
 
       - name: Install Python runtime/test dependencies
@@ -265,15 +265,15 @@ jobs:
         shards: [ 2 ]
         include:
           - os: ubuntu-20.04
-            container: 'centos'
-            containerTag: 7
+            container: 'rockylinux'
+            containerTag: 8
             runtimeCheck: OFF
             protonGitRef: main
             shard: 1
             shards: 2
           - os: ubuntu-20.04
-            container: 'centos'
-            containerTag: 7
+            container: 'rockylinux'
+            containerTag: 8
             runtimeCheck: OFF
             protonGitRef: main
             shard: 2
@@ -350,14 +350,29 @@ jobs:
           path: 'qpid-dispatch'
 
       - name: Install EPEL (on CentOS 7)
-        if: ${{ matrix.container == 'centos' }}
+        if: ${{ matrix.container == 'centos' && matrix.containerTag == '7' }}
         run: |
           yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
+      # https://wiki.rockylinux.org/rocky/repo/#notes-on-epel
+      - name: Install EPEL (on RockyLinux 8)
+        if: ${{ matrix.container == 'rockylinux' && matrix.containerTag == '8' }}
+        run: |
+          dnf install -y epel-release
+          crb enable
 
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          yum install -y gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain swig python3-devel python3-pip make libwebsockets-devel ccache libasan libubsan libtsan
+          yum install -y gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain swig make libwebsockets-devel ccache libasan libubsan libtsan
+
+      - name: Install Linux build dependencies (Fedora, CentOS)
+        if: ${{ matrix.container == 'fedora' || matrix.container == 'centos' }}
+        run: yum install -y python3-devel python3-pip
+
+      - name: Install Linux build dependencies (RockyLinux 8)
+        if: ${{ matrix.container == 'rockylinux' && matrix.containerTag == '8' }}
+        run: dnf install -y python39-devel python39-pip
 
       - name: Install Python build dependencies
         run: python3 -m pip install setuptools wheel tox
