@@ -651,7 +651,7 @@ static void qdrc_test_client_api_setup(test_module_t *test_module)
                                               _on_conn_event,
                                               0, 0, 0, tc);
 
-    qd_log(test_module->core->log, QD_LOG_TRACE, "client test registered %p", tc->conn_events);
+    qd_log(test_module->core->log, QD_LOG_TRACE, "client test registered %p", (void *) tc->conn_events);
 }
 
 

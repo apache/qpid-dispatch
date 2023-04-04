@@ -584,10 +584,10 @@ typedef struct {
 // Parse an iterator to a python object.
 static PyObject *py_iter_parse(qd_iterator_t *iter)
 {
-    qd_parsed_field_t *parsed=0;
+    qd_parsed_field_t *parsed = 0;
     if (iter && (parsed = qd_parse(iter))) {
         if (!qd_parse_ok(parsed)) {
-            qd_error(QD_ERROR_MESSAGE, qd_parse_error(parsed));
+            qd_error(QD_ERROR_MESSAGE, "%s", qd_parse_error(parsed));
             qd_parse_free(parsed);
             return 0;
         }

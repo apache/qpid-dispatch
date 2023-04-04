@@ -207,7 +207,7 @@ qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const cha
         va_start(arglist, fmt);
         vaprintf(&begin, end, fmt, arglist);
         va_end(arglist);
-        aprintf(&begin, end, ": ", errnum);
+        aprintf(&begin, end, ": ");
         char *em = ts.error_message;
         if(strerror_r(errnum, begin, end - begin) != 0) {
             snprintf(begin, end - begin, "Unknown error %d", errnum);

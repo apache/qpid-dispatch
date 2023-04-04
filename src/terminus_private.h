@@ -28,7 +28,10 @@
 // do pointer & length arithmetic without overflowing the destination buffer in
 // qdr_terminus_format()
 //
-static inline size_t safe_snprintf(char *str, size_t size, const char *format, ...) {
+static inline size_t safe_snprintf(char *str, size_t size, const char *format, ...)
+    __attribute__((format(printf, 3, 4)));
+size_t safe_snprintf(char *str, size_t size, const char *format, ...)
+{
     // max size allowed must be INT_MAX (since vsnprintf returns an int)
     if (size == 0 || size > INT_MAX) {
         return 0;

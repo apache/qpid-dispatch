@@ -343,7 +343,7 @@ char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits f
     char *begin = buffer;
     char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
     bool first = true;
-    aprintf(&begin, end, "Message{", msg);
+    aprintf(&begin, end, "Message{");
     print_field(msg, QD_FIELD_MESSAGE_ID, "message-id", flags, &first, &begin, end);
     print_field(msg, QD_FIELD_USER_ID, "user-id", flags, &first, &begin, end);
     print_field(msg, QD_FIELD_TO, "to", flags, &first, &begin, end);

@@ -44,13 +44,15 @@ qd_log_source_t* qd_log_source(const char *module);
 /**@internal*/
 bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level);
 /**@internal*/
-void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...);
+void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...)
+    __attribute__((format(printf, 5, 6)));
 
 /**
  * Another version of the qd_log_impl function. This function unconditionally writes the the message to the log file.
  * It does not check to see if the passed in log level is enabled.
  */
-void qd_log_impl_v1(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...);
+void qd_log_impl_v1(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...)
+    __attribute__((format(printf, 5, 6)));
 void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_level, const char *file, int line, const char *fmt, va_list ap);
 
 /** Log a message
@@ -80,6 +82,6 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
 /** Maximum length for a log message */
 int qd_log_max_len();
 
-void qd_format_string(char* buf, int buf_size, const char *fmt, ...);
+void qd_format_string(char *buf, int buf_size, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
 #endif

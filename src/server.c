@@ -633,6 +633,8 @@ static void on_accept(pn_event_t *e, qd_listener_t *listener)
 
 /* Log the description, set the transport condition (name, description) close the transport tail. */
 void connect_fail(qd_connection_t *ctx, const char *name, const char *description, ...)
+     __attribute__((format(printf, 3, 4)));
+void connect_fail(qd_connection_t *ctx, const char *name, const char *description, ...)
 {
     va_list ap;
     va_start(ap, description);
@@ -654,7 +656,6 @@ void connect_fail(qd_connection_t *ctx, const char *name, const char *descriptio
         }
     }
 }
-
 
 /* Get the host IP address for the remote end */
 static void set_rhost_port(qd_connection_t *ctx) {
@@ -1081,11 +1082,11 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
                             pn_condition_get_name(condition), pn_condition_get_description(condition));
                     strcpy(ctx->connector->conn_msg, conn_msg);
 
-                    qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
+                    qd_log(qd_server->log_source, QD_LOG_INFO, "%s", conn_msg);
                 } else {
                     qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed", ctx->connection_id, config->host_port);
                     strcpy(ctx->connector->conn_msg, conn_msg);
-                    qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
+                    qd_log(qd_server->log_source, QD_LOG_INFO, "%s", conn_msg);
                 }
             } else if (ctx && ctx->listener) { /* Incoming connection */
                 if (condition && pn_condition_is_set(condition)) {
