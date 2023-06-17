@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import App from "./App";
 
 let config = { title: "Apache Qpid Dispatch Console" };
@@ -30,6 +30,8 @@ fetch("/config.json")
   .catch(error => {
     console.log("/config.json not found. Using default console title");
   })
-  .finally(() =>
-    ReactDOM.render(<App config={config} />, document.getElementById("root"))
-  );
+  .finally(() => {
+    const rootElement = document.getElementById("root");
+    const root = createRoot(rootElement);
+    root.render(<App config={config} />);
+  });
