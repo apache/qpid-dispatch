@@ -33,7 +33,7 @@ import {
   NavExpandable,
   NavItem,
   NavList,
-  PageSidebar
+  PageSidebar,
 } from "@patternfly/react-core";
 
 import { Routes, Route, Link, Navigate } from "react-router-dom";
@@ -73,7 +73,9 @@ function withRouter(Component) {
       <Component
         {...props}
         router={{ location, navigate, params }} // intended usage
-        location={location} navigate={navigate} params={params} // what the code currently expects
+        location={location}
+        navigate={navigate}
+        params={params} // what the code currently expects
       />
     );
   }
@@ -95,7 +97,7 @@ class PageLayout extends React.PureComponent {
       isMobileView: false,
       user: "anonymous",
       timePeriod: 60,
-      suppress: JSON.parse(localStorage.getItem(SUPPRESS_NOTIFICATIONS)) || false
+      suppress: JSON.parse(localStorage.getItem(SUPPRESS_NOTIFICATIONS)) || false,
     };
     this.isDropdownOpen = false;
 
@@ -108,10 +110,10 @@ class PageLayout extends React.PureComponent {
         { name: "addresses", pre: true },
         { name: "links", pre: true },
         { name: "connections", pre: true },
-        { name: "logs", pre: true }
+        { name: "logs", pre: true },
       ],
       visualizations: [{ name: "topology" }, { name: "flow", title: "Message flow" }],
-      details: [{ name: "entities" }, { name: "schema" }]
+      details: [{ name: "entities" }, { name: "schema" }],
     };
     this.state.connecting = true;
     this.tryInitialConnect();
@@ -123,7 +125,7 @@ class PageLayout extends React.PureComponent {
     this.inflightChartData = new inflightData(this.service);
     this.updateCharts();
     document.title = this.props.config.title;
-    this.idleUnregister = idle(1000 * 60 * 60, this.handleIdleTimeout);
+    this.idleUnregister = idle(1000 * 10, this.handleIdleTimeout);
   };
 
   componentWillUnmount = () => {
@@ -138,9 +140,7 @@ class PageLayout extends React.PureComponent {
   };
 
   handleIdleTimeout = () => {
-    this.props.history.replace(
-      `${this.props.location.pathname}${this.props.location.search}`
-    );
+    this.props.navigate(`${this.props.location.pathname}${this.props.location.search}`);
   };
 
   tryInitialConnect = () => {
@@ -149,7 +149,7 @@ class PageLayout extends React.PureComponent {
       address: window.location.hostname,
       port: window.location.port === "" ? defaultPort : window.location.port,
       timeout: 2000,
-      reconnect: true
+      reconnect: true,
     };
     this.service.connect(connectOptions).then(
       () => {
@@ -157,7 +157,7 @@ class PageLayout extends React.PureComponent {
       },
       () => {
         //this.service.disconnect();
-        this.props.history.replace("/");
+        this.props.navigate("/");
         this.setState({ connecting: false });
       }
     );
@@ -187,10 +187,10 @@ class PageLayout extends React.PureComponent {
       if (this.lastLocation) {
         to = this.lastLocation;
       }
-      this.props.history.push(to);
+      this.props.navigate(to);
       this.setState({
         isConnectFormOpen: false,
-        connected: true
+        connected: true,
       });
     }
   };
@@ -265,7 +265,7 @@ class PageLayout extends React.PureComponent {
             activeItem,
             activeGroup,
             connected: true,
-            isConnectFormOpen: false
+            isConnectFormOpen: false,
           });
           this.props.navigate(connectPath);
         }
@@ -276,7 +276,7 @@ class PageLayout extends React.PureComponent {
   onNavSelect = result => {
     this.setState({
       activeItem: result.itemId,
-      activeGroup: result.groupId
+      activeGroup: result.groupId,
     });
   };
 
@@ -290,19 +290,19 @@ class PageLayout extends React.PureComponent {
 
   onNavToggleDesktop = () => {
     this.setState({
-      isNavOpenDesktop: !this.state.isNavOpenDesktop
+      isNavOpenDesktop: !this.state.isNavOpenDesktop,
     });
   };
 
   onNavToggleMobile = () => {
     this.setState({
-      isNavOpenMobile: !this.state.isNavOpenMobile
+      isNavOpenMobile: !this.state.isNavOpenMobile,
     });
   };
 
   onPageResize = ({ mobileView, windowSize }) => {
     this.setState({
-      isMobileView: mobileView
+      isMobileView: mobileView,
     });
   };
 
@@ -322,7 +322,7 @@ class PageLayout extends React.PureComponent {
         message,
         timestamp,
         severity,
-        silent
+        silent,
       });
     }
   };
@@ -447,20 +447,24 @@ class PageLayout extends React.PureComponent {
 
     // don't allow access to this component unless we are logged in
     // https://gist.github.com/mjackson/d54b40a094277b7afdd6b81f51a0393f
-    const RequireLogin = ( props ) => {
-      const { component: Component, ...more } = props
+    const RequireLogin = props => {
+      const { component: Component, ...more } = props;
 
-      return this.state.connected ? <Component
-        service={this.service}
-        handleAddNotification={this.handleAddNotification}
-        {...this.props}
-        {...more}
-        location={this.props.history.location}
-      /> : <Navigate
-        to={`/login${this.state.connecting ? "/connecting" : ""}`}
-        state={{ from: this.props.history.location }}
-      />;
-    }
+      return this.state.connected ? (
+        <Component
+          service={this.service}
+          handleAddNotification={this.handleAddNotification}
+          {...this.props}
+          {...more}
+          location={this.props.location}
+        />
+      ) : (
+        <Navigate
+          to={`/login${this.state.connecting ? "/connecting" : ""}`}
+          state={{ from: this.props.location }}
+        />
+      );
+    };
 
     const connectForm = () => {
       return this.state.isConnectFormOpen ? (
@@ -501,7 +505,8 @@ class PageLayout extends React.PureComponent {
         {connectForm()}
         <Routes>
           <Route
-            exact path={"/"}
+            exact
+            path={"/"}
             element={
               <RequireLogin
                 throughputChartData={this.throughputChartData}
@@ -520,21 +525,22 @@ class PageLayout extends React.PureComponent {
               />
             }
           />
-          <Route path="/overview/:entity" element={<RequireLogin component={OverviewPage}/>}/>
+          <Route
+            path="/overview/:entity"
+            element={<RequireLogin component={OverviewPage} />}
+          />
           <Route
             path="/details"
-            element={
-              <RequireLogin
-                schema={this.schema}
-                component={DetailsTablePage}
-              />
-            }
+            element={<RequireLogin schema={this.schema} component={DetailsTablePage} />}
           />
-          <Route path="/topology" element={<RequireLogin component={TopologyPage}/>}/>
-          <Route path="/flow" element={<RequireLogin component={MessageFlowPage}/>}/>
-          <Route path="/logs" element={<RequireLogin component={LogDetails}/>}/>
-          <Route path="/entities" element={<RequireLogin component={EntitiesPage}/>}/>
-          <Route path="/schema" element={<RequireLogin schema={this.schema} component={SchemaPage}/>}/>
+          <Route path="/topology" element={<RequireLogin component={TopologyPage} />} />
+          <Route path="/flow" element={<RequireLogin component={MessageFlowPage} />} />
+          <Route path="/logs" element={<RequireLogin component={LogDetails} />} />
+          <Route path="/entities" element={<RequireLogin component={EntitiesPage} />} />
+          <Route
+            path="/schema"
+            element={<RequireLogin schema={this.schema} component={SchemaPage} />}
+          />
           <Route
             path="/login/*"
             element={
