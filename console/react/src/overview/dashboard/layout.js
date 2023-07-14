@@ -125,7 +125,7 @@ class PageLayout extends React.PureComponent {
     this.inflightChartData = new inflightData(this.service);
     this.updateCharts();
     document.title = this.props.config.title;
-    this.idleUnregister = idle(1000 * 10, this.handleIdleTimeout);
+    this.idleUnregister = idle(1000 * 60 * 60, this.handleIdleTimeout);
   };
 
   componentWillUnmount = () => {
