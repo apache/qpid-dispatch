@@ -1029,9 +1029,10 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         qdrc_endpoint_do_cleanup_CT(core, link->core_endpoint);
 
     //
-    // If the link has a connected peer, unlink the peer
+    // If the link has a connected peer, detach and unlink the peer
     //
     if (link->connected_link) {
+        qdr_link_outbound_detach_CT(core, link->connected_link, 0, QDR_CONDITION_ROUTED_LINK_LOST, true);
         link->connected_link->connected_link = 0;
         link->connected_link = 0;
     }
