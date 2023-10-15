@@ -35,3 +35,19 @@ github:
     - c
     - python
     - python3
+
+  features:
+    wiki: false
+    issues: false
+    projects: false
+
+  enabled_merge_buttons:
+    squash:  true
+    merge:   false
+    rebase:  true
+
+  dependabot_alerts:  true
+
+  autolink_jira:
+    - INFRA
+    - DISPATCH
