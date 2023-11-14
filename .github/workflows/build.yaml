@@ -104,7 +104,7 @@ jobs:
           architecture: x64
 
       - name: Install Python build dependencies
-        run: python -m pip install setuptools wheel tox
+        run: python -m pip install setuptools wheel tox cffi
 
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -375,7 +375,7 @@ jobs:
         run: dnf install -y python39-devel python39-pip
 
       - name: Install Python build dependencies
-        run: python3 -m pip install setuptools wheel tox
+        run: python3 -m pip install setuptools wheel tox cffi
 
       # https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
       - name: Prepare ccache timestamp
