@@ -32,6 +32,7 @@ jobs:
         buildType: [Debug]
         runtimeCheck: [asan]
         protonGitRef: [main, 0.36.0]
+        python: [/usr/bin/python3-dbg]
     env:
       BuildType: ${{matrix.buildType}}
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
@@ -47,6 +48,7 @@ jobs:
         -DBUILD_TESTING=OFF
         -DENABLE_FUZZ_TESTING=OFF
         -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
+        -DPython_EXECUTABLE=${{matrix.python}}
       DispatchCMakeExtraArgs: >
         -DCMAKE_C_COMPILER_LAUNCHER=ccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -56,6 +58,7 @@ jobs:
         -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
         -DSANITIZE_3RD_PARTY=ON
         -DBUILD_BENCHMARKS=ON
+        -DPython_EXECUTABLE=${{matrix.python}}
 
       CCACHE_BASEDIR: ${{github.workspace}}
       CCACHE_DIR: ${{github.workspace}}/.ccache
@@ -109,7 +112,10 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt update; sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev ccache ninja-build pixz libbenchmark-dev
+          sudo apt update; sudo apt install -y swig python3-dbg libpython3-dbg libsasl2-dev libjsoncpp-dev libwebsockets-dev ccache ninja-build pixz libbenchmark-dev
+
+      - name: Install Python build dependencies
+        run: ${{matrix.python}} -m pip install setuptools wheel tox
 
       - name: Zero ccache stats
         run: ccache -z
@@ -177,6 +183,7 @@ jobs:
         buildType: [Debug]
         runtimeCheck: [asan]
         protonGitRef: [main, 0.36.0]
+        python: [/usr/bin/python3-dbg]
         shard: [1, 2]
         shards: [2]
     env:
@@ -189,6 +196,7 @@ jobs:
       LD_LIBRARY_PATH: ${{github.workspace}}/install/lib
       QPID_SYSTEM_TEST_TIMEOUT: 300
       QPID_SYSTEM_TEST_SKIP_FALLBACK_SWITCHOVER_TEST: True
+      PYTHONTRACEMALLOC: 5
     steps:
 
       - name: Show environment (Linux)
@@ -212,13 +220,16 @@ jobs:
       - name: Install Linux runtime/test dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt update; sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 libbenchmark1 pixz bubblewrap curl
+          sudo apt update; sudo apt install -y python3-dbg libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 libbenchmark1 pixz bubblewrap curl
 
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
 
-      - name: install qpid-proton python wheel
-        run: python -m pip install $(find ${ProtonBuildDir}/python/ -name 'python_qpid_proton*.whl')
+      - name: Install Python runtime/test dependencies
+        run: ${{matrix.python}} -m pip install tox quart selectors h2 grpcio protobuf websockets pytest
+
+      - name: Install qpid-proton python wheel
+        run: ${{matrix.python}} -m pip install $(find ${ProtonBuildDir}/python/ -name 'python_qpid_proton*.whl')
 
       - name: CTest
         working-directory: ${{env.DispatchBuildDir}}
