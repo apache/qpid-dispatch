@@ -23,7 +23,7 @@ import unittest
 try:
     import websockets
 except ImportError:
-    websockets = None  # noqa  # type: ignore[assignment]  # expression has type "None", variable has type Module
+    websockets = None  # type: ignore[assignment]  # expression has type "None", variable has type Module
 
 from system_test import Qdrouterd
 from system_test import main_module, TestCase, Process

@@ -66,6 +66,7 @@ void qd_python_finalize(void)
 {
     (void) qd_python_lock();
 
+    Py_DECREF(message_type);
     Py_DECREF(dispatch_module);
     dispatch_module = 0;
     PyGC_Collect();
@@ -565,7 +566,8 @@ static PyTypeObject LogAdapterType = {
     .tp_dealloc   = (destructor)LogAdapter_dealloc,
     .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_methods   = LogAdapter_methods,
-    .tp_init      = (initproc)LogAdapter_init
+    .tp_init      = (initproc)LogAdapter_init,
+    .tp_new       = PyType_GenericNew,
 };
 
 
@@ -636,6 +638,11 @@ static uint64_t qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, 
 {
     IoAdapter *self = (IoAdapter*) context;
     *error = 0;
+
+    if (self->handler == NULL) {
+        *error = qdr_error(QD_AMQP_COND_INTERNAL_ERROR, "Router is shutting down");
+        return PN_REJECTED;
+    }
 
     //
     // Parse the message through the body and exit if the message is not well formed.
@@ -719,10 +726,24 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     return 0;
 }
 
+// visit all members which may conceivably participate in reference cycles
+static int IoAdapter_traverse(IoAdapter* self, visitproc visit, void *arg)
+{
+    Py_VISIT(self->handler);
+    return 0;
+}
+
+static int IoAdapter_clear(IoAdapter* self)
+{
+    Py_CLEAR(self->handler);
+    return 0;
+}
+
 static void IoAdapter_dealloc(IoAdapter* self)
 {
     qdr_core_unsubscribe(self->sub);
-    Py_DECREF(self->handler);
+    PyObject_GC_UnTrack(self);
+    IoAdapter_clear(self);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -802,10 +823,13 @@ static PyTypeObject IoAdapterType = {
     .tp_name      = DISPATCH_MODULE ".IoAdapter",
     .tp_doc       = "Dispatch IO Adapter",
     .tp_basicsize = sizeof(IoAdapter),
+    .tp_traverse  = (traverseproc)IoAdapter_traverse,
+    .tp_clear     = (inquiry)IoAdapter_clear,
     .tp_dealloc   = (destructor)IoAdapter_dealloc,
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
+    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
     .tp_methods   = IoAdapter_methods,
     .tp_init      = (initproc)IoAdapter_init,
+    .tp_new       = PyType_GenericNew,
 };
 
 
@@ -821,8 +845,6 @@ static void qd_register_constant(PyObject *module, const char *name, uint32_t va
 
 static void qd_python_setup(void)
 {
-    LogAdapterType.tp_new = PyType_GenericNew;
-    IoAdapterType.tp_new  = PyType_GenericNew;
     if ((PyType_Ready(&LogAdapterType) < 0) || (PyType_Ready(&IoAdapterType) < 0)) {
         qd_error_py();
         qd_log(log_source, QD_LOG_CRITICAL, "Unable to initialize Adapters");

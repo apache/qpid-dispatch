@@ -255,6 +255,10 @@ void qdr_core_free(qdr_core_t *core)
     // this must happen after qdrc_endpoint_do_cleanup_CT calls
     qdr_modules_finalize(core);
 
+    // Drain the general work lists
+    //  (this can also generate actions, e.g. qdr_forward_on_message -> qd_io_rx_handler call chain does that)
+    qdr_general_handler(core);
+
     // discard any left over actions
 
     qdr_action_list_t  action_list;
@@ -267,9 +271,6 @@ void qdr_core_free(qdr_core_t *core)
         free_qdr_action_t(action);
         action = DEQ_HEAD(action_list);
     }
-
-    // Drain the general work lists
-    qdr_general_handler(core);
 
     sys_thread_free(core->thread);
     sys_cond_free(core->action_cond);
