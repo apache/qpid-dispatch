@@ -340,6 +340,7 @@ qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent) {
     assert(agent);
     assert(!qd->agent);
+    Py_IncRef(agent);  // TODO: why not incref here? actually probably needed, I get a leak in test 9 without this, strange...
     qd->agent = agent;
 }
 
@@ -371,12 +372,18 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     qd_connection_manager_free(qd->connection_manager);
     qd_policy_free(qd->policy);
     Py_XDECREF((PyObject*) qd->agent);
+//    Py_XDECREF(qd_python_module());  // hack
+    PyGC_Collect();  // run destructors while we still have the router around
+//    int ret = PyRun_SimpleString("import objgraph; import gc; gc.collect(); from qpid_dispatch_internal.management import config");
+//    assert(ret == 0);
+
+//    qd_python_finalize();
+
     qd_router_free(qd->router);
     qd_container_free(qd->container);
     qd_server_free(qd->server);
     qd_log_finalize();
-    qd_alloc_finalize();
-    qd_python_finalize();
+    qd_alloc_finalize();  // python objects may use alloc pool objects during finalization? TODO: they do that now  // actually, no, too late to do real work now
     qd_dispatch_set_router_id(qd, NULL);
     qd_dispatch_set_router_area(qd, NULL);
     qd_iterator_finalize();
