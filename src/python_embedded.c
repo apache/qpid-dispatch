@@ -50,13 +50,13 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
 {
     log_source = qd_log_source("PYTHON");
     dispatch = qd;
-    if (python_pkgdir)
-        dispatch_python_pkgdir = PyUnicode_FromString(python_pkgdir);
 
     Py_Initialize();
 #if PY_VERSION_HEX < 0x03070000
     PyEval_InitThreads(); // necessary for Python 3.6 and older versions
 #endif
+    if (python_pkgdir)
+        dispatch_python_pkgdir = PyUnicode_FromString(python_pkgdir);
     qd_python_setup();
     PyEval_SaveThread(); // drop the Python GIL; we will reacquire it in other threads as needed
 }
