@@ -18,8 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
-import { createHashHistory } from "history";
+import { HashRouter } from "react-router-dom";
 
 import "@patternfly/patternfly/patternfly.css";
 import "@patternfly/patternfly/patternfly-addons.css";
@@ -31,19 +30,17 @@ import "./App.css";
 import PageLayout from "./overview/dashboard/layout";
 
 function App(props) {
-
   // service is passed in to make testing easier
   const service = new QDRService();
 
   // also, a router is used here to provide PageLayout with a history property
-  const history = createHashHistory({ window });
 
   return (
-    <HistoryRouter history={history}>
+    <HashRouter>
       <div className="App pf-m-redhat-font">
-        <PageLayout service={service} {...props} history={history} config={props.config}/>
+        <PageLayout service={service} {...props} config={props.config} />
       </div>
-    </HistoryRouter>
+    </HashRouter>
   );
 }
 

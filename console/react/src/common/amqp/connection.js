@@ -18,7 +18,7 @@ under the License.
 */
 
 import Correlator from "./correlator";
-import rhea from "rhea";
+import rhea from "rhea/dist/rhea-umd";
 
 class ConnectionManager {
   constructor(protocol) {
