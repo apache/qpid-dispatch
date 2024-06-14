@@ -212,10 +212,12 @@ def port_available(port, protocol_family='IPv4'):
 def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     """Wait up to timeout for port (on host) to be connectable.
     Takes same keyword arguments as retry to control the timeout"""
-    def check(e):
+
+    def check(e: Exception) -> None:
         """Only retry on connection refused"""
-        if not isinstance(e, socket.error) or not e.errno == errno.ECONNREFUSED:
-            raise
+        if isinstance(e, OSError) and e.errno == errno.ECONNREFUSED:
+            return
+        raise
 
     host = None
 

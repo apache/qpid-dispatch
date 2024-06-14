@@ -22,14 +22,14 @@ import system_test
 
 from quart import Quart, request
 try:
-    from quart.static import send_file  # noqa  # mypy#8823  # type: ignore[attr-defined]
+    from quart.static import send_file  # type: ignore[attr-defined]  # mypy#8823
 except ImportError:
-    from quart.helpers import send_file  # noqa  # mypy#8823  # type: ignore[attr-defined, no-redef]  # mypy#1153
+    from quart.helpers import send_file  # type: ignore[attr-defined, no-redef]  # mypy#1153
 
 try:
-    from quart.exceptions import HTTPStatusException  # noqa  # mypy#8823  # type: ignore[attr-defined]
+    from quart.exceptions import HTTPStatusException  # type: ignore[attr-defined]
 except ImportError:
-    from werkzeug.exceptions import InternalServerError as HTTPStatusException  # noqa  # mypy#8823  # type: ignore[no-redef]  # mypy#1153
+    from werkzeug.exceptions import InternalServerError as HTTPStatusException  # type: ignore[no-redef]  # mypy#1153
 
 app = Quart(__name__)
 
