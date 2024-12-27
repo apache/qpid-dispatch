@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+#include <sys/time.h>
 
 #define TEXT_MAX QD_LOG_TEXT_MAX
 #define LOG_MAX (QD_LOG_TEXT_MAX+128)

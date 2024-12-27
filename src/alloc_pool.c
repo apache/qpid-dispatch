@@ -37,6 +37,7 @@
 #ifdef QD_MEMORY_DEBUG
 #include "log_private.h"
 
+#include <sys/time.h>
 #include <execinfo.h>
 #endif
 
