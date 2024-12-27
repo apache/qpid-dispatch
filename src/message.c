@@ -97,7 +97,7 @@ typedef void (*buffer_process_t) (void *context, const unsigned char *base, int 
 
 qd_log_source_t* log_source = 0;
 
-qd_log_source_t* qd_message_log_source()
+qd_log_source_t* qd_message_log_source(void)
 {
     if(log_source)
         return log_source;
@@ -107,11 +107,11 @@ qd_log_source_t* qd_message_log_source()
     }
 }
 
-void qd_message_initialize() {
+void qd_message_initialize(void) {
     log_source = qd_log_source("MESSAGE");
 }
 
-int qd_message_repr_len() { return qd_log_max_len(); }
+int qd_message_repr_len(void) { return qd_log_max_len(); }
 
 /**
  * Quote non-printable characters suitable for log messages. Output in buffer.
@@ -1008,7 +1008,7 @@ static qd_field_location_t *qd_message_field_location(qd_message_t *msg, qd_mess
 }
 
 
-qd_message_t *qd_message()
+qd_message_t *qd_message(void)
 {
     qd_message_pvt_t *msg = (qd_message_pvt_t*) new_qd_message_t();
     if (!msg)

@@ -24,9 +24,9 @@
 
 void qd_timer_initialize(void);
 void qd_timer_finalize(void);
-void qd_timer_visit();
+void qd_timer_visit(void);
 
 /// For tests only
-sys_mutex_t* qd_timer_lock();
+sys_mutex_t* qd_timer_lock(void);
 
 #endif

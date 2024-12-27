@@ -24,15 +24,15 @@
 
 void qd_log_initialize(void);
 void qd_log_finalize(void);
-void qd_error_initialize();
+void qd_error_initialize(void);
 void qd_router_id_initialize(const char *, const char *);
 void qd_router_id_finalize(void);
 
 
-int message_tests();
-int field_tests();
-int parse_tests();
-int buffer_tests();
+int message_tests(void);
+int field_tests(void);
+int parse_tests(void);
+int buffer_tests(void);
 
 // validate router id constructor/encoder
 //

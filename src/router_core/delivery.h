@@ -74,7 +74,7 @@ ALLOC_DECLARE(qdr_delivery_t);
 /** Delivery Id for logging - thread safe
  */
 extern sys_atomic_t global_delivery_id;
-static inline uint32_t next_delivery_id() { return sys_atomic_inc(&global_delivery_id); }
+static inline uint32_t next_delivery_id(void) { return sys_atomic_inc(&global_delivery_id); }
 
 // Common log line prefix
 #define DLV_FMT       "[C%"PRIu64"][L%"PRIu64"][D%"PRIu32"]"

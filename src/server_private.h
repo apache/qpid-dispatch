@@ -202,7 +202,7 @@ ALLOC_DECLARE(qd_pn_free_link_session_t);
 /**
  * For every connection on the server's connection list, call pn_transport_set_tracer and enable trace logging
  */
-void qd_server_trace_all_connections();
+void qd_server_trace_all_connections(void);
 
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer

@@ -51,12 +51,12 @@ static entity_event_t *entity_event(action_t action, const char *type, void *obj
 static sys_mutex_t *event_lock = 0;
 static entity_event_list_t  event_list;
 
-void qd_entity_cache_initialize() {
+void qd_entity_cache_initialize(void) {
     event_lock = sys_mutex();
     DEQ_INIT(event_list);
 }
 
-void qd_entity_cache_free_entries() {
+void qd_entity_cache_free_entries(void) {
     sys_mutex_lock(event_lock);
     entity_event_t *event = DEQ_HEAD(event_list);
     while (event) {
@@ -101,6 +101,6 @@ QD_EXPORT qd_error_t qd_entity_refresh_begin(PyObject *list) {
     return qd_error_code();
 }
 
-QD_EXPORT void qd_entity_refresh_end() {
+QD_EXPORT void qd_entity_refresh_end(void) {
     sys_mutex_unlock(event_lock);
 }
