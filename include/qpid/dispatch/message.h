@@ -433,9 +433,9 @@ int qd_message_stream_data_append(qd_message_t *msg, qd_buffer_list_t *data, boo
  */
 char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits log_message);
 /** Recommended buffer length for qd_message_repr */
-int qd_message_repr_len();
+int qd_message_repr_len(void);
 
-qd_log_source_t* qd_message_log_source();
+qd_log_source_t* qd_message_log_source(void);
 
 /**
  * Accessor for incoming messages ingress router annotation

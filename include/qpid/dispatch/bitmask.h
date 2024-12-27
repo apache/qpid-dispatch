@@ -33,7 +33,7 @@
 typedef struct qd_bitmask_t qd_bitmask_t;
 
 /** Number of bits in a bitmask. */
-int qd_bitmask_width();
+int qd_bitmask_width(void);
 
 /** Create a bitmask.
  *@param initial if non-zero set all bits, else clear all bits.

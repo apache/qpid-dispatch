@@ -50,7 +50,7 @@ typedef enum {
 qd_parse_tree_t *qd_parse_tree_new(qd_parse_tree_type_t type);
 void qd_parse_tree_free(qd_parse_tree_t *tree);
 qd_parse_tree_type_t qd_parse_tree_type(const qd_parse_tree_t *tree);
-const char *qd_parse_address_token_sep();
+const char *qd_parse_address_token_sep(void);
 
 // verify the pattern is in a legal format for the given tree's match algorithm
 bool qd_parse_tree_validate_pattern(const qd_parse_tree_t *tree,

@@ -61,8 +61,8 @@ typedef void (*qdrc_module_final_t) (void *module_context);
  * @param on_final Pointer to a function for module finalization, called at core thread shutdown
  */
 #define QDR_CORE_MODULE_DECLARE(name,enable,on_init,on_final)   \
-    static void modstart() __attribute__((constructor)); \
-    void modstart() { qdr_register_core_module(name, enable, on_init, on_final); }
+    static void modstart(void) __attribute__((constructor)); \
+    void modstart(void) { qdr_register_core_module(name, enable, on_init, on_final); }
 void qdr_register_core_module(const char *name,
                               qdrc_module_enable_t enable,
                               qdrc_module_init_t on_init,

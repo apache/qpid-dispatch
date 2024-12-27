@@ -1462,7 +1462,7 @@ void qd_server_set_container(qd_dispatch_t *qd, qd_container_t *container)
     qd->server->container = container;
 }
 
-void qd_server_trace_all_connections()
+void qd_server_trace_all_connections(void)
 {
     qd_dispatch_t *qd = qd_dispatch_get_dispatch();
     if (qd->server) {
@@ -1645,7 +1645,7 @@ void qd_connection_invoke_deferred_impl(qd_connection_t *conn, qd_deferred_t cal
 }
 
 
-void *qd_connection_new_qd_deferred_call_t()
+void *qd_connection_new_qd_deferred_call_t(void)
 {
     return new_qd_deferred_call_t();
 }

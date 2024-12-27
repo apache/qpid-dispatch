@@ -560,7 +560,7 @@ static void _do_send(test_client_t *tc)
         ++tc->counter;
         --tc->credit;
         qd_log(tc->module->core->log, QD_LOG_TRACE,
-               "client test message sent id=%"PRIi64" c=%d", tc->counter - 1, tc->credit);
+               "client test message sent id=%ld c=%d", tc->counter - 1, tc->credit);
     }
 }
 

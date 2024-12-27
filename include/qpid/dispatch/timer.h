@@ -115,7 +115,7 @@ void qd_timer_cancel(qd_timer_t *timer);
 /**
  * The current time.
  */
-qd_timestamp_t qd_timer_now() ;
+qd_timestamp_t qd_timer_now(void) ;
 
 /**
  * @}

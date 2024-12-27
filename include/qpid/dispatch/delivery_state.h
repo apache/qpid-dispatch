@@ -54,7 +54,7 @@ typedef struct {
 } qd_delivery_state_t;
 
 // allocate
-qd_delivery_state_t *qd_delivery_state();
+qd_delivery_state_t *qd_delivery_state(void);
 
 // this constructor takes ownership of err. err will be freed by
 // qd_delivery_state_free()

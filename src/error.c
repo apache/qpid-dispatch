@@ -66,7 +66,7 @@ static __thread struct {
 
 static qd_log_source_t* log_source = 0;
 
-void qd_error_initialize() {
+void qd_error_initialize(void) {
     log_source = qd_log_source("ERROR");
 }
 
@@ -99,17 +99,17 @@ qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char
     return err;
 }
 
-qd_error_t qd_error_clear() {
+qd_error_t qd_error_clear(void) {
     ts.error_code = 0;
     snprintf(ts.error_message, ERROR_MAX, "No Error");
     return QD_ERROR_NONE;
 }
 
-const char* qd_error_message() {
+const char* qd_error_message(void) {
     return ts.error_message;
 }
 
-qd_error_t qd_error_code() {
+qd_error_t qd_error_code(void) {
     return ts.error_code;
 }
 

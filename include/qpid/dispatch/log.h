@@ -80,7 +80,7 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_leve
     } while(0)
 
 /** Maximum length for a log message */
-int qd_log_max_len();
+int qd_log_max_len(void);
 
 void qd_format_string(char *buf, int buf_size, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 

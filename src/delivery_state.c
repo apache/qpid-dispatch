@@ -24,7 +24,7 @@
 ALLOC_DECLARE(qd_delivery_state_t);
 ALLOC_DEFINE(qd_delivery_state_t);
 
-qd_delivery_state_t *qd_delivery_state()
+qd_delivery_state_t *qd_delivery_state(void)
 {
     qd_delivery_state_t *dstate = new_qd_delivery_state_t();
     ZERO(dstate);

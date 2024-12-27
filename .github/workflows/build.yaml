@@ -255,7 +255,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-24.04]
         container: ['fedora']
         containerTag: ['35']
         buildType: [RelWithDebInfo]
@@ -264,28 +264,28 @@ jobs:
         shard: [ 1, 2 ]
         shards: [ 2 ]
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             container: 'rockylinux'
             containerTag: 8
             runtimeCheck: OFF
             protonGitRef: main
             shard: 1
             shards: 2
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             container: 'rockylinux'
             containerTag: 8
             runtimeCheck: OFF
             protonGitRef: main
             shard: 2
             shards: 2
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             container: 'centos'
             containerTag: 7
             runtimeCheck: OFF
             protonGitRef: 0.36.0
             shard: 1
             shards: 2
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             container: 'centos'
             containerTag: 7
             runtimeCheck: OFF
@@ -297,6 +297,10 @@ jobs:
       image: 'library/${{ matrix.container }}:${{ matrix.containerTag }}'
       volumes:
         - ${{github.workspace}}:${{github.workspace}}
+        # mount the libs from the host, needed for `using: action` steps when image has ancient glibc
+        - "/:/mnt"
+        # manipulate the host from within the job container
+        - "/var/run/docker.sock:/var/run/docker.sock"
 
     env:
       BuildType: ${{matrix.buildType}}
@@ -339,15 +343,37 @@ jobs:
         if: ${{ always() && runner.os == 'Linux' }}
         run: env -0 | sort -z | tr '\0' '\n'
 
+      - name: compatibility libs
+        run: |
+          yum -y install docker-client
+          podman run --rm -it quay.io/centos/centos:10
+        env:
+          CONTAINER_HOST: "unix:///var/run/docker.sock"
+
+
+      - name: run node20
+#          ./patchelf --set-interpreter /mnt/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 --set-rpath /mnt/lib/x86_64-linux-gnu/ /__e/node20/bin/node
+        run: |
+          curl -L https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz | \
+            tar --strip 2 -C . -xzf - ./bin/patchelf
+          ./patchelf --set-rpath /mnt/lib/x86_64-linux-gnu/ /mnt/home/runner/runners/*/externals/node20/bin/node
+          /__e/node20/bin/node --help
+#        env:
+#          LD_LIBRARY_PATH: "/mnt/lib/x86_64-linux-gnu/"
+
       - uses: actions/checkout@v3
         with:
           repository: 'apache/qpid-proton'
           ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
+        env:
+          LD_LIBRARY_PATH: "/mnt/lib64"
 
       - uses: actions/checkout@v3
         with:
           path: 'qpid-dispatch'
+        env:
+          LD_LIBRARY_PATH: "/mnt/lib64"
 
       - name: Install EPEL (on CentOS 7)
         if: ${{ matrix.container == 'centos' && matrix.containerTag == '7' }}

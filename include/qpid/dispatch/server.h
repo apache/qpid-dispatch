@@ -589,7 +589,7 @@ void qd_connection_invoke_deferred_impl(qd_connection_t *conn, qd_deferred_t cal
 /**
  * Allocate a qd_deferred_call_t object
  */
-void *qd_connection_new_qd_deferred_call_t();
+void *qd_connection_new_qd_deferred_call_t(void);
 
 
 /**

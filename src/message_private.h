@@ -186,7 +186,7 @@ ALLOC_DECLARE(qd_message_content_t);
 #define MSG_CONTENT(m) (((qd_message_pvt_t*) m)->content)
 
 /** Initialize logging */
-void qd_message_initialize();
+void qd_message_initialize(void);
 
 // These expect content->lock to be locked.
 bool _Q2_holdoff_should_block_LH(const qd_message_content_t *content);

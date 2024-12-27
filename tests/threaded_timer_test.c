@@ -73,13 +73,13 @@ static struct event_t {
     sys_cond_t  *c;
 } event;
 
-static void test_setup()
+static void test_setup(void)
 {
     event.m = sys_mutex();
     event.c = sys_cond();
 }
 
-static void test_cleanup()
+static void test_cleanup(void)
 {
     sys_mutex_free(event.m);
     event.m = 0;

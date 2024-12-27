@@ -183,7 +183,7 @@ sys_thread_t *sys_thread(void *(*run_function) (void *), void *arg)
 }
 
 
-sys_thread_t *sys_thread_self()
+sys_thread_t *sys_thread_self(void)
 {
     return _self;
 }

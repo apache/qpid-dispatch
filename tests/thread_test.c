@@ -171,7 +171,7 @@ static char *test_condition(void *context)
 }
 
 
-int thread_tests()
+int thread_tests(void)
 {
     int result = 0;
     char *test_group = "thread_tests";
