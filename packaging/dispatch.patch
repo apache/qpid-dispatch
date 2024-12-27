@@ -1,0 +1,30 @@
+diff --git a/etc/qdrouterd.conf b/etc/qdrouterd.conf
+index 4e8e506c..add40c69 100644
+--- a/etc/qdrouterd.conf
++++ b/etc/qdrouterd.conf
+@@ -32,6 +32,13 @@ listener {
+     saslMechanisms: ANONYMOUS
+ }
+
++listener {
++    host: 0.0.0.0
++    port: 8672
++    authenticatePeer: no
++    http: yes
++}
++
+ address {
+     prefix: closest
+     distribution: closest
+diff --git a/tests/cpp-stub/cpp_stub.h b/tests/cpp-stub/cpp_stub.h
+index 7532ede5..6559fe28 100644
+--- a/tests/cpp-stub/cpp_stub.h
++++ b/tests/cpp-stub/cpp_stub.h
+@@ -23,6 +23,7 @@
+ #include <cstring>
+ //c++
+ #include <map>
++#include <cstdint>
+
+
+ #define ADDR(CLASS_NAME,MEMBER_NAME) (&CLASS_NAME::MEMBER_NAME)

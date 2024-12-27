@@ -1,0 +1,38 @@
+diff --git a/python/setup.py.in b/python/setup.py.in
+index 200cb84b8..75ddc4b1e 100755
+--- a/python/setup.py.in
++++ b/python/setup.py.in
+@@ -18,9 +18,8 @@
+ # under the License.
+ #
+
+-from distutils.core import setup
+-from distutils.command.build_py import build_py
+-from distutils.file_util import copy_file
++from setuptools import setup
++from setuptools.command.build_py import build_py
+ from os.path import join
+ from os import environ
+
+@@ -35,7 +34,7 @@ class BuildPy(build_py):
+     def run(self):
+         build_py.run(self)      # Run the standard build, copies source .py files into builddir
+         for m in self.MODULES:
+-            copy_file(join('${CMAKE_CURRENT_BINARY_DIR}', m), join(self.build_lib, m))
++            build_py.copy_file(self, join('${CMAKE_CURRENT_BINARY_DIR}', m), join(self.build_lib, m))
+
+     def get_outputs(self, **kwargs):
+         return build_py.get_outputs(self, **kwargs) + [join(self.build_lib, m) for m in self.MODULES]
+diff --git a/src/remote_sasl.c b/src/remote_sasl.c
+index 548b3c2ae..c5ee1ae6b 100644
+--- a/src/remote_sasl.c
++++ b/src/remote_sasl.c
+@@ -33,6 +33,8 @@
+ #include "qpid/dispatch/ctools.h"
+ #include "qpid/dispatch/log.h"
+
++#include <proton/object.h>
++
+ static qd_log_source_t* auth_service_log;
+
+ typedef struct
