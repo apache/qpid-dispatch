@@ -12,7 +12,7 @@
     "@patternfly/react-topology": "^4.45.19",
     "d3": "^3.5.17",
     "d3-queue": "^3.0.7",
-    "express": "^4.17.3",
+    "express": "^4.21.2",
     "font-awesome": "^4.7.0",
     "prop-types": "^15.8.1",
     "react": "^17.0.2",
