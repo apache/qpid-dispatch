@@ -37,6 +37,8 @@ jobs:
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
+      # ternary in GHA: https://github.com/actions/runner/issues/409#issuecomment-752775072
+      PythonVersion: "${{ matrix.protonGitRef == 'main' && 3.9 || 3.8 }}"
       VERBOSE: 1
 
       ProtonCMakeExtraArgs: >
@@ -97,10 +99,10 @@ jobs:
       - name: Create Build and Install directories
         run: mkdir -p "${ProtonBuildDir}" "${DispatchBuildDir}" "${InstallPrefix}"
 
-      - name: Setup python
+      - name: Setup python ${{ env.PythonVersion }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: ${{ env.PythonVersion }}
           architecture: x64
 
       - name: Install Python build dependencies
@@ -184,6 +186,8 @@ jobs:
       ProtonBuildDir: ${{github.workspace}}/qpid-proton/build
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
+      # ternary in GHA: https://github.com/actions/runner/issues/409#issuecomment-752775072
+      PythonVersion: "${{ matrix.protonGitRef == 'main' && 3.9 || 3.8 }}"
       # TODO(DISPATCH-2078) re-enable system_tests_authz_service_plugin when the GHA failure is understood and fixed
       DispatchCTestExtraArgs: "-E 'system_tests_authz_service_plugin'"
       LD_LIBRARY_PATH: ${{github.workspace}}/install/lib
@@ -200,10 +204,10 @@ jobs:
         with:
           name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}
 
-      - name: Setup python
+      - name: Setup python ${{ env.PythonVersion }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: ${{ env.PythonVersion }}
           architecture: x64
 
       - name: Install Python runtime/test dependencies
