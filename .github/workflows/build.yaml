@@ -45,6 +45,7 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=ccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         -DBUILD_BINDINGS=python
+        -DBUILD_TOOLS=OFF
         -DBUILD_EXAMPLES=OFF
         -DBUILD_TESTING=OFF
         -DENABLE_FUZZ_TESTING=OFF
@@ -322,6 +323,7 @@ jobs:
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         -DBUILD_BINDINGS=python
         -DPython_EXECUTABLE=/usr/bin/python3
+        -DBUILD_TOOLS=OFF
         -DBUILD_EXAMPLES=OFF
         -DBUILD_TESTING=OFF
         -DENABLE_FUZZ_TESTING=OFF
