@@ -306,6 +306,12 @@ jobs:
       image: 'library/${{ matrix.container }}:${{ matrix.containerTag }}'
       volumes:
         - ${{github.workspace}}:${{github.workspace}}
+        # mount the lib64 directory, needed on CentOS 7 for `using: action` steps when image has ancient glibc
+        - "/mnt:/mnt"
+        # manipulate the host from within the job container
+        - "/var/run/docker.sock:/var/run/docker.sock"
+      # permit reading dmesg
+      options: --privileged --security-opt apparmor:unconfined --security-opt seccomp=unconfined
 
     env:
       BuildType: ${{matrix.buildType}}
@@ -349,6 +355,78 @@ jobs:
         if: ${{ always() && runner.os == 'Linux' }}
         run: env -0 | sort -z | tr '\0' '\n'
 
+      # Problem: Want to have CentOS 7 CI still around, but there are problems
+      #  - CentOS 7 packages have been removed from the CentOS mirrors
+      #  - GitHub Actions upgraded to Node20 and they provide a binary of node that
+      #      is incompatible with the glibc in CentOS 7
+      # Solutions:
+      #   - CentOS 7 is archived, so we need to use packages from vault.centos.org
+      #   - One way to setup a runtime environment for node20 is to copy libs and the link-loader
+      #       from a newer Linux distribution and patch the binary to use them.
+      #   - Docker containers provide ready-made env, to avoid docker-in-docker, need to mount host docker socket
+      #   - For talking to Docker socket from the host we need genuine Docker, Podman will refuse to communicate
+      #   - The patchelf tool can update interpreter and rpath for already-compiled binary, alternatively
+      #       I looked at chain-loaders, but that is way too much effort to make work
+      #       refs:
+      #         - https://rootknecht.net/blog/patching-binaries-for-nixos/
+      #         - https://nixos.wiki/wiki/Packaging/Binaries#Manual_Method
+      #         - https://tmpout.sh/2/6.html (Preloading the linker for fun and profit)
+      #         - https://github.com/nix-community/nix-ld
+      #         - https://lieeil.wordpress.com/2009/01/04/rtldi-indirect-runtime-loader/,
+      - name: Install up-to-date /lib64 for CentOS 7
+        if: ${{ matrix.container == 'centos' && matrix.containerTag == '7' }}
+        run: |
+          set -Eeuxo pipefail
+          rm -rf /etc/yum.repos.d/*.repo
+
+          cat > /etc/yum.repos.d/CentOS-Linux-BaseOS.repo <<'EOF'
+          [BaseOS] 
+          name=CentOS Linux 7 - BaseOS
+          baseurl=https://vault.centos.org/7.9.2009/os/\$basearch/
+          gpgcheck=1
+          gpgkey=https://vault.centos.org/7.9.2009/os/x86_64/RPM-GPG-KEY-CentOS-7
+          EOF
+  
+          cat > /etc/yum.repos.d/CentOS-Linux-Updates.repo <<'EOF'
+          [Updates]
+          name=CentOS Linux 7 - Updates
+          baseurl=https://vault.centos.org/7.9.2009/updates/\$basearch/
+          gpgcheck=0
+          EOF
+
+          # Docker packages are at https://download.docker.com/linux/centos/7/x86_64/stable/Packages/
+          cat > /etc/yum.repos.d/DockerCE.repo <<'EOF'
+          [docker-ce-stable]
+          name=Docker CE Stable - $basearch
+          baseurl=https://download.docker.com/linux/centos/$releasever/$basearch/stable
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://download.docker.com/linux/centos/gpg
+          EOF
+
+          yum install -y docker-ce-cli
+
+          # Note: the paths get confusing with two containers being around
+          docker run --rm --volume /:/mnt -i quay.io/centos/centos:stream10 <<'EOF'
+          set -Eeuxo pipefail
+          # fedora and ubuntu have patchelf in packages, centos does not 
+          curl -L https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz | \
+            tar --strip 2 -C . -xzf - ./bin/patchelf
+          # `patchelf` may fail to patch correctly if new interpreter path is longer than the previous interpreter path
+          #    this would manifest as strange segfault when running the binary
+          find /mnt/home/runner/runners/*/externals -type f -executable -exec ./patchelf --set-interpreter /ld-linux-x86-64.so.2 --set-rpath /mnt/usr/lib64 {} ';'
+          mkdir -p /mnt/mnt/usr
+          cp -R /usr/lib64 /mnt/mnt/usr/lib64
+          EOF
+
+          # Note: this is outside the container now
+          cp /mnt/usr/lib64/ld-linux-x86-64.so.2 /
+        env:
+          DOCKER_HOST: "unix:///var/run/docker.sock"
+
+      - name: Check that Node20 works inside in-docker steps
+        run: /__e/node20/bin/node -e 'console.log("Hello World")'
+
       - uses: actions/checkout@v3
         with:
           repository: 'apache/qpid-proton'
@@ -359,10 +437,17 @@ jobs:
         with:
           path: 'qpid-dispatch'
 
+      # Again, it's gone, can't do `yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm`
       - name: Install EPEL (on CentOS 7)
         if: ${{ matrix.container == 'centos' && matrix.containerTag == '7' }}
         run: |
-          yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+          cat > /etc/yum.repos.d/epel.repo <<'EOF'
+          [epel]
+          name=EPEL 7
+          baseurl=https://archives.fedoraproject.org/pub/archive/epel/$releasever/$basearch/
+          enabled=1
+          gpgcheck=0
+          EOF
 
       # https://wiki.rockylinux.org/rocky/repo/#notes-on-epel
       - name: Install EPEL (on RockyLinux 8)
@@ -495,6 +580,10 @@ jobs:
           name: cores_${{matrix.container}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}_${{matrix.shard}}
           path: |
             **/core
+
+      - name: Dump dmesg (on failure)
+        if: ${{ failure() }}
+        run: dmesg
 
   python:
     name: 'Python Checker (${{ matrix.os }})'
