@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import AlertList from "./alertList";
 
 it("renders the AlertList component", async () => {
@@ -33,12 +33,14 @@ it("renders the AlertList component", async () => {
   expect(queryByLabelText("alert-close-button")).toBeNull();
 
   // add an alert
-  ref.addAlert("info", "testing");
+  await waitFor(() => {
+    ref.addAlert("info", "testing");
+  });
   // the alert close button should now be there
   expect(getByLabelText("alert-close-button")).toBeInTheDocument();
 
   const alert = {
-    key: 0
+    key: 0,
   };
   // hide the alert
   ref.hideAlert(alert);
