@@ -29,4 +29,5 @@ dockerfiles
 
 build
 cmake-build-*
+**/node_modules
 tests/system_test.dir
