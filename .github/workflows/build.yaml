@@ -101,7 +101,7 @@ jobs:
         run: mkdir -p "${ProtonBuildDir}" "${DispatchBuildDir}" "${InstallPrefix}"
 
       - name: Setup python ${{ env.PythonVersion }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PythonVersion }}
           architecture: x64
@@ -206,7 +206,7 @@ jobs:
           name: qpid_dispatch_wrk_${{matrix.os}}_${{matrix.buildType}}_${{matrix.runtimeCheck}}_${{matrix.protonGitRef}}
 
       - name: Setup python ${{ env.PythonVersion }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PythonVersion }}
           architecture: x64
