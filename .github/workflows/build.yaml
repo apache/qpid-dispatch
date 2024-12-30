@@ -70,13 +70,13 @@ jobs:
         if: ${{ always() && runner.os == 'Linux' }}
         run: env -0 | sort -z | tr '\0' '\n'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'apache/qpid-proton'
           ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: 'qpid-dispatch'
 
@@ -427,13 +427,13 @@ jobs:
       - name: Check that Node20 works inside in-docker steps
         run: /__e/node20/bin/node -e 'console.log("Hello World")'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'apache/qpid-proton'
           ref: ${{ matrix.protonGitRef }}
           path: 'qpid-proton'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: 'qpid-dispatch'
 
@@ -614,7 +614,7 @@ jobs:
       - name: Install python-checker test dependencies
         run: python3 -m pip install tox
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create Build and Install directories
         run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
@@ -646,7 +646,7 @@ jobs:
         -DCONSOLE_INSTALL=OFF
     steps:
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create Build and Install directories
         run: mkdir -p "${DispatchBuildDir}" "{InstallPrefix}"
@@ -702,7 +702,7 @@ jobs:
     name: Console Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: cd console/react && npm ci
@@ -714,7 +714,7 @@ jobs:
     name: Console ESLint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: cd console/react && npm ci
@@ -726,7 +726,7 @@ jobs:
     name: RAT Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
@@ -752,7 +752,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build Debian image
         uses: docker/build-push-action@v5
         with:
