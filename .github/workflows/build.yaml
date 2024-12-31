@@ -754,7 +754,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build Debian image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           file: dockerfiles/Dockerfile-debian
           context: .
