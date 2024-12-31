@@ -17,6 +17,8 @@
 # under the License.
 #
 
+# https://infra.apache.org/asf-yaml.html
+
 github:
   description: "Mirror of Apache Qpid Dispatch"
   homepage: https://qpid.apache.org/components/dispatch-router
@@ -41,12 +43,18 @@ github:
     issues: false
     projects: false
 
+  protected_branches:
+    main:
+      strict: true
+      required_linear_history: true
+
   enabled_merge_buttons:
     squash:  true
     merge:   false
     rebase:  true
 
   dependabot_alerts:  true
+  dependabot_updates: true
 
   autolink_jira:
     - INFRA
