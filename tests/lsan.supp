@@ -3,9 +3,6 @@
 #
 
 # to be triaged; pretty much all tests
-leak:^IoAdapter_init$
-
-# to be triaged; pretty much all tests
 leak:^load_server_config$
 
 # to be triaged; system_tests_autolinks
