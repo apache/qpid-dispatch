@@ -750,11 +750,21 @@ jobs:
   container-images:
     name: Container Images
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # TODO(jdanek): commented out Dockerfiles are broken and don't build
+        dockerfile:
+          - Dockerfile
+          # - dockerfiles/Dockerfile-centos7
+          - dockerfiles/Dockerfile-debian
+          #- dockerfiles/Dockerfile-fedora
+          #- dockerfiles/Dockerfile-ubuntu
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
       - name: Build Debian image
         uses: docker/build-push-action@v5
         with:
-          file: dockerfiles/Dockerfile-debian
+          file: ${{ matrix.dockerfile }}
           context: .
