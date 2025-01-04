@@ -19,16 +19,3 @@ console/react/build/
 console/react/coverage/
 console/react/.prettierrc
 console/react/.prettierignore
-
-
-
-Dockerfile.centos7
-cmake-build-debug/
-console/cypress/
-console/newapp/
-console/playwright/
-console/react/newapp/
-newapp/
-patchelf
-patchelf-0.18.0-x86_64.tar.gz
-share/
