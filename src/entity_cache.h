@@ -32,10 +32,10 @@
  */
 
 /** Initialize the module. */
-void qd_entity_cache_initialize();
+void qd_entity_cache_initialize(void);
 
 /** Free all entries in the cache. Avoids leaks in c_unittests. */
-void qd_entity_cache_free_entries();
+void qd_entity_cache_free_entries(void);
 
 /** Add an entity to the agent cache. */
 void qd_entity_cache_add(const char *type, void *object);

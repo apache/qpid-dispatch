@@ -397,7 +397,7 @@ static char *test_compose_subfields(void *context)
 }
 
 
-int compose_tests()
+int compose_tests(void)
 {
     int result = 0;
     char *test_group = "compose_tests";

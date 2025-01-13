@@ -76,17 +76,17 @@ qd_error_t qd_error_vimpl(qd_error_t code, const char *file, int line, const cha
  * Clear thread-local error code and message.
  *@return QD_ERROR_NONE
  */
-qd_error_t qd_error_clear();
+qd_error_t qd_error_clear(void);
 
 /**
  * @return Thread local error message. Includes text for error code.
  */
-QD_EXPORT const char* qd_error_message();
+QD_EXPORT const char* qd_error_message(void);
 
 /**
  *@return Thread local error code
  */
-QD_EXPORT qd_error_t qd_error_code();
+QD_EXPORT qd_error_t qd_error_code(void);
 
 /** Maximum length of a qd_error_message, useful for temporary buffers. */
 extern const int QD_ERROR_MAX;

@@ -152,7 +152,7 @@ static char *test_failover_list_multiple(void *unused)
 }
 
 
-int failoverlist_tests()
+int failoverlist_tests(void)
 {
     int result = 0;
     char *test_group = "failover_tests";

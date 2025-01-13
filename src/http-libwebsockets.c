@@ -63,7 +63,7 @@ static void logger(int lll, const char *line)  {
     qd_log(http_log, qd_level(lll), "%.*s", (int)len, line);
 }
 
-static void log_init() {
+static void log_init(void) {
     http_log = qd_log_source("HTTP");
     int levels = 0;
     for (int i = 0; i < LLL_COUNT; ++i) {

@@ -191,7 +191,7 @@ qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager)
 }
 
 
-long qd_policy_c_counts_alloc()
+long qd_policy_c_counts_alloc(void)
 {
     qd_policy_denial_counts_t * dc = NEW(qd_policy_denial_counts_t);
     assert(dc);
@@ -1561,6 +1561,6 @@ char * qd_policy_compile_allowed_csv(char * csv)
 }
 
 
-qd_log_source_t* qd_policy_log_source() {
+qd_log_source_t* qd_policy_log_source(void) {
     return policy_log_source;
 }

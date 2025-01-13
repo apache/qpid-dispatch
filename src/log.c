@@ -46,7 +46,7 @@ const char *QD_LOG_STATS_TYPE = "logStats";
 
 static qd_log_source_t      *default_log_source=0;
 
-int qd_log_max_len() { return TEXT_MAX; }
+int qd_log_max_len(void) { return TEXT_MAX; }
 
 typedef struct qd_log_entry_t qd_log_entry_t;
 
@@ -464,7 +464,7 @@ void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file
   va_end(ap);
 }
 
-static PyObject *inc_none() { Py_INCREF(Py_None); return Py_None; }
+static PyObject *inc_none(void) { Py_INCREF(Py_None); return Py_None; }
 
 /// Return the log buffer up to limit as a python list. Called by management agent.
 QD_EXPORT PyObject *qd_log_recent_py(long limit) {

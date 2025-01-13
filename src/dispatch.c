@@ -55,7 +55,7 @@ void            qd_policy_free(qd_policy_t *policy);
 qd_router_t    *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id);
 void            qd_router_setup_late(qd_dispatch_t *qd);
 void            qd_router_free(qd_router_t *router);
-void            qd_error_initialize();
+void            qd_error_initialize(void);
 static void qd_dispatch_set_router_id(qd_dispatch_t *qd, char *_id);
 static void qd_dispatch_set_router_area(qd_dispatch_t *qd, char *_area);
 
@@ -68,7 +68,7 @@ sys_atomic_t global_delivery_id;
 
 qd_dispatch_t *qd = 0;
 
-qd_dispatch_t *qd_dispatch_get_dispatch()
+qd_dispatch_t *qd_dispatch_get_dispatch(void)
 {
     return qd;
 }
@@ -287,7 +287,7 @@ qd_error_t qd_dispatch_register_display_name_service(qd_dispatch_t *qd, void *ob
 }
 
 
-QD_EXPORT long qd_dispatch_policy_c_counts_alloc()
+QD_EXPORT long qd_dispatch_policy_c_counts_alloc(void)
 {
     return qd_policy_c_counts_alloc();
 }
@@ -404,7 +404,7 @@ qdr_core_t* qd_dispatch_router_core(qd_dispatch_t *qd) {
  *
  * Return 0 if the memory usage cannot be determined.
  */
-uint64_t qd_router_memory_usage()
+uint64_t qd_router_memory_usage(void)
 {
     // @TODO(kgiusti): only works for linux (what? doesn't everyone run linux?)
 

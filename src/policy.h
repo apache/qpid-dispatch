@@ -85,7 +85,7 @@ qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager)
 /** Allocate counts statistics block.
  * Called from Python
  */
-long qd_policy_c_counts_alloc();
+long qd_policy_c_counts_alloc(void);
 
 /** Free counts statistics block.
  * Called from Python
@@ -261,5 +261,5 @@ void qd_policy_count_max_size_event(pn_link_t *link, qd_connection_t *qd_conn);
 /**
  * Return POLICY log_source to log policy 
  */
-qd_log_source_t* qd_policy_log_source();
+qd_log_source_t* qd_policy_log_source(void);
 #endif
