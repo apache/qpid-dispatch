@@ -311,7 +311,7 @@ jobs:
         # manipulate the host from within the job container
         - "/var/run/docker.sock:/var/run/docker.sock"
       # permit reading dmesg
-      options: --privileged --security-opt apparmor:unconfined --security-opt seccomp=unconfined
+      options: --privileged --security-opt apparmor:unconfined --security-opt seccomp=unconfined --sysctl net.ipv6.conf.all.disable_ipv6=0
 
     env:
       BuildType: ${{matrix.buildType}}
