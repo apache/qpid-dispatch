@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<licenseSummary>
+  <dependencies>
+    <dependency>
+      <packageName>qpid-dispatch</packageName>
+      <version>1.19.0</version>
+      <licenses>
+        <license>
+          <name>ASL 2.0</name>
+          <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+      </licenses>
+    </dependency>
+  </dependencies>
+</licenseSummary>
