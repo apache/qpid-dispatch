@@ -42,6 +42,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 /**
  * Private Function Prototypes
