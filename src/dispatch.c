@@ -41,6 +41,7 @@
 #include <dlfcn.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 /**
  * Private Function Prototypes
