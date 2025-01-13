@@ -177,9 +177,8 @@ Requires: python3-qpid-proton >= %{proton_minimum_version}
 
 %prep
 %setup -q -n qpid-dispatch-3.1.0
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
+%patch -P1 -p1
+%patch -P2 -p1
 
 mkdir pre_built
 cd pre_built
