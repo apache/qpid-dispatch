@@ -443,6 +443,7 @@ qd_error_t qd_router_python_setup(qd_router_t *router)
     // Instantiate the router
     //
     pyRouter = PyObject_CallObject(pClass, pArgs);
+    Py_DECREF(pClass);
     Py_DECREF(pArgs);
     Py_DECREF(adapterType);
     QD_ERROR_PY_RET();
@@ -455,7 +456,14 @@ qd_error_t qd_router_python_setup(qd_router_t *router)
 }
 
 void qd_router_python_free(qd_router_t *router) {
-    // empty
+    qd_python_lock_state_t ls = qd_python_lock();
+    Py_XDECREF(pyRouter);
+    Py_CLEAR(pyTick);
+    Py_CLEAR(pySetMobileSeq);
+    Py_CLEAR(pySetMyMobileSeq);
+    Py_CLEAR(pyLinkLost);
+    PyGC_Collect();
+    qd_python_unlock(ls);
 }
 
 

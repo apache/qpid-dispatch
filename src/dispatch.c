@@ -342,6 +342,7 @@ qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent) {
     assert(agent);
     assert(!qd->agent);
+    Py_IncRef(agent);
     qd->agent = agent;
 }
 
