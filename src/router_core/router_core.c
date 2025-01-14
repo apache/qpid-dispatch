@@ -161,6 +161,9 @@ void qdr_core_free(qdr_core_t *core)
         }
     }
 
+    // I have to first run qdrc_endpoint_do_cleanup_CT src/router_core/core_link_endpoint.c:241
+    //  and only then qcm_edge_router_final_CT src/router_core/modules/edge_router/module.c:59
+
     qdr_link_route_t *link_route = 0;
     while ( (link_route = DEQ_HEAD(core->link_routes))) {
         DEQ_REMOVE_HEAD(core->link_routes);
@@ -323,16 +326,53 @@ void qdr_core_free(qdr_core_t *core)
     }
     assert(DEQ_SIZE(core->streaming_connections) == 0);
 
+    // this now adds unsubscribe actions, so have to do before the discard next
+    //  plus I need to run it before core mutexes are freed
+
+    qdr_modules_finalize(core);
+
+    // discard any left over actions
+
+    qdr_action_list_t  action_list;
+    DEQ_MOVE(core->action_list, action_list);
+    DEQ_APPEND(action_list, core->action_list_background);
+    qdr_action_t *action = DEQ_HEAD(action_list);
+    while (action) {
+        DEQ_REMOVE_HEAD(action_list);
+        action->action_handler(core, action, true);
+        free_qdr_action_t(action);
+        action = DEQ_HEAD(action_list);
+    }
+
+    // Drain the general work lists
+    qdr_general_handler(core);
+
     // at this point all the conn identifiers have been freed
     qd_hash_free(core->conn_id_hash);
 
     qdr_agent_free(core->mgmt_agent);
 
+    //
+    // Free the core resources
+    //
     if (core->routers_by_mask_bit)       free(core->routers_by_mask_bit);
     if (core->control_links_by_mask_bit) free(core->control_links_by_mask_bit);
     if (core->data_links_by_mask_bit)    free(core->data_links_by_mask_bit);
     if (core->neighbor_free_mask)        qd_bitmask_free(core->neighbor_free_mask);
     if (core->rnode_conns_by_mask_bit)   free(core->rnode_conns_by_mask_bit);
+
+    sys_thread_free(core->thread);
+    sys_cond_free(core->action_cond);
+    sys_mutex_free(core->action_lock);
+    sys_mutex_free(core->work_lock);
+    sys_mutex_free(core->id_lock);
+    qd_timer_free(core->work_timer);
+
+    for (int i = 0; i <= QD_TREATMENT_LINK_BALANCED; ++i) {
+        if (core->forwarders[i]) {
+            free(core->forwarders[i]);
+        }
+    }
 
     free(core);
 }
