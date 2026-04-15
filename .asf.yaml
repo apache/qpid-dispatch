@@ -21,7 +21,7 @@
 
 github:
   description: "Archive of Apache Qpid Dispatch"
-  homepage: ~
+  homepage: https://qpid.apache.org
   labels:
     - qpid-dispatch-router
 
