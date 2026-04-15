@@ -44,7 +44,6 @@ github:
 
   protected_branches:
     main:
-      strict: true
       required_linear_history: true
 
   enabled_merge_buttons:
